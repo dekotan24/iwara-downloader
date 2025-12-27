@@ -463,7 +463,7 @@ namespace IwaraDownloader.Forms
             this.notifyIcon.ContextMenuStrip = this.contextMenuTray;
             this.notifyIcon.Text = "IwaraDownloader";
             this.notifyIcon.Visible = true;
-            this.notifyIcon.Icon = System.Drawing.SystemIcons.Application;
+            this.notifyIcon.Icon = Properties.Resources.icon;
             this.notifyIcon.DoubleClick += new EventHandler(this.notifyIcon_DoubleClick);
 
             // 
@@ -683,6 +683,7 @@ namespace IwaraDownloader.Forms
             this.Controls.Add(this.mainSplitContainer);
             this.Controls.Add(this.toolStrip);
             this.Controls.Add(this.statusStrip);
+            this.Icon = Properties.Resources.icon;
             this.MinimumSize = new Size(800, 500);
             this.Name = "MainForm";
             this.StartPosition = FormStartPosition.CenterScreen;

@@ -539,6 +539,7 @@ namespace IwaraDownloader.Forms
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnApply);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.Icon = Properties.Resources.icon;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "SettingsForm";
