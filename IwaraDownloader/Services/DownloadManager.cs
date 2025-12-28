@@ -181,7 +181,7 @@ namespace IwaraDownloader.Services
                     
                     // レート制限：DL開始前に設定値分待機
                     var settings = SettingsManager.Instance.Settings;
-                    var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最侎1秒
+                    var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
                     System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
                     await Task.Delay(delayMs, _globalCts.Token);
                     
