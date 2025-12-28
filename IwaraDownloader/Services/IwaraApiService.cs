@@ -136,6 +136,21 @@ namespace IwaraDownloader.Services
         #endregion
 
         /// <summary>
+        /// レート制限設定の引数を生成
+        /// </summary>
+        private List<string> GetRateLimitArgs()
+        {
+            var settings = Utils.SettingsManager.Instance.Settings;
+            return new List<string>
+            {
+                "--api-delay", (settings.ApiRequestDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--page-delay", (settings.PageFetchDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--rate-limit-base", (settings.RateLimitBaseDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--rate-limit-max", (settings.RateLimitMaxDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+        }
+
+        /// <summary>
         /// Pythonスクリプトを実行
         /// </summary>
         private async Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
@@ -153,12 +168,21 @@ namespace IwaraDownloader.Services
             }
 
             var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
-            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
+            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\"")); 
             
             if (!string.IsNullOrEmpty(_token))
             {
                 allArgs.Add("--token");
                 allArgs.Add($"\"{_token}\"");
+            }
+
+            // レート制限設定を追加
+            allArgs.AddRange(GetRateLimitArgs());
+            
+            // バックオフ無効の場合
+            if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
+            {
+                allArgs.Add("--no-backoff");
             }
 
             var psi = new ProcessStartInfo

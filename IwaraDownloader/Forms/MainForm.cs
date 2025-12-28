@@ -592,6 +592,18 @@ namespace IwaraDownloader.Forms
             }
         }
 
+        /// <summary>
+        /// 右クリック時にノードを選択状態にする
+        /// </summary>
+        private void treeViewChannels_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            // 右クリック時はクリックしたノードを選択状態にする
+            if (e.Button == MouseButtons.Right && e.Node != null)
+            {
+                treeViewChannels.SelectedNode = e.Node;
+            }
+        }
+
         #endregion
 
         #region Video List
@@ -801,10 +813,13 @@ namespace IwaraDownloader.Forms
             {
                 UpdateStatusBar($"{user.Username} の新着を確認中...");
                 var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                await _downloadManager.CheckForNewVideosAsync(progress);
+                
+                // 選択したチャンネルのみチェック
+                await _downloadManager.CheckForNewVideosAsync(user, progress);
+                
                 RefreshChannelTree();
                 RefreshVideoList();
-                UpdateStatusBar("確認完了");
+                UpdateStatusBar($"{user.Username} の確認完了");
             }
         }
 

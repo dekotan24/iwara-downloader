@@ -20,6 +20,7 @@ namespace IwaraDownloader.Forms
             this.tabControl = new TabControl();
             this.tabGeneral = new TabPage();
             this.tabAccount = new TabPage();
+            this.tabAdvanced = new TabPage();
             this.tabBackup = new TabPage();
 
             // 一般設定
@@ -51,6 +52,31 @@ namespace IwaraDownloader.Forms
             this.txtPassword = new TextBox();
             this.lblAccountNote = new Label();
 
+            // 詳細設定（レート制限）
+            this.grpRateLimit = new GroupBox();
+            this.lblApiDelay = new Label();
+            this.numApiDelay = new NumericUpDown();
+            this.lblApiDelayUnit = new Label();
+            this.lblDownloadDelay = new Label();
+            this.numDownloadDelay = new NumericUpDown();
+            this.lblDownloadDelayUnit = new Label();
+            this.lblChannelDelay = new Label();
+            this.numChannelDelay = new NumericUpDown();
+            this.lblChannelDelayUnit = new Label();
+            this.lblPageDelay = new Label();
+            this.numPageDelay = new NumericUpDown();
+            this.lblPageDelayUnit = new Label();
+
+            this.grpErrorHandling = new GroupBox();
+            this.lblRateLimitBase = new Label();
+            this.numRateLimitBase = new NumericUpDown();
+            this.lblRateLimitBaseUnit = new Label();
+            this.lblRateLimitMax = new Label();
+            this.numRateLimitMax = new NumericUpDown();
+            this.lblRateLimitMaxUnit = new Label();
+            this.chkExponentialBackoff = new CheckBox();
+            this.lblAdvancedNote = new Label();
+
             // バックアップ
             this.grpExport = new GroupBox();
             this.btnExportSettings = new Button();
@@ -67,15 +93,24 @@ namespace IwaraDownloader.Forms
             this.tabControl.SuspendLayout();
             this.tabGeneral.SuspendLayout();
             this.tabAccount.SuspendLayout();
+            this.tabAdvanced.SuspendLayout();
             this.tabBackup.SuspendLayout();
             this.grpDownload.SuspendLayout();
             this.grpAutoCheck.SuspendLayout();
             this.grpNotification.SuspendLayout();
             this.grpAccount.SuspendLayout();
+            this.grpRateLimit.SuspendLayout();
+            this.grpErrorHandling.SuspendLayout();
             this.grpExport.SuspendLayout();
             this.grpImport.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numPageDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitBase)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitMax)).BeginInit();
             this.SuspendLayout();
 
             // 
@@ -83,6 +118,7 @@ namespace IwaraDownloader.Forms
             // 
             this.tabControl.Controls.Add(this.tabGeneral);
             this.tabControl.Controls.Add(this.tabAccount);
+            this.tabControl.Controls.Add(this.tabAdvanced);
             this.tabControl.Controls.Add(this.tabBackup);
             this.tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.tabControl.Location = new Point(12, 12);
@@ -410,6 +446,199 @@ namespace IwaraDownloader.Forms
             this.lblAccountNote.Text = "※ R-18コンテンツやプライベート動画をダウンロードするには\r\n　 iwaraアカウントでのログインが必要です。";
 
             // 
+            // tabAdvanced
+            // 
+            this.tabAdvanced.Controls.Add(this.grpRateLimit);
+            this.tabAdvanced.Controls.Add(this.grpErrorHandling);
+            this.tabAdvanced.Controls.Add(this.lblAdvancedNote);
+            this.tabAdvanced.Location = new Point(4, 24);
+            this.tabAdvanced.Name = "tabAdvanced";
+            this.tabAdvanced.Padding = new Padding(3);
+            this.tabAdvanced.Size = new Size(452, 352);
+            this.tabAdvanced.TabIndex = 2;
+            this.tabAdvanced.Text = "詳細設定";
+            this.tabAdvanced.UseVisualStyleBackColor = true;
+
+            // 
+            // grpRateLimit
+            // 
+            this.grpRateLimit.Controls.Add(this.lblApiDelay);
+            this.grpRateLimit.Controls.Add(this.numApiDelay);
+            this.grpRateLimit.Controls.Add(this.lblApiDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblDownloadDelay);
+            this.grpRateLimit.Controls.Add(this.numDownloadDelay);
+            this.grpRateLimit.Controls.Add(this.lblDownloadDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblChannelDelay);
+            this.grpRateLimit.Controls.Add(this.numChannelDelay);
+            this.grpRateLimit.Controls.Add(this.lblChannelDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblPageDelay);
+            this.grpRateLimit.Controls.Add(this.numPageDelay);
+            this.grpRateLimit.Controls.Add(this.lblPageDelayUnit);
+            this.grpRateLimit.Location = new Point(6, 6);
+            this.grpRateLimit.Name = "grpRateLimit";
+            this.grpRateLimit.Size = new Size(440, 140);
+            this.grpRateLimit.TabIndex = 0;
+            this.grpRateLimit.TabStop = false;
+            this.grpRateLimit.Text = "レート制限設定";
+
+            // lblApiDelay
+            this.lblApiDelay.AutoSize = true;
+            this.lblApiDelay.Location = new Point(10, 25);
+            this.lblApiDelay.Name = "lblApiDelay";
+            this.lblApiDelay.Size = new Size(120, 15);
+            this.lblApiDelay.Text = "APIリクエスト間隔:";
+
+            // numApiDelay
+            this.numApiDelay.Location = new Point(140, 22);
+            this.numApiDelay.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            this.numApiDelay.Minimum = new decimal(new int[] { 500, 0, 0, 0 });
+            this.numApiDelay.Name = "numApiDelay";
+            this.numApiDelay.Size = new Size(80, 23);
+            this.numApiDelay.Value = new decimal(new int[] { 1000, 0, 0, 0 });
+
+            // lblApiDelayUnit
+            this.lblApiDelayUnit.AutoSize = true;
+            this.lblApiDelayUnit.Location = new Point(225, 25);
+            this.lblApiDelayUnit.Text = "ミリ秒";
+
+            // lblDownloadDelay
+            this.lblDownloadDelay.AutoSize = true;
+            this.lblDownloadDelay.Location = new Point(10, 55);
+            this.lblDownloadDelay.Name = "lblDownloadDelay";
+            this.lblDownloadDelay.Size = new Size(120, 15);
+            this.lblDownloadDelay.Text = "ダウンロード間隔:";
+
+            // numDownloadDelay
+            this.numDownloadDelay.Location = new Point(140, 52);
+            this.numDownloadDelay.Maximum = new decimal(new int[] { 60000, 0, 0, 0 });
+            this.numDownloadDelay.Minimum = new decimal(new int[] { 1000, 0, 0, 0 });
+            this.numDownloadDelay.Name = "numDownloadDelay";
+            this.numDownloadDelay.Size = new Size(80, 23);
+            this.numDownloadDelay.Value = new decimal(new int[] { 3000, 0, 0, 0 });
+
+            // lblDownloadDelayUnit
+            this.lblDownloadDelayUnit.AutoSize = true;
+            this.lblDownloadDelayUnit.Location = new Point(225, 55);
+            this.lblDownloadDelayUnit.Text = "ミリ秒";
+
+            // lblChannelDelay
+            this.lblChannelDelay.AutoSize = true;
+            this.lblChannelDelay.Location = new Point(10, 85);
+            this.lblChannelDelay.Name = "lblChannelDelay";
+            this.lblChannelDelay.Size = new Size(120, 15);
+            this.lblChannelDelay.Text = "チャンネル巡回間隔:";
+
+            // numChannelDelay
+            this.numChannelDelay.Location = new Point(140, 82);
+            this.numChannelDelay.Maximum = new decimal(new int[] { 120000, 0, 0, 0 });
+            this.numChannelDelay.Minimum = new decimal(new int[] { 1000, 0, 0, 0 });
+            this.numChannelDelay.Name = "numChannelDelay";
+            this.numChannelDelay.Size = new Size(80, 23);
+            this.numChannelDelay.Value = new decimal(new int[] { 5000, 0, 0, 0 });
+
+            // lblChannelDelayUnit
+            this.lblChannelDelayUnit.AutoSize = true;
+            this.lblChannelDelayUnit.Location = new Point(225, 85);
+            this.lblChannelDelayUnit.Text = "ミリ秒";
+
+            // lblPageDelay
+            this.lblPageDelay.AutoSize = true;
+            this.lblPageDelay.Location = new Point(10, 115);
+            this.lblPageDelay.Name = "lblPageDelay";
+            this.lblPageDelay.Size = new Size(120, 15);
+            this.lblPageDelay.Text = "ページ取得間隔:";
+
+            // numPageDelay
+            this.numPageDelay.Location = new Point(140, 112);
+            this.numPageDelay.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            this.numPageDelay.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numPageDelay.Name = "numPageDelay";
+            this.numPageDelay.Size = new Size(80, 23);
+            this.numPageDelay.Value = new decimal(new int[] { 500, 0, 0, 0 });
+
+            // lblPageDelayUnit
+            this.lblPageDelayUnit.AutoSize = true;
+            this.lblPageDelayUnit.Location = new Point(225, 115);
+            this.lblPageDelayUnit.Text = "ミリ秒";
+
+            // 
+            // grpErrorHandling
+            // 
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitBase);
+            this.grpErrorHandling.Controls.Add(this.numRateLimitBase);
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitBaseUnit);
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitMax);
+            this.grpErrorHandling.Controls.Add(this.numRateLimitMax);
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitMaxUnit);
+            this.grpErrorHandling.Controls.Add(this.chkExponentialBackoff);
+            this.grpErrorHandling.Location = new Point(6, 152);
+            this.grpErrorHandling.Name = "grpErrorHandling";
+            this.grpErrorHandling.Size = new Size(440, 115);
+            this.grpErrorHandling.TabIndex = 1;
+            this.grpErrorHandling.TabStop = false;
+            this.grpErrorHandling.Text = "エラー時の動作 (429/403)";
+
+            // lblRateLimitBase
+            this.lblRateLimitBase.AutoSize = true;
+            this.lblRateLimitBase.Location = new Point(10, 25);
+            this.lblRateLimitBase.Name = "lblRateLimitBase";
+            this.lblRateLimitBase.Size = new Size(120, 15);
+            this.lblRateLimitBase.Text = "基本待機時間:";
+
+            // numRateLimitBase
+            this.numRateLimitBase.Location = new Point(140, 22);
+            this.numRateLimitBase.Maximum = new decimal(new int[] { 300000, 0, 0, 0 });
+            this.numRateLimitBase.Minimum = new decimal(new int[] { 5000, 0, 0, 0 });
+            this.numRateLimitBase.Increment = new decimal(new int[] { 5000, 0, 0, 0 });
+            this.numRateLimitBase.Name = "numRateLimitBase";
+            this.numRateLimitBase.Size = new Size(80, 23);
+            this.numRateLimitBase.Value = new decimal(new int[] { 30000, 0, 0, 0 });
+
+            // lblRateLimitBaseUnit
+            this.lblRateLimitBaseUnit.AutoSize = true;
+            this.lblRateLimitBaseUnit.Location = new Point(225, 25);
+            this.lblRateLimitBaseUnit.Text = "ミリ秒";
+
+            // lblRateLimitMax
+            this.lblRateLimitMax.AutoSize = true;
+            this.lblRateLimitMax.Location = new Point(10, 55);
+            this.lblRateLimitMax.Name = "lblRateLimitMax";
+            this.lblRateLimitMax.Size = new Size(120, 15);
+            this.lblRateLimitMax.Text = "最大待機時間:";
+
+            // numRateLimitMax
+            this.numRateLimitMax.Location = new Point(140, 52);
+            this.numRateLimitMax.Maximum = new decimal(new int[] { 600000, 0, 0, 0 });
+            this.numRateLimitMax.Minimum = new decimal(new int[] { 30000, 0, 0, 0 });
+            this.numRateLimitMax.Increment = new decimal(new int[] { 30000, 0, 0, 0 });
+            this.numRateLimitMax.Name = "numRateLimitMax";
+            this.numRateLimitMax.Size = new Size(80, 23);
+            this.numRateLimitMax.Value = new decimal(new int[] { 300000, 0, 0, 0 });
+
+            // lblRateLimitMaxUnit
+            this.lblRateLimitMaxUnit.AutoSize = true;
+            this.lblRateLimitMaxUnit.Location = new Point(225, 55);
+            this.lblRateLimitMaxUnit.Text = "ミリ秒";
+
+            // chkExponentialBackoff
+            this.chkExponentialBackoff.AutoSize = true;
+            this.chkExponentialBackoff.Checked = true;
+            this.chkExponentialBackoff.CheckState = CheckState.Checked;
+            this.chkExponentialBackoff.Location = new Point(10, 85);
+            this.chkExponentialBackoff.Name = "chkExponentialBackoff";
+            this.chkExponentialBackoff.Size = new Size(320, 19);
+            this.chkExponentialBackoff.Text = "エクスポネンシャルバックオフを有効にする（連続エラー時に待機時間を増加）";
+            this.chkExponentialBackoff.UseVisualStyleBackColor = true;
+
+            // lblAdvancedNote
+            this.lblAdvancedNote.AutoSize = true;
+            this.lblAdvancedNote.ForeColor = Color.Gray;
+            this.lblAdvancedNote.Location = new Point(10, 280);
+            this.lblAdvancedNote.Name = "lblAdvancedNote";
+            this.lblAdvancedNote.Size = new Size(420, 60);
+            this.lblAdvancedNote.Text = "※ レート制限設定はサーバー負荷を軽減し、403/429エラーを防ぎます。\r\n※ 値が小さすぎるとアクセス制限される可能性があります。\r\n※ 大きすぎるとダウンロードに時間がかかります。";
+
+            // 
             // tabBackup
             // 
             this.tabBackup.Controls.Add(this.grpExport);
@@ -551,6 +780,8 @@ namespace IwaraDownloader.Forms
             this.tabControl.ResumeLayout(false);
             this.tabGeneral.ResumeLayout(false);
             this.tabAccount.ResumeLayout(false);
+            this.tabAdvanced.ResumeLayout(false);
+            this.tabAdvanced.PerformLayout();
             this.tabBackup.ResumeLayout(false);
             this.grpDownload.ResumeLayout(false);
             this.grpDownload.PerformLayout();
@@ -560,10 +791,20 @@ namespace IwaraDownloader.Forms
             this.grpNotification.PerformLayout();
             this.grpAccount.ResumeLayout(false);
             this.grpAccount.PerformLayout();
+            this.grpRateLimit.ResumeLayout(false);
+            this.grpRateLimit.PerformLayout();
+            this.grpErrorHandling.ResumeLayout(false);
+            this.grpErrorHandling.PerformLayout();
             this.grpExport.ResumeLayout(false);
             this.grpImport.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numPageDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitBase)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitMax)).EndInit();
             this.ResumeLayout(false);
         }
 
@@ -572,6 +813,7 @@ namespace IwaraDownloader.Forms
         private TabControl tabControl;
         private TabPage tabGeneral;
         private TabPage tabAccount;
+        private TabPage tabAdvanced;
         private TabPage tabBackup;
         private GroupBox grpDownload;
         private Label lblDownloadFolder;
@@ -607,5 +849,29 @@ namespace IwaraDownloader.Forms
         private Button btnOk;
         private Button btnCancel;
         private Button btnApply;
+
+        // 詳細設定（レート制限）
+        private GroupBox grpRateLimit;
+        private Label lblApiDelay;
+        private NumericUpDown numApiDelay;
+        private Label lblApiDelayUnit;
+        private Label lblDownloadDelay;
+        private NumericUpDown numDownloadDelay;
+        private Label lblDownloadDelayUnit;
+        private Label lblChannelDelay;
+        private NumericUpDown numChannelDelay;
+        private Label lblChannelDelayUnit;
+        private Label lblPageDelay;
+        private NumericUpDown numPageDelay;
+        private Label lblPageDelayUnit;
+        private GroupBox grpErrorHandling;
+        private Label lblRateLimitBase;
+        private NumericUpDown numRateLimitBase;
+        private Label lblRateLimitBaseUnit;
+        private Label lblRateLimitMax;
+        private NumericUpDown numRateLimitMax;
+        private Label lblRateLimitMaxUnit;
+        private CheckBox chkExponentialBackoff;
+        private Label lblAdvancedNote;
     }
 }

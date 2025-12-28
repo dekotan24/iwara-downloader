@@ -64,6 +64,15 @@ namespace IwaraDownloader.Forms
             // アカウント
             txtUsername.Text = settings.IwaraUsername;
             txtPassword.Text = _settingsManager.GetIwaraPassword();
+
+            // レート制限設定
+            numApiDelay.Value = settings.ApiRequestDelayMs;
+            numDownloadDelay.Value = settings.DownloadDelayMs;
+            numChannelDelay.Value = settings.ChannelCheckDelayMs;
+            numPageDelay.Value = settings.PageFetchDelayMs;
+            numRateLimitBase.Value = settings.RateLimitBaseDelayMs;
+            numRateLimitMax.Value = settings.RateLimitMaxDelayMs;
+            chkExponentialBackoff.Checked = settings.EnableExponentialBackoff;
         }
 
         /// <summary>
@@ -95,6 +104,15 @@ namespace IwaraDownloader.Forms
             // アカウント
             settings.IwaraUsername = txtUsername.Text;
             _settingsManager.SetIwaraPassword(txtPassword.Text);
+
+            // レート制限設定
+            settings.ApiRequestDelayMs = (int)numApiDelay.Value;
+            settings.DownloadDelayMs = (int)numDownloadDelay.Value;
+            settings.ChannelCheckDelayMs = (int)numChannelDelay.Value;
+            settings.PageFetchDelayMs = (int)numPageDelay.Value;
+            settings.RateLimitBaseDelayMs = (int)numRateLimitBase.Value;
+            settings.RateLimitMaxDelayMs = (int)numRateLimitMax.Value;
+            settings.EnableExponentialBackoff = chkExponentialBackoff.Checked;
 
             // 保存
             _settingsManager.Save();

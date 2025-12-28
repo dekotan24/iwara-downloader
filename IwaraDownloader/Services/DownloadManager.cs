@@ -179,8 +179,11 @@ namespace IwaraDownloader.Services
 
                     await _downloadSemaphore.WaitAsync(_globalCts.Token);
                     
-                    // 接続エラー対策：DL開始前に少し待機
-                    await Task.Delay(1000, _globalCts.Token);
+                    // レート制限：DL開始前に設定値分待機
+                    var settings = SettingsManager.Instance.Settings;
+                    var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最侎1秒
+                    System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
+                    await Task.Delay(delayMs, _globalCts.Token);
                     
                     _ = ExecuteDownloadAsync(task);
                 }
@@ -408,65 +411,87 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 新着動画をチェック（IwaraApiService使用）
+        /// 新着動画をチェック（全チャンネル）
         /// </summary>
         public async Task CheckForNewVideosAsync(IProgress<string>? progress = null)
         {
             var users = _database.GetEnabledSubscribedUsers();
+            var settings = SettingsManager.Instance.Settings;
+            var isFirstUser = true;
 
             foreach (var user in users)
             {
-                try
+                // チャンネル間のディレイ（最初のユーザー以外）
+                if (!isFirstUser)
                 {
-                    progress?.Report($"{user.Username}の動画を確認中...");
-
-                    // IwaraApiServiceで動画一覧を取得
-                    var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress);
-
-                    var newVideos = new List<VideoInfo>();
-
-                    foreach (var video in videos)
-                    {
-                        if (!_database.VideoExists(video.VideoId))
-                        {
-                            video.AuthorUserId = user.UserId;
-                            video.AuthorUsername = user.Username;
-                            video.SubscribedUserId = user.Id;
-                            video.Status = DownloadStatus.Pending;
-                            video.Id = _database.AddVideo(video);
-                            newVideos.Add(video);
-                        }
-                    }
-
-                    // ユーザー情報更新
-                    user.LastCheckedAt = DateTime.Now;
-                    user.TotalVideoCount = videos.Count;
-                    _database.UpdateSubscribedUser(user);
-
-                    if (newVideos.Count > 0)
-                    {
-                        NewVideosFound?.Invoke(this, (user, newVideos));
-
-                        // 自動DLオプションが有効な場合のみキューに追加
-                        if (SettingsManager.Instance.Settings.AutoDownloadOnCheck)
-                        {
-                            foreach (var video in newVideos)
-                            {
-                                EnqueueDownload(video, true, user);
-                            }
-                        }
-
-                        NotificationService.Instance.NotifyNewVideosFound(user.Username, newVideos.Count);
-                    }
+                    var channelDelay = Math.Max(settings.ChannelCheckDelayMs, 1000);
+                    progress?.Report($"次のチャンネルまで{channelDelay / 1000.0:F1}秒待機中...");
+                    System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {channelDelay}ms before next channel...");
+                    await Task.Delay(channelDelay);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"チェックエラー ({user.Username}): {ex.Message}");
-                    progress?.Report($"エラー ({user.Username}): {ex.Message}");
-                }
+                isFirstUser = false;
+
+                await CheckForNewVideosAsync(user, progress);
             }
 
             AutoCheckCompleted?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 新着動画をチェック（単一チャンネル）
+        /// </summary>
+        public async Task CheckForNewVideosAsync(SubscribedUser user, IProgress<string>? progress = null)
+        {
+            try
+            {
+                progress?.Report($"{user.Username}の動画を確認中...");
+
+                // IwaraApiServiceで動画一覧を取得
+                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress);
+
+                var newVideos = new List<VideoInfo>();
+
+                foreach (var video in videos)
+                {
+                    if (!_database.VideoExists(video.VideoId))
+                    {
+                        video.AuthorUserId = user.UserId;
+                        video.AuthorUsername = user.Username;
+                        video.SubscribedUserId = user.Id;
+                        video.Status = DownloadStatus.Pending;
+                        video.Id = _database.AddVideo(video);
+                        newVideos.Add(video);
+                    }
+                }
+
+                // ユーザー情報更新
+                user.LastCheckedAt = DateTime.Now;
+                user.TotalVideoCount = videos.Count;
+                _database.UpdateSubscribedUser(user);
+
+                if (newVideos.Count > 0)
+                {
+                    NewVideosFound?.Invoke(this, (user, newVideos));
+
+                    // 自動DLオプションが有効な場合のみキューに追加
+                    if (SettingsManager.Instance.Settings.AutoDownloadOnCheck)
+                    {
+                        foreach (var video in newVideos)
+                        {
+                            EnqueueDownload(video, true, user);
+                        }
+                    }
+
+                    NotificationService.Instance.NotifyNewVideosFound(user.Username, newVideos.Count);
+                }
+
+                progress?.Report($"{user.Username}: {videos.Count}件の動画、{newVideos.Count}件の新着");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"チェックエラー ({user.Username}): {ex.Message}");
+                progress?.Report($"エラー ({user.Username}): {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -494,12 +519,18 @@ namespace IwaraDownloader.Services
             var existing = _database.GetSubscribedUserByUserId(username);
             if (existing != null)
             {
+                progress?.Report($"{username}は既に登録済みです");
                 return existing;
             }
 
-            // IwaraApiServiceで動画数を確認（ユーザーが存在するか確認）
+            // IwaraApiServiceで動画一覧を取得
             progress?.Report($"{username}のプロフィールを確認中...");
             var videos = await _iwaraApi.GetUserVideosAsync(username, progress);
+
+            if (videos.Count == 0)
+            {
+                progress?.Report($"{username}: 動画が見つかりませんでした（ユーザーが存在しないか、動画が0件の可能性があります）");
+            }
 
             var profileUrl = $"https://www.iwara.tv/profile/{username}/videos";
 
@@ -509,11 +540,36 @@ namespace IwaraDownloader.Services
                 Username = username,
                 ProfileUrl = profileUrl,
                 CreatedAt = DateTime.Now,
+                LastCheckedAt = DateTime.Now,
                 IsEnabled = true,
                 TotalVideoCount = videos.Count
             };
 
             user.Id = _database.AddSubscribedUser(user);
+
+            // 取得した動画をDBに保存
+            var addedCount = 0;
+            foreach (var video in videos)
+            {
+                if (!_database.VideoExists(video.VideoId))
+                {
+                    video.AuthorUserId = user.UserId;
+                    video.AuthorUsername = user.Username;
+                    video.SubscribedUserId = user.Id;
+                    video.Status = DownloadStatus.Pending;
+                    video.Id = _database.AddVideo(video);
+                    addedCount++;
+                }
+            }
+
+            progress?.Report($"{username}: {videos.Count}件の動画を登録しました");
+
+            // 新着動画があればイベント発火
+            if (addedCount > 0)
+            {
+                var addedVideos = _database.GetVideosBySubscribedUser(user.Id);
+                NewVideosFound?.Invoke(this, (user, addedVideos));
+            }
 
             return user;
         }

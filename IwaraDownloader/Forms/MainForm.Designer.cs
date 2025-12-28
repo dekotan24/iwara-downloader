@@ -216,6 +216,7 @@ namespace IwaraDownloader.Forms
             this.treeViewChannels.Size = new Size(250, 511);
             this.treeViewChannels.TabIndex = 0;
             this.treeViewChannels.AfterSelect += new TreeViewEventHandler(this.treeViewChannels_AfterSelect);
+            this.treeViewChannels.NodeMouseClick += new TreeNodeMouseClickEventHandler(this.treeViewChannels_NodeMouseClick);
             this.treeViewChannels.NodeMouseDoubleClick += new TreeNodeMouseClickEventHandler(this.treeViewChannels_NodeMouseDoubleClick);
 
             // 
