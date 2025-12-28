@@ -1,109 +1,108 @@
 @echo off
-REM iwara_setup.bat - Pythonã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—ï¼ˆEmbeddable Pythonå¯¾å¿œï¼‰
-REM ä½¿ç”¨æ–¹æ³•: set PYTHON_PATH=C:\...\python.exe && iwara_setup.bat
+REM iwara_setup.bat - PythonƒZƒbƒgƒAƒbƒviEmbeddable Python‘Î‰žj
+REM Žg—p•û–@: set PYTHON_PATH=C:\...\python.exe && iwara_setup.bat
 
 setlocal enabledelayedexpansion
-chcp 65001 >nul
 
 echo ========================================
-echo iwara-downloader Pythonã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—
+echo iwara-downloader PythonƒZƒbƒgƒAƒbƒv
 echo ========================================
 echo.
 
-REM Pythonãƒ‘ã‚¹ã‚’ç¢ºèª
+REM PythonƒpƒX‚ðŠm”F
 if not defined PYTHON_PATH (
-    echo PYTHON_PATHãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚
+    echo PYTHON_PATH‚ªÝ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB
     where python >nul 2>&1
     if !errorlevel! equ 0 (
         set "PYTHON_PATH=python"
-        echo pythonã‚³ãƒžãƒ³ãƒ‰ã‚’ä½¿ç”¨ã—ã¾ã™ã€‚
+        echo pythonƒRƒ}ƒ“ƒh‚ðŽg—p‚µ‚Ü‚·B
     ) else (
-        echo PythonãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚
+        echo Python‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB
         exit /b 1
     )
 )
 
-REM ã‚¯ã‚©ãƒ¼ãƒˆã‚’å‰Šé™¤
+REM ƒNƒH[ƒg‚ðíœ
 set "PYTHON_PATH=%PYTHON_PATH:"=%"
-echo Pythonãƒ‘ã‚¹: %PYTHON_PATH%
+echo PythonƒpƒX: %PYTHON_PATH%
 echo.
 
-REM Pythonã®ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’å–å¾—
+REM Python‚ÌƒfƒBƒŒƒNƒgƒŠ‚ðŽæ“¾
 for %%I in ("%PYTHON_PATH%") do set "PYTHON_DIR=%%~dpI"
-echo Pythonãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª: %PYTHON_DIR%
+echo PythonƒfƒBƒŒƒNƒgƒŠ: %PYTHON_DIR%
 
-REM Pythonãƒãƒ¼ã‚¸ãƒ§ãƒ³ç¢ºèª
-echo Pythonãƒãƒ¼ã‚¸ãƒ§ãƒ³ã‚’ç¢ºèªä¸­...
+REM Pythonƒo[ƒWƒ‡ƒ“Šm”F
+echo Pythonƒo[ƒWƒ‡ƒ“‚ðŠm”F’†...
 "%PYTHON_PATH%" --version
 if %errorlevel% neq 0 (
-    echo Pythonã®å®Ÿè¡Œã«å¤±æ•—ã—ã¾ã—ãŸã€‚
+    echo Python‚ÌŽÀs‚ÉŽ¸”s‚µ‚Ü‚µ‚½B
     exit /b 1
 )
 echo.
 
-REM Embeddable Pythonç”¨: python3*._pthãƒ•ã‚¡ã‚¤ãƒ«ã‚’æŽ¢ã—ã¦ä¿®æ­£ï¼ˆå…¨ãƒãƒ¼ã‚¸ãƒ§ãƒ³å¯¾å¿œï¼‰
+REM Embeddable Python—p: python3*._pthƒtƒ@ƒCƒ‹‚ð’T‚µ‚ÄC³i‘Sƒo[ƒWƒ‡ƒ“‘Î‰žj
 set "PTH_FOUND=0"
 for %%F in ("%PYTHON_DIR%python3*._pth") do (
-    echo Embeddable Pythonã‚’æ¤œå‡ºã—ã¾ã—ãŸ: %%~nxF
-    echo _pthãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä¿®æ­£ä¸­...
+    echo Embeddable Python‚ðŒŸo‚µ‚Ü‚µ‚½: %%~nxF
+    echo _pthƒtƒ@ƒCƒ‹‚ðC³’†...
     powershell -Command "(Get-Content '%%F') -replace '#import site', 'import site' | Set-Content '%%F'"
-    echo _pthä¿®æ­£å®Œäº†
+    echo _pthC³Š®—¹
     set "PTH_FOUND=1"
     echo.
 )
 
-REM pipãŒå­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
+REM pip‚ª‘¶Ý‚·‚é‚©Šm”F
 "%PYTHON_PATH%" -m pip --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo pipãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚get-pip.pyã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ã¦ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã—ã¾ã™...
+    echo pip‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñBget-pip.py‚ðƒ_ƒEƒ“ƒ[ƒh‚µ‚ÄƒCƒ“ƒXƒg[ƒ‹‚µ‚Ü‚·...
     
-    REM get-pip.pyã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰
+    REM get-pip.py‚ðƒ_ƒEƒ“ƒ[ƒh
     curl -sS https://bootstrap.pypa.io/get-pip.py -o "%PYTHON_DIR%get-pip.py"
     if %errorlevel% neq 0 (
-        echo get-pip.pyã®ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•—ã—ã¾ã—ãŸã€‚
+        echo get-pip.py‚Ìƒ_ƒEƒ“ƒ[ƒh‚ÉŽ¸”s‚µ‚Ü‚µ‚½B
         exit /b 1
     )
     
-    REM pipã‚’ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«
+    REM pip‚ðƒCƒ“ƒXƒg[ƒ‹
     "%PYTHON_PATH%" "%PYTHON_DIR%get-pip.py" --no-warn-script-location
     if %errorlevel% neq 0 (
-        echo pipã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã«å¤±æ•—ã—ã¾ã—ãŸã€‚
+        echo pip‚ÌƒCƒ“ƒXƒg[ƒ‹‚ÉŽ¸”s‚µ‚Ü‚µ‚½B
         exit /b 1
     )
-    echo pipã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«å®Œäº†
+    echo pipƒCƒ“ƒXƒg[ƒ‹Š®—¹
     echo.
 )
 
-REM pipãƒãƒ¼ã‚¸ãƒ§ãƒ³ç¢ºèª
-echo pipãƒãƒ¼ã‚¸ãƒ§ãƒ³:
+REM pipƒo[ƒWƒ‡ƒ“Šm”F
+echo pipƒo[ƒWƒ‡ƒ“:
 "%PYTHON_PATH%" -m pip --version
 echo.
 
-REM cloudscraperã‚’ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«
-echo cloudscraperã‚’ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ä¸­...
+REM cloudscraper‚ðƒCƒ“ƒXƒg[ƒ‹
+echo cloudscraper‚ðƒCƒ“ƒXƒg[ƒ‹’†...
 "%PYTHON_PATH%" -m pip install cloudscraper --quiet --no-warn-script-location
 if %errorlevel% neq 0 (
-    echo cloudscraperã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã«å¤±æ•—ã—ã¾ã—ãŸã€‚
+    echo cloudscraper‚ÌƒCƒ“ƒXƒg[ƒ‹‚ÉŽ¸”s‚µ‚Ü‚µ‚½B
     exit /b 1
 )
 
-REM ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ç¢ºèª
-echo ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ç¢ºèªä¸­...
+REM ƒCƒ“ƒXƒg[ƒ‹Šm”F
+echo ƒCƒ“ƒXƒg[ƒ‹Šm”F’†...
 "%PYTHON_PATH%" -c "import cloudscraper; print('cloudscraper OK')"
 if %errorlevel% neq 0 (
-    echo cloudscraperã®ã‚¤ãƒ³ãƒãƒ¼ãƒˆã«å¤±æ•—ã—ã¾ã—ãŸã€‚
+    echo cloudscraper‚ÌƒCƒ“ƒ|[ƒg‚ÉŽ¸”s‚µ‚Ü‚µ‚½B
     exit /b 1
 )
 
 echo.
 echo ========================================
-echo ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—å®Œäº†ï¼
+echo ƒZƒbƒgƒAƒbƒvŠ®—¹I
 echo ========================================
 echo.
 echo Python: %PYTHON_PATH%
 echo.
 
-REM å®Œäº†ãƒžãƒ¼ã‚«ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆ
+REM Š®—¹ƒ}[ƒJ[ƒtƒ@ƒCƒ‹‚ðì¬
 echo %date% %time% > "%~dp0.python_setup_done"
 
 exit /b 0
