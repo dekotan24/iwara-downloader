@@ -62,7 +62,13 @@ namespace IwaraDownloader.Models
         /// <summary>チェック時に自動でダウンロードを開始</summary>
         public bool AutoDownloadOnCheck { get; set; } = true;
 
-        /// <summary>iwaraユーザー名</summary>
+        /// <summary>Pythonの実行パス</summary>
+        public string PythonPath { get; set; } = "python";
+
+        /// <summary>iwaraメールアドレス</summary>
+        public string IwaraEmail { get; set; } = string.Empty;
+
+        /// <summary>iwaraユーザー名（表示用）</summary>
         public string IwaraUsername { get; set; } = string.Empty;
 
         /// <summary>iwaraパスワード（暗号化済み）</summary>

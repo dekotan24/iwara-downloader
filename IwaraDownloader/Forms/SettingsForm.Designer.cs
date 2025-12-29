@@ -45,11 +45,19 @@ namespace IwaraDownloader.Forms
             this.chkStartMinimized = new CheckBox();
 
             // アカウント設定
+            this.grpPython = new GroupBox();
+            this.lblPythonPath = new Label();
+            this.txtPythonPath = new TextBox();
+            this.btnBrowsePython = new Button();
+            this.lblPythonNote = new Label();
+            
             this.grpAccount = new GroupBox();
-            this.lblUsername = new Label();
-            this.txtUsername = new TextBox();
+            this.lblEmail = new Label();
+            this.txtEmail = new TextBox();
             this.lblPassword = new Label();
             this.txtPassword = new TextBox();
+            this.lblLoginStatus = new Label();
+            this.btnReLogin = new Button();
             this.lblAccountNote = new Label();
 
             // 詳細設定（レート制限）
@@ -98,6 +106,7 @@ namespace IwaraDownloader.Forms
             this.grpDownload.SuspendLayout();
             this.grpAutoCheck.SuspendLayout();
             this.grpNotification.SuspendLayout();
+            this.grpPython.SuspendLayout();
             this.grpAccount.SuspendLayout();
             this.grpRateLimit.SuspendLayout();
             this.grpErrorHandling.SuspendLayout();
@@ -373,6 +382,7 @@ namespace IwaraDownloader.Forms
             // 
             // tabAccount
             // 
+            this.tabAccount.Controls.Add(this.grpPython);
             this.tabAccount.Controls.Add(this.grpAccount);
             this.tabAccount.Location = new Point(4, 24);
             this.tabAccount.Name = "tabAccount";
@@ -383,37 +393,83 @@ namespace IwaraDownloader.Forms
             this.tabAccount.UseVisualStyleBackColor = true;
 
             // 
+            // grpPython
+            // 
+            this.grpPython.Controls.Add(this.lblPythonPath);
+            this.grpPython.Controls.Add(this.txtPythonPath);
+            this.grpPython.Controls.Add(this.btnBrowsePython);
+            this.grpPython.Controls.Add(this.lblPythonNote);
+            this.grpPython.Location = new Point(6, 6);
+            this.grpPython.Name = "grpPython";
+            this.grpPython.Size = new Size(440, 90);
+            this.grpPython.TabIndex = 0;
+            this.grpPython.TabStop = false;
+            this.grpPython.Text = "Python環境";
+
+            // lblPythonPath
+            this.lblPythonPath.AutoSize = true;
+            this.lblPythonPath.Location = new Point(10, 30);
+            this.lblPythonPath.Name = "lblPythonPath";
+            this.lblPythonPath.Size = new Size(80, 15);
+            this.lblPythonPath.Text = "Pythonパス:";
+
+            // txtPythonPath
+            this.txtPythonPath.Location = new Point(100, 27);
+            this.txtPythonPath.Name = "txtPythonPath";
+            this.txtPythonPath.Size = new Size(260, 23);
+            this.txtPythonPath.TabIndex = 1;
+
+            // btnBrowsePython
+            this.btnBrowsePython.Location = new Point(366, 26);
+            this.btnBrowsePython.Name = "btnBrowsePython";
+            this.btnBrowsePython.Size = new Size(60, 25);
+            this.btnBrowsePython.TabIndex = 2;
+            this.btnBrowsePython.Text = "参照...";
+            this.btnBrowsePython.UseVisualStyleBackColor = true;
+            this.btnBrowsePython.Click += new EventHandler(this.btnBrowsePython_Click);
+
+            // lblPythonNote
+            this.lblPythonNote.AutoSize = true;
+            this.lblPythonNote.ForeColor = Color.Gray;
+            this.lblPythonNote.Location = new Point(10, 60);
+            this.lblPythonNote.Name = "lblPythonNote";
+            this.lblPythonNote.Size = new Size(400, 15);
+            this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います（ライブラリの再インストールは不要）";
+
+            // 
             // grpAccount
             // 
-            this.grpAccount.Controls.Add(this.lblUsername);
-            this.grpAccount.Controls.Add(this.txtUsername);
+            this.grpAccount.Controls.Add(this.lblEmail);
+            this.grpAccount.Controls.Add(this.txtEmail);
             this.grpAccount.Controls.Add(this.lblPassword);
             this.grpAccount.Controls.Add(this.txtPassword);
+            this.grpAccount.Controls.Add(this.lblLoginStatus);
+            this.grpAccount.Controls.Add(this.btnReLogin);
             this.grpAccount.Controls.Add(this.lblAccountNote);
-            this.grpAccount.Location = new Point(6, 6);
+            this.grpAccount.Location = new Point(6, 102);
             this.grpAccount.Name = "grpAccount";
-            this.grpAccount.Size = new Size(440, 140);
-            this.grpAccount.TabIndex = 0;
+            this.grpAccount.Size = new Size(440, 165);
+            this.grpAccount.TabIndex = 1;
             this.grpAccount.TabStop = false;
             this.grpAccount.Text = "iwaraアカウント";
 
             // 
-            // lblUsername
+            // lblEmail
             // 
-            this.lblUsername.AutoSize = true;
-            this.lblUsername.Location = new Point(10, 30);
-            this.lblUsername.Name = "lblUsername";
-            this.lblUsername.Size = new Size(60, 15);
-            this.lblUsername.TabIndex = 0;
-            this.lblUsername.Text = "ユーザー名:";
+            this.lblEmail.AutoSize = true;
+            this.lblEmail.Location = new Point(10, 30);
+            this.lblEmail.Name = "lblEmail";
+            this.lblEmail.Size = new Size(80, 15);
+            this.lblEmail.TabIndex = 0;
+            this.lblEmail.Text = "メールアドレス:";
 
             // 
-            // txtUsername
+            // txtEmail
             // 
-            this.txtUsername.Location = new Point(80, 27);
-            this.txtUsername.Name = "txtUsername";
-            this.txtUsername.Size = new Size(200, 23);
-            this.txtUsername.TabIndex = 1;
+            this.txtEmail.Location = new Point(100, 27);
+            this.txtEmail.Name = "txtEmail";
+            this.txtEmail.Size = new Size(200, 23);
+            this.txtEmail.TabIndex = 1;
 
             // 
             // lblPassword
@@ -428,11 +484,33 @@ namespace IwaraDownloader.Forms
             // 
             // txtPassword
             // 
-            this.txtPassword.Location = new Point(80, 57);
+            this.txtPassword.Location = new Point(100, 57);
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.PasswordChar = '●';
             this.txtPassword.Size = new Size(200, 23);
             this.txtPassword.TabIndex = 3;
+
+            // 
+            // lblLoginStatus
+            // 
+            this.lblLoginStatus.AutoSize = true;
+            this.lblLoginStatus.Location = new Point(310, 30);
+            this.lblLoginStatus.Name = "lblLoginStatus";
+            this.lblLoginStatus.Size = new Size(100, 15);
+            this.lblLoginStatus.TabIndex = 4;
+            this.lblLoginStatus.Text = "(未ログイン)";
+            this.lblLoginStatus.ForeColor = Color.Gray;
+
+            // 
+            // btnReLogin
+            // 
+            this.btnReLogin.Location = new Point(310, 55);
+            this.btnReLogin.Name = "btnReLogin";
+            this.btnReLogin.Size = new Size(115, 27);
+            this.btnReLogin.TabIndex = 5;
+            this.btnReLogin.Text = "再ログイン";
+            this.btnReLogin.UseVisualStyleBackColor = true;
+            this.btnReLogin.Click += new EventHandler(this.btnReLogin_Click);
 
             // 
             // lblAccountNote
@@ -441,9 +519,9 @@ namespace IwaraDownloader.Forms
             this.lblAccountNote.ForeColor = Color.Gray;
             this.lblAccountNote.Location = new Point(10, 95);
             this.lblAccountNote.Name = "lblAccountNote";
-            this.lblAccountNote.Size = new Size(350, 30);
-            this.lblAccountNote.TabIndex = 4;
-            this.lblAccountNote.Text = "※ R-18コンテンツやプライベート動画をダウンロードするには\r\n　 iwaraアカウントでのログインが必要です。";
+            this.lblAccountNote.Size = new Size(400, 60);
+            this.lblAccountNote.TabIndex = 6;
+            this.lblAccountNote.Text = "※ R-18コンテンツやプライベート動画をダウンロードするには\r\n　 iwaraアカウントでのログインが必要です。\r\n※ メールアドレス/パスワード変更後は「再ログイン」を押してください。";
 
             // 
             // tabAdvanced
@@ -789,6 +867,8 @@ namespace IwaraDownloader.Forms
             this.grpAutoCheck.PerformLayout();
             this.grpNotification.ResumeLayout(false);
             this.grpNotification.PerformLayout();
+            this.grpPython.ResumeLayout(false);
+            this.grpPython.PerformLayout();
             this.grpAccount.ResumeLayout(false);
             this.grpAccount.PerformLayout();
             this.grpRateLimit.ResumeLayout(false);
@@ -834,11 +914,18 @@ namespace IwaraDownloader.Forms
         private CheckBox chkToast;
         private CheckBox chkStartMinimized;
         private CheckBox chkMinimizeToTray;
+        private GroupBox grpPython;
+        private Label lblPythonPath;
+        private TextBox txtPythonPath;
+        private Button btnBrowsePython;
+        private Label lblPythonNote;
         private GroupBox grpAccount;
-        private Label lblUsername;
-        private TextBox txtUsername;
+        private Label lblEmail;
+        private TextBox txtEmail;
         private Label lblPassword;
         private TextBox txtPassword;
+        private Label lblLoginStatus;
+        private Button btnReLogin;
         private Label lblAccountNote;
         private GroupBox grpExport;
         private Button btnExportSettings;

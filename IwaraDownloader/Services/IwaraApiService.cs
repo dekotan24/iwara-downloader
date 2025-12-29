@@ -11,8 +11,6 @@ namespace IwaraDownloader.Services
     {
         private readonly string _appDir;
         private readonly string _scriptPath;
-        private readonly string _pythonConfigPath;
-        private string? _pythonPath;
         private string? _token;
 
         /// <summary>ログイン済みかどうか</summary>
@@ -21,8 +19,23 @@ namespace IwaraDownloader.Services
         /// <summary>トークン</summary>
         public string? Token => _token;
 
+        /// <summary>Pythonパス（設定から取得）</summary>
+        private string PythonPath => Utils.SettingsManager.Instance.Settings.PythonPath;
+
         /// <summary>Pythonが設定されているか</summary>
-        public bool IsPythonConfigured => !string.IsNullOrEmpty(_pythonPath) && File.Exists(_pythonPath);
+        public bool IsPythonConfigured
+        {
+            get
+            {
+                var pythonPath = PythonPath;
+                if (string.IsNullOrEmpty(pythonPath)) return false;
+                // フルパスの場合はファイル存在チェック
+                if (Path.IsPathRooted(pythonPath))
+                    return File.Exists(pythonPath);
+                // "python"などPATH上のコマンドの場合は存在するとみなす
+                return true;
+            }
+        }
 
         /// <summary>スクリプトが存在するか</summary>
         public bool IsScriptReady => File.Exists(_scriptPath);
@@ -37,55 +50,59 @@ namespace IwaraDownloader.Services
         {
             _appDir = AppDomain.CurrentDomain.BaseDirectory;
             _scriptPath = Path.Combine(_appDir, "iwara_helper.py");
-            _pythonConfigPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "IwaraDownloader",
-                "python_path.txt");
-            
-            // 保存されたPythonパスを読み込み
-            LoadPythonPath();
             
             // 保存されたトークンを読み込み
             LoadToken();
+            
+            // 旧形式のPythonパスファイルがあれば設定に移行
+            MigratePythonPath();
         }
 
         #region Python Path Management
 
         /// <summary>
-        /// Pythonパスを保存
+        /// Pythonパスを保存（設定に保存）
         /// </summary>
         public void SavePythonPath(string pythonPath)
         {
-            try
-            {
-                var dir = Path.GetDirectoryName(_pythonConfigPath);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                
-                File.WriteAllText(_pythonConfigPath, pythonPath);
-                _pythonPath = pythonPath;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Pythonパス保存エラー: {ex.Message}");
-            }
+            var settings = Utils.SettingsManager.Instance.Settings;
+            settings.PythonPath = pythonPath;
+            Utils.SettingsManager.Instance.Save();
         }
 
         /// <summary>
-        /// Pythonパスを読み込み
+        /// 旧形式のPythonパスファイルから設定に移行
         /// </summary>
-        private void LoadPythonPath()
+        private void MigratePythonPath()
         {
             try
             {
-                if (File.Exists(_pythonConfigPath))
+                var oldConfigPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "IwaraDownloader",
+                    "python_path.txt");
+                
+                if (File.Exists(oldConfigPath))
                 {
-                    _pythonPath = File.ReadAllText(_pythonConfigPath).Trim();
+                    var pythonPath = File.ReadAllText(oldConfigPath).Trim();
+                    if (!string.IsNullOrEmpty(pythonPath))
+                    {
+                        // 設定がデフォルトの場合のみ移行
+                        var settings = Utils.SettingsManager.Instance.Settings;
+                        if (settings.PythonPath == "python")
+                        {
+                            settings.PythonPath = pythonPath;
+                            Utils.SettingsManager.Instance.Save();
+                            Debug.WriteLine($"Pythonパスを設定に移行しました: {pythonPath}");
+                        }
+                    }
+                    // 旧ファイルを削除
+                    File.Delete(oldConfigPath);
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Pythonパス読み込みエラー: {ex.Message}");
+                Debug.WriteLine($"Pythonパス移行エラー: {ex.Message}");
             }
         }
 
@@ -187,7 +204,7 @@ namespace IwaraDownloader.Services
 
             var psi = new ProcessStartInfo
             {
-                FileName = _pythonPath,
+                FileName = PythonPath,
                 Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -197,7 +214,7 @@ namespace IwaraDownloader.Services
                 WorkingDirectory = _appDir
             };
 
-            Debug.WriteLine($"Running: {_pythonPath} {psi.Arguments}");
+            Debug.WriteLine($"Running: {PythonPath} {psi.Arguments}");
 
             using var process = new Process { StartInfo = psi };
             var output = new System.Text.StringBuilder();
@@ -428,7 +445,7 @@ namespace IwaraDownloader.Services
 
             var psi = new ProcessStartInfo
             {
-                FileName = _pythonPath,
+                FileName = PythonPath,
                 Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,

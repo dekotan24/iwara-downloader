@@ -120,9 +120,19 @@ namespace IwaraDownloader.Utils
                 EnableToastNotification = Settings.EnableToastNotification,
                 StartMinimized = Settings.StartMinimized,
                 AutoCheckEnabled = Settings.AutoCheckEnabled,
+                PythonPath = Settings.PythonPath,
+                IwaraEmail = Settings.IwaraEmail,
                 IwaraUsername = Settings.IwaraUsername,
                 // パスワードは除外
-                IwaraPasswordEncrypted = string.Empty
+                IwaraPasswordEncrypted = string.Empty,
+                // レート制限設定もエクスポート
+                ApiRequestDelayMs = Settings.ApiRequestDelayMs,
+                DownloadDelayMs = Settings.DownloadDelayMs,
+                ChannelCheckDelayMs = Settings.ChannelCheckDelayMs,
+                PageFetchDelayMs = Settings.PageFetchDelayMs,
+                RateLimitBaseDelayMs = Settings.RateLimitBaseDelayMs,
+                RateLimitMaxDelayMs = Settings.RateLimitMaxDelayMs,
+                EnableExponentialBackoff = Settings.EnableExponentialBackoff
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };

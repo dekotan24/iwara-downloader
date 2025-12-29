@@ -59,6 +59,18 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
+        /// ユーザー名が有効かどうか（英数字、@、_、-のみ許可）
+        /// </summary>
+        public static bool IsValidUsername(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return false;
+            
+            // 英数字、@、_、- のみ許可（1～50文字）
+            return Regex.IsMatch(username, @"^[a-zA-Z0-9@_-]{1,50}$");
+        }
+
+        /// <summary>
         /// URLがiwaraの動画ページかどうか
         /// </summary>
         public static bool IsVideoUrl(string url)

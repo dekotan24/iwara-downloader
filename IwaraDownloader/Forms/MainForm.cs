@@ -257,6 +257,37 @@ namespace IwaraDownloader.Forms
         {
             var input = ShowInputDialog("チャンネル追加", "ユーザー名またはプロフィールURLを入力:");
             if (string.IsNullOrEmpty(input)) return;
+
+            // URL形式の場合はiwaraのURLかチェック
+            var isUrl = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                        input.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+            if (isUrl)
+            {
+                if (!Helpers.IsUserProfileUrl(input))
+                {
+                    MessageBox.Show(
+                        "iwara.tvのプロフィールURLを入力してください。\n\n対応形式: https://www.iwara.tv/profile/username",
+                        "無効なURL",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            else
+            {
+                // ユーザー名のバリデーション
+                if (!Helpers.IsValidUsername(input))
+                {
+                    MessageBox.Show(
+                        "無効なユーザー名です。\n\nユーザー名には英数字、@、_、- のみ使用できます。",
+                        "無効な入力",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             await AddUserAsync(input);
         }
 
@@ -264,6 +295,17 @@ namespace IwaraDownloader.Forms
         {
             var url = ShowInputDialog("動画追加", "動画URLを入力:");
             if (string.IsNullOrEmpty(url)) return;
+
+            if (!Helpers.IsVideoUrl(url))
+            {
+                MessageBox.Show(
+                    "iwara.tvの動画URLを入力してください。\n\n対応形式: https://www.iwara.tv/video/xxxxx",
+                    "無効なURL",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
             await AddVideoAsync(url);
         }
 
@@ -338,16 +380,41 @@ namespace IwaraDownloader.Forms
 
             txtUrl.Clear();
 
+            // URL形式かどうかチェック
+            var isUrl = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                        input.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
             if (Helpers.IsVideoUrl(input))
             {
+                // iwaraの動画URL
                 await AddVideoAsync(input);
             }
             else if (Helpers.IsUserProfileUrl(input))
             {
+                // iwaraのプロフィールURL
                 await AddUserAsync(input);
+            }
+            else if (isUrl)
+            {
+                // URL形式だがiwaraのURLではない
+                MessageBox.Show(
+                    "iwara.tvのURLを入力してください。\n\n対応形式:\n・動画: https://www.iwara.tv/video/xxxxx\n・チャンネル: https://www.iwara.tv/profile/username",
+                    "無効なURL",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+            else if (!Helpers.IsValidUsername(input))
+            {
+                // ユーザー名として無効な文字が含まれている
+                MessageBox.Show(
+                    "無効なユーザー名です。\n\nユーザー名には英数字、@、_、- のみ使用できます。",
+                    "無効な入力",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
             }
             else
             {
+                // 有効なユーザー名
                 await AddUserAsync(input);
             }
         }

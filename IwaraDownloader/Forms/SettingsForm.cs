@@ -11,6 +11,7 @@ namespace IwaraDownloader.Forms
     {
         private readonly SettingsManager _settingsManager;
         private readonly DatabaseService _database;
+        private readonly IwaraApiService _iwaraApi;
 
         // チェック間隔の選択肢（分）
         private readonly int[] _checkIntervalMinutes = { 30, 60, 120, 360, 720, 1440 };
@@ -20,11 +21,13 @@ namespace IwaraDownloader.Forms
             InitializeComponent();
             _settingsManager = SettingsManager.Instance;
             _database = DatabaseService.Instance;
+            _iwaraApi = new IwaraApiService();
         }
 
         private void SettingsForm_Load(object sender, EventArgs e)
         {
             LoadSettings();
+            UpdateLoginStatusDisplay();
         }
 
         /// <summary>
@@ -61,8 +64,11 @@ namespace IwaraDownloader.Forms
             chkStartMinimized.Checked = settings.StartMinimized;
             chkMinimizeToTray.Checked = settings.MinimizeToTray;
 
+            // Python環境
+            txtPythonPath.Text = settings.PythonPath;
+
             // アカウント
-            txtUsername.Text = settings.IwaraUsername;
+            txtEmail.Text = settings.IwaraEmail;
             txtPassword.Text = _settingsManager.GetIwaraPassword();
 
             // レート制限設定
@@ -101,8 +107,11 @@ namespace IwaraDownloader.Forms
             settings.StartMinimized = chkStartMinimized.Checked;
             settings.MinimizeToTray = chkMinimizeToTray.Checked;
 
+            // Python環境
+            settings.PythonPath = txtPythonPath.Text.Trim();
+
             // アカウント
-            settings.IwaraUsername = txtUsername.Text;
+            settings.IwaraEmail = txtEmail.Text.Trim();
             _settingsManager.SetIwaraPassword(txtPassword.Text);
 
             // レート制限設定
@@ -130,6 +139,101 @@ namespace IwaraDownloader.Forms
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 txtDownloadFolder.Text = dialog.SelectedPath;
+            }
+        }
+
+        private void btnBrowsePython_Click(object sender, EventArgs e)
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Title = "Python実行ファイルを選択",
+                Filter = "実行ファイル (*.exe)|*.exe|すべてのファイル (*.*)|*.*",
+                FileName = "python.exe"
+            };
+
+            // よくあるPythonインストール先を探す
+            var possiblePaths = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python"),
+                @"C:\Python311",
+                @"C:\Python312",
+                @"C:\Python310"
+            };
+
+            foreach (var path in possiblePaths)
+            {
+                if (Directory.Exists(path))
+                {
+                    dialog.InitialDirectory = path;
+                    break;
+                }
+            }
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtPythonPath.Text = dialog.FileName;
+            }
+        }
+
+        private async void btnReLogin_Click(object sender, EventArgs e)
+        {
+            var email = txtEmail.Text.Trim();
+            var password = txtPassword.Text;
+
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+            {
+                MessageBox.Show("メールアドレスとパスワードを入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 先に設定を保存（Pythonパスを含む）
+            SaveSettings();
+
+            btnReLogin.Enabled = false;
+            btnReLogin.Text = "ログイン中...";
+
+            try
+            {
+                // 一度ログアウトしてから再ログイン
+                _iwaraApi.Logout();
+
+                var (success, error) = await _iwaraApi.LoginAsync(email, password);
+
+                if (success)
+                {
+                    MessageBox.Show("ログインに成功しました！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show($"ログインに失敗しました:\n{error}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ログイン中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnReLogin.Enabled = true;
+                btnReLogin.Text = "再ログイン";
+                UpdateLoginStatusDisplay();
+            }
+        }
+
+        /// <summary>
+        /// ログイン状態表示を更新
+        /// </summary>
+        private void UpdateLoginStatusDisplay()
+        {
+            if (_iwaraApi.IsLoggedIn)
+            {
+                lblLoginStatus.Text = "(ログイン済)";
+                lblLoginStatus.ForeColor = Color.Green;
+            }
+            else
+            {
+                lblLoginStatus.Text = "(未ログイン)";
+                lblLoginStatus.ForeColor = Color.Gray;
             }
         }
 
