@@ -712,6 +712,14 @@ namespace IwaraDownloader.Services
             return null;
         }
 
+        /// <summary>
+        /// アクティブなタスク一覧を取得
+        /// </summary>
+        public List<DownloadTask> GetActiveTasks()
+        {
+            return _activeTasks.Values.ToList();
+        }
+
         /// <summary>環境が準備できているか</summary>
         public bool IsEnvironmentReady => _iwaraApi.IsPythonConfigured && _iwaraApi.IsSetupDone && _iwaraApi.IsScriptReady;
 

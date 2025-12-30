@@ -129,6 +129,38 @@ namespace IwaraDownloader.Forms
             }
         }
 
+        /// <summary>
+        /// フォームレベルのキーボードショートカット
+        /// </summary>
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            // F5: 新着チェック
+            if (e.KeyCode == Keys.F5)
+            {
+                e.Handled = true;
+                if (btnCheckNow.Enabled)
+                {
+                    btnCheckNow_Click(sender, e);
+                }
+            }
+            // Ctrl+D: 選択動画をダウンロード
+            else if (e.Control && e.KeyCode == Keys.D)
+            {
+                e.Handled = true;
+                if (listViewVideos.SelectedItems.Count > 0)
+                {
+                    menuVidDownload_Click(sender, e);
+                }
+            }
+            // Ctrl+F: フィルターボックスにフォーカス
+            else if (e.Control && e.KeyCode == Keys.F)
+            {
+                e.Handled = true;
+                txtVideoFilter.Focus();
+                txtVideoFilter.SelectAll();
+            }
+        }
+
         #endregion
 
         #region Environment Check
@@ -475,6 +507,44 @@ namespace IwaraDownloader.Forms
 
             try
             {
+                // 既存チェック
+                var videoId = Helpers.ExtractVideoIdFromUrl(url);
+                if (!string.IsNullOrEmpty(videoId))
+                {
+                    var existingVideo = _database.GetVideoByVideoId(videoId);
+                    if (existingVideo != null)
+                    {
+                        var statusText = GetStatusText(existingVideo.Status);
+                        var result = MessageBox.Show(
+                            $"この動画は既に登録されています。\n\n" +
+                            $"タイトル: {existingVideo.Title}\n" +
+                            $"状態: {statusText}\n\n" +
+                            $"ダウンロードキューに追加しますか？",
+                            "重複確認",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (result == DialogResult.Yes)
+                        {
+                            // キューに追加
+                            SubscribedUser? user = null;
+                            if (existingVideo.SubscribedUserId.HasValue)
+                            {
+                                user = _database.GetSubscribedUserById(existingVideo.SubscribedUserId.Value);
+                            }
+                            _downloadManager.EnqueueDownload(existingVideo, existingVideo.SubscribedUserId.HasValue, user);
+                            RefreshChannelTree();
+                            RefreshVideoList();
+                            UpdateStatusBar($"動画「{existingVideo.Title}」をキューに追加しました");
+                        }
+                        else
+                        {
+                            UpdateStatusBar("キャンセルされました");
+                        }
+                        return;
+                    }
+                }
+
                 var progress = new Progress<string>(msg => UpdateStatusBar(msg));
                 var task = await _downloadManager.AddSingleVideoAsync(url, progress);
 
@@ -706,17 +776,7 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        /// <summary>
-        /// 右クリック時にノードを選択状態にする
-        /// </summary>
-        private void treeViewChannels_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
-        {
-            // 右クリック時はクリックしたノードを選択状態にする
-            if (e.Button == MouseButtons.Right && e.Node != null)
-            {
-                treeViewChannels.SelectedNode = e.Node;
-            }
-        }
+        // NodeMouseClickは不要（contextMenuChannel_Opening内でノード選択を行う）
 
         #endregion
 
@@ -817,7 +877,22 @@ namespace IwaraDownloader.Forms
             var task = _downloadManager.GetTask(video.VideoId);
             if (task != null && task.Status == DownloadStatus.Downloading)
             {
-                progressText = task.Progress > 0 ? $"{task.Progress:F0}%" : "DL中...";
+                if (task.Progress > 0)
+                {
+                    // 速度と残り時間を表示
+                    if (task.DownloadSpeed > 0)
+                    {
+                        progressText = $"{task.Progress:F0}% ({task.SpeedFormatted})";
+                    }
+                    else
+                    {
+                        progressText = $"{task.Progress:F0}%";
+                    }
+                }
+                else
+                {
+                    progressText = "DL中...";
+                }
             }
             else if (video.Status == DownloadStatus.Completed)
             {
@@ -850,6 +925,24 @@ namespace IwaraDownloader.Forms
                 _ => Color.Black
             };
 
+            // ツールチップ（エラー詳細表示）
+            if (video.Status == DownloadStatus.Failed && !string.IsNullOrEmpty(video.LastErrorMessage))
+            {
+                item.ToolTipText = $"エラー: {video.LastErrorMessage}\nリトライ: {video.RetryCount}回";
+            }
+            else if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath))
+            {
+                item.ToolTipText = $"保存先: {video.LocalFilePath}";
+            }
+            else if (task != null && task.Status == DownloadStatus.Downloading && task.EstimatedTimeRemaining.HasValue)
+            {
+                item.ToolTipText = $"{video.Title}\n残り: {task.EtaFormatted}";
+            }
+            else
+            {
+                item.ToolTipText = $"{video.Title}\n投稿者: {video.AuthorUsername}";
+            }
+
             return item;
         }
 
@@ -859,15 +952,45 @@ namespace IwaraDownloader.Forms
             {
                 if (item.Tag is VideoInfo video && video.VideoId == task.Video.VideoId)
                 {
-                    // 進捗更新
-                    var progressText = task.Status == DownloadStatus.Downloading
-                        ? (task.Progress > 0 ? $"{task.Progress:F0}%" : "DL中...")
-                        : (task.Status == DownloadStatus.Completed ? "100%" : 
-                           task.Status == DownloadStatus.Pending ? "待機" : "-");
+                    // 進捗更新（速度表示付き）
+                    string progressText;
+                    if (task.Status == DownloadStatus.Downloading)
+                    {
+                        if (task.Progress > 0 && task.DownloadSpeed > 0)
+                        {
+                            progressText = $"{task.Progress:F0}% ({task.SpeedFormatted})";
+                        }
+                        else if (task.Progress > 0)
+                        {
+                            progressText = $"{task.Progress:F0}%";
+                        }
+                        else
+                        {
+                            progressText = "DL中...";
+                        }
+                    }
+                    else if (task.Status == DownloadStatus.Completed)
+                    {
+                        progressText = "100%";
+                    }
+                    else if (task.Status == DownloadStatus.Pending)
+                    {
+                        progressText = "待機";
+                    }
+                    else
+                    {
+                        progressText = "-";
+                    }
                     
                     item.SubItems[1].Text = GetStatusText(task.Status);
                     item.SubItems[2].Text = progressText;
                     item.SubItems[0].Text = $"{GetStatusIcon(task.Status)} {task.Video.Title}";
+                    
+                    // ツールチップ更新（残り時間表示）
+                    if (task.Status == DownloadStatus.Downloading && task.EstimatedTimeRemaining.HasValue)
+                    {
+                        item.ToolTipText = $"{task.Video.Title}\n残り: {task.EtaFormatted}";
+                    }
                     
                     item.ForeColor = task.Status switch
                     {
@@ -942,11 +1065,82 @@ namespace IwaraDownloader.Forms
                 }
                 listViewVideos.EndUpdate();
             }
+            // Deleteで削除
+            else if (e.KeyCode == Keys.Delete)
+            {
+                e.SuppressKeyPress = true;
+                menuVidDelete_Click(sender, e);
+            }
+        }
+
+        private void listViewVideos_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selectedCount = listViewVideos.SelectedItems.Count;
+            if (selectedCount > 0)
+            {
+                // 選択中の合計サイズを計算
+                long totalSize = 0;
+                foreach (ListViewItem item in listViewVideos.SelectedItems)
+                {
+                    if (item.Tag is VideoInfo video)
+                    {
+                        totalSize += video.FileSize;
+                    }
+                }
+                var sizeText = totalSize > 0 ? $" ({FormatFileSize(totalSize)})" : "";
+                UpdateStatusBar($"{selectedCount}件選択中{sizeText}");
+            }
         }
 
         #endregion
 
         #region Channel Context Menu
+
+        /// <summary>
+        /// チャンネルコンテキストメニューを開く前に項目の表示/非表示を制御
+        /// </summary>
+        private void contextMenuChannel_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // 右クリック位置からノードを取得して選択
+            var mousePos = treeViewChannels.PointToClient(Control.MousePosition);
+            var clickedNode = treeViewChannels.GetNodeAt(mousePos);
+            
+            // ノードがない場所で右クリックした場合はメニューをキャンセル
+            if (clickedNode == null)
+            {
+                e.Cancel = true;
+                return;
+            }
+            
+            // クリックしたノードを選択状態にする
+            treeViewChannels.SelectedNode = clickedNode;
+
+            var selectedNode = clickedNode;
+            var isUserNode = selectedNode?.Tag is SubscribedUser;
+            var isSpecialNode = selectedNode?.Tag is string;
+
+            // チャンネル用メニュー項目の表示/非表示
+            menuChOpen.Visible = isUserNode;
+            menuChCheckNow.Visible = isUserNode;
+            menuChSeparator1.Visible = isUserNode;
+            menuChSetSavePath.Visible = isUserNode;
+            menuChSeparator2.Visible = isUserNode;
+            menuChEnable.Visible = isUserNode;
+            menuChDisable.Visible = isUserNode;
+            menuChSeparator3.Visible = isUserNode;
+            menuChDelete.Visible = isUserNode;
+
+            // 「全てダウンロード」はチャンネル・未 DL・エラー・単発動画ノードで表示
+            var showDownloadAll = isUserNode || 
+                (isSpecialNode && (selectedNode?.Tag as string) is NODE_NOT_DOWNLOADED or NODE_FAILED_VIDEOS or NODE_SINGLE_VIDEOS);
+            menuChDownloadAll.Visible = showDownloadAll;
+
+            // メニュー項目がない場合はキャンセル
+            if (!showDownloadAll && !isUserNode)
+            {
+                e.Cancel = true;
+            }
+        }
 
         private void menuChOpen_Click(object sender, EventArgs e)
         {
@@ -974,9 +1168,13 @@ namespace IwaraDownloader.Forms
 
         private void menuChDownloadAll_Click(object sender, EventArgs e)
         {
-            if (treeViewChannels.SelectedNode?.Tag is SubscribedUser user)
+            var selectedNode = treeViewChannels.SelectedNode;
+            List<VideoInfo> videos;
+
+            if (selectedNode?.Tag is SubscribedUser user)
             {
-                var videos = _database.GetVideosBySubscribedUser(user.Id)
+                // チャンネルの全動画DL
+                videos = _database.GetVideosBySubscribedUser(user.Id)
                     .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
                     .ToList();
 
@@ -984,11 +1182,56 @@ namespace IwaraDownloader.Forms
                 {
                     _downloadManager.EnqueueDownload(video, true, user);
                 }
-
-                RefreshChannelTree();
-                RefreshVideoList();
-                UpdateStatusBar($"{videos.Count} 件のダウンロードをキューに追加しました");
             }
+            else if (selectedNode?.Tag is string tag)
+            {
+                // 特殊ノードの全DL
+                if (tag == NODE_NOT_DOWNLOADED)
+                {
+                    videos = _database.GetAllVideos()
+                        .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                        .ToList();
+                }
+                else if (tag == NODE_FAILED_VIDEOS)
+                {
+                    videos = _database.GetVideosByStatus(DownloadStatus.Failed).ToList();
+                    // 失敗動画はリトライカウントをリセット
+                    foreach (var video in videos)
+                    {
+                        video.RetryCount = 0;
+                        video.LastErrorMessage = null;
+                        _database.UpdateVideo(video);
+                    }
+                }
+                else if (tag == NODE_SINGLE_VIDEOS)
+                {
+                    videos = _database.GetAllVideos()
+                        .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                        .ToList();
+                }
+                else
+                {
+                    return;
+                }
+
+                foreach (var video in videos)
+                {
+                    SubscribedUser? videoUser = null;
+                    if (video.SubscribedUserId.HasValue)
+                    {
+                        videoUser = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                    }
+                    _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, videoUser);
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"{videos.Count} 件のダウンロードをキューに追加しました");
         }
 
         private void menuChSetSavePath_Click(object sender, EventArgs e)
@@ -1097,6 +1340,47 @@ namespace IwaraDownloader.Forms
             RefreshVideoList();
         }
 
+        /// <summary>
+        /// 失敗した動画を再試行
+        /// </summary>
+        private void menuVidRetryFailed_Click(object sender, EventArgs e)
+        {
+            if (listViewVideos.SelectedItems.Count == 0) return;
+            
+            var retryCount = 0;
+            foreach (ListViewItem item in listViewVideos.SelectedItems)
+            {
+                if (item.Tag is VideoInfo video && video.Status == DownloadStatus.Failed)
+                {
+                    // リトライカウントをリセット
+                    video.RetryCount = 0;
+                    video.LastErrorMessage = null;
+                    _database.UpdateVideo(video);
+                    
+                    // キューに追加
+                    SubscribedUser? user = null;
+                    if (video.SubscribedUserId.HasValue)
+                    {
+                        user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                    }
+                    _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                    retryCount++;
+                }
+            }
+            
+            RefreshChannelTree();
+            RefreshVideoList();
+            
+            if (retryCount > 0)
+            {
+                UpdateStatusBar($"{retryCount}件の動画を再試行キューに追加しました");
+            }
+            else
+            {
+                UpdateStatusBar("失敗した動画が選択されていません");
+            }
+        }
+
         private async void menuVidRefreshInfo_Click(object sender, EventArgs e)
         {
             if (listViewVideos.SelectedItems.Count == 0) return;
@@ -1166,6 +1450,156 @@ namespace IwaraDownloader.Forms
             }
         }
 
+        /// <summary>
+        /// URLをクリップボードにコピー
+        /// </summary>
+        private void menuVidCopyUrl_Click(object sender, EventArgs e)
+        {
+            if (listViewVideos.SelectedItems.Count == 0) return;
+            
+            var urls = new List<string>();
+            foreach (ListViewItem item in listViewVideos.SelectedItems)
+            {
+                if (item.Tag is VideoInfo video && !string.IsNullOrEmpty(video.Url))
+                {
+                    urls.Add(video.Url);
+                }
+            }
+            
+            if (urls.Count > 0)
+            {
+                Clipboard.SetText(string.Join(Environment.NewLine, urls));
+                UpdateStatusBar($"{urls.Count}件のURLをコピーしました");
+            }
+        }
+
+        /// <summary>
+        /// タイトルをクリップボードにコピー
+        /// </summary>
+        private void menuVidCopyTitle_Click(object sender, EventArgs e)
+        {
+            if (listViewVideos.SelectedItems.Count == 0) return;
+            
+            var titles = new List<string>();
+            foreach (ListViewItem item in listViewVideos.SelectedItems)
+            {
+                if (item.Tag is VideoInfo video && !string.IsNullOrEmpty(video.Title))
+                {
+                    titles.Add(video.Title);
+                }
+            }
+            
+            if (titles.Count > 0)
+            {
+                Clipboard.SetText(string.Join(Environment.NewLine, titles));
+                UpdateStatusBar($"{titles.Count}件のタイトルをコピーしました");
+            }
+        }
+
+        /// <summary>
+        /// ファイル存在チェック
+        /// </summary>
+        private void menuVidCheckFileExists_Click(object sender, EventArgs e)
+        {
+            if (listViewVideos.SelectedItems.Count == 0) return;
+
+            var checkedCount = 0;
+            var missingCount = 0;
+            var requeuedCount = 0;
+
+            foreach (ListViewItem item in listViewVideos.SelectedItems)
+            {
+                if (item.Tag is VideoInfo video)
+                {
+                    // ダウンロード済みの動画のみチェック
+                    if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath))
+                    {
+                        checkedCount++;
+
+                        if (!File.Exists(video.LocalFilePath))
+                        {
+                            missingCount++;
+
+                            // ステータスをリセット
+                            video.Status = DownloadStatus.Pending;
+                            video.LocalFilePath = string.Empty;
+                            video.DownloadedAt = null;
+                            video.RetryCount = 0;
+                            video.LastErrorMessage = null;
+                            _database.UpdateVideo(video);
+
+                            // DLキューに追加
+                            SubscribedUser? user = null;
+                            if (video.SubscribedUserId.HasValue)
+                            {
+                                user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                            }
+                            _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                            requeuedCount++;
+                        }
+                    }
+                }
+            }
+
+            RefreshChannelTree();
+            RefreshVideoList();
+
+            if (checkedCount == 0)
+            {
+                UpdateStatusBar("ダウンロード済みの動画が選択されていません");
+            }
+            else if (missingCount == 0)
+            {
+                UpdateStatusBar($"{checkedCount}件チェック: 全てのファイルが存在します");
+            }
+            else
+            {
+                UpdateStatusBar($"{checkedCount}件チェック: {missingCount}件のファイルが見つからず、{requeuedCount}件をキューに追加しました");
+            }
+        }
+
+        /// <summary>
+        /// 動画を削除
+        /// </summary>
+        private void menuVidDelete_Click(object sender, EventArgs e)
+        {
+            if (listViewVideos.SelectedItems.Count == 0) return;
+
+            var count = listViewVideos.SelectedItems.Count;
+            var message = count == 1
+                ? $"「{(listViewVideos.SelectedItems[0].Tag as VideoInfo)?.Title}」を削除しますか？"
+                : $"{count}件の動画を削除しますか？";
+
+            var result = MessageBox.Show(
+                message + "\n\n※ダウンロード済みのファイルは削除されません",
+                "確認",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes) return;
+
+            var deletedCount = 0;
+            foreach (ListViewItem item in listViewVideos.SelectedItems)
+            {
+                if (item.Tag is VideoInfo video)
+                {
+                    // ダウンロード中の場合はキャンセル
+                    if (video.Status == DownloadStatus.Downloading || video.Status == DownloadStatus.Pending)
+                    {
+                        _downloadManager.CancelTask(video.VideoId);
+                    }
+                    
+                    // DBから削除
+                    _database.DeleteVideo(video.Id);
+                    deletedCount++;
+                }
+            }
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"{deletedCount}件の動画を削除しました");
+        }
+
         #endregion
 
         #region Tray Icon
@@ -1221,7 +1655,18 @@ namespace IwaraDownloader.Forms
             
             if (downloading > 0)
             {
-                progressBar.Style = ProgressBarStyle.Marquee;
+                // ダウンロード中の全体進捗を計算
+                var activeTasks = _downloadManager.GetActiveTasks();
+                if (activeTasks.Count > 0)
+                {
+                    var avgProgress = activeTasks.Average(t => t.Progress);
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressBar.Value = Math.Min(100, (int)avgProgress);
+                }
+                else
+                {
+                    progressBar.Style = ProgressBarStyle.Marquee;
+                }
             }
             else
             {
@@ -1444,6 +1889,47 @@ namespace IwaraDownloader.Forms
                 // 更新チェックの失敗は黙殺
                 System.Diagnostics.Debug.WriteLine($"更新チェック失敗: {ex.Message}");
             }
+        }
+
+        #endregion
+
+        #region Help Menu
+
+        /// <summary>
+        /// バージョン情報ダイアログを開く
+        /// </summary>
+        private void menuHelpAbout_Click(object sender, EventArgs e)
+        {
+            using var form = new AboutForm();
+            form.ShowDialog();
+        }
+
+        /// <summary>
+        /// ログフォルダを開く
+        /// </summary>
+        private void menuHelpOpenLogs_Click(object sender, EventArgs e)
+        {
+            var logFolder = LoggingService.Instance.LogDirectory;
+            if (Directory.Exists(logFolder))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = logFolder,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                MessageBox.Show("ログフォルダが存在しません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        /// <summary>
+        /// GitHubページを開く
+        /// </summary>
+        private void menuHelpGitHub_Click(object sender, EventArgs e)
+        {
+            Helpers.OpenUrl("https://github.com/dekotan24/iwara-downloader");
         }
 
         #endregion

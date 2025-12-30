@@ -38,6 +38,11 @@ namespace IwaraDownloader.Forms
             this.toolStripSeparator4 = new ToolStripSeparator();
             this.btnLogin = new ToolStripButton();
             this.lblLoginStatus = new ToolStripLabel();
+            this.toolStripSeparator5 = new ToolStripSeparator();
+            this.btnHelp = new ToolStripDropDownButton();
+            this.menuHelpAbout = new ToolStripMenuItem();
+            this.menuHelpOpenLogs = new ToolStripMenuItem();
+            this.menuHelpGitHub = new ToolStripMenuItem();
 
             // URLテキストボックス
             this.txtUrl = new TextBox();
@@ -91,12 +96,18 @@ namespace IwaraDownloader.Forms
             this.contextMenuVideo = new ContextMenuStrip(this.components);
             this.menuVidDownload = new ToolStripMenuItem();
             this.menuVidCancel = new ToolStripMenuItem();
+            this.menuVidRetryFailed = new ToolStripMenuItem();
             this.menuVidRefreshInfo = new ToolStripMenuItem();
+            this.menuVidCheckFileExists = new ToolStripMenuItem();
             this.menuVidSeparator1 = new ToolStripSeparator();
             this.menuVidPlay = new ToolStripMenuItem();
             this.menuVidOpenFolder = new ToolStripMenuItem();
             this.menuVidSeparator2 = new ToolStripSeparator();
             this.menuVidOpenPage = new ToolStripMenuItem();
+            this.menuVidCopyUrl = new ToolStripMenuItem();
+            this.menuVidCopyTitle = new ToolStripMenuItem();
+            this.menuVidSeparator3 = new ToolStripSeparator();
+            this.menuVidDelete = new ToolStripMenuItem();
 
             // ImageList
             this.imageListTree = new ImageList(this.components);
@@ -220,7 +231,6 @@ namespace IwaraDownloader.Forms
             this.treeViewChannels.Size = new Size(250, 511);
             this.treeViewChannels.TabIndex = 0;
             this.treeViewChannels.AfterSelect += new TreeViewEventHandler(this.treeViewChannels_AfterSelect);
-            this.treeViewChannels.NodeMouseClick += new TreeNodeMouseClickEventHandler(this.treeViewChannels_NodeMouseClick);
             this.treeViewChannels.NodeMouseDoubleClick += new TreeNodeMouseClickEventHandler(this.treeViewChannels_NodeMouseDoubleClick);
 
             // 
@@ -303,12 +313,14 @@ namespace IwaraDownloader.Forms
             this.listViewVideos.Location = new Point(0, 53);
             this.listViewVideos.MultiSelect = true;
             this.listViewVideos.Name = "listViewVideos";
+            this.listViewVideos.ShowItemToolTips = true;
             this.listViewVideos.Size = new Size(746, 483);
             this.listViewVideos.TabIndex = 0;
             this.listViewVideos.UseCompatibleStateImageBehavior = false;
             this.listViewVideos.View = View.Details;
             this.listViewVideos.DoubleClick += new EventHandler(this.listViewVideos_DoubleClick);
             this.listViewVideos.KeyDown += new KeyEventHandler(this.listViewVideos_KeyDown);
+            this.listViewVideos.SelectedIndexChanged += new EventHandler(this.listViewVideos_SelectedIndexChanged);
 
             // 
             // colVideoTitle
@@ -356,7 +368,9 @@ namespace IwaraDownloader.Forms
                 this.btnSetup,
                 this.toolStripSeparator4,
                 this.btnLogin,
-                this.lblLoginStatus
+                this.lblLoginStatus,
+                this.toolStripSeparator5,
+                this.btnHelp
             });
             this.toolStrip.Location = new Point(0, 0);
             this.toolStrip.Name = "toolStrip";
@@ -366,6 +380,7 @@ namespace IwaraDownloader.Forms
             // 
             // btnAddUser
             // 
+            this.btnAddUser.AutoToolTip = false;
             this.btnAddUser.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnAddUser.Name = "btnAddUser";
             this.btnAddUser.Size = new Size(90, 22);
@@ -375,6 +390,7 @@ namespace IwaraDownloader.Forms
             // 
             // btnAddVideo
             // 
+            this.btnAddVideo.AutoToolTip = false;
             this.btnAddVideo.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnAddVideo.Name = "btnAddVideo";
             this.btnAddVideo.Size = new Size(60, 22);
@@ -390,15 +406,17 @@ namespace IwaraDownloader.Forms
             // 
             // btnCheckNow
             // 
+            this.btnCheckNow.AutoToolTip = false;
             this.btnCheckNow.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnCheckNow.Name = "btnCheckNow";
-            this.btnCheckNow.Size = new Size(75, 22);
-            this.btnCheckNow.Text = "今すぐ確認";
+            this.btnCheckNow.Size = new Size(90, 22);
+            this.btnCheckNow.Text = "今すぐ確認 (F5)";
             this.btnCheckNow.Click += new EventHandler(this.btnCheckNow_Click);
 
             // 
             // btnStartAll
             // 
+            this.btnStartAll.AutoToolTip = false;
             this.btnStartAll.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnStartAll.Name = "btnStartAll";
             this.btnStartAll.Size = new Size(70, 22);
@@ -408,6 +426,7 @@ namespace IwaraDownloader.Forms
             // 
             // btnStopAll
             // 
+            this.btnStopAll.AutoToolTip = false;
             this.btnStopAll.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnStopAll.Name = "btnStopAll";
             this.btnStopAll.Size = new Size(60, 22);
@@ -423,6 +442,7 @@ namespace IwaraDownloader.Forms
             // 
             // btnSettings
             // 
+            this.btnSettings.AutoToolTip = false;
             this.btnSettings.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnSettings.Name = "btnSettings";
             this.btnSettings.Size = new Size(35, 22);
@@ -438,6 +458,7 @@ namespace IwaraDownloader.Forms
             // 
             // btnSetup
             // 
+            this.btnSetup.AutoToolTip = false;
             this.btnSetup.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnSetup.Name = "btnSetup";
             this.btnSetup.Size = new Size(100, 22);
@@ -453,6 +474,7 @@ namespace IwaraDownloader.Forms
             // 
             // btnLogin
             // 
+            this.btnLogin.AutoToolTip = false;
             this.btnLogin.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnLogin.Name = "btnLogin";
             this.btnLogin.Size = new Size(55, 22);
@@ -466,6 +488,50 @@ namespace IwaraDownloader.Forms
             this.lblLoginStatus.Size = new Size(60, 22);
             this.lblLoginStatus.Text = "(未ログイン)";
             this.lblLoginStatus.ForeColor = Color.Gray;
+
+            // 
+            // toolStripSeparator5
+            // 
+            this.toolStripSeparator5.Name = "toolStripSeparator5";
+            this.toolStripSeparator5.Size = new Size(6, 25);
+
+            // 
+            // btnHelp
+            // 
+            this.btnHelp.AutoToolTip = false;
+            this.btnHelp.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            this.btnHelp.DropDownItems.AddRange(new ToolStripItem[] {
+                this.menuHelpAbout,
+                this.menuHelpOpenLogs,
+                this.menuHelpGitHub
+            });
+            this.btnHelp.Name = "btnHelp";
+            this.btnHelp.Size = new Size(55, 22);
+            this.btnHelp.Text = "ヘルプ";
+
+            // 
+            // menuHelpAbout
+            // 
+            this.menuHelpAbout.Name = "menuHelpAbout";
+            this.menuHelpAbout.Size = new Size(180, 22);
+            this.menuHelpAbout.Text = "バージョン情報...";
+            this.menuHelpAbout.Click += new EventHandler(this.menuHelpAbout_Click);
+
+            // 
+            // menuHelpOpenLogs
+            // 
+            this.menuHelpOpenLogs.Name = "menuHelpOpenLogs";
+            this.menuHelpOpenLogs.Size = new Size(180, 22);
+            this.menuHelpOpenLogs.Text = "ログフォルダを開く";
+            this.menuHelpOpenLogs.Click += new EventHandler(this.menuHelpOpenLogs_Click);
+
+            // 
+            // menuHelpGitHub
+            // 
+            this.menuHelpGitHub.Name = "menuHelpGitHub";
+            this.menuHelpGitHub.Size = new Size(180, 22);
+            this.menuHelpGitHub.Text = "GitHubページ";
+            this.menuHelpGitHub.Click += new EventHandler(this.menuHelpGitHub_Click);
 
             // 
             // statusStrip
@@ -561,6 +627,7 @@ namespace IwaraDownloader.Forms
             });
             this.contextMenuChannel.Name = "contextMenuChannel";
             this.contextMenuChannel.Size = new Size(180, 176);
+            this.contextMenuChannel.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuChannel_Opening);
 
             // 
             // menuChOpen
@@ -642,31 +709,46 @@ namespace IwaraDownloader.Forms
             this.contextMenuVideo.Items.AddRange(new ToolStripItem[] {
                 this.menuVidDownload,
                 this.menuVidCancel,
+                this.menuVidRetryFailed,
                 this.menuVidRefreshInfo,
+                this.menuVidCheckFileExists,
                 this.menuVidSeparator1,
                 this.menuVidPlay,
                 this.menuVidOpenFolder,
                 this.menuVidSeparator2,
-                this.menuVidOpenPage
+                this.menuVidOpenPage,
+                this.menuVidCopyUrl,
+                this.menuVidCopyTitle,
+                this.menuVidSeparator3,
+                this.menuVidDelete
             });
             this.contextMenuVideo.Name = "contextMenuVideo";
-            this.contextMenuVideo.Size = new Size(160, 148);
+            this.contextMenuVideo.Size = new Size(180, 264);
 
             // 
             // menuVidDownload
             // 
             this.menuVidDownload.Name = "menuVidDownload";
-            this.menuVidDownload.Size = new Size(159, 22);
+            this.menuVidDownload.Size = new Size(180, 22);
             this.menuVidDownload.Text = "ダウンロード";
+            this.menuVidDownload.ShortcutKeyDisplayString = "Ctrl+D";
             this.menuVidDownload.Click += new EventHandler(this.menuVidDownload_Click);
 
             // 
             // menuVidCancel
             // 
             this.menuVidCancel.Name = "menuVidCancel";
-            this.menuVidCancel.Size = new Size(159, 22);
+            this.menuVidCancel.Size = new Size(180, 22);
             this.menuVidCancel.Text = "キャンセル";
             this.menuVidCancel.Click += new EventHandler(this.menuVidCancel_Click);
+
+            // 
+            // menuVidRetryFailed
+            // 
+            this.menuVidRetryFailed.Name = "menuVidRetryFailed";
+            this.menuVidRetryFailed.Size = new Size(180, 22);
+            this.menuVidRetryFailed.Text = "失敗を再試行";
+            this.menuVidRetryFailed.Click += new EventHandler(this.menuVidRetryFailed_Click);
 
             // 
             // menuVidRefreshInfo
@@ -675,6 +757,14 @@ namespace IwaraDownloader.Forms
             this.menuVidRefreshInfo.Size = new Size(159, 22);
             this.menuVidRefreshInfo.Text = "情報再取得";
             this.menuVidRefreshInfo.Click += new EventHandler(this.menuVidRefreshInfo_Click);
+
+            // 
+            // menuVidCheckFileExists
+            // 
+            this.menuVidCheckFileExists.Name = "menuVidCheckFileExists";
+            this.menuVidCheckFileExists.Size = new Size(180, 22);
+            this.menuVidCheckFileExists.Text = "ファイル存在チェック";
+            this.menuVidCheckFileExists.Click += new EventHandler(this.menuVidCheckFileExists_Click);
 
             // 
             // menuVidSeparator1
@@ -713,6 +803,37 @@ namespace IwaraDownloader.Forms
             this.menuVidOpenPage.Click += new EventHandler(this.menuVidOpenPage_Click);
 
             // 
+            // menuVidCopyUrl
+            // 
+            this.menuVidCopyUrl.Name = "menuVidCopyUrl";
+            this.menuVidCopyUrl.Size = new Size(180, 22);
+            this.menuVidCopyUrl.Text = "URLをコピー";
+            this.menuVidCopyUrl.Click += new EventHandler(this.menuVidCopyUrl_Click);
+
+            // 
+            // menuVidCopyTitle
+            // 
+            this.menuVidCopyTitle.Name = "menuVidCopyTitle";
+            this.menuVidCopyTitle.Size = new Size(180, 22);
+            this.menuVidCopyTitle.Text = "タイトルをコピー";
+            this.menuVidCopyTitle.Click += new EventHandler(this.menuVidCopyTitle_Click);
+
+            // 
+            // menuVidSeparator3
+            // 
+            this.menuVidSeparator3.Name = "menuVidSeparator3";
+            this.menuVidSeparator3.Size = new Size(156, 6);
+
+            // 
+            // menuVidDelete
+            // 
+            this.menuVidDelete.Name = "menuVidDelete";
+            this.menuVidDelete.Size = new Size(180, 22);
+            this.menuVidDelete.Text = "削除";
+            this.menuVidDelete.ShortcutKeyDisplayString = "Delete";
+            this.menuVidDelete.Click += new EventHandler(this.menuVidDelete_Click);
+
+            // 
             // imageListTree
             // 
             this.imageListTree.ColorDepth = ColorDepth.Depth32Bit;
@@ -729,12 +850,14 @@ namespace IwaraDownloader.Forms
             this.Controls.Add(this.toolStrip);
             this.Controls.Add(this.statusStrip);
             this.Icon = Properties.Resources.icon;
+            this.KeyPreview = true;
             this.MinimumSize = new Size(800, 500);
             this.Name = "MainForm";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "IwaraDownloader";
             this.FormClosing += new FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new EventHandler(this.MainForm_Load);
+            this.KeyDown += new KeyEventHandler(this.MainForm_KeyDown);
             this.Resize += new EventHandler(this.MainForm_Resize);
 
             ((System.ComponentModel.ISupportInitialize)(this.mainSplitContainer)).EndInit();
@@ -777,6 +900,11 @@ namespace IwaraDownloader.Forms
         private ToolStripSeparator toolStripSeparator4;
         private ToolStripButton btnLogin;
         private ToolStripLabel lblLoginStatus;
+        private ToolStripSeparator toolStripSeparator5;
+        private ToolStripDropDownButton btnHelp;
+        private ToolStripMenuItem menuHelpAbout;
+        private ToolStripMenuItem menuHelpOpenLogs;
+        private ToolStripMenuItem menuHelpGitHub;
         private TreeView treeViewChannels;
         private Panel panelChannelHeader;
         private Label lblChannelHeader;
@@ -811,12 +939,18 @@ namespace IwaraDownloader.Forms
         private ContextMenuStrip contextMenuVideo;
         private ToolStripMenuItem menuVidDownload;
         private ToolStripMenuItem menuVidCancel;
+        private ToolStripMenuItem menuVidRetryFailed;
         private ToolStripMenuItem menuVidRefreshInfo;
         private ToolStripSeparator menuVidSeparator1;
         private ToolStripMenuItem menuVidPlay;
         private ToolStripMenuItem menuVidOpenFolder;
         private ToolStripSeparator menuVidSeparator2;
         private ToolStripMenuItem menuVidOpenPage;
+        private ToolStripMenuItem menuVidCopyUrl;
+        private ToolStripMenuItem menuVidCopyTitle;
+        private ToolStripSeparator menuVidSeparator3;
+        private ToolStripMenuItem menuVidDelete;
+        private ToolStripMenuItem menuVidCheckFileExists;
         private ImageList imageListTree;
         private Panel panelVideoFilter;
         private TextBox txtVideoFilter;
