@@ -79,6 +79,15 @@ namespace IwaraDownloader.Forms
             numRateLimitBase.Value = settings.RateLimitBaseDelayMs;
             numRateLimitMax.Value = settings.RateLimitMaxDelayMs;
             chkExponentialBackoff.Checked = settings.EnableExponentialBackoff;
+
+            // その他設定
+            chkEnableSound.Checked = settings.EnableCompletionSound;
+            txtSoundFile.Text = settings.CompletionSoundPath;
+            txtFilenameTemplate.Text = settings.FilenameTemplate;
+            chkSaveMetadata.Checked = settings.SaveMetadata;
+            chkCheckUpdate.Checked = settings.CheckUpdateOnStartup;
+            chkResumeOnStartup.Checked = settings.ResumeDownloadsOnStartup;
+            lblCurrentVersion.Text = $"現在: {UpdateService.CurrentVersionString}";
         }
 
         /// <summary>
@@ -122,6 +131,14 @@ namespace IwaraDownloader.Forms
             settings.RateLimitBaseDelayMs = (int)numRateLimitBase.Value;
             settings.RateLimitMaxDelayMs = (int)numRateLimitMax.Value;
             settings.EnableExponentialBackoff = chkExponentialBackoff.Checked;
+
+            // その他設定
+            settings.EnableCompletionSound = chkEnableSound.Checked;
+            settings.CompletionSoundPath = txtSoundFile.Text.Trim();
+            settings.FilenameTemplate = txtFilenameTemplate.Text.Trim();
+            settings.SaveMetadata = chkSaveMetadata.Checked;
+            settings.CheckUpdateOnStartup = chkCheckUpdate.Checked;
+            settings.ResumeDownloadsOnStartup = chkResumeOnStartup.Checked;
 
             // 保存
             _settingsManager.Save();
@@ -344,6 +361,92 @@ namespace IwaraDownloader.Forms
                 {
                     MessageBox.Show($"インポートに失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        #endregion
+
+        #region Sound Settings
+
+        private void btnBrowseSound_Click(object sender, EventArgs e)
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Title = "音声ファイルを選択",
+                Filter = "音声ファイル (*.wav;*.mp3;*.m4a)|*.wav;*.mp3;*.m4a|すべてのファイル (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtSoundFile.Text = dialog.FileName;
+            }
+        }
+
+        private void btnTestSound_Click(object sender, EventArgs e)
+        {
+            var soundPath = txtSoundFile.Text.Trim();
+            
+            if (string.IsNullOrEmpty(soundPath))
+            {
+                // システム音をテスト
+                System.Media.SystemSounds.Asterisk.Play();
+            }
+            else if (File.Exists(soundPath))
+            {
+                SoundService.Instance.PlaySound(soundPath);
+            }
+            else
+            {
+                MessageBox.Show("指定されたファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        #endregion
+
+        #region Update Check
+
+        private async void btnCheckUpdateNow_Click(object sender, EventArgs e)
+        {
+            btnCheckUpdateNow.Enabled = false;
+            btnCheckUpdateNow.Text = "チェック中...";
+
+            try
+            {
+                var result = await UpdateService.CheckForUpdateAsync();
+
+                if (!result.Success)
+                {
+                    MessageBox.Show($"更新チェックに失敗しました:\n{result.ErrorMessage}", 
+                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (result.HasUpdate)
+                {
+                    var dialogResult = MessageBox.Show(
+                        $"新しいバージョンがあります！\n\n" +
+                        $"現在: {UpdateService.CurrentVersionString}\n" +
+                        $"最新: {result.LatestVersionString}\n\n" +
+                        $"ダウンロードページを開きますか？",
+                        "更新があります",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information);
+
+                    if (dialogResult == DialogResult.Yes)
+                    {
+                        UpdateService.OpenReleasesPage();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show($"最新バージョンです！\n\n現在: {UpdateService.CurrentVersionString}", 
+                        "更新チェック", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            finally
+            {
+                btnCheckUpdateNow.Enabled = true;
+                btnCheckUpdateNow.Text = "今すぐチェック";
             }
         }
 

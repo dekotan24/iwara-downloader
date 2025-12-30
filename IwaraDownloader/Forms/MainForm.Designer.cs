@@ -57,6 +57,9 @@ namespace IwaraDownloader.Forms
             this.colVideoDate = new ColumnHeader();
             this.lblVideoHeader = new Label();
             this.panelVideoHeader = new Panel();
+            this.txtVideoFilter = new TextBox();
+            this.btnClearFilter = new Button();
+            this.panelVideoFilter = new Panel();
 
             // ステータスバー
             this.statusStrip = new StatusStrip();
@@ -155,6 +158,7 @@ namespace IwaraDownloader.Forms
             // contentSplitContainer.Panel2 - 動画リスト
             // 
             this.contentSplitContainer.Panel2.Controls.Add(this.listViewVideos);
+            this.contentSplitContainer.Panel2.Controls.Add(this.panelVideoFilter);
             this.contentSplitContainer.Panel2.Controls.Add(this.panelVideoHeader);
 
             // 
@@ -232,6 +236,46 @@ namespace IwaraDownloader.Forms
             this.panelVideoHeader.TabIndex = 1;
 
             // 
+            // panelVideoFilter
+            // 
+            this.panelVideoFilter.BackColor = Color.FromArgb(250, 250, 250);
+            this.panelVideoFilter.BorderStyle = BorderStyle.None;
+            this.panelVideoFilter.Controls.Add(this.btnClearFilter);
+            this.panelVideoFilter.Controls.Add(this.txtVideoFilter);
+            this.panelVideoFilter.Dock = DockStyle.Top;
+            this.panelVideoFilter.Location = new Point(0, 25);
+            this.panelVideoFilter.Name = "panelVideoFilter";
+            this.panelVideoFilter.Size = new Size(746, 28);
+            this.panelVideoFilter.TabIndex = 2;
+
+            // 
+            // txtVideoFilter
+            // 
+            this.txtVideoFilter.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.txtVideoFilter.Font = new Font("Yu Gothic UI", 9F);
+            this.txtVideoFilter.Location = new Point(3, 3);
+            this.txtVideoFilter.Name = "txtVideoFilter";
+            this.txtVideoFilter.PlaceholderText = "🔍 フィルター（タイトルで絞り込み）...";
+            this.txtVideoFilter.Size = new Size(630, 23);
+            this.txtVideoFilter.TabIndex = 0;
+            this.txtVideoFilter.TextChanged += new EventHandler(this.txtVideoFilter_TextChanged);
+            this.txtVideoFilter.KeyDown += new KeyEventHandler(this.txtVideoFilter_KeyDown);
+
+            // 
+            // btnClearFilter
+            // 
+            this.btnClearFilter.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnClearFilter.FlatStyle = FlatStyle.Flat;
+            this.btnClearFilter.Font = new Font("Yu Gothic UI", 8F);
+            this.btnClearFilter.Location = new Point(638, 2);
+            this.btnClearFilter.Name = "btnClearFilter";
+            this.btnClearFilter.Size = new Size(50, 23);
+            this.btnClearFilter.TabIndex = 1;
+            this.btnClearFilter.Text = "クリア";
+            this.btnClearFilter.UseVisualStyleBackColor = true;
+            this.btnClearFilter.Click += new EventHandler(this.btnClearFilter_Click);
+
+            // 
             // lblVideoHeader
             // 
             this.lblVideoHeader.AutoSize = true;
@@ -256,10 +300,10 @@ namespace IwaraDownloader.Forms
             this.listViewVideos.Dock = DockStyle.Fill;
             this.listViewVideos.FullRowSelect = true;
             this.listViewVideos.GridLines = true;
-            this.listViewVideos.Location = new Point(0, 25);
+            this.listViewVideos.Location = new Point(0, 53);
             this.listViewVideos.MultiSelect = true;
             this.listViewVideos.Name = "listViewVideos";
-            this.listViewVideos.Size = new Size(746, 511);
+            this.listViewVideos.Size = new Size(746, 483);
             this.listViewVideos.TabIndex = 0;
             this.listViewVideos.UseCompatibleStateImageBehavior = false;
             this.listViewVideos.View = View.Details;
@@ -774,5 +818,8 @@ namespace IwaraDownloader.Forms
         private ToolStripSeparator menuVidSeparator2;
         private ToolStripMenuItem menuVidOpenPage;
         private ImageList imageListTree;
+        private Panel panelVideoFilter;
+        private TextBox txtVideoFilter;
+        private Button btnClearFilter;
     }
 }

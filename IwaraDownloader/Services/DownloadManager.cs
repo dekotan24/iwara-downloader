@@ -11,6 +11,7 @@ namespace IwaraDownloader.Services
     {
         private readonly IwaraApiService _iwaraApi;
         private readonly DatabaseService _database;
+        private readonly LoggingService _logger = LoggingService.Instance;
         private readonly ConcurrentDictionary<string, DownloadTask> _activeTasks;
         private readonly ConcurrentDictionary<string, DownloadTask> _pendingTasks;
         private readonly ConcurrentQueue<DownloadTask> _pendingQueue;
@@ -70,11 +71,57 @@ namespace IwaraDownloader.Services
             _globalCts = new CancellationTokenSource();
             _isRunning = true;
 
+            _logger.Info("DownloadManager started");
+
             // 自動チェック開始
             UpdateAutoCheckTimer();
 
             // 待機中のタスクを処理開始
             _ = ProcessQueueAsync();
+        }
+
+        /// <summary>
+        /// 起動時に未完了のダウンロードを再開
+        /// </summary>
+        public void ResumeIncompleteDownloads()
+        {
+            var settings = SettingsManager.Instance.Settings;
+            if (!settings.ResumeDownloadsOnStartup)
+            {
+                _logger.Debug("Resume on startup is disabled");
+                return;
+            }
+
+            // PendingまたはDownloading状態の動画を取得
+            var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
+            var downloadingVideos = _database.GetVideosByStatus(DownloadStatus.Downloading);
+
+            // Downloading状態のものはPendingにリセット（前回中断されたもの）
+            foreach (var video in downloadingVideos)
+            {
+                video.Status = DownloadStatus.Pending;
+                _database.UpdateVideo(video);
+                pendingVideos.Add(video);
+            }
+
+            if (pendingVideos.Count == 0)
+            {
+                _logger.Debug("No incomplete downloads to resume");
+                return;
+            }
+
+            _logger.Info($"Resuming {pendingVideos.Count} incomplete downloads");
+
+            // キューに追加
+            foreach (var video in pendingVideos)
+            {
+                SubscribedUser? user = null;
+                if (video.SubscribedUserId.HasValue)
+                {
+                    user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                }
+                EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+            }
         }
 
         /// <summary>
@@ -84,6 +131,7 @@ namespace IwaraDownloader.Services
         {
             if (!_isRunning) return;
 
+            _logger.Info("DownloadManager stopping");
             _autoCheckTimer.Stop();
             _globalCts?.Cancel();
             _isRunning = false;
@@ -217,25 +265,34 @@ namespace IwaraDownloader.Services
 
                 // 出力パスを決定
                 string outputPath;
+                
+                // ファイル名テンプレートを適用
+                var filenameTemplate = settings.FilenameTemplate;
+                var generatedFilename = Helpers.ApplyFilenameTemplate(
+                    filenameTemplate,
+                    video.Title,
+                    video.AuthorUsername,
+                    video.VideoId,
+                    video.PostedAt) + ".mp4";
+
                 if (task.IsSubscriptionDownload && task.SubscribedUser != null)
                 {
                     // チャンネル別保存先を使用
                     var savePath = task.SubscribedUser.GetSavePath(settings.DownloadFolder);
-                    outputPath = Path.Combine(savePath, Helpers.SanitizeFileName(video.Title) + ".mp4");
+                    outputPath = Path.Combine(savePath, generatedFilename);
                 }
                 else if (task.IsSubscriptionDownload)
                 {
-                    outputPath = Helpers.GetSubscriptionDownloadPath(
-                        settings.DownloadFolder,
-                        video.AuthorUsername,
-                        video.Title);
+                    var sanitizedUsername = Helpers.SanitizeFileName(video.AuthorUsername);
+                    var userFolder = Path.Combine(settings.DownloadFolder, sanitizedUsername);
+                    if (!Directory.Exists(userFolder))
+                        Directory.CreateDirectory(userFolder);
+                    outputPath = Path.Combine(userFolder, generatedFilename);
                 }
                 else
                 {
-                    outputPath = Helpers.GetSingleDownloadPath(
-                        settings.DownloadFolder,
-                        video.AuthorUsername,
-                        video.Title);
+                    // 単発動画はベースフォルダ直下
+                    outputPath = Path.Combine(settings.DownloadFolder, generatedFilename);
                 }
 
                 // フォルダ作成
@@ -276,6 +333,17 @@ namespace IwaraDownloader.Services
                     video.FileSize = new FileInfo(outputPath).Length;
                     _database.UpdateVideo(video);
 
+                    _logger.Info($"Download completed: {video.Title} ({video.FileSizeFormatted})");
+
+                    // 完了音を再生
+                    SoundService.Instance.PlayCompletionSound();
+
+                    // メタデータ保存
+                    if (SettingsManager.Instance.Settings.SaveMetadata)
+                    {
+                        SaveVideoMetadata(video, outputPath);
+                    }
+
                     if (video.SubscribedUserId.HasValue)
                     {
                         var user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
@@ -295,12 +363,14 @@ namespace IwaraDownloader.Services
             }
             catch (OperationCanceledException)
             {
+                _logger.Info($"Download cancelled: {task.Video.Title}");
                 task.Status = DownloadStatus.Paused;
                 task.Video.Status = DownloadStatus.Paused;
                 _database.UpdateVideo(task.Video);
             }
             catch (Exception ex)
             {
+                _logger.Error($"Download failed: {task.Video.Title}", ex);
                 task.Status = DownloadStatus.Failed;
                 task.ErrorMessage = ex.Message;
                 task.Video.RetryCount++;
@@ -669,6 +739,44 @@ namespace IwaraDownloader.Services
             _autoCheckTimer.Dispose();
             _downloadSemaphore.Dispose();
             _globalCts?.Dispose();
+        }
+
+        /// <summary>
+        /// 動画のメタデータをJSONで保存
+        /// </summary>
+        private void SaveVideoMetadata(VideoInfo video, string videoPath)
+        {
+            try
+            {
+                var metadataPath = Path.ChangeExtension(videoPath, ".json");
+                var metadata = new
+                {
+                    title = video.Title,
+                    author = video.AuthorUsername,
+                    authorId = video.AuthorUserId,
+                    videoId = video.VideoId,
+                    fileSize = video.FileSize,
+                    fileSizeFormatted = video.FileSizeFormatted,
+                    duration = video.DurationSeconds,
+                    durationFormatted = video.DurationFormatted,
+                    postedAt = video.PostedAt?.ToString("yyyy-MM-dd HH:mm:ss"),
+                    downloadedAt = video.DownloadedAt?.ToString("yyyy-MM-dd HH:mm:ss"),
+                    url = video.Url,
+                    thumbnailUrl = video.ThumbnailUrl
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(metadata, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                File.WriteAllText(metadataPath, json);
+                _logger.Debug($"Metadata saved: {metadataPath}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn($"Failed to save metadata for {video.Title}", ex);
+            }
         }
     }
 }

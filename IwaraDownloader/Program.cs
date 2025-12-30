@@ -1,4 +1,5 @@
 using IwaraDownloader.Forms;
+using IwaraDownloader.Services;
 
 namespace IwaraDownloader
 {
@@ -25,13 +26,25 @@ namespace IwaraDownloader
             // アプリケーション設定
             ApplicationConfiguration.Initialize();
 
+            // ログサービス初期化
+            var logger = LoggingService.Instance;
+            logger.Info("Application starting...");
+
             // 未処理例外のハンドリング
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            // メインフォームを起動
-            Application.Run(new MainForm());
+            try
+            {
+                // メインフォームを起動
+                Application.Run(new MainForm());
+            }
+            finally
+            {
+                // ログサービス終了
+                logger.Dispose();
+            }
         }
 
         /// <summary>
@@ -60,24 +73,29 @@ namespace IwaraDownloader
         {
             try
             {
-                // ログファイルに記録
-                var logPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "IwaraDownloader",
-                    "error.log");
-
-                var logDir = Path.GetDirectoryName(logPath);
-                if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
-                {
-                    Directory.CreateDirectory(logDir);
-                }
-
-                var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}\n\n";
-                File.AppendAllText(logPath, logMessage);
+                // LoggingServiceでエラーを記録
+                LoggingService.Instance.Fatal("Unhandled exception", ex);
             }
             catch
             {
-                // ログ書き込み失敗は無視
+                // ログ書き込み失敗時は旧形式でバックアップ
+                try
+                {
+                    var logPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "IwaraDownloader",
+                        "error.log");
+
+                    var logDir = Path.GetDirectoryName(logPath);
+                    if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
+                    {
+                        Directory.CreateDirectory(logDir);
+                    }
+
+                    var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}\n\n";
+                    File.AppendAllText(logPath, logMessage);
+                }
+                catch { }
             }
 
             MessageBox.Show(
