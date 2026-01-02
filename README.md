@@ -5,218 +5,218 @@
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A Windows desktop application for downloading videos from iwara.tv with channel subscription and automatic new video detection.
+iwara.tv から動画をダウンロードするためのWindows用デスクトップアプリケーションです。チャンネル購読と新着動画の自動検出機能を備えています。
 
-**[日本語版 README はこちら](README_ja.md)**
+**[English README](README_en.md)**
 
-## Features
+## 機能
 
-- **Channel Subscription** - Subscribe to your favorite users and automatically check for new videos
-- **Batch Download** - Download multiple videos from subscribed channels at once
-- **Single Video Download** - Download individual videos by URL
-- **Download Queue** - Manage multiple concurrent downloads (up to 3 parallel)
-- **Auto Check** - Automatically detect new videos at specified intervals
-- **Resume on Startup** - Automatically resume incomplete downloads
-- **Statistics Dashboard** - View download statistics, success rates, and daily trends
-- **Bulk URL Import** - Import multiple URLs from text or file
-- **Duplicate Check** - Detect and manage duplicate videos
-- **Batch Rename** - Rename downloaded files using customizable templates
-- **Notification Sound** - Play sound on download completion or error
-- **System Tray** - Run in background with tray icon
-- **Toast Notifications** - Get notified on download completion and new video detection
+- **チャンネル購読** - お気に入りのユーザーを登録して新着動画を自動チェック
+- **一括ダウンロード** - 購読チャンネルの動画をまとめてダウンロード
+- **単発ダウンロード** - 動画URLを指定して個別にダウンロード
+- **ダウンロードキュー管理** - 複数動画の同時ダウンロード（最大3並列）
+- **自動新着チェック** - 指定間隔で新着動画を自動検出
+- **起動時リジューム** - 未完了のダウンロードを自動再開
+- **統計ダッシュボード** - 動画数、成功率、日別推移を確認
+- **URL一括インポート** - テキストやファイルから複数URLを一括追加
+- **重複チェック** - 同一動画の重複検出・削除
+- **ファイル一括リネーム** - テンプレートによる一括リネーム
+- **通知音** - ダウンロード完了/エラー時に音で通知
+- **タスクトレイ常駐** - バックグラウンドで動作
+- **トースト通知** - ダウンロード完了や新着検出を通知
 
-## Requirements
+## 動作環境
 
-| Item | Requirement |
-|------|-------------|
-| OS | Windows 10/11 (64-bit) |
-| Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.8 or higher (tested on 3.10) |
+| 項目 | 要件 |
+|------|------|
+| OS | Windows 10/11 (64bit) |
+| ランタイム | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| Python | 3.8以上（3.10で動作確認済） |
 
-## Installation
+## インストール
 
-### 1. Download
+### 1. ダウンロード
 
-Download the latest release from [Releases](https://github.com/dekotan24/iwara-downloader/releases) and extract to any folder.
+[Releases](https://github.com/dekotan24/iwara-downloader/releases) から最新版をダウンロードして任意のフォルダに展開してください。
 
-### 2. Python Setup
+### 2. Python環境の準備
 
-Ensure Python 3.8+ is installed:
-- Download from [Python Official Site](https://www.python.org/downloads/)
-- Or use [Python Embeddable Package](https://www.python.org/downloads/)
+Python 3.8以上がインストールされている必要があります。
 
-### 3. Initial Setup
+- [Python公式サイト](https://www.python.org/downloads/) からダウンロード
+- または [Python Embeddable Package](https://www.python.org/downloads/) を使用
 
-1. Run `IwaraDownloader.exe`
-2. Click "Environment Setup" button
-3. Enter your Python path (e.g., `C:\Python311\python.exe`)
-4. Wait for setup to complete (cloudscraper will be installed automatically)
+### 3. 初回セットアップ
 
-### 4. Login
+1. `IwaraDownloader.exe` を起動
+2. 「環境セットアップ」ボタンをクリック
+3. Pythonのパスを入力（例: `C:\Python311\python.exe`）
+4. セットアップが完了するまで待機（cloudscraperが自動インストールされます）
 
-1. Click "Login" button
-2. Enter your iwara.tv email and password
-3. After successful login, all features become available
+### 4. ログイン
 
-## Usage
+1. 「ログイン」ボタンをクリック
+2. iwara.tv のメールアドレスとパスワードを入力
+3. ログイン完了後、すべての機能が利用可能になります
 
-### Subscribe to a Channel
+## 使い方
 
-1. Enter username or profile URL (`https://www.iwara.tv/profile/username`) in the URL input field
-2. Press Enter or click "Add" button
-3. The channel will appear in the left panel
+### チャンネルを購読する
 
-### Download Videos
+1. URL入力欄にユーザー名またはプロフィールURL（`https://www.iwara.tv/profile/username`）を入力
+2. Enterキーを押すか「追加」ボタンをクリック
+3. 左側のチャンネルリストに追加されます
 
-**From Channel:**
-1. Select a channel from the left panel
-2. Select videos to download (multi-select supported)
-3. Right-click → "Download"
+### 動画をダウンロードする
 
-**Single Video:**
-1. Enter video URL (`https://www.iwara.tv/video/xxxxx`) in the URL input field
-2. Press Enter to add to download queue
+**チャンネルの動画をダウンロード:**
+1. 左側のチャンネルリストからチャンネルを選択
+2. 右側の動画リストでダウンロードしたい動画を選択（複数選択可）
+3. 右クリック →「ダウンロード」を選択
 
-**Bulk Import:**
-1. Menu → "Bulk URL Import"
-2. Paste URLs or load from file
-3. Click "Import"
+**単発でダウンロード:**
+1. URL入力欄に動画URL（`https://www.iwara.tv/video/xxxxx`）を入力
+2. Enterキーを押すとダウンロードキューに追加されます
 
-### Keyboard Shortcuts
+**URL一括インポート:**
+1. メニュー →「URL一括インポート」を選択
+2. テキストエリアにURLを貼り付け、またはファイルから読み込み
+3. 「インポート」ボタンで一括追加
 
-| Shortcut | Action |
-|----------|--------|
-| `F5` | Check for new videos |
-| `Ctrl+D` | Download selected videos |
-| `Ctrl+F` | Focus filter box |
-| `Ctrl+A` | Select all videos |
-| `Delete` | Delete selected videos |
+### キーボードショートカット
 
-## Configuration
+| ショートカット | 機能 |
+|--------------|-----|
+| `F5` | 新着チェック |
+| `Ctrl+D` | 選択した動画をダウンロード |
+| `Ctrl+F` | フィルターボックスにフォーカス |
+| `Ctrl+A` | 動画リストの全選択 |
+| `Delete` | 選択した動画を削除 |
 
-### Basic Settings
+## 設定
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| Download Folder | Video save location | My Videos/Iwara |
-| Default Quality | Source / 540p / 360p | Source |
-| Concurrent Downloads | 1-3 (1-2 recommended) | 2 |
-| Retry Count | Number of retry attempts | 3 |
-| Check Interval | New video check interval | 60 min |
+### 基本設定
 
-### Filename Template
+| 項目 | 説明 | デフォルト |
+|------|------|-----------|
+| ダウンロード先フォルダ | 動画の保存先 | マイビデオ/Iwara |
+| デフォルト画質 | Source / 540p / 360p | Source |
+| 同時ダウンロード数 | 1〜3（1-2推奨） | 2 |
+| リトライ回数 | 失敗時の再試行回数 | 3 |
+| 自動チェック間隔 | 新着チェックの間隔 | 60分 |
 
-Available variables:
+### ファイル名テンプレート
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{title}` | Video title | My Video |
-| `{author}` | Uploader name | username |
-| `{date}` | Upload date | 2025-01-01 |
-| `{id}` | Video ID | AbCdEfGh |
-| `{quality}` | Quality | Source |
+以下の変数が使用可能です：
 
-Default: `{id}_{title}`
+| 変数 | 説明 | 例 |
+|------|------|-----|
+| `{title}` | 動画タイトル | My Video |
+| `{author}` | 投稿者名 | username |
+| `{date}` | 投稿日 | 2025-01-01 |
+| `{id}` | 動画ID | AbCdEfGh |
+| `{quality}` | 画質 | Source |
 
-### Rate Limiting
+デフォルト: `{id}_{title}`
 
-For heavy users with many subscriptions:
+### 詳細設定（レート制限）
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| API Request Delay | Delay between API requests | 1000ms |
-| Download Delay | Delay after each download | 3000ms |
-| Channel Check Delay | Delay between channel checks | 5000ms |
-| Page Fetch Delay | Delay when paginating | 500ms |
-| Rate Limit Base Delay | Base delay on 429/403 error | 30000ms |
-| Exponential Backoff | Increase delay on consecutive errors | ON |
+多数のチャンネルを購読している場合や、大量の動画をダウンロードする場合に調整できます：
 
-> ⚠️ Setting values too low may result in access restrictions (403/429 errors).
+| 項目 | 説明 | デフォルト |
+|------|------|-----------|
+| APIリクエスト間隔 | 動画情報取得等のリクエスト間隔 | 1000ms |
+| ダウンロード間隔 | 動画DL完了後の待機時間 | 3000ms |
+| チャンネル巡回間隔 | 次のチャンネルチェックまでの待機 | 5000ms |
+| ページ取得間隔 | 動画一覧のページング時 | 500ms |
+| 429/403エラー時の待機 | エラー時のバックオフ時間 | 30000ms |
+| エクスポネンシャルバックオフ | 連続エラー時に待機時間を段階的に増加 | ON |
 
-## File Structure
+> ⚠️ 値が小さすぎるとサーバーからアクセス制限（403/429エラー）を受ける可能性があります。
+
+## ファイル構成
 
 ```
 IwaraDownloader/
-├── IwaraDownloader.exe    # Main application
-├── iwara_helper.py        # Python API helper
-├── iwara_setup.bat        # Python environment setup
-├── task_complete.mp3      # Completion sound (default)
-├── task_error.mp3         # Error sound (default)
-└── [DLLs and other files]
+├── IwaraDownloader.exe    # メインアプリケーション
+├── iwara_helper.py        # Python APIヘルパー
+├── iwara_setup.bat        # Python環境セットアップ用
+├── task_complete.mp3      # 完了音（デフォルト）
+├── task_error.mp3         # エラー音（デフォルト）
+└── その他DLL等
 ```
 
-## Data Location
+## データ保存場所
 
-Application data is stored in:
+アプリケーションデータは以下に保存されます：
 
 ```
 %APPDATA%\IwaraDownloader\
-├── settings.json         # App settings
-├── data.db               # Subscriptions and video info (SQLite)
-├── token.txt             # Login token
-├── python_path.txt       # Python path setting
-└── logs/                 # Log files
+├── settings.json         # アプリ設定
+├── data.db               # 購読・動画情報（SQLite）
+├── token.txt             # ログイントークン
+├── python_path.txt       # Pythonパス設定
+└── logs/                 # ログファイル
     └── IwaraDownloader_YYYYMMDD_HHMMSS.log
 ```
 
-## Troubleshooting
+## トラブルシューティング
 
-### Setup Fails
+### セットアップに失敗する
 
-- Verify Python path is correct
-- Check internet connection (required for cloudscraper installation)
-- Check if antivirus is blocking the process
-- Ensure Python version is 3.8 or higher
+- Pythonのパスが正しいか確認してください
+- インターネット接続を確認してください（cloudscraperのインストールに必要）
+- ウイルス対策ソフトがブロックしていないか確認してください
+- Pythonのバージョンが3.8以上か確認してください
 
-### Login Fails
+### ログインに失敗する
 
-- Verify email and password are correct
-- Check if you can login directly on iwara.tv
-- Ensure environment setup is complete
+- メールアドレスとパスワードが正しいか確認してください
+- iwara.tv のサイトに直接ログインできるか確認してください
+- 環境セットアップが完了しているか確認してください
 
-### Download Fails
+### ダウンロードに失敗する
 
-- Check login status
-- Verify the video is not private or deleted
-- Check disk space
-- If 403 errors occur frequently, increase rate limit values
+- ログイン状態を確認してください
+- 動画が非公開または削除されていないか確認してください
+- ディスク容量を確認してください
+- 403エラーが頻発する場合はレート制限の値を大きくしてください
 
-### Cloudflare Errors
+### Cloudflareエラーが発生する
 
-- Run environment setup again
-- Wait a while and retry
-- Check if curl_cffi was installed (optional, for better Cloudflare bypass)
+- 環境セットアップを再実行してください
+- しばらく時間をおいてから再試行してください
+- curl_cffiがインストールされているか確認してください（オプション）
 
-## Dependencies
+## 依存ライブラリ
 
 ### Python
-- [cloudscraper](https://github.com/VeNoMouS/cloudscraper) - Cloudflare bypass
-- [curl_cffi](https://github.com/yifeikong/curl_cffi) - TLS fingerprint spoofing (optional)
+- [cloudscraper](https://github.com/VeNoMouS/cloudscraper) - Cloudflare対策
+- [curl_cffi](https://github.com/yifeikong/curl_cffi) - TLSフィンガープリント偽装（オプション）
 
 ### .NET
-- Microsoft.Data.Sqlite - SQLite database
-- System.Text.Json - JSON processing
-- System.Security.Cryptography.ProtectedData - Password encryption
-- NAudio - Audio playback
+- Microsoft.Data.Sqlite - SQLiteデータベース
+- System.Text.Json - JSON処理
+- System.Security.Cryptography.ProtectedData - パスワード暗号化
+- NAudio - 音声再生
 
-## License
+## ライセンス
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - 詳細は [LICENSE](LICENSE) をご覧ください。
 
-## Disclaimer
+## 免責事項
 
-- This software is intended for personal use only
-- Copyright of downloaded videos belongs to their respective owners
-- The author is not responsible for any damages or losses caused by the use of this software
-- Please comply with iwara.tv's terms of service
+- 本ソフトウェアは個人利用を目的としています
+- ダウンロードした動画の著作権は各権利者に帰属します
+- 本ソフトウェアの使用により生じたいかなる損害・損失についても、作者は責任を負いません
+- iwara.tv の利用規約を遵守してご使用ください
 
-## Acknowledgments
+## 謝辞
 
-This project is built with reference to:
+このプロジェクトは以下のプロジェクトを参考に構築されています：
 
 - [iwara-python-api](https://github.com/xiatg/iwara-python-api)
 - [cloudscraper](https://github.com/VeNoMouS/cloudscraper)
 
-Coded with assistance from:
+また、以下のツールによってコーディングされました：
 - [Claude](https://claude.ai) by Anthropic
-
