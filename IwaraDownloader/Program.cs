@@ -37,11 +37,18 @@ namespace IwaraDownloader
 
             try
             {
+                // スプラッシュスクリーンを表示
+                SplashForm.ShowSplash();
+                SplashForm.UpdateStatus("初期化中...", 0);
+
                 // メインフォームを起動
                 Application.Run(new MainForm());
             }
             finally
             {
+                // スプラッシュが残っていれば閉じる
+                SplashForm.CloseSplash();
+
                 // ログサービス終了
                 logger.Dispose();
             }

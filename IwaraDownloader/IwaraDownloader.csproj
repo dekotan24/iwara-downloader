@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
     <RootNamespace>IwaraDownloader</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>deko</Authors>
     <Description>Iwara video downloader</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>

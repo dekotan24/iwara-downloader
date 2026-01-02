@@ -83,6 +83,8 @@ namespace IwaraDownloader.Forms
             // その他設定
             chkEnableSound.Checked = settings.EnableCompletionSound;
             txtSoundFile.Text = settings.CompletionSoundPath;
+            chkEnableErrorSound.Checked = settings.EnableErrorSound;
+            txtErrorSoundFile.Text = settings.ErrorSoundPath;
             txtFilenameTemplate.Text = settings.FilenameTemplate;
             chkSaveMetadata.Checked = settings.SaveMetadata;
             chkCheckUpdate.Checked = settings.CheckUpdateOnStartup;
@@ -135,6 +137,8 @@ namespace IwaraDownloader.Forms
             // その他設定
             settings.EnableCompletionSound = chkEnableSound.Checked;
             settings.CompletionSoundPath = txtSoundFile.Text.Trim();
+            settings.EnableErrorSound = chkEnableErrorSound.Checked;
+            settings.ErrorSoundPath = txtErrorSoundFile.Text.Trim();
             settings.FilenameTemplate = txtFilenameTemplate.Text.Trim();
             settings.SaveMetadata = chkSaveMetadata.Checked;
             settings.CheckUpdateOnStartup = chkCheckUpdate.Checked;
@@ -399,6 +403,276 @@ namespace IwaraDownloader.Forms
             {
                 MessageBox.Show("指定されたファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        private void btnBrowseErrorSound_Click(object sender, EventArgs e)
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Title = "エラー音声ファイルを選択",
+                Filter = "音声ファイル (*.wav;*.mp3;*.m4a)|*.wav;*.mp3;*.m4a|すべてのファイル (*.*)|*.*"
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtErrorSoundFile.Text = dialog.FileName;
+            }
+        }
+
+        private void btnTestErrorSound_Click(object sender, EventArgs e)
+        {
+            var soundPath = txtErrorSoundFile.Text.Trim();
+            
+            if (string.IsNullOrEmpty(soundPath))
+            {
+                // システムエラー音をテスト
+                System.Media.SystemSounds.Hand.Play();
+            }
+            else if (File.Exists(soundPath))
+            {
+                SoundService.Instance.PlaySound(soundPath);
+            }
+            else
+            {
+                MessageBox.Show("指定されたファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        #endregion
+
+        #region Rename Files
+
+        private async void btnRenameFiles_Click(object sender, EventArgs e)
+        {
+            // 現在のテンプレートを取得
+            var template = txtFilenameTemplate.Text.Trim();
+            if (string.IsNullOrEmpty(template))
+            {
+                MessageBox.Show("テンプレートを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // DL済みの動画を取得
+            var completedVideos = _database.GetVideosByStatus(DownloadStatus.Completed)
+                .Where(v => !string.IsNullOrEmpty(v.LocalFilePath))
+                .ToList();
+
+            if (completedVideos.Count == 0)
+            {
+                MessageBox.Show("リネーム対象のファイルがありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            btnRenameFiles.Enabled = false;
+            btnRenameFiles.Text = "スキャン中...";
+
+            // リネーム項目を作成
+            var items = new List<RenameItem>();
+            var newPathSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            await Task.Run(() =>
+            {
+                foreach (var video in completedVideos)
+                {
+                    var item = new RenameItem
+                    {
+                        Video = video,
+                        OriginalPath = video.LocalFilePath!,
+                        Status = RenameStatus.Pending
+                    };
+
+                    // ファイルが存在しない場合
+                    if (!File.Exists(item.OriginalPath))
+                    {
+                        item.Status = RenameStatus.FileNotFound;
+                        item.NewPath = item.OriginalPath;
+                        items.Add(item);
+                        continue;
+                    }
+
+                    var directory = Path.GetDirectoryName(item.OriginalPath)!;
+                    var extension = Path.GetExtension(item.OriginalPath);
+
+                    // 新しいファイル名を生成
+                    var newFilename = Helpers.ApplyFilenameTemplate(
+                        template,
+                        video.Title,
+                        video.AuthorUsername ?? "unknown",
+                        video.VideoId,
+                        video.PostedAt);
+
+                    item.NewPath = Path.Combine(directory, newFilename + extension);
+
+                    // 同じファイル名ならスキップ
+                    if (item.OriginalPath.Equals(item.NewPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        item.Status = RenameStatus.Skipped;
+                        items.Add(item);
+                        continue;
+                    }
+
+                    // 既存ファイルとの重複チェック
+                    if (File.Exists(item.NewPath))
+                    {
+                        item.Status = RenameStatus.Conflict;
+                        item.ConflictingPath = item.NewPath;
+                        items.Add(item);
+                        newPathSet.Add(item.NewPath);
+                        continue;
+                    }
+
+                    // 他のリネーム対象との重複チェック
+                    if (newPathSet.Contains(item.NewPath))
+                    {
+                        item.Status = RenameStatus.Conflict;
+                        item.ConflictingPath = item.NewPath;
+                        items.Add(item);
+                        continue;
+                    }
+
+                    newPathSet.Add(item.NewPath);
+                    item.Status = RenameStatus.Pending;
+                    items.Add(item);
+                }
+            });
+
+            // 重複があるか確認
+            var conflictCount = items.Count(i => i.Status == RenameStatus.Conflict);
+            var pendingCount = items.Count(i => i.Status == RenameStatus.Pending);
+            var notFoundCount = items.Count(i => i.Status == RenameStatus.FileNotFound);
+
+            if (conflictCount > 0)
+            {
+                var warningResult = MessageBox.Show(
+                    $"リネーム対象: {completedVideos.Count}件\n\n" +
+                    $"・処理可能: {pendingCount}件\n" +
+                    $"・重複あり: {conflictCount}件\n" +
+                    $"・ファイル不在: {notFoundCount}件\n\n" +
+                    $"重複ファイルは結果画面で個別に処理できます。\n" +
+                    $"続行しますか？",
+                    "重複警告",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (warningResult != DialogResult.Yes)
+                {
+                    btnRenameFiles.Enabled = true;
+                    btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+                    return;
+                }
+            }
+            else if (pendingCount > 0)
+            {
+                var confirmResult = MessageBox.Show(
+                    $"{pendingCount}件のファイルをリネームします。\n\n" +
+                    $"テンプレート: {template}\n\n" +
+                    "この操作は取り消しできません。続行しますか？",
+                    "一括リネーム確認",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    btnRenameFiles.Enabled = true;
+                    btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+                    return;
+                }
+            }
+
+            btnRenameFiles.Text = "リネーム中...";
+
+            // Pending状態のファイルをリネーム
+            await Task.Run(() =>
+            {
+                foreach (var item in items.Where(i => i.Status == RenameStatus.Pending))
+                {
+                    try
+                    {
+                        // ファイルをリネーム
+                        File.Move(item.OriginalPath, item.NewPath);
+
+                        // メタデータファイル(.json)もリネーム
+                        var originalJsonPath = Path.ChangeExtension(item.OriginalPath, ".json");
+                        if (File.Exists(originalJsonPath))
+                        {
+                            var newJsonPath = Path.ChangeExtension(item.NewPath, ".json");
+                            File.Move(originalJsonPath, newJsonPath);
+                        }
+
+                        // DB更新
+                        item.Video.LocalFilePath = item.NewPath;
+                        _database.UpdateVideo(item.Video);
+
+                        item.Status = RenameStatus.Success;
+                    }
+                    catch (Exception ex)
+                    {
+                        item.Status = RenameStatus.Error;
+                        item.ErrorMessage = ex.Message;
+                    }
+                }
+            });
+
+            btnRenameFiles.Enabled = true;
+            btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+
+            // 結果ダイアログを表示
+            using var resultForm = new RenameResultForm(items, template);
+            resultForm.ShowDialog(this);
+        }
+
+        #endregion
+
+        #region Rate Limit Presets
+
+        /// <summary>
+        /// 控えめプリセット（サーバー負荷を最小限に）
+        /// </summary>
+        private void btnPresetConservative_Click(object sender, EventArgs e)
+        {
+            numApiDelay.Value = 2000;        // 2秒
+            numDownloadDelay.Value = 5000;    // 5秒
+            numChannelDelay.Value = 10000;    // 10秒
+            numPageDelay.Value = 1000;        // 1秒
+            numRateLimitBase.Value = 60000;   // 60秒
+            numRateLimitMax.Value = 600000;   // 10分
+            chkExponentialBackoff.Checked = true;
+        }
+
+        /// <summary>
+        /// 標準プリセット（バランス重視）
+        /// </summary>
+        private void btnPresetStandard_Click(object sender, EventArgs e)
+        {
+            numApiDelay.Value = 1000;        // 1秒
+            numDownloadDelay.Value = 3000;    // 3秒
+            numChannelDelay.Value = 5000;     // 5秒
+            numPageDelay.Value = 500;         // 0.5秒
+            numRateLimitBase.Value = 30000;   // 30秒
+            numRateLimitMax.Value = 300000;   // 5分
+            chkExponentialBackoff.Checked = true;
+        }
+
+        /// <summary>
+        /// 積極的プリセット（速度優先、エラー増加の可能性あり）
+        /// </summary>
+        private void btnPresetAggressive_Click(object sender, EventArgs e)
+        {
+            numApiDelay.Value = 500;         // 0.5秒
+            numDownloadDelay.Value = 1000;    // 1秒
+            numChannelDelay.Value = 2000;     // 2秒
+            numPageDelay.Value = 200;         // 0.2秒
+            numRateLimitBase.Value = 15000;   // 15秒
+            numRateLimitMax.Value = 120000;   // 2分
+            chkExponentialBackoff.Checked = true;
+
+            // 警告を表示
+            MessageBox.Show(
+                "積極的プリセットはエラーが発生しやすくなります。\n" +
+                "403/429エラーが頻発する場合は、標準または控えめに変更してください。",
+                "注意",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
         }
 
         #endregion

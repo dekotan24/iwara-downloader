@@ -43,6 +43,10 @@ namespace IwaraDownloader.Forms
             this.menuHelpAbout = new ToolStripMenuItem();
             this.menuHelpOpenLogs = new ToolStripMenuItem();
             this.menuHelpGitHub = new ToolStripMenuItem();
+            this.menuHelpSeparator1 = new ToolStripSeparator();
+            this.menuToolsBulkImport = new ToolStripMenuItem();
+            this.menuToolsDuplicateCheck = new ToolStripMenuItem();
+            this.menuToolsStatistics = new ToolStripMenuItem();
 
             // URLテキストボックス
             this.txtUrl = new TextBox();
@@ -318,6 +322,12 @@ namespace IwaraDownloader.Forms
             this.listViewVideos.TabIndex = 0;
             this.listViewVideos.UseCompatibleStateImageBehavior = false;
             this.listViewVideos.View = View.Details;
+            this.listViewVideos.VirtualMode = true;
+            this.listViewVideos.VirtualListSize = 0;
+            this.listViewVideos.RetrieveVirtualItem += new RetrieveVirtualItemEventHandler(this.listViewVideos_RetrieveVirtualItem);
+            this.listViewVideos.SearchForVirtualItem += new SearchForVirtualItemEventHandler(this.listViewVideos_SearchForVirtualItem);
+            this.listViewVideos.CacheVirtualItems += new CacheVirtualItemsEventHandler(this.listViewVideos_CacheVirtualItems);
+            this.listViewVideos.ColumnClick += new ColumnClickEventHandler(this.listViewVideos_ColumnClick);
             this.listViewVideos.DoubleClick += new EventHandler(this.listViewVideos_DoubleClick);
             this.listViewVideos.KeyDown += new KeyEventHandler(this.listViewVideos_KeyDown);
             this.listViewVideos.SelectedIndexChanged += new EventHandler(this.listViewVideos_SelectedIndexChanged);
@@ -349,7 +359,7 @@ namespace IwaraDownloader.Forms
             // 
             // colVideoDate
             // 
-            this.colVideoDate.Text = "投稿日";
+            this.colVideoDate.Text = "追加日時";
             this.colVideoDate.Width = 100;
 
             // 
@@ -503,7 +513,11 @@ namespace IwaraDownloader.Forms
             this.btnHelp.DropDownItems.AddRange(new ToolStripItem[] {
                 this.menuHelpAbout,
                 this.menuHelpOpenLogs,
-                this.menuHelpGitHub
+                this.menuHelpGitHub,
+                this.menuHelpSeparator1,
+                this.menuToolsBulkImport,
+                this.menuToolsDuplicateCheck,
+                this.menuToolsStatistics
             });
             this.btnHelp.Name = "btnHelp";
             this.btnHelp.Size = new Size(55, 22);
@@ -532,6 +546,36 @@ namespace IwaraDownloader.Forms
             this.menuHelpGitHub.Size = new Size(180, 22);
             this.menuHelpGitHub.Text = "GitHubページ";
             this.menuHelpGitHub.Click += new EventHandler(this.menuHelpGitHub_Click);
+
+            // 
+            // menuHelpSeparator1
+            // 
+            this.menuHelpSeparator1.Name = "menuHelpSeparator1";
+            this.menuHelpSeparator1.Size = new Size(177, 6);
+
+            // 
+            // menuToolsBulkImport
+            // 
+            this.menuToolsBulkImport.Name = "menuToolsBulkImport";
+            this.menuToolsBulkImport.Size = new Size(180, 22);
+            this.menuToolsBulkImport.Text = "URL一括インポート...";
+            this.menuToolsBulkImport.Click += new EventHandler(this.menuToolsBulkImport_Click);
+
+            // 
+            // menuToolsDuplicateCheck
+            // 
+            this.menuToolsDuplicateCheck.Name = "menuToolsDuplicateCheck";
+            this.menuToolsDuplicateCheck.Size = new Size(180, 22);
+            this.menuToolsDuplicateCheck.Text = "重複チェック...";
+            this.menuToolsDuplicateCheck.Click += new EventHandler(this.menuToolsDuplicateCheck_Click);
+
+            // 
+            // menuToolsStatistics
+            // 
+            this.menuToolsStatistics.Name = "menuToolsStatistics";
+            this.menuToolsStatistics.Size = new Size(180, 22);
+            this.menuToolsStatistics.Text = "統計ダッシュボード...";
+            this.menuToolsStatistics.Click += new EventHandler(this.menuToolsStatistics_Click);
 
             // 
             // statusStrip
@@ -859,6 +903,7 @@ namespace IwaraDownloader.Forms
             this.Load += new EventHandler(this.MainForm_Load);
             this.KeyDown += new KeyEventHandler(this.MainForm_KeyDown);
             this.Resize += new EventHandler(this.MainForm_Resize);
+            this.Shown += new EventHandler(this.MainForm_Shown);
 
             ((System.ComponentModel.ISupportInitialize)(this.mainSplitContainer)).EndInit();
             this.mainSplitContainer.Panel1.ResumeLayout(false);
@@ -905,6 +950,10 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuHelpAbout;
         private ToolStripMenuItem menuHelpOpenLogs;
         private ToolStripMenuItem menuHelpGitHub;
+        private ToolStripSeparator menuHelpSeparator1;
+        private ToolStripMenuItem menuToolsBulkImport;
+        private ToolStripMenuItem menuToolsDuplicateCheck;
+        private ToolStripMenuItem menuToolsStatistics;
         private TreeView treeViewChannels;
         private Panel panelChannelHeader;
         private Label lblChannelHeader;

@@ -230,6 +230,18 @@ namespace IwaraDownloader.Services
                 {
                     error.AppendLine(e.Data);
                     Debug.WriteLine($"Python stderr: {e.Data}");
+                    
+                    // LoggingServiceにも出力（エラーレベルの判定）
+                    if (e.Data.Contains("Error") || e.Data.Contains("error") || 
+                        e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
+                        e.Data.Contains("403") || e.Data.Contains("429"))
+                    {
+                        LoggingService.Instance.Warn($"Python: {e.Data}");
+                    }
+                    else if (!e.Data.StartsWith("Progress:"))
+                    {
+                        LoggingService.Instance.Debug($"Python: {e.Data}");
+                    }
                 }
             };
 
@@ -244,7 +256,12 @@ namespace IwaraDownloader.Services
 
             if (string.IsNullOrEmpty(outputStr))
             {
-                Debug.WriteLine($"Python error: {error}");
+                var errorStr = error.ToString().Trim();
+                Debug.WriteLine($"Python error: {errorStr}");
+                if (!string.IsNullOrEmpty(errorStr))
+                {
+                    LoggingService.Instance.Error($"Pythonスクリプト実行エラー (action={action}):\n{errorStr}");
+                }
                 return null;
             }
 
@@ -464,10 +481,12 @@ namespace IwaraDownloader.Services
             };
 
             // stderrから進捗をリアルタイム取得
+            var errorOutput = new System.Text.StringBuilder();
             process.ErrorDataReceived += (s, e) =>
             {
                 if (e.Data != null)
                 {
+                    errorOutput.AppendLine(e.Data);
                     Debug.WriteLine($"Python stderr: {e.Data}");
                     
                     // Progress: XX.X% 形式をパース
@@ -478,6 +497,13 @@ namespace IwaraDownloader.Services
                         {
                             percentProgress.Report(pct);
                         }
+                    }
+                    // LoggingServiceにも出力（エラーレベルの判定）
+                    else if (e.Data.Contains("Error") || e.Data.Contains("error") || 
+                             e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
+                             e.Data.Contains("403") || e.Data.Contains("429"))
+                    {
+                        LoggingService.Instance.Warn($"Python: {e.Data}");
                     }
                 }
             };
@@ -492,6 +518,11 @@ namespace IwaraDownloader.Services
 
             if (string.IsNullOrEmpty(outputStr))
             {
+                var errorStr = errorOutput.ToString().Trim();
+                if (!string.IsNullOrEmpty(errorStr))
+                {
+                    LoggingService.Instance.Error($"Pythonスクリプト実行エラー (action={action}):\n{errorStr}");
+                }
                 return null;
             }
 
@@ -502,6 +533,7 @@ namespace IwaraDownloader.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"JSON parse error: {ex.Message}");
+                LoggingService.Instance.Error($"Python出力JSONパースエラー: {ex.Message}\nOutput: {outputStr}");
                 return null;
             }
         }

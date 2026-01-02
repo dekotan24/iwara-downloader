@@ -89,6 +89,8 @@ namespace IwaraDownloader.Services
                     RetryCount INTEGER DEFAULT 0,
                     LastErrorMessage TEXT,
                     CreatedAt TEXT NOT NULL,
+                    Tags TEXT DEFAULT '',
+                    Memo TEXT DEFAULT '',
                     FOREIGN KEY (SubscribedUserId) REFERENCES SubscribedUsers(Id) ON DELETE SET NULL
                 );
 
@@ -127,6 +129,44 @@ namespace IwaraDownloader.Services
             {
                 var alterCmd = connection.CreateCommand();
                 alterCmd.CommandText = "ALTER TABLE SubscribedUsers ADD COLUMN CustomSavePath TEXT DEFAULT ''";
+                alterCmd.ExecuteNonQuery();
+            }
+
+            // VideosテーブルのTags/Memoカラムマイグレーション
+            MigrateVideosTable(connection);
+        }
+
+        /// <summary>
+        /// Videosテーブルのマイグレーション
+        /// </summary>
+        private void MigrateVideosTable(SqliteConnection connection)
+        {
+            var checkCmd = connection.CreateCommand();
+            checkCmd.CommandText = "PRAGMA table_info(Videos)";
+            bool hasTags = false;
+            bool hasMemo = false;
+            
+            using (var reader = checkCmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    var columnName = reader.GetString(1);
+                    if (columnName == "Tags") hasTags = true;
+                    if (columnName == "Memo") hasMemo = true;
+                }
+            }
+
+            if (!hasTags)
+            {
+                var alterCmd = connection.CreateCommand();
+                alterCmd.CommandText = "ALTER TABLE Videos ADD COLUMN Tags TEXT DEFAULT ''";
+                alterCmd.ExecuteNonQuery();
+            }
+
+            if (!hasMemo)
+            {
+                var alterCmd = connection.CreateCommand();
+                alterCmd.CommandText = "ALTER TABLE Videos ADD COLUMN Memo TEXT DEFAULT ''";
                 alterCmd.ExecuteNonQuery();
             }
         }
@@ -333,10 +373,10 @@ namespace IwaraDownloader.Services
             command.CommandText = @"
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId, 
-                    RetryCount, LastErrorMessage, CreatedAt)
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo)
                 VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                     @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt);
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo);
                 SELECT last_insert_rowid();
             ";
             AddVideoParameters(command, video);
@@ -370,7 +410,9 @@ namespace IwaraDownloader.Services
                     DownloadedAt = @DownloadedAt,
                     SubscribedUserId = @SubscribedUserId,
                     RetryCount = @RetryCount,
-                    LastErrorMessage = @LastErrorMessage
+                    LastErrorMessage = @LastErrorMessage,
+                    Tags = @Tags,
+                    Memo = @Memo
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", video.Id);
@@ -553,6 +595,8 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@SubscribedUserId", video.SubscribedUserId ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("@RetryCount", video.RetryCount);
             command.Parameters.AddWithValue("@LastErrorMessage", video.LastErrorMessage ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@Tags", video.Tags ?? "");
+            command.Parameters.AddWithValue("@Memo", video.Memo ?? "");
         }
 
         private static VideoInfo ReadVideo(SqliteDataReader reader)
@@ -576,8 +620,347 @@ namespace IwaraDownloader.Services
                 SubscribedUserId = reader.IsDBNull(reader.GetOrdinal("SubscribedUserId")) ? null : reader.GetInt32(reader.GetOrdinal("SubscribedUserId")),
                 RetryCount = reader.GetInt32(reader.GetOrdinal("RetryCount")),
                 LastErrorMessage = reader.IsDBNull(reader.GetOrdinal("LastErrorMessage")) ? null : reader.GetString(reader.GetOrdinal("LastErrorMessage")),
-                CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedAt")))
+                CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedAt"))),
+                Tags = TryGetString(reader, "Tags"),
+                Memo = TryGetString(reader, "Memo")
             };
+        }
+
+        /// <summary>
+        /// カラムが存在する場合のみ文字列を取得（マイグレーション対応）
+        /// </summary>
+        private static string TryGetString(SqliteDataReader reader, string columnName)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal(columnName);
+                return reader.IsDBNull(ordinal) ? "" : reader.GetString(ordinal);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        #endregion
+
+        #region Batch Operations
+
+        /// <summary>
+        /// 複数の動画を一括追加（トランザクション使用で高速化）
+        /// </summary>
+        /// <param name="videos">追加する動画リスト</param>
+        /// <returns>追加された動画数</returns>
+        public int AddVideosBatch(IEnumerable<VideoInfo> videos)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+            int addedCount = 0;
+
+            try
+            {
+                var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = @"
+                    INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
+                        DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId, 
+                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo)
+                    VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
+                        @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
+                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo)
+                ";
+
+                // パラメータを作成（再利用）
+                var pVideoId = command.Parameters.Add("@VideoId", SqliteType.Text);
+                var pTitle = command.Parameters.Add("@Title", SqliteType.Text);
+                var pUrl = command.Parameters.Add("@Url", SqliteType.Text);
+                var pThumbnailUrl = command.Parameters.Add("@ThumbnailUrl", SqliteType.Text);
+                var pLocalThumbnailPath = command.Parameters.Add("@LocalThumbnailPath", SqliteType.Text);
+                var pAuthorUserId = command.Parameters.Add("@AuthorUserId", SqliteType.Text);
+                var pAuthorUsername = command.Parameters.Add("@AuthorUsername", SqliteType.Text);
+                var pDurationSeconds = command.Parameters.Add("@DurationSeconds", SqliteType.Integer);
+                var pPostedAt = command.Parameters.Add("@PostedAt", SqliteType.Text);
+                var pLocalFilePath = command.Parameters.Add("@LocalFilePath", SqliteType.Text);
+                var pFileSize = command.Parameters.Add("@FileSize", SqliteType.Integer);
+                var pStatus = command.Parameters.Add("@Status", SqliteType.Integer);
+                var pDownloadedAt = command.Parameters.Add("@DownloadedAt", SqliteType.Text);
+                var pSubscribedUserId = command.Parameters.Add("@SubscribedUserId", SqliteType.Integer);
+                var pRetryCount = command.Parameters.Add("@RetryCount", SqliteType.Integer);
+                var pLastErrorMessage = command.Parameters.Add("@LastErrorMessage", SqliteType.Text);
+                var pCreatedAt = command.Parameters.Add("@CreatedAt", SqliteType.Text);
+                var pTags = command.Parameters.Add("@Tags", SqliteType.Text);
+                var pMemo = command.Parameters.Add("@Memo", SqliteType.Text);
+
+                foreach (var video in videos)
+                {
+                    pVideoId.Value = video.VideoId;
+                    pTitle.Value = video.Title;
+                    pUrl.Value = video.Url;
+                    pThumbnailUrl.Value = video.ThumbnailUrl ?? "";
+                    pLocalThumbnailPath.Value = video.LocalThumbnailPath ?? "";
+                    pAuthorUserId.Value = video.AuthorUserId ?? "";
+                    pAuthorUsername.Value = video.AuthorUsername ?? "";
+                    pDurationSeconds.Value = video.DurationSeconds;
+                    pPostedAt.Value = video.PostedAt?.ToString("o") ?? (object)DBNull.Value;
+                    pLocalFilePath.Value = video.LocalFilePath ?? "";
+                    pFileSize.Value = video.FileSize;
+                    pStatus.Value = (int)video.Status;
+                    pDownloadedAt.Value = video.DownloadedAt?.ToString("o") ?? (object)DBNull.Value;
+                    pSubscribedUserId.Value = video.SubscribedUserId ?? (object)DBNull.Value;
+                    pRetryCount.Value = video.RetryCount;
+                    pLastErrorMessage.Value = video.LastErrorMessage ?? (object)DBNull.Value;
+                    pCreatedAt.Value = video.CreatedAt.ToString("o");
+                    pTags.Value = video.Tags ?? "";
+                    pMemo.Value = video.Memo ?? "";
+
+                    addedCount += command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+
+            return addedCount;
+        }
+
+        /// <summary>
+        /// 複数の動画を一括更新（トランザクション使用で高速化）
+        /// </summary>
+        /// <param name="videos">更新する動画リスト</param>
+        /// <returns>更新された動画数</returns>
+        public int UpdateVideosBatch(IEnumerable<VideoInfo> videos)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+            int updatedCount = 0;
+
+            try
+            {
+                var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = @"
+                    UPDATE Videos SET
+                        Title = @Title,
+                        Url = @Url,
+                        ThumbnailUrl = @ThumbnailUrl,
+                        LocalThumbnailPath = @LocalThumbnailPath,
+                        AuthorUserId = @AuthorUserId,
+                        AuthorUsername = @AuthorUsername,
+                        DurationSeconds = @DurationSeconds,
+                        PostedAt = @PostedAt,
+                        LocalFilePath = @LocalFilePath,
+                        FileSize = @FileSize,
+                        Status = @Status,
+                        DownloadedAt = @DownloadedAt,
+                        SubscribedUserId = @SubscribedUserId,
+                        RetryCount = @RetryCount,
+                        LastErrorMessage = @LastErrorMessage,
+                        Tags = @Tags,
+                        Memo = @Memo
+                    WHERE Id = @Id
+                ";
+
+                // パラメータを作成（再利用）
+                var pId = command.Parameters.Add("@Id", SqliteType.Integer);
+                var pTitle = command.Parameters.Add("@Title", SqliteType.Text);
+                var pUrl = command.Parameters.Add("@Url", SqliteType.Text);
+                var pThumbnailUrl = command.Parameters.Add("@ThumbnailUrl", SqliteType.Text);
+                var pLocalThumbnailPath = command.Parameters.Add("@LocalThumbnailPath", SqliteType.Text);
+                var pAuthorUserId = command.Parameters.Add("@AuthorUserId", SqliteType.Text);
+                var pAuthorUsername = command.Parameters.Add("@AuthorUsername", SqliteType.Text);
+                var pDurationSeconds = command.Parameters.Add("@DurationSeconds", SqliteType.Integer);
+                var pPostedAt = command.Parameters.Add("@PostedAt", SqliteType.Text);
+                var pLocalFilePath = command.Parameters.Add("@LocalFilePath", SqliteType.Text);
+                var pFileSize = command.Parameters.Add("@FileSize", SqliteType.Integer);
+                var pStatus = command.Parameters.Add("@Status", SqliteType.Integer);
+                var pDownloadedAt = command.Parameters.Add("@DownloadedAt", SqliteType.Text);
+                var pSubscribedUserId = command.Parameters.Add("@SubscribedUserId", SqliteType.Integer);
+                var pRetryCount = command.Parameters.Add("@RetryCount", SqliteType.Integer);
+                var pLastErrorMessage = command.Parameters.Add("@LastErrorMessage", SqliteType.Text);
+                var pTags = command.Parameters.Add("@Tags", SqliteType.Text);
+                var pMemo = command.Parameters.Add("@Memo", SqliteType.Text);
+
+                foreach (var video in videos)
+                {
+                    pId.Value = video.Id;
+                    pTitle.Value = video.Title;
+                    pUrl.Value = video.Url;
+                    pThumbnailUrl.Value = video.ThumbnailUrl ?? "";
+                    pLocalThumbnailPath.Value = video.LocalThumbnailPath ?? "";
+                    pAuthorUserId.Value = video.AuthorUserId ?? "";
+                    pAuthorUsername.Value = video.AuthorUsername ?? "";
+                    pDurationSeconds.Value = video.DurationSeconds;
+                    pPostedAt.Value = video.PostedAt?.ToString("o") ?? (object)DBNull.Value;
+                    pLocalFilePath.Value = video.LocalFilePath ?? "";
+                    pFileSize.Value = video.FileSize;
+                    pStatus.Value = (int)video.Status;
+                    pDownloadedAt.Value = video.DownloadedAt?.ToString("o") ?? (object)DBNull.Value;
+                    pSubscribedUserId.Value = video.SubscribedUserId ?? (object)DBNull.Value;
+                    pRetryCount.Value = video.RetryCount;
+                    pLastErrorMessage.Value = video.LastErrorMessage ?? (object)DBNull.Value;
+                    pTags.Value = video.Tags ?? "";
+                    pMemo.Value = video.Memo ?? "";
+
+                    updatedCount += command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+
+            return updatedCount;
+        }
+
+        /// <summary>
+        /// 複数のVideoIdの存在確認を一括で行う（高速化）
+        /// </summary>
+        /// <param name="videoIds">確認するVideoIdリスト</param>
+        /// <returns>存在するVideoIdのHashSet</returns>
+        public HashSet<string> GetExistingVideoIds(IEnumerable<string> videoIds)
+        {
+            var existingIds = new HashSet<string>();
+            var videoIdList = videoIds.ToList();
+            
+            if (videoIdList.Count == 0)
+                return existingIds;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            // SQLiteはINクエリのパラメータ数に制限があるため、バッチで処理
+            const int batchSize = 500;
+            
+            for (int i = 0; i < videoIdList.Count; i += batchSize)
+            {
+                var batch = videoIdList.Skip(i).Take(batchSize).ToList();
+                var placeholders = string.Join(",", batch.Select((_, idx) => $"@id{idx}"));
+                
+                var command = connection.CreateCommand();
+                command.CommandText = $"SELECT VideoId FROM Videos WHERE VideoId IN ({placeholders})";
+                
+                for (int j = 0; j < batch.Count; j++)
+                {
+                    command.Parameters.AddWithValue($"@id{j}", batch[j]);
+                }
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    existingIds.Add(reader.GetString(0));
+                }
+            }
+
+            return existingIds;
+        }
+
+        /// <summary>
+        /// 複数の動画を一括削除（トランザクション使用）
+        /// </summary>
+        /// <param name="ids">削除する動画IDリスト</param>
+        /// <returns>削除された動画数</returns>
+        public int DeleteVideosBatch(IEnumerable<int> ids)
+        {
+            var idList = ids.ToList();
+            if (idList.Count == 0)
+                return 0;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+            int deletedCount = 0;
+
+            try
+            {
+                // バッチで削除
+                const int batchSize = 500;
+                
+                for (int i = 0; i < idList.Count; i += batchSize)
+                {
+                    var batch = idList.Skip(i).Take(batchSize).ToList();
+                    var placeholders = string.Join(",", batch.Select((_, idx) => $"@id{idx}"));
+                    
+                    var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = $"DELETE FROM Videos WHERE Id IN ({placeholders})";
+                    
+                    for (int j = 0; j < batch.Count; j++)
+                    {
+                        command.Parameters.AddWithValue($"@id{j}", batch[j]);
+                    }
+
+                    deletedCount += command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+
+            return deletedCount;
+        }
+
+        #endregion
+
+        #region Statistics
+
+        /// <summary>
+        /// ダウンロード統計を取得
+        /// </summary>
+        public DownloadStatistics GetDownloadStatistics()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var stats = new DownloadStatistics();
+
+            // 総動画数
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM Videos";
+            stats.TotalVideoCount = Convert.ToInt32(cmd.ExecuteScalar());
+
+            // ステータス別カウント
+            cmd.CommandText = "SELECT Status, COUNT(*) FROM Videos GROUP BY Status";
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    var status = (DownloadStatus)reader.GetInt32(0);
+                    var count = reader.GetInt32(1);
+                    stats.StatusCounts[status] = count;
+                }
+            }
+
+            // 総ファイルサイズ（完了分）
+            cmd.CommandText = "SELECT COALESCE(SUM(FileSize), 0) FROM Videos WHERE Status = @Status";
+            cmd.Parameters.AddWithValue("@Status", (int)DownloadStatus.Completed);
+            stats.TotalDownloadedSize = Convert.ToInt64(cmd.ExecuteScalar());
+
+            // チャンネル数
+            cmd.CommandText = "SELECT COUNT(*) FROM SubscribedUsers";
+            cmd.Parameters.Clear();
+            stats.ChannelCount = Convert.ToInt32(cmd.ExecuteScalar());
+
+            // 有効なチャンネル数
+            cmd.CommandText = "SELECT COUNT(*) FROM SubscribedUsers WHERE IsEnabled = 1";
+            stats.EnabledChannelCount = Convert.ToInt32(cmd.ExecuteScalar());
+
+            return stats;
         }
 
         #endregion
@@ -620,6 +1003,57 @@ namespace IwaraDownloader.Services
         public void Dispose()
         {
             // SqliteConnectionは使い捨てなので特に何もしない
+        }
+    }
+
+    /// <summary>
+    /// ダウンロード統計情報
+    /// </summary>
+    public class DownloadStatistics
+    {
+        /// <summary>総動画数</summary>
+        public int TotalVideoCount { get; set; }
+        
+        /// <summary>ステータス別カウント</summary>
+        public Dictionary<DownloadStatus, int> StatusCounts { get; set; } = new();
+        
+        /// <summary>総ダウンロード済みサイズ（バイト）</summary>
+        public long TotalDownloadedSize { get; set; }
+        
+        /// <summary>チャンネル数</summary>
+        public int ChannelCount { get; set; }
+        
+        /// <summary>有効なチャンネル数</summary>
+        public int EnabledChannelCount { get; set; }
+
+        /// <summary>完了数</summary>
+        public int CompletedCount => StatusCounts.GetValueOrDefault(DownloadStatus.Completed, 0);
+        
+        /// <summary>失敗数</summary>
+        public int FailedCount => StatusCounts.GetValueOrDefault(DownloadStatus.Failed, 0);
+        
+        /// <summary>待機中数</summary>
+        public int PendingCount => StatusCounts.GetValueOrDefault(DownloadStatus.Pending, 0);
+        
+        /// <summary>DL中数</summary>
+        public int DownloadingCount => StatusCounts.GetValueOrDefault(DownloadStatus.Downloading, 0);
+
+        /// <summary>総サイズを表示用にフォーマット</summary>
+        public string TotalDownloadedSizeFormatted
+        {
+            get
+            {
+                if (TotalDownloadedSize <= 0) return "0 B";
+                string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+                int order = 0;
+                double size = TotalDownloadedSize;
+                while (size >= 1024 && order < sizes.Length - 1)
+                {
+                    order++;
+                    size /= 1024;
+                }
+                return $"{size:0.##} {sizes[order]}";
+            }
         }
     }
 }

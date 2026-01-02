@@ -19,7 +19,7 @@ namespace IwaraDownloader.Forms
         {
             // バージョン情報を設定
             lblVersion.Text = $"Version {UpdateService.CurrentVersionString}";
-            lblCopyright.Text = $"© {DateTime.Now.Year} IwaraDownloader";
+            lblCopyright.Text = $"© {DateTime.Now.Year} Ogura Deko";
         }
 
         private void linkGitHub_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

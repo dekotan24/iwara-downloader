@@ -222,6 +222,13 @@ namespace IwaraDownloader.Services
                         break;
                     }
 
+                    // キャンセルされたタスク（_pendingTasksから削除済み）はスキップ
+                    if (!_pendingTasks.ContainsKey(task.Video.VideoId))
+                    {
+                        _logger.Debug($"Skipping cancelled task: {task.Video.VideoId}");
+                        continue;
+                    }
+
                     // 待機中リストから削除
                     _pendingTasks.TryRemove(task.Video.VideoId, out _);
 
@@ -379,13 +386,19 @@ namespace IwaraDownloader.Services
                 _database.UpdateVideo(task.Video);
 
                 var maxRetry = SettingsManager.Instance.Settings.MaxRetryCount;
+                _logger.Debug($"Download error: {task.Video.Title} - RetryCount={task.Video.RetryCount}, MaxRetry={maxRetry}");
+                
                 if (task.Video.RetryCount < maxRetry)
                 {
+                    _logger.Info($"Retrying download: {task.Video.Title} (attempt {task.Video.RetryCount + 1}/{maxRetry})");
                     await Task.Delay(5000);
                     EnqueueDownload(task.Video, task.IsSubscriptionDownload, task.SubscribedUser);
                 }
                 else
                 {
+                    // 最終的に失敗した場合はエラー音を再生して通知
+                    _logger.Info($"Final failure, playing error sound: {task.Video.Title}");
+                    SoundService.Instance.PlayErrorSound();
                     NotificationService.Instance.NotifyDownloadError(task.Video.Title, ex.Message);
                 }
             }

@@ -70,12 +70,18 @@ namespace IwaraDownloader.Models
         /// <summary>完了音のファイルパス（空の場合はシステム音）</summary>
         public string CompletionSoundPath { get; set; } = string.Empty;
 
+        /// <summary>ダウンロードエラー音を有効にする</summary>
+        public bool EnableErrorSound { get; set; } = false;
+
+        /// <summary>エラー音のファイルパス（空の場合はシステム音）</summary>
+        public string ErrorSoundPath { get; set; } = string.Empty;
+
         #endregion
 
         #region Filename Template
 
         /// <summary>ファイル名テンプレート</summary>
-        public string FilenameTemplate { get; set; } = "{title}";
+        public string FilenameTemplate { get; set; } = "{id}_{title}";
 
         #endregion
 
