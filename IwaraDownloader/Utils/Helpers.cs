@@ -59,6 +59,18 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
+        /// ユーザー名が有効かどうか（英数字、@、_、-のみ許可）
+        /// </summary>
+        public static bool IsValidUsername(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return false;
+            
+            // 英数字、@、_、- のみ許可（1～50文字）
+            return Regex.IsMatch(username, @"^[a-zA-Z0-9@_-]{1,50}$");
+        }
+
+        /// <summary>
         /// URLがiwaraの動画ページかどうか
         /// </summary>
         public static bool IsVideoUrl(string url)
@@ -251,6 +263,37 @@ namespace IwaraDownloader.Utils
             } while (File.Exists(newPath));
 
             return newPath;
+        }
+
+        /// <summary>
+        /// ファイル名テンプレートを適用してファイル名を生成
+        /// </summary>
+        /// <param name="template">テンプレート（{title}, {author}, {date}, {id}, {quality}）</param>
+        /// <param name="title">動画タイトル</param>
+        /// <param name="author">投稿者名</param>
+        /// <param name="videoId">動画ID</param>
+        /// <param name="postedAt">投稿日</param>
+        /// <param name="quality">画質</param>
+        /// <returns>ファイル名（拡張子なし）</returns>
+        public static string ApplyFilenameTemplate(string template, string title, string author, string videoId, DateTime? postedAt, string quality = "")
+        {
+            if (string.IsNullOrWhiteSpace(template))
+                template = "{title}";
+
+            var dateStr = postedAt?.ToString("yyyyMMdd") ?? "unknown";
+
+            var result = template
+                .Replace("{title}", SanitizeFileName(title))
+                .Replace("{author}", SanitizeFileName(author))
+                .Replace("{date}", dateStr)
+                .Replace("{id}", SanitizeFileName(videoId))
+                .Replace("{quality}", SanitizeFileName(quality));
+
+            // 結果が空の場合はデフォルト
+            if (string.IsNullOrWhiteSpace(result))
+                result = SanitizeFileName(title);
+
+            return result;
         }
     }
 }

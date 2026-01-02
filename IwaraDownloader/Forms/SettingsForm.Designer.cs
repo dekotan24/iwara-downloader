@@ -20,6 +20,8 @@ namespace IwaraDownloader.Forms
             this.tabControl = new TabControl();
             this.tabGeneral = new TabPage();
             this.tabAccount = new TabPage();
+            this.tabAdvanced = new TabPage();
+            this.tabOther = new TabPage();
             this.tabBackup = new TabPage();
 
             // 一般設定
@@ -44,12 +46,45 @@ namespace IwaraDownloader.Forms
             this.chkStartMinimized = new CheckBox();
 
             // アカウント設定
+            this.grpPython = new GroupBox();
+            this.lblPythonPath = new Label();
+            this.txtPythonPath = new TextBox();
+            this.btnBrowsePython = new Button();
+            this.lblPythonNote = new Label();
+            
             this.grpAccount = new GroupBox();
-            this.lblUsername = new Label();
-            this.txtUsername = new TextBox();
+            this.lblEmail = new Label();
+            this.txtEmail = new TextBox();
             this.lblPassword = new Label();
             this.txtPassword = new TextBox();
+            this.lblLoginStatus = new Label();
+            this.btnReLogin = new Button();
             this.lblAccountNote = new Label();
+
+            // 詳細設定（レート制限）
+            this.grpRateLimit = new GroupBox();
+            this.lblApiDelay = new Label();
+            this.numApiDelay = new NumericUpDown();
+            this.lblApiDelayUnit = new Label();
+            this.lblDownloadDelay = new Label();
+            this.numDownloadDelay = new NumericUpDown();
+            this.lblDownloadDelayUnit = new Label();
+            this.lblChannelDelay = new Label();
+            this.numChannelDelay = new NumericUpDown();
+            this.lblChannelDelayUnit = new Label();
+            this.lblPageDelay = new Label();
+            this.numPageDelay = new NumericUpDown();
+            this.lblPageDelayUnit = new Label();
+
+            this.grpErrorHandling = new GroupBox();
+            this.lblRateLimitBase = new Label();
+            this.numRateLimitBase = new NumericUpDown();
+            this.lblRateLimitBaseUnit = new Label();
+            this.lblRateLimitMax = new Label();
+            this.numRateLimitMax = new NumericUpDown();
+            this.lblRateLimitMaxUnit = new Label();
+            this.chkExponentialBackoff = new CheckBox();
+            this.lblAdvancedNote = new Label();
 
             // バックアップ
             this.grpExport = new GroupBox();
@@ -59,6 +94,33 @@ namespace IwaraDownloader.Forms
             this.btnImportSettings = new Button();
             this.btnImportSubscriptions = new Button();
 
+            // その他設定
+            this.grpSound = new GroupBox();
+            this.chkEnableSound = new CheckBox();
+            this.lblSoundFile = new Label();
+            this.txtSoundFile = new TextBox();
+            this.btnBrowseSound = new Button();
+            this.btnTestSound = new Button();
+            this.chkEnableErrorSound = new CheckBox();
+            this.lblErrorSoundFile = new Label();
+            this.txtErrorSoundFile = new TextBox();
+            this.btnBrowseErrorSound = new Button();
+            this.btnTestErrorSound = new Button();
+            
+            this.grpFilename = new GroupBox();
+            this.lblFilenameTemplate = new Label();
+            this.txtFilenameTemplate = new TextBox();
+            this.lblFilenameHelp = new Label();
+            this.btnRenameFiles = new Button();
+            
+            this.grpMetadata = new GroupBox();
+            this.chkSaveMetadata = new CheckBox();
+            
+            this.grpUpdate = new GroupBox();
+            this.chkCheckUpdate = new CheckBox();
+            this.btnCheckUpdateNow = new Button();
+            this.lblCurrentVersion = new Label();
+
             // ボタン
             this.btnOk = new Button();
             this.btnCancel = new Button();
@@ -67,15 +129,30 @@ namespace IwaraDownloader.Forms
             this.tabControl.SuspendLayout();
             this.tabGeneral.SuspendLayout();
             this.tabAccount.SuspendLayout();
+            this.tabAdvanced.SuspendLayout();
+            this.tabOther.SuspendLayout();
             this.tabBackup.SuspendLayout();
             this.grpDownload.SuspendLayout();
             this.grpAutoCheck.SuspendLayout();
             this.grpNotification.SuspendLayout();
+            this.grpPython.SuspendLayout();
             this.grpAccount.SuspendLayout();
+            this.grpRateLimit.SuspendLayout();
+            this.grpErrorHandling.SuspendLayout();
+            this.grpSound.SuspendLayout();
+            this.grpFilename.SuspendLayout();
+            this.grpMetadata.SuspendLayout();
+            this.grpUpdate.SuspendLayout();
             this.grpExport.SuspendLayout();
             this.grpImport.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numPageDelay)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitBase)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitMax)).BeginInit();
             this.SuspendLayout();
 
             // 
@@ -83,12 +160,14 @@ namespace IwaraDownloader.Forms
             // 
             this.tabControl.Controls.Add(this.tabGeneral);
             this.tabControl.Controls.Add(this.tabAccount);
+            this.tabControl.Controls.Add(this.tabAdvanced);
+            this.tabControl.Controls.Add(this.tabOther);
             this.tabControl.Controls.Add(this.tabBackup);
             this.tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.tabControl.Location = new Point(12, 12);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new Size(460, 380);
+            this.tabControl.Size = new Size(460, 500);
             this.tabControl.TabIndex = 0;
 
             // 
@@ -100,7 +179,7 @@ namespace IwaraDownloader.Forms
             this.tabGeneral.Location = new Point(4, 24);
             this.tabGeneral.Name = "tabGeneral";
             this.tabGeneral.Padding = new Padding(3);
-            this.tabGeneral.Size = new Size(452, 352);
+            this.tabGeneral.Size = new Size(452, 472);
             this.tabGeneral.TabIndex = 0;
             this.tabGeneral.Text = "一般";
             this.tabGeneral.UseVisualStyleBackColor = true;
@@ -337,47 +416,94 @@ namespace IwaraDownloader.Forms
             // 
             // tabAccount
             // 
+            this.tabAccount.Controls.Add(this.grpPython);
             this.tabAccount.Controls.Add(this.grpAccount);
             this.tabAccount.Location = new Point(4, 24);
             this.tabAccount.Name = "tabAccount";
             this.tabAccount.Padding = new Padding(3);
-            this.tabAccount.Size = new Size(452, 352);
+            this.tabAccount.Size = new Size(452, 472);
             this.tabAccount.TabIndex = 1;
             this.tabAccount.Text = "アカウント";
             this.tabAccount.UseVisualStyleBackColor = true;
 
             // 
+            // grpPython
+            // 
+            this.grpPython.Controls.Add(this.lblPythonPath);
+            this.grpPython.Controls.Add(this.txtPythonPath);
+            this.grpPython.Controls.Add(this.btnBrowsePython);
+            this.grpPython.Controls.Add(this.lblPythonNote);
+            this.grpPython.Location = new Point(6, 6);
+            this.grpPython.Name = "grpPython";
+            this.grpPython.Size = new Size(440, 90);
+            this.grpPython.TabIndex = 0;
+            this.grpPython.TabStop = false;
+            this.grpPython.Text = "Python環境";
+
+            // lblPythonPath
+            this.lblPythonPath.AutoSize = true;
+            this.lblPythonPath.Location = new Point(10, 30);
+            this.lblPythonPath.Name = "lblPythonPath";
+            this.lblPythonPath.Size = new Size(80, 15);
+            this.lblPythonPath.Text = "Pythonパス:";
+
+            // txtPythonPath
+            this.txtPythonPath.Location = new Point(100, 27);
+            this.txtPythonPath.Name = "txtPythonPath";
+            this.txtPythonPath.Size = new Size(260, 23);
+            this.txtPythonPath.TabIndex = 1;
+
+            // btnBrowsePython
+            this.btnBrowsePython.Location = new Point(366, 26);
+            this.btnBrowsePython.Name = "btnBrowsePython";
+            this.btnBrowsePython.Size = new Size(60, 25);
+            this.btnBrowsePython.TabIndex = 2;
+            this.btnBrowsePython.Text = "参照...";
+            this.btnBrowsePython.UseVisualStyleBackColor = true;
+            this.btnBrowsePython.Click += new EventHandler(this.btnBrowsePython_Click);
+
+            // lblPythonNote
+            this.lblPythonNote.AutoSize = true;
+            this.lblPythonNote.ForeColor = Color.Gray;
+            this.lblPythonNote.Location = new Point(10, 60);
+            this.lblPythonNote.Name = "lblPythonNote";
+            this.lblPythonNote.Size = new Size(400, 15);
+            this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います（ライブラリの再インストールは不要）";
+
+            // 
             // grpAccount
             // 
-            this.grpAccount.Controls.Add(this.lblUsername);
-            this.grpAccount.Controls.Add(this.txtUsername);
+            this.grpAccount.Controls.Add(this.lblEmail);
+            this.grpAccount.Controls.Add(this.txtEmail);
             this.grpAccount.Controls.Add(this.lblPassword);
             this.grpAccount.Controls.Add(this.txtPassword);
+            this.grpAccount.Controls.Add(this.lblLoginStatus);
+            this.grpAccount.Controls.Add(this.btnReLogin);
             this.grpAccount.Controls.Add(this.lblAccountNote);
-            this.grpAccount.Location = new Point(6, 6);
+            this.grpAccount.Location = new Point(6, 102);
             this.grpAccount.Name = "grpAccount";
-            this.grpAccount.Size = new Size(440, 140);
-            this.grpAccount.TabIndex = 0;
+            this.grpAccount.Size = new Size(440, 165);
+            this.grpAccount.TabIndex = 1;
             this.grpAccount.TabStop = false;
             this.grpAccount.Text = "iwaraアカウント";
 
             // 
-            // lblUsername
+            // lblEmail
             // 
-            this.lblUsername.AutoSize = true;
-            this.lblUsername.Location = new Point(10, 30);
-            this.lblUsername.Name = "lblUsername";
-            this.lblUsername.Size = new Size(60, 15);
-            this.lblUsername.TabIndex = 0;
-            this.lblUsername.Text = "ユーザー名:";
+            this.lblEmail.AutoSize = true;
+            this.lblEmail.Location = new Point(10, 30);
+            this.lblEmail.Name = "lblEmail";
+            this.lblEmail.Size = new Size(80, 15);
+            this.lblEmail.TabIndex = 0;
+            this.lblEmail.Text = "メールアドレス:";
 
             // 
-            // txtUsername
+            // txtEmail
             // 
-            this.txtUsername.Location = new Point(80, 27);
-            this.txtUsername.Name = "txtUsername";
-            this.txtUsername.Size = new Size(200, 23);
-            this.txtUsername.TabIndex = 1;
+            this.txtEmail.Location = new Point(100, 27);
+            this.txtEmail.Name = "txtEmail";
+            this.txtEmail.Size = new Size(200, 23);
+            this.txtEmail.TabIndex = 1;
 
             // 
             // lblPassword
@@ -392,11 +518,33 @@ namespace IwaraDownloader.Forms
             // 
             // txtPassword
             // 
-            this.txtPassword.Location = new Point(80, 57);
+            this.txtPassword.Location = new Point(100, 57);
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.PasswordChar = '●';
             this.txtPassword.Size = new Size(200, 23);
             this.txtPassword.TabIndex = 3;
+
+            // 
+            // lblLoginStatus
+            // 
+            this.lblLoginStatus.AutoSize = true;
+            this.lblLoginStatus.Location = new Point(310, 30);
+            this.lblLoginStatus.Name = "lblLoginStatus";
+            this.lblLoginStatus.Size = new Size(100, 15);
+            this.lblLoginStatus.TabIndex = 4;
+            this.lblLoginStatus.Text = "(未ログイン)";
+            this.lblLoginStatus.ForeColor = Color.Gray;
+
+            // 
+            // btnReLogin
+            // 
+            this.btnReLogin.Location = new Point(310, 55);
+            this.btnReLogin.Name = "btnReLogin";
+            this.btnReLogin.Size = new Size(115, 27);
+            this.btnReLogin.TabIndex = 5;
+            this.btnReLogin.Text = "再ログイン";
+            this.btnReLogin.UseVisualStyleBackColor = true;
+            this.btnReLogin.Click += new EventHandler(this.btnReLogin_Click);
 
             // 
             // lblAccountNote
@@ -405,9 +553,457 @@ namespace IwaraDownloader.Forms
             this.lblAccountNote.ForeColor = Color.Gray;
             this.lblAccountNote.Location = new Point(10, 95);
             this.lblAccountNote.Name = "lblAccountNote";
-            this.lblAccountNote.Size = new Size(350, 30);
-            this.lblAccountNote.TabIndex = 4;
-            this.lblAccountNote.Text = "※ R-18コンテンツやプライベート動画をダウンロードするには\r\n　 iwaraアカウントでのログインが必要です。";
+            this.lblAccountNote.Size = new Size(400, 60);
+            this.lblAccountNote.TabIndex = 6;
+            this.lblAccountNote.Text = "※ R-18コンテンツやプライベート動画をダウンロードするには\r\n　 iwaraアカウントでのログインが必要です。\r\n※ メールアドレス/パスワード変更後は「再ログイン」を押してください。";
+
+            // 
+            // tabAdvanced
+            // 
+            this.tabAdvanced.Controls.Add(this.grpRateLimit);
+            this.tabAdvanced.Controls.Add(this.grpErrorHandling);
+            this.tabAdvanced.Controls.Add(this.lblAdvancedNote);
+            this.tabAdvanced.Location = new Point(4, 24);
+            this.tabAdvanced.Name = "tabAdvanced";
+            this.tabAdvanced.Padding = new Padding(3);
+            this.tabAdvanced.Size = new Size(452, 472);
+            this.tabAdvanced.TabIndex = 2;
+            this.tabAdvanced.Text = "詳細設定";
+            this.tabAdvanced.UseVisualStyleBackColor = true;
+
+            // 
+            // grpRateLimit
+            // 
+            this.grpRateLimit.Controls.Add(this.lblApiDelay);
+            this.grpRateLimit.Controls.Add(this.numApiDelay);
+            this.grpRateLimit.Controls.Add(this.lblApiDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblDownloadDelay);
+            this.grpRateLimit.Controls.Add(this.numDownloadDelay);
+            this.grpRateLimit.Controls.Add(this.lblDownloadDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblChannelDelay);
+            this.grpRateLimit.Controls.Add(this.numChannelDelay);
+            this.grpRateLimit.Controls.Add(this.lblChannelDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblPageDelay);
+            this.grpRateLimit.Controls.Add(this.numPageDelay);
+            this.grpRateLimit.Controls.Add(this.lblPageDelayUnit);
+            this.grpRateLimit.Controls.Add(this.lblPreset);
+            this.grpRateLimit.Controls.Add(this.btnPresetConservative);
+            this.grpRateLimit.Controls.Add(this.btnPresetStandard);
+            this.grpRateLimit.Controls.Add(this.btnPresetAggressive);
+            this.grpRateLimit.Location = new Point(6, 6);
+            this.grpRateLimit.Name = "grpRateLimit";
+            this.grpRateLimit.Size = new Size(440, 175);
+            this.grpRateLimit.TabIndex = 0;
+            this.grpRateLimit.TabStop = false;
+            this.grpRateLimit.Text = "レート制限設定";
+
+            // lblApiDelay
+            this.lblApiDelay.AutoSize = true;
+            this.lblApiDelay.Location = new Point(10, 25);
+            this.lblApiDelay.Name = "lblApiDelay";
+            this.lblApiDelay.Size = new Size(120, 15);
+            this.lblApiDelay.Text = "APIリクエスト間隔:";
+
+            // numApiDelay
+            this.numApiDelay.Location = new Point(140, 22);
+            this.numApiDelay.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            this.numApiDelay.Minimum = new decimal(new int[] { 500, 0, 0, 0 });
+            this.numApiDelay.Name = "numApiDelay";
+            this.numApiDelay.Size = new Size(80, 23);
+            this.numApiDelay.Value = new decimal(new int[] { 1000, 0, 0, 0 });
+
+            // lblApiDelayUnit
+            this.lblApiDelayUnit.AutoSize = true;
+            this.lblApiDelayUnit.Location = new Point(225, 25);
+            this.lblApiDelayUnit.Text = "ミリ秒";
+
+            // lblDownloadDelay
+            this.lblDownloadDelay.AutoSize = true;
+            this.lblDownloadDelay.Location = new Point(10, 55);
+            this.lblDownloadDelay.Name = "lblDownloadDelay";
+            this.lblDownloadDelay.Size = new Size(120, 15);
+            this.lblDownloadDelay.Text = "ダウンロード間隔:";
+
+            // numDownloadDelay
+            this.numDownloadDelay.Location = new Point(140, 52);
+            this.numDownloadDelay.Maximum = new decimal(new int[] { 60000, 0, 0, 0 });
+            this.numDownloadDelay.Minimum = new decimal(new int[] { 1000, 0, 0, 0 });
+            this.numDownloadDelay.Name = "numDownloadDelay";
+            this.numDownloadDelay.Size = new Size(80, 23);
+            this.numDownloadDelay.Value = new decimal(new int[] { 3000, 0, 0, 0 });
+
+            // lblDownloadDelayUnit
+            this.lblDownloadDelayUnit.AutoSize = true;
+            this.lblDownloadDelayUnit.Location = new Point(225, 55);
+            this.lblDownloadDelayUnit.Text = "ミリ秒";
+
+            // lblChannelDelay
+            this.lblChannelDelay.AutoSize = true;
+            this.lblChannelDelay.Location = new Point(10, 85);
+            this.lblChannelDelay.Name = "lblChannelDelay";
+            this.lblChannelDelay.Size = new Size(120, 15);
+            this.lblChannelDelay.Text = "チャンネル巡回間隔:";
+
+            // numChannelDelay
+            this.numChannelDelay.Location = new Point(140, 82);
+            this.numChannelDelay.Maximum = new decimal(new int[] { 120000, 0, 0, 0 });
+            this.numChannelDelay.Minimum = new decimal(new int[] { 1000, 0, 0, 0 });
+            this.numChannelDelay.Name = "numChannelDelay";
+            this.numChannelDelay.Size = new Size(80, 23);
+            this.numChannelDelay.Value = new decimal(new int[] { 5000, 0, 0, 0 });
+
+            // lblChannelDelayUnit
+            this.lblChannelDelayUnit.AutoSize = true;
+            this.lblChannelDelayUnit.Location = new Point(225, 85);
+            this.lblChannelDelayUnit.Text = "ミリ秒";
+
+            // lblPageDelay
+            this.lblPageDelay.AutoSize = true;
+            this.lblPageDelay.Location = new Point(10, 115);
+            this.lblPageDelay.Name = "lblPageDelay";
+            this.lblPageDelay.Size = new Size(120, 15);
+            this.lblPageDelay.Text = "ページ取得間隔:";
+
+            // numPageDelay
+            this.numPageDelay.Location = new Point(140, 112);
+            this.numPageDelay.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            this.numPageDelay.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numPageDelay.Name = "numPageDelay";
+            this.numPageDelay.Size = new Size(80, 23);
+            this.numPageDelay.Value = new decimal(new int[] { 500, 0, 0, 0 });
+
+            // lblPageDelayUnit
+            this.lblPageDelayUnit.AutoSize = true;
+            this.lblPageDelayUnit.Location = new Point(225, 115);
+            this.lblPageDelayUnit.Text = "ミリ秒";
+
+            // lblPreset
+            this.lblPreset = new Label();
+            this.lblPreset.AutoSize = true;
+            this.lblPreset.Location = new Point(10, 145);
+            this.lblPreset.Name = "lblPreset";
+            this.lblPreset.Size = new Size(60, 15);
+            this.lblPreset.Text = "プリセット:";
+
+            // btnPresetConservative
+            this.btnPresetConservative = new Button();
+            this.btnPresetConservative.Location = new Point(80, 140);
+            this.btnPresetConservative.Name = "btnPresetConservative";
+            this.btnPresetConservative.Size = new Size(100, 27);
+            this.btnPresetConservative.Text = "控えめ";
+            this.btnPresetConservative.UseVisualStyleBackColor = true;
+            this.btnPresetConservative.Click += new EventHandler(this.btnPresetConservative_Click);
+
+            // btnPresetStandard
+            this.btnPresetStandard = new Button();
+            this.btnPresetStandard.Location = new Point(185, 140);
+            this.btnPresetStandard.Name = "btnPresetStandard";
+            this.btnPresetStandard.Size = new Size(100, 27);
+            this.btnPresetStandard.Text = "標準";
+            this.btnPresetStandard.UseVisualStyleBackColor = true;
+            this.btnPresetStandard.Click += new EventHandler(this.btnPresetStandard_Click);
+
+            // btnPresetAggressive
+            this.btnPresetAggressive = new Button();
+            this.btnPresetAggressive.Location = new Point(290, 140);
+            this.btnPresetAggressive.Name = "btnPresetAggressive";
+            this.btnPresetAggressive.Size = new Size(100, 27);
+            this.btnPresetAggressive.Text = "積極的";
+            this.btnPresetAggressive.UseVisualStyleBackColor = true;
+            this.btnPresetAggressive.Click += new EventHandler(this.btnPresetAggressive_Click);
+
+            // 
+            // grpErrorHandling
+            // 
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitBase);
+            this.grpErrorHandling.Controls.Add(this.numRateLimitBase);
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitBaseUnit);
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitMax);
+            this.grpErrorHandling.Controls.Add(this.numRateLimitMax);
+            this.grpErrorHandling.Controls.Add(this.lblRateLimitMaxUnit);
+            this.grpErrorHandling.Controls.Add(this.chkExponentialBackoff);
+            this.grpErrorHandling.Location = new Point(6, 187);
+            this.grpErrorHandling.Name = "grpErrorHandling";
+            this.grpErrorHandling.Size = new Size(440, 115);
+            this.grpErrorHandling.TabIndex = 1;
+            this.grpErrorHandling.TabStop = false;
+            this.grpErrorHandling.Text = "エラー時の動作 (429/403)";
+
+            // lblRateLimitBase
+            this.lblRateLimitBase.AutoSize = true;
+            this.lblRateLimitBase.Location = new Point(10, 25);
+            this.lblRateLimitBase.Name = "lblRateLimitBase";
+            this.lblRateLimitBase.Size = new Size(120, 15);
+            this.lblRateLimitBase.Text = "基本待機時間:";
+
+            // numRateLimitBase
+            this.numRateLimitBase.Location = new Point(140, 22);
+            this.numRateLimitBase.Maximum = new decimal(new int[] { 300000, 0, 0, 0 });
+            this.numRateLimitBase.Minimum = new decimal(new int[] { 5000, 0, 0, 0 });
+            this.numRateLimitBase.Increment = new decimal(new int[] { 5000, 0, 0, 0 });
+            this.numRateLimitBase.Name = "numRateLimitBase";
+            this.numRateLimitBase.Size = new Size(80, 23);
+            this.numRateLimitBase.Value = new decimal(new int[] { 30000, 0, 0, 0 });
+
+            // lblRateLimitBaseUnit
+            this.lblRateLimitBaseUnit.AutoSize = true;
+            this.lblRateLimitBaseUnit.Location = new Point(225, 25);
+            this.lblRateLimitBaseUnit.Text = "ミリ秒";
+
+            // lblRateLimitMax
+            this.lblRateLimitMax.AutoSize = true;
+            this.lblRateLimitMax.Location = new Point(10, 55);
+            this.lblRateLimitMax.Name = "lblRateLimitMax";
+            this.lblRateLimitMax.Size = new Size(120, 15);
+            this.lblRateLimitMax.Text = "最大待機時間:";
+
+            // numRateLimitMax
+            this.numRateLimitMax.Location = new Point(140, 52);
+            this.numRateLimitMax.Maximum = new decimal(new int[] { 600000, 0, 0, 0 });
+            this.numRateLimitMax.Minimum = new decimal(new int[] { 30000, 0, 0, 0 });
+            this.numRateLimitMax.Increment = new decimal(new int[] { 30000, 0, 0, 0 });
+            this.numRateLimitMax.Name = "numRateLimitMax";
+            this.numRateLimitMax.Size = new Size(80, 23);
+            this.numRateLimitMax.Value = new decimal(new int[] { 300000, 0, 0, 0 });
+
+            // lblRateLimitMaxUnit
+            this.lblRateLimitMaxUnit.AutoSize = true;
+            this.lblRateLimitMaxUnit.Location = new Point(225, 55);
+            this.lblRateLimitMaxUnit.Text = "ミリ秒";
+
+            // chkExponentialBackoff
+            this.chkExponentialBackoff.AutoSize = true;
+            this.chkExponentialBackoff.Checked = true;
+            this.chkExponentialBackoff.CheckState = CheckState.Checked;
+            this.chkExponentialBackoff.Location = new Point(10, 85);
+            this.chkExponentialBackoff.Name = "chkExponentialBackoff";
+            this.chkExponentialBackoff.Size = new Size(320, 19);
+            this.chkExponentialBackoff.Text = "エクスポネンシャルバックオフを有効にする（連続エラー時に待機時間を増加）";
+            this.chkExponentialBackoff.UseVisualStyleBackColor = true;
+
+            // lblAdvancedNote
+            this.lblAdvancedNote.AutoSize = true;
+            this.lblAdvancedNote.ForeColor = Color.Gray;
+            this.lblAdvancedNote.Location = new Point(10, 315);
+            this.lblAdvancedNote.Name = "lblAdvancedNote";
+            this.lblAdvancedNote.Size = new Size(420, 60);
+            this.lblAdvancedNote.Text = "※ レート制限設定はサーバー負荷を軽減し、403/429エラーを防ぎます。\r\n※ 値が小さすぎるとアクセス制限される可能性があります。\r\n※ 大きすぎるとダウンロードに時間がかかります。";
+
+            // 
+            // tabOther
+            // 
+            this.tabOther.Controls.Add(this.grpSound);
+            this.tabOther.Controls.Add(this.grpFilename);
+            this.tabOther.Controls.Add(this.grpMetadata);
+            this.tabOther.Controls.Add(this.grpUpdate);
+            this.tabOther.Location = new Point(4, 24);
+            this.tabOther.Name = "tabOther";
+            this.tabOther.Padding = new Padding(3);
+            this.tabOther.Size = new Size(452, 472);
+            this.tabOther.TabIndex = 3;
+            this.tabOther.Text = "その他";
+            this.tabOther.UseVisualStyleBackColor = true;
+
+            // 
+            // grpSound
+            // 
+            this.grpSound.Controls.Add(this.chkEnableSound);
+            this.grpSound.Controls.Add(this.lblSoundFile);
+            this.grpSound.Controls.Add(this.txtSoundFile);
+            this.grpSound.Controls.Add(this.btnBrowseSound);
+            this.grpSound.Controls.Add(this.btnTestSound);
+            this.grpSound.Controls.Add(this.chkEnableErrorSound);
+            this.grpSound.Controls.Add(this.lblErrorSoundFile);
+            this.grpSound.Controls.Add(this.txtErrorSoundFile);
+            this.grpSound.Controls.Add(this.btnBrowseErrorSound);
+            this.grpSound.Controls.Add(this.btnTestErrorSound);
+            this.grpSound.Location = new Point(6, 6);
+            this.grpSound.Name = "grpSound";
+            this.grpSound.Size = new Size(440, 145);
+            this.grpSound.TabIndex = 0;
+            this.grpSound.TabStop = false;
+            this.grpSound.Text = "効果音";
+
+            // chkEnableSound
+            this.chkEnableSound.AutoSize = true;
+            this.chkEnableSound.Location = new Point(10, 25);
+            this.chkEnableSound.Name = "chkEnableSound";
+            this.chkEnableSound.Size = new Size(180, 19);
+            this.chkEnableSound.Text = "ダウンロード完了時に音を鳴らす";
+            this.chkEnableSound.UseVisualStyleBackColor = true;
+
+            // lblSoundFile
+            this.lblSoundFile.AutoSize = true;
+            this.lblSoundFile.Location = new Point(10, 55);
+            this.lblSoundFile.Name = "lblSoundFile";
+            this.lblSoundFile.Size = new Size(70, 15);
+            this.lblSoundFile.Text = "音声ファイル:";
+
+            // txtSoundFile
+            this.txtSoundFile.Location = new Point(90, 52);
+            this.txtSoundFile.Name = "txtSoundFile";
+            this.txtSoundFile.Size = new Size(220, 23);
+            this.txtSoundFile.PlaceholderText = "空欄の場合はシステム音";
+
+            // btnBrowseSound
+            this.btnBrowseSound.Location = new Point(315, 51);
+            this.btnBrowseSound.Name = "btnBrowseSound";
+            this.btnBrowseSound.Size = new Size(55, 25);
+            this.btnBrowseSound.Text = "参照...";
+            this.btnBrowseSound.UseVisualStyleBackColor = true;
+            this.btnBrowseSound.Click += new EventHandler(this.btnBrowseSound_Click);
+
+            // btnTestSound
+            this.btnTestSound.Location = new Point(375, 51);
+            this.btnTestSound.Name = "btnTestSound";
+            this.btnTestSound.Size = new Size(55, 25);
+            this.btnTestSound.Text = "テスト";
+            this.btnTestSound.UseVisualStyleBackColor = true;
+            this.btnTestSound.Click += new EventHandler(this.btnTestSound_Click);
+
+            // chkEnableErrorSound
+            this.chkEnableErrorSound.AutoSize = true;
+            this.chkEnableErrorSound.Location = new Point(10, 85);
+            this.chkEnableErrorSound.Name = "chkEnableErrorSound";
+            this.chkEnableErrorSound.Size = new Size(180, 19);
+            this.chkEnableErrorSound.Text = "ダウンロード失敗時に音を鳴らす";
+            this.chkEnableErrorSound.UseVisualStyleBackColor = true;
+
+            // lblErrorSoundFile
+            this.lblErrorSoundFile.AutoSize = true;
+            this.lblErrorSoundFile.Location = new Point(10, 115);
+            this.lblErrorSoundFile.Name = "lblErrorSoundFile";
+            this.lblErrorSoundFile.Size = new Size(70, 15);
+            this.lblErrorSoundFile.Text = "音声ファイル:";
+
+            // txtErrorSoundFile
+            this.txtErrorSoundFile.Location = new Point(90, 112);
+            this.txtErrorSoundFile.Name = "txtErrorSoundFile";
+            this.txtErrorSoundFile.Size = new Size(220, 23);
+            this.txtErrorSoundFile.PlaceholderText = "空欄の場合はシステム音";
+
+            // btnBrowseErrorSound
+            this.btnBrowseErrorSound.Location = new Point(315, 111);
+            this.btnBrowseErrorSound.Name = "btnBrowseErrorSound";
+            this.btnBrowseErrorSound.Size = new Size(55, 25);
+            this.btnBrowseErrorSound.Text = "参照...";
+            this.btnBrowseErrorSound.UseVisualStyleBackColor = true;
+            this.btnBrowseErrorSound.Click += new EventHandler(this.btnBrowseErrorSound_Click);
+
+            // btnTestErrorSound
+            this.btnTestErrorSound.Location = new Point(375, 111);
+            this.btnTestErrorSound.Name = "btnTestErrorSound";
+            this.btnTestErrorSound.Size = new Size(55, 25);
+            this.btnTestErrorSound.Text = "テスト";
+            this.btnTestErrorSound.UseVisualStyleBackColor = true;
+            this.btnTestErrorSound.Click += new EventHandler(this.btnTestErrorSound_Click);
+
+            // 
+            // grpFilename
+            // 
+            this.grpFilename.Controls.Add(this.lblFilenameTemplate);
+            this.grpFilename.Controls.Add(this.txtFilenameTemplate);
+            this.grpFilename.Controls.Add(this.lblFilenameHelp);
+            this.grpFilename.Controls.Add(this.btnRenameFiles);
+            this.grpFilename.Location = new Point(6, 157);
+            this.grpFilename.Name = "grpFilename";
+            this.grpFilename.Size = new Size(440, 125);
+            this.grpFilename.TabIndex = 1;
+            this.grpFilename.TabStop = false;
+            this.grpFilename.Text = "ファイル名テンプレート";
+
+            // lblFilenameTemplate
+            this.lblFilenameTemplate.AutoSize = true;
+            this.lblFilenameTemplate.Location = new Point(10, 25);
+            this.lblFilenameTemplate.Name = "lblFilenameTemplate";
+            this.lblFilenameTemplate.Size = new Size(70, 15);
+            this.lblFilenameTemplate.Text = "テンプレート:";
+
+            // txtFilenameTemplate
+            this.txtFilenameTemplate.Location = new Point(90, 22);
+            this.txtFilenameTemplate.Name = "txtFilenameTemplate";
+            this.txtFilenameTemplate.Size = new Size(340, 23);
+
+            // lblFilenameHelp
+            this.lblFilenameHelp.AutoSize = true;
+            this.lblFilenameHelp.ForeColor = Color.Gray;
+            this.lblFilenameHelp.Location = new Point(10, 55);
+            this.lblFilenameHelp.Name = "lblFilenameHelp";
+            this.lblFilenameHelp.Size = new Size(400, 30);
+            this.lblFilenameHelp.Text = "使用可能: {title}, {author}, {date}, {id}, {quality}\r\n例: {author}_{title}_{date} → username_VideoTitle_20250101";
+
+            // btnRenameFiles
+            this.btnRenameFiles.Location = new Point(10, 90);
+            this.btnRenameFiles.Name = "btnRenameFiles";
+            this.btnRenameFiles.Size = new Size(220, 27);
+            this.btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+            this.btnRenameFiles.UseVisualStyleBackColor = true;
+            this.btnRenameFiles.Click += new EventHandler(this.btnRenameFiles_Click);
+
+            // 
+            // grpMetadata
+            // 
+            this.grpMetadata.Controls.Add(this.chkSaveMetadata);
+            this.grpMetadata.Location = new Point(6, 288);
+            this.grpMetadata.Name = "grpMetadata";
+            this.grpMetadata.Size = new Size(440, 55);
+            this.grpMetadata.TabIndex = 2;
+            this.grpMetadata.TabStop = false;
+            this.grpMetadata.Text = "メタデータ";
+
+            // chkSaveMetadata
+            this.chkSaveMetadata.AutoSize = true;
+            this.chkSaveMetadata.Location = new Point(10, 25);
+            this.chkSaveMetadata.Name = "chkSaveMetadata";
+            this.chkSaveMetadata.Size = new Size(280, 19);
+            this.chkSaveMetadata.Text = "動画と一緒にメタデータ(.json)を保存";
+            this.chkSaveMetadata.UseVisualStyleBackColor = true;
+
+            // 
+            // grpUpdate
+            // 
+            this.grpUpdate.Controls.Add(this.chkCheckUpdate);
+            this.grpUpdate.Controls.Add(this.chkResumeOnStartup);
+            this.grpUpdate.Controls.Add(this.btnCheckUpdateNow);
+            this.grpUpdate.Controls.Add(this.lblCurrentVersion);
+            this.grpUpdate.Location = new Point(6, 349);
+            this.grpUpdate.Name = "grpUpdate";
+            this.grpUpdate.Size = new Size(440, 85);
+            this.grpUpdate.TabIndex = 3;
+            this.grpUpdate.TabStop = false;
+            this.grpUpdate.Text = "起動時の動作";
+
+            // chkCheckUpdate
+            this.chkCheckUpdate.AutoSize = true;
+            this.chkCheckUpdate.Location = new Point(10, 25);
+            this.chkCheckUpdate.Name = "chkCheckUpdate";
+            this.chkCheckUpdate.Size = new Size(180, 19);
+            this.chkCheckUpdate.Text = "起動時に更新をチェック";
+            this.chkCheckUpdate.UseVisualStyleBackColor = true;
+
+            // chkResumeOnStartup
+            this.chkResumeOnStartup = new CheckBox();
+            this.chkResumeOnStartup.AutoSize = true;
+            this.chkResumeOnStartup.Location = new Point(200, 25);
+            this.chkResumeOnStartup.Name = "chkResumeOnStartup";
+            this.chkResumeOnStartup.Size = new Size(200, 19);
+            this.chkResumeOnStartup.Text = "未完了のDLを再開";
+            this.chkResumeOnStartup.UseVisualStyleBackColor = true;
+
+            // btnCheckUpdateNow
+            this.btnCheckUpdateNow.Location = new Point(10, 50);
+            this.btnCheckUpdateNow.Name = "btnCheckUpdateNow";
+            this.btnCheckUpdateNow.Size = new Size(120, 27);
+            this.btnCheckUpdateNow.Text = "今すぐチェック";
+            this.btnCheckUpdateNow.UseVisualStyleBackColor = true;
+            this.btnCheckUpdateNow.Click += new EventHandler(this.btnCheckUpdateNow_Click);
+
+            // lblCurrentVersion
+            this.lblCurrentVersion.AutoSize = true;
+            this.lblCurrentVersion.Location = new Point(140, 56);
+            this.lblCurrentVersion.Name = "lblCurrentVersion";
+            this.lblCurrentVersion.Size = new Size(100, 15);
+            this.lblCurrentVersion.Text = "現在: v1.0.0";
 
             // 
             // tabBackup
@@ -417,7 +1013,7 @@ namespace IwaraDownloader.Forms
             this.tabBackup.Location = new Point(4, 24);
             this.tabBackup.Name = "tabBackup";
             this.tabBackup.Padding = new Padding(3);
-            this.tabBackup.Size = new Size(452, 352);
+            this.tabBackup.Size = new Size(452, 472);
             this.tabBackup.TabIndex = 2;
             this.tabBackup.Text = "バックアップ";
             this.tabBackup.UseVisualStyleBackColor = true;
@@ -494,7 +1090,7 @@ namespace IwaraDownloader.Forms
             // btnOk
             // 
             this.btnOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            this.btnOk.Location = new Point(236, 400);
+            this.btnOk.Location = new Point(236, 520);
             this.btnOk.Name = "btnOk";
             this.btnOk.Size = new Size(75, 27);
             this.btnOk.TabIndex = 1;
@@ -507,7 +1103,7 @@ namespace IwaraDownloader.Forms
             // 
             this.btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             this.btnCancel.DialogResult = DialogResult.Cancel;
-            this.btnCancel.Location = new Point(317, 400);
+            this.btnCancel.Location = new Point(317, 520);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new Size(75, 27);
             this.btnCancel.TabIndex = 2;
@@ -518,7 +1114,7 @@ namespace IwaraDownloader.Forms
             // btnApply
             // 
             this.btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            this.btnApply.Location = new Point(398, 400);
+            this.btnApply.Location = new Point(398, 520);
             this.btnApply.Name = "btnApply";
             this.btnApply.Size = new Size(75, 27);
             this.btnApply.TabIndex = 3;
@@ -533,7 +1129,7 @@ namespace IwaraDownloader.Forms
             this.AutoScaleDimensions = new SizeF(7F, 15F);
             this.AutoScaleMode = AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new Size(484, 441);
+            this.ClientSize = new Size(484, 560);
             this.Controls.Add(this.tabControl);
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.btnCancel);
@@ -551,6 +1147,9 @@ namespace IwaraDownloader.Forms
             this.tabControl.ResumeLayout(false);
             this.tabGeneral.ResumeLayout(false);
             this.tabAccount.ResumeLayout(false);
+            this.tabAdvanced.ResumeLayout(false);
+            this.tabAdvanced.PerformLayout();
+            this.tabOther.ResumeLayout(false);
             this.tabBackup.ResumeLayout(false);
             this.grpDownload.ResumeLayout(false);
             this.grpDownload.PerformLayout();
@@ -558,12 +1157,32 @@ namespace IwaraDownloader.Forms
             this.grpAutoCheck.PerformLayout();
             this.grpNotification.ResumeLayout(false);
             this.grpNotification.PerformLayout();
+            this.grpPython.ResumeLayout(false);
+            this.grpPython.PerformLayout();
             this.grpAccount.ResumeLayout(false);
             this.grpAccount.PerformLayout();
+            this.grpRateLimit.ResumeLayout(false);
+            this.grpRateLimit.PerformLayout();
+            this.grpErrorHandling.ResumeLayout(false);
+            this.grpErrorHandling.PerformLayout();
+            this.grpSound.ResumeLayout(false);
+            this.grpSound.PerformLayout();
+            this.grpFilename.ResumeLayout(false);
+            this.grpFilename.PerformLayout();
+            this.grpMetadata.ResumeLayout(false);
+            this.grpMetadata.PerformLayout();
+            this.grpUpdate.ResumeLayout(false);
+            this.grpUpdate.PerformLayout();
             this.grpExport.ResumeLayout(false);
             this.grpImport.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numPageDelay)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitBase)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numRateLimitMax)).EndInit();
             this.ResumeLayout(false);
         }
 
@@ -572,6 +1191,8 @@ namespace IwaraDownloader.Forms
         private TabControl tabControl;
         private TabPage tabGeneral;
         private TabPage tabAccount;
+        private TabPage tabAdvanced;
+        private TabPage tabOther;
         private TabPage tabBackup;
         private GroupBox grpDownload;
         private Label lblDownloadFolder;
@@ -592,11 +1213,18 @@ namespace IwaraDownloader.Forms
         private CheckBox chkToast;
         private CheckBox chkStartMinimized;
         private CheckBox chkMinimizeToTray;
+        private GroupBox grpPython;
+        private Label lblPythonPath;
+        private TextBox txtPythonPath;
+        private Button btnBrowsePython;
+        private Label lblPythonNote;
         private GroupBox grpAccount;
-        private Label lblUsername;
-        private TextBox txtUsername;
+        private Label lblEmail;
+        private TextBox txtEmail;
         private Label lblPassword;
         private TextBox txtPassword;
+        private Label lblLoginStatus;
+        private Button btnReLogin;
         private Label lblAccountNote;
         private GroupBox grpExport;
         private Button btnExportSettings;
@@ -607,5 +1235,58 @@ namespace IwaraDownloader.Forms
         private Button btnOk;
         private Button btnCancel;
         private Button btnApply;
+
+        // 詳細設定（レート制限）
+        private GroupBox grpRateLimit;
+        private Label lblApiDelay;
+        private NumericUpDown numApiDelay;
+        private Label lblApiDelayUnit;
+        private Label lblDownloadDelay;
+        private NumericUpDown numDownloadDelay;
+        private Label lblDownloadDelayUnit;
+        private Label lblChannelDelay;
+        private NumericUpDown numChannelDelay;
+        private Label lblChannelDelayUnit;
+        private Label lblPageDelay;
+        private NumericUpDown numPageDelay;
+        private Label lblPageDelayUnit;
+        private GroupBox grpErrorHandling;
+        private Label lblRateLimitBase;
+        private NumericUpDown numRateLimitBase;
+        private Label lblRateLimitBaseUnit;
+        private Label lblRateLimitMax;
+        private NumericUpDown numRateLimitMax;
+        private Label lblRateLimitMaxUnit;
+        private CheckBox chkExponentialBackoff;
+        private Label lblAdvancedNote;
+        private Label lblPreset;
+        private Button btnPresetConservative;
+        private Button btnPresetStandard;
+        private Button btnPresetAggressive;
+
+        // その他設定
+        private GroupBox grpSound;
+        private CheckBox chkEnableSound;
+        private Label lblSoundFile;
+        private TextBox txtSoundFile;
+        private Button btnBrowseSound;
+        private Button btnTestSound;
+        private CheckBox chkEnableErrorSound;
+        private Label lblErrorSoundFile;
+        private TextBox txtErrorSoundFile;
+        private Button btnBrowseErrorSound;
+        private Button btnTestErrorSound;
+        private GroupBox grpFilename;
+        private Label lblFilenameTemplate;
+        private TextBox txtFilenameTemplate;
+        private Label lblFilenameHelp;
+        private Button btnRenameFiles;
+        private GroupBox grpMetadata;
+        private CheckBox chkSaveMetadata;
+        private GroupBox grpUpdate;
+        private CheckBox chkCheckUpdate;
+        private CheckBox chkResumeOnStartup;
+        private Button btnCheckUpdateNow;
+        private Label lblCurrentVersion;
     }
 }

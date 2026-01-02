@@ -1,165 +1,222 @@
 # IwaraDownloader
 
-iwara.tv から動画をダウンロードするためのWindows用デスクトップアプリケーションです。
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)](https://www.microsoft.com/windows)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## 特徴
+A Windows desktop application for downloading videos from iwara.tv with channel subscription and automatic new video detection.
 
-- **チャンネル購読機能** - お気に入りのユーザーを登録して新着動画を自動チェック
-- **一括ダウンロード** - 購読チャンネルの動画をまとめてダウンロード
-- **単発ダウンロード** - 動画URLを指定して個別にダウンロード
-- **ダウンロードキュー管理** - 複数動画の同時ダウンロード（最大3並列）
-- **自動新着チェック** - 指定間隔で新着動画を自動検出
-- **タスクトレイ常駐** - バックグラウンドで動作
-- **トースト通知** - ダウンロード完了や新着検出を通知
-- **チャンネル別保存先** - ユーザーごとにカスタム保存フォルダを設定可能
-- **設定・購読リストのエクスポート/インポート** - バックアップや移行に対応
+**[日本語版 README はこちら](README_ja.md)**
 
-## 動作環境
+## Features
 
-- Windows 10/11 (64bit)
-- [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
-- Python 3.8以上（3.10.0で動作確認済）
+- **Channel Subscription** - Subscribe to your favorite users and automatically check for new videos
+- **Batch Download** - Download multiple videos from subscribed channels at once
+- **Single Video Download** - Download individual videos by URL
+- **Download Queue** - Manage multiple concurrent downloads (up to 3 parallel)
+- **Auto Check** - Automatically detect new videos at specified intervals
+- **Resume on Startup** - Automatically resume incomplete downloads
+- **Statistics Dashboard** - View download statistics, success rates, and daily trends
+- **Bulk URL Import** - Import multiple URLs from text or file
+- **Duplicate Check** - Detect and manage duplicate videos
+- **Batch Rename** - Rename downloaded files using customizable templates
+- **Notification Sound** - Play sound on download completion or error
+- **System Tray** - Run in background with tray icon
+- **Toast Notifications** - Get notified on download completion and new video detection
 
-## インストール
+## Requirements
 
-### 1. アプリケーションのダウンロード
+| Item | Requirement |
+|------|-------------|
+| OS | Windows 10/11 (64-bit) |
+| Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| Python | 3.8 or higher (tested on 3.10) |
 
-[Releases](https://github.com/dekotan24/iwara-downloader/releases) から最新版をダウンロードして任意のフォルダに展開してください。
+## Installation
 
-### 2. Python環境の準備
+### 1. Download
 
-Python 3.8以上がインストールされている必要があります。
+Download the latest release from [Releases](https://github.com/dekotan24/iwara-downloader/releases) and extract to any folder.
 
-- [Python公式サイト](https://www.python.org/downloads/) からダウンロード
-- または [Python Embeddable Package](https://www.python.org/downloads/) を使用
+### 2. Python Setup
 
-### 3. 初回セットアップ
+Ensure Python 3.8+ is installed:
+- Download from [Python Official Site](https://www.python.org/downloads/)
+- Or use [Python Embeddable Package](https://www.python.org/downloads/)
 
-1. `IwaraDownloader.exe` を起動
-2. 「環境セットアップ」ボタンをクリック
-3. Pythonのパスを入力（例: `C:\Python311\python.exe`）※エラーになったら再度試行してください。
-4. セットアップが完了するまで待機（cloudscraperが自動インストールされます）
+### 3. Initial Setup
 
-### 4. ログイン
+1. Run `IwaraDownloader.exe`
+2. Click "Environment Setup" button
+3. Enter your Python path (e.g., `C:\Python311\python.exe`)
+4. Wait for setup to complete (cloudscraper will be installed automatically)
 
-1. 「ログイン」ボタンをクリック
-2. iwara.tv のメールアドレスとパスワードを入力
-3. ログイン完了後、すべての機能が利用可能になります
+### 4. Login
 
-## 使い方
+1. Click "Login" button
+2. Enter your iwara.tv email and password
+3. After successful login, all features become available
 
-### チャンネルを購読する
+## Usage
 
-1. URL入力欄にユーザー名またはプロフィールURL（`https://www.iwara.tv/profile/username`）を入力
-2. Enterキーを押すか「貼り付けて追加」ボタンをクリック
-3. 左側のチャンネルリストに追加されます
+### Subscribe to a Channel
 
-### 動画をダウンロードする
+1. Enter username or profile URL (`https://www.iwara.tv/profile/username`) in the URL input field
+2. Press Enter or click "Add" button
+3. The channel will appear in the left panel
 
-**チャンネルの動画をダウンロード:**
-1. 左側のチャンネルリストからチャンネルを選択
-2. 右側の動画リストでダウンロードしたい動画を右クリック
-3. 「ダウンロード」を選択
+### Download Videos
 
-**単発でダウンロード:**
-1. URL入力欄に動画URL（`https://www.iwara.tv/video/xxxxx`）を入力
-2. Enterキーを押すと自動的にダウンロードキューに追加されます
+**From Channel:**
+1. Select a channel from the left panel
+2. Select videos to download (multi-select supported)
+3. Right-click → "Download"
 
-### 新着チェック
+**Single Video:**
+1. Enter video URL (`https://www.iwara.tv/video/xxxxx`) in the URL input field
+2. Press Enter to add to download queue
 
-- 「今すぐチェック」ボタンで手動チェック
-- 設定で自動チェック間隔を指定可能（30分〜24時間）
-- 新着検出時に自動ダウンロードするオプションあり
+**Bulk Import:**
+1. Menu → "Bulk URL Import"
+2. Paste URLs or load from file
+3. Click "Import"
 
-### 設定
+### Keyboard Shortcuts
 
-「設定」ボタンから以下の項目を変更できます：
+| Shortcut | Action |
+|----------|--------|
+| `F5` | Check for new videos |
+| `Ctrl+D` | Download selected videos |
+| `Ctrl+F` | Focus filter box |
+| `Ctrl+A` | Select all videos |
+| `Delete` | Delete selected videos |
 
-- ダウンロード先フォルダ
-- デフォルト画質（Source / 540p / 360p）
-- 同時ダウンロード数（1〜3）※大きい数字を設定するとサーバに負荷がかかるので1か2を推奨
-- リトライ回数
-- 自動チェック間隔
-- 新着検出時の自動ダウンロード
-- トースト通知のON/OFF
-- 起動時の最小化
-- 閉じるボタンでトレイに最小化
+## Configuration
 
-## ファイル構成
+### Basic Settings
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Download Folder | Video save location | My Videos/Iwara |
+| Default Quality | Source / 540p / 360p | Source |
+| Concurrent Downloads | 1-3 (1-2 recommended) | 2 |
+| Retry Count | Number of retry attempts | 3 |
+| Check Interval | New video check interval | 60 min |
+
+### Filename Template
+
+Available variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{title}` | Video title | My Video |
+| `{author}` | Uploader name | username |
+| `{date}` | Upload date | 2025-01-01 |
+| `{id}` | Video ID | AbCdEfGh |
+| `{quality}` | Quality | Source |
+
+Default: `{id}_{title}`
+
+### Rate Limiting
+
+For heavy users with many subscriptions:
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| API Request Delay | Delay between API requests | 1000ms |
+| Download Delay | Delay after each download | 3000ms |
+| Channel Check Delay | Delay between channel checks | 5000ms |
+| Page Fetch Delay | Delay when paginating | 500ms |
+| Rate Limit Base Delay | Base delay on 429/403 error | 30000ms |
+| Exponential Backoff | Increase delay on consecutive errors | ON |
+
+> ⚠️ Setting values too low may result in access restrictions (403/429 errors).
+
+## File Structure
 
 ```
 IwaraDownloader/
-├── IwaraDownloader.exe    # メインアプリケーション
-├── iwara_helper.py        # Python APIヘルパー
-├── iwara_setup.bat        # Python環境セットアップ用
-└── その他DLL等
+├── IwaraDownloader.exe    # Main application
+├── iwara_helper.py        # Python API helper
+├── iwara_setup.bat        # Python environment setup
+├── task_complete.mp3      # Completion sound (default)
+├── task_error.mp3         # Error sound (default)
+└── [DLLs and other files]
 ```
 
-## データ保存場所
+## Data Location
 
-アプリケーションデータは以下に保存されます：
+Application data is stored in:
 
 ```
 %APPDATA%\IwaraDownloader\
-├── settings.json         # アプリ設定
-├── data.db               # 購読・動画情報（SQLite）
-├── token.txt             # ログイントークン
-├── python_path.txt       # Pythonパス設定
-└── error.log             # エラーログ
+├── settings.json         # App settings
+├── data.db               # Subscriptions and video info (SQLite)
+├── token.txt             # Login token
+├── python_path.txt       # Python path setting
+└── logs/                 # Log files
+    └── IwaraDownloader_YYYYMMDD_HHMMSS.log
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### セットアップに失敗する
+### Setup Fails
 
-- Pythonのパスが正しいか確認してください
-- インターネット接続を確認してください（cloudscraperのインストールに必要）
-- ウイルス対策ソフトがブロックしていないか確認してください
+- Verify Python path is correct
+- Check internet connection (required for cloudscraper installation)
+- Check if antivirus is blocking the process
+- Ensure Python version is 3.8 or higher
 
-### ログインに失敗する
+### Login Fails
 
-- メールアドレスとパスワードが正しいか確認してください
-- iwara.tv のサイトに直接ログインできるか確認してください
-- 環境セットアップが完了しているか確認してください
+- Verify email and password are correct
+- Check if you can login directly on iwara.tv
+- Ensure environment setup is complete
 
-### ダウンロードに失敗する
+### Download Fails
 
-- ログイン状態を確認してください
-- 動画が非公開または削除されていないか確認してください
-- ディスク容量を確認してください
+- Check login status
+- Verify the video is not private or deleted
+- Check disk space
+- If 403 errors occur frequently, increase rate limit values
 
-### 動画一覧が取得できない
+### Cloudflare Errors
 
-- ログインが必要です。先にログインを完了してください
-- ユーザー名が正しいか確認してください
+- Run environment setup again
+- Wait a while and retry
+- Check if curl_cffi was installed (optional, for better Cloudflare bypass)
 
-## 依存ライブラリ
+## Dependencies
 
 ### Python
-- [cloudscraper](https://github.com/VeNoMouS/cloudscraper) - Cloudflare対策
+- [cloudscraper](https://github.com/VeNoMouS/cloudscraper) - Cloudflare bypass
+- [curl_cffi](https://github.com/yifeikong/curl_cffi) - TLS fingerprint spoofing (optional)
 
 ### .NET
-- Microsoft.Data.Sqlite
-- System.Text.Json
-- System.Security.Cryptography.ProtectedData
+- Microsoft.Data.Sqlite - SQLite database
+- System.Text.Json - JSON processing
+- System.Security.Cryptography.ProtectedData - Password encryption
+- NAudio - Audio playback
 
-## ライセンス
+## License
 
-MIT License - 詳細は [LICENSE](LICENSE) をご覧ください。
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 免責事項
+## Disclaimer
 
-- 本ソフトウェアは個人利用を目的としています
-- ダウンロードした動画の著作権は各権利者に帰属します
-- 本ソフトウェアの使用により生じたいかなる損害・損失についても、作者は責任を負いません
-- iwara.tv の利用規約を遵守してご使用ください
+- This software is intended for personal use only
+- Copyright of downloaded videos belongs to their respective owners
+- The author is not responsible for any damages or losses caused by the use of this software
+- Please comply with iwara.tv's terms of service
 
-## 謝辞
+## Acknowledgments
 
-このプロジェクトは以下のプロジェクトを参考に構築されています：
+This project is built with reference to:
 
 - [iwara-python-api](https://github.com/xiatg/iwara-python-api)
 - [cloudscraper](https://github.com/VeNoMouS/cloudscraper)
 
-また、以下のツールによってコーディングされました：
-- [claude.ai](https://claude.ai) Opus 4.5
+Coded with assistance from:
+- [Claude](https://claude.ai) by Anthropic
+

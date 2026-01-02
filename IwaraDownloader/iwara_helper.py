@@ -13,10 +13,11 @@ import sys
 import os
 import hashlib
 import re
+import time
 from urllib.parse import urlparse, parse_qs
 
 class IwaraAPI:
-    def __init__(self, token=None):
+    def __init__(self, token=None, rate_limit_config=None):
         self.scraper = cloudscraper.create_scraper(
             browser={
                 'browser': 'chrome',
@@ -27,17 +28,173 @@ class IwaraAPI:
         self.api_url = "https://api.iwara.tv"
         self.file_url = "https://files.iwara.tv"
         self.token = token
+        
+        # Rate limiting configuration
+        self.rate_limit_config = rate_limit_config or {}
+        self.api_request_delay = self.rate_limit_config.get('api_delay', 1.0)  # seconds
+        self.page_fetch_delay = self.rate_limit_config.get('page_delay', 0.5)  # seconds
+        self.rate_limit_base_delay = self.rate_limit_config.get('rate_limit_base', 30)  # seconds
+        self.rate_limit_max_delay = self.rate_limit_config.get('rate_limit_max', 300)  # seconds
+        self.enable_backoff = self.rate_limit_config.get('enable_backoff', True)
+        
+        # Backoff state
+        self._consecutive_errors = 0
+        self._last_request_time = 0
+    
+    def _wait_for_rate_limit(self, delay_seconds=None):
+        """リクエスト間隔を確保"""
+        if delay_seconds is None:
+            delay_seconds = self.api_request_delay
+        
+        elapsed = time.time() - self._last_request_time
+        if elapsed < delay_seconds:
+            wait_time = delay_seconds - elapsed
+            print(f"RateLimit: waiting {wait_time:.1f}s...", file=sys.stderr)
+            time.sleep(wait_time)
+        
+        self._last_request_time = time.time()
+    
+    def _handle_rate_limit_error(self, status_code, response=None):
+        """429/403エラー時のバックオフ処理
+        
+        Returns:
+            (should_retry, error_message)
+            - should_retry: Trueならリトライすべき、Falseなら即座に失敗
+            - error_message: エラーメッセージ
+        """
+        if status_code == 429:
+            # 429 Too Many Requests - レート制限、リトライする
+            self._consecutive_errors += 1
+            
+            if self.enable_backoff:
+                delay = min(
+                    self.rate_limit_base_delay * (2 ** (self._consecutive_errors - 1)),
+                    self.rate_limit_max_delay
+                )
+            else:
+                delay = self.rate_limit_base_delay
+            
+            print(f"RateLimit: HTTP 429 Too Many Requests, backing off for {delay:.0f}s (attempt {self._consecutive_errors})", file=sys.stderr)
+            time.sleep(delay)
+            return True, "Rate limited (429)"
+        
+        if status_code == 403:
+            # 403 Forbidden - 原因を判別
+            error_detail = ""
+            is_rate_limit = False
+            
+            if response is not None:
+                try:
+                    # レスポンスボディを確認
+                    try:
+                        body = response.json()
+                        error_detail = body.get("message", "") or body.get("error", "") or str(body)
+                    except:
+                        error_detail = response.text[:200] if response.text else ""
+                    
+                    # Cloudflareやレート制限の判定
+                    text_lower = (error_detail + response.text).lower() if response.text else error_detail.lower()
+                    if any(keyword in text_lower for keyword in ['rate limit', 'too many', 'cloudflare', 'blocked', 'captcha']):
+                        is_rate_limit = True
+                except Exception as e:
+                    error_detail = f"Could not parse response: {e}"
+            
+            if is_rate_limit:
+                # レート制限由来の403 - リトライする
+                self._consecutive_errors += 1
+                
+                if self.enable_backoff:
+                    delay = min(
+                        self.rate_limit_base_delay * (2 ** (self._consecutive_errors - 1)),
+                        self.rate_limit_max_delay
+                    )
+                else:
+                    delay = self.rate_limit_base_delay
+                
+                print(f"RateLimit: HTTP 403 (rate limit), backing off for {delay:.0f}s (attempt {self._consecutive_errors})", file=sys.stderr)
+                time.sleep(delay)
+                return True, f"Rate limited (403): {error_detail}"
+            else:
+                # 権限不足の403 - リトライしない
+                print(f"Permission denied: HTTP 403 - {error_detail}", file=sys.stderr)
+                return False, f"Access denied (403): {error_detail or 'Private content or insufficient permissions'}"
+        
+        # その他のエラー
+        self._consecutive_errors = 0
+        return False, f"HTTP {status_code}"
+    
+    def _request_with_retry(self, method, url, max_retries=3, **kwargs):
+        """リトライ機能付きリクエスト"""
+        last_error = None
+        
+        for attempt in range(max_retries):
+            self._wait_for_rate_limit()
+            
+            try:
+                if method == 'GET':
+                    r = self.scraper.get(url, **kwargs)
+                elif method == 'POST':
+                    r = self.scraper.post(url, **kwargs)
+                else:
+                    raise ValueError(f"Unknown method: {method}")
+                
+                # レート制限/権限エラーの処理
+                if r.status_code in [429, 403]:
+                    should_retry, error_msg = self._handle_rate_limit_error(r.status_code, r)
+                    last_error = error_msg
+                    
+                    if should_retry and attempt < max_retries - 1:
+                        print(f"Retrying... (attempt {attempt + 2}/{max_retries})", file=sys.stderr)
+                        continue
+                    else:
+                        # リトライ不可または最後の試行
+                        print(f"Failed after {attempt + 1} attempts: {error_msg}", file=sys.stderr)
+                        return r  # エラーレスポンスを返す
+                
+                # 成功 - エラーカウントリセット
+                self._consecutive_errors = 0
+                return r
+                
+            except Exception as e:
+                last_error = str(e)
+                print(f"Request error (attempt {attempt + 1}/{max_retries}): {e}", file=sys.stderr)
+                if attempt < max_retries - 1:
+                    time.sleep(self.api_request_delay * (attempt + 1))
+                else:
+                    raise
+        
+        return None
 
     def login(self, email: str, password: str) -> dict:
         """ログインしてトークンを取得"""
         try:
-            r = self.scraper.post(
+            r = self._request_with_retry(
+                'POST',
                 f"{self.api_url}/user/login",
                 json={"email": email, "password": password}
             )
             
+            if r is None:
+                return {"success": False, "error": "No response from server"}
+            
+            if r.status_code == 401:
+                return {"success": False, "error": "Invalid email or password"}
+            
+            if r.status_code == 403:
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = ""
+                return {"success": False, "error": f"Login blocked: {msg or 'Too many attempts or account issue'}"}
+            
             if r.status_code != 200:
-                return {"success": False, "error": f"Login failed: HTTP {r.status_code}"}
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = r.text[:100] if r.text else ""
+                return {"success": False, "error": f"Login failed: HTTP {r.status_code} - {msg}"}
             
             data = r.json()
             self.token = data.get("token")
@@ -48,7 +205,7 @@ class IwaraAPI:
                 return {"success": False, "error": "No token in response"}
                 
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": f"Exception: {str(e)}"}
 
     def _auth_header(self) -> dict:
         """認証ヘッダーを返す"""
@@ -60,13 +217,33 @@ class IwaraAPI:
         """ユーザーの全動画リストを取得"""
         try:
             # 1. プロフィールからuser_idを取得
-            profile_r = self.scraper.get(
+            profile_r = self._request_with_retry(
+                'GET',
                 f"{self.api_url}/profile/{username}",
                 headers=self._auth_header()
             )
             
+            if profile_r is None:
+                return {"success": False, "error": "No response from server"}
+            
+            if profile_r.status_code == 404:
+                return {"success": False, "error": f"User not found: {username}"}
+            
+            if profile_r.status_code == 403:
+                try:
+                    body = profile_r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = ""
+                return {"success": False, "error": f"Access denied: {msg or 'Login may be required'}"}
+            
             if profile_r.status_code != 200:
-                return {"success": False, "error": f"Profile fetch failed: HTTP {profile_r.status_code}"}
+                try:
+                    body = profile_r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = profile_r.text[:100] if profile_r.text else ""
+                return {"success": False, "error": f"Profile fetch failed: HTTP {profile_r.status_code} - {msg}"}
             
             profile_data = profile_r.json()
             user_id = profile_data.get("user", {}).get("id")
@@ -80,7 +257,12 @@ class IwaraAPI:
             max_pages = 100  # 安全のため上限
             
             while page < max_pages:
-                r = self.scraper.get(
+                # ページ取得間のディレイ
+                if page > 0:
+                    self._wait_for_rate_limit(self.page_fetch_delay)
+                
+                r = self._request_with_retry(
+                    'GET',
                     f"{self.api_url}/videos",
                     params={
                         "page": page,
@@ -91,7 +273,8 @@ class IwaraAPI:
                     headers=self._auth_header()
                 )
                 
-                if r.status_code != 200:
+                if r is None or r.status_code != 200:
+                    print(f"Page {page} fetch failed, stopping pagination", file=sys.stderr)
                     break
                 
                 data = r.json()
@@ -111,6 +294,7 @@ class IwaraAPI:
                         "private": video.get("private", False)
                     })
                 
+                print(f"Fetched page {page + 1}, {len(results)} videos (total: {len(videos)})", file=sys.stderr)
                 page += 1
             
             return {
@@ -134,18 +318,39 @@ class IwaraAPI:
     def get_video_info(self, video_id: str) -> dict:
         """動画情報を取得"""
         try:
-            r = self.scraper.get(
+            r = self._request_with_retry(
+                'GET',
                 f"{self.api_url}/video/{video_id}",
                 headers=self._auth_header()
             )
             
+            if r is None:
+                return {"success": False, "error": "No response from server"}
+            
+            if r.status_code == 404:
+                return {"success": False, "error": f"Video not found: {video_id}"}
+            
+            if r.status_code == 403:
+                # 詳細なエラーメッセージを取得
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = ""
+                return {"success": False, "error": f"Access denied: {msg or 'Private video or login required'}"}
+            
             if r.status_code != 200:
-                return {"success": False, "error": f"Video info failed: HTTP {r.status_code}"}
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = r.text[:100] if r.text else ""
+                return {"success": False, "error": f"HTTP {r.status_code}: {msg}"}
             
             return {"success": True, "data": r.json()}
             
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": f"Exception: {str(e)}"}
 
     def get_download_url(self, video_id: str, quality: str = "Source") -> dict:
         """ダウンロードURLを取得"""
@@ -176,10 +381,26 @@ class IwaraAPI:
             headers = self._auth_header()
             headers['X-Version'] = x_version
             
-            r = self.scraper.get(file_url, headers=headers)
+            r = self._request_with_retry('GET', file_url, headers=headers)
+            
+            if r is None:
+                return {"success": False, "error": "No response from file server"}
+            
+            if r.status_code == 403:
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = r.text[:100] if r.text else ""
+                return {"success": False, "error": f"Access denied to download: {msg or 'Private video or login required'}"}
             
             if r.status_code != 200:
-                return {"success": False, "error": f"File URL fetch failed: HTTP {r.status_code}"}
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except:
+                    msg = r.text[:100] if r.text else ""
+                return {"success": False, "error": f"File URL fetch failed: HTTP {r.status_code} - {msg}"}
             
             files = r.json()
             
@@ -235,6 +456,17 @@ class IwaraAPI:
             
             r = self.scraper.get(download_url, stream=True)
             
+            if r.status_code == 403:
+                try:
+                    # ストリームの場合はボディを読み取れないことがある
+                    msg = "Access denied"
+                except:
+                    msg = "Access denied"
+                return {"success": False, "error": f"Download blocked (403): {msg}"}
+            
+            if r.status_code == 404:
+                return {"success": False, "error": "Download URL expired or not found (404)"}
+            
             if r.status_code != 200:
                 return {"success": False, "error": f"Download failed: HTTP {r.status_code}"}
             
@@ -242,23 +474,29 @@ class IwaraAPI:
             total_size = int(r.headers.get('content-length', 0))
             
             # 出力ディレクトリ作成
-            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+            try:
+                os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+            except Exception as e:
+                return {"success": False, "error": f"Cannot create output directory: {e}"}
             
             # ダウンロード（1%ごとに進捗出力）
             downloaded = 0
             last_percent = -1
-            with open(output_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=65536):  # 64KBチャンク
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if total_size > 0:
-                            progress = (downloaded / total_size) * 100
-                            current_percent = int(progress)
-                            # 1%ごとに出力
-                            if current_percent > last_percent:
-                                print(f"Progress: {current_percent}%", file=sys.stderr)
-                                last_percent = current_percent
+            try:
+                with open(output_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=65536):  # 64KBチャンク
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size > 0:
+                                progress = (downloaded / total_size) * 100
+                                current_percent = int(progress)
+                                # 1%ごとに出力
+                                if current_percent > last_percent:
+                                    print(f"Progress: {current_percent}%", file=sys.stderr)
+                                    last_percent = current_percent
+            except IOError as e:
+                return {"success": False, "error": f"File write error: {e}"}
             
             print("Progress: 100%", file=sys.stderr)  # 完了
             
@@ -270,7 +508,26 @@ class IwaraAPI:
             }
             
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": f"Download exception: {str(e)}"}
+
+
+def parse_rate_limit_args():
+    """レート制限設定をコマンドライン引数からパース"""
+    config = {}
+    
+    for i, arg in enumerate(sys.argv):
+        if arg == "--api-delay" and i + 1 < len(sys.argv):
+            config['api_delay'] = float(sys.argv[i + 1])
+        elif arg == "--page-delay" and i + 1 < len(sys.argv):
+            config['page_delay'] = float(sys.argv[i + 1])
+        elif arg == "--rate-limit-base" and i + 1 < len(sys.argv):
+            config['rate_limit_base'] = float(sys.argv[i + 1])
+        elif arg == "--rate-limit-max" and i + 1 < len(sys.argv):
+            config['rate_limit_max'] = float(sys.argv[i + 1])
+        elif arg == "--no-backoff":
+            config['enable_backoff'] = False
+    
+    return config
 
 
 def main():
@@ -291,7 +548,10 @@ def main():
     if not token:
         token = os.environ.get("IWARA_TOKEN")
     
-    api = IwaraAPI(token=token)
+    # レート制限設定をパース
+    rate_limit_config = parse_rate_limit_args()
+    
+    api = IwaraAPI(token=token, rate_limit_config=rate_limit_config)
     
     if action == "login":
         if len(sys.argv) < 4:

@@ -11,8 +11,6 @@ namespace IwaraDownloader.Services
     {
         private readonly string _appDir;
         private readonly string _scriptPath;
-        private readonly string _pythonConfigPath;
-        private string? _pythonPath;
         private string? _token;
 
         /// <summary>ログイン済みかどうか</summary>
@@ -21,8 +19,23 @@ namespace IwaraDownloader.Services
         /// <summary>トークン</summary>
         public string? Token => _token;
 
+        /// <summary>Pythonパス（設定から取得）</summary>
+        private string PythonPath => Utils.SettingsManager.Instance.Settings.PythonPath;
+
         /// <summary>Pythonが設定されているか</summary>
-        public bool IsPythonConfigured => !string.IsNullOrEmpty(_pythonPath) && File.Exists(_pythonPath);
+        public bool IsPythonConfigured
+        {
+            get
+            {
+                var pythonPath = PythonPath;
+                if (string.IsNullOrEmpty(pythonPath)) return false;
+                // フルパスの場合はファイル存在チェック
+                if (Path.IsPathRooted(pythonPath))
+                    return File.Exists(pythonPath);
+                // "python"などPATH上のコマンドの場合は存在するとみなす
+                return true;
+            }
+        }
 
         /// <summary>スクリプトが存在するか</summary>
         public bool IsScriptReady => File.Exists(_scriptPath);
@@ -37,55 +50,59 @@ namespace IwaraDownloader.Services
         {
             _appDir = AppDomain.CurrentDomain.BaseDirectory;
             _scriptPath = Path.Combine(_appDir, "iwara_helper.py");
-            _pythonConfigPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "IwaraDownloader",
-                "python_path.txt");
-            
-            // 保存されたPythonパスを読み込み
-            LoadPythonPath();
             
             // 保存されたトークンを読み込み
             LoadToken();
+            
+            // 旧形式のPythonパスファイルがあれば設定に移行
+            MigratePythonPath();
         }
 
         #region Python Path Management
 
         /// <summary>
-        /// Pythonパスを保存
+        /// Pythonパスを保存（設定に保存）
         /// </summary>
         public void SavePythonPath(string pythonPath)
         {
-            try
-            {
-                var dir = Path.GetDirectoryName(_pythonConfigPath);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                
-                File.WriteAllText(_pythonConfigPath, pythonPath);
-                _pythonPath = pythonPath;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Pythonパス保存エラー: {ex.Message}");
-            }
+            var settings = Utils.SettingsManager.Instance.Settings;
+            settings.PythonPath = pythonPath;
+            Utils.SettingsManager.Instance.Save();
         }
 
         /// <summary>
-        /// Pythonパスを読み込み
+        /// 旧形式のPythonパスファイルから設定に移行
         /// </summary>
-        private void LoadPythonPath()
+        private void MigratePythonPath()
         {
             try
             {
-                if (File.Exists(_pythonConfigPath))
+                var oldConfigPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "IwaraDownloader",
+                    "python_path.txt");
+                
+                if (File.Exists(oldConfigPath))
                 {
-                    _pythonPath = File.ReadAllText(_pythonConfigPath).Trim();
+                    var pythonPath = File.ReadAllText(oldConfigPath).Trim();
+                    if (!string.IsNullOrEmpty(pythonPath))
+                    {
+                        // 設定がデフォルトの場合のみ移行
+                        var settings = Utils.SettingsManager.Instance.Settings;
+                        if (settings.PythonPath == "python")
+                        {
+                            settings.PythonPath = pythonPath;
+                            Utils.SettingsManager.Instance.Save();
+                            Debug.WriteLine($"Pythonパスを設定に移行しました: {pythonPath}");
+                        }
+                    }
+                    // 旧ファイルを削除
+                    File.Delete(oldConfigPath);
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Pythonパス読み込みエラー: {ex.Message}");
+                Debug.WriteLine($"Pythonパス移行エラー: {ex.Message}");
             }
         }
 
@@ -136,6 +153,21 @@ namespace IwaraDownloader.Services
         #endregion
 
         /// <summary>
+        /// レート制限設定の引数を生成
+        /// </summary>
+        private List<string> GetRateLimitArgs()
+        {
+            var settings = Utils.SettingsManager.Instance.Settings;
+            return new List<string>
+            {
+                "--api-delay", (settings.ApiRequestDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--page-delay", (settings.PageFetchDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--rate-limit-base", (settings.RateLimitBaseDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                "--rate-limit-max", (settings.RateLimitMaxDelayMs / 1000.0).ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+        }
+
+        /// <summary>
         /// Pythonスクリプトを実行
         /// </summary>
         private async Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
@@ -153,7 +185,7 @@ namespace IwaraDownloader.Services
             }
 
             var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
-            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
+            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\"")); 
             
             if (!string.IsNullOrEmpty(_token))
             {
@@ -161,9 +193,18 @@ namespace IwaraDownloader.Services
                 allArgs.Add($"\"{_token}\"");
             }
 
+            // レート制限設定を追加
+            allArgs.AddRange(GetRateLimitArgs());
+            
+            // バックオフ無効の場合
+            if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
+            {
+                allArgs.Add("--no-backoff");
+            }
+
             var psi = new ProcessStartInfo
             {
-                FileName = _pythonPath,
+                FileName = PythonPath,
                 Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -173,7 +214,7 @@ namespace IwaraDownloader.Services
                 WorkingDirectory = _appDir
             };
 
-            Debug.WriteLine($"Running: {_pythonPath} {psi.Arguments}");
+            Debug.WriteLine($"Running: {PythonPath} {psi.Arguments}");
 
             using var process = new Process { StartInfo = psi };
             var output = new System.Text.StringBuilder();
@@ -189,6 +230,18 @@ namespace IwaraDownloader.Services
                 {
                     error.AppendLine(e.Data);
                     Debug.WriteLine($"Python stderr: {e.Data}");
+                    
+                    // LoggingServiceにも出力（エラーレベルの判定）
+                    if (e.Data.Contains("Error") || e.Data.Contains("error") || 
+                        e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
+                        e.Data.Contains("403") || e.Data.Contains("429"))
+                    {
+                        LoggingService.Instance.Warn($"Python: {e.Data}");
+                    }
+                    else if (!e.Data.StartsWith("Progress:"))
+                    {
+                        LoggingService.Instance.Debug($"Python: {e.Data}");
+                    }
                 }
             };
 
@@ -203,7 +256,12 @@ namespace IwaraDownloader.Services
 
             if (string.IsNullOrEmpty(outputStr))
             {
-                Debug.WriteLine($"Python error: {error}");
+                var errorStr = error.ToString().Trim();
+                Debug.WriteLine($"Python error: {errorStr}");
+                if (!string.IsNullOrEmpty(errorStr))
+                {
+                    LoggingService.Instance.Error($"Pythonスクリプト実行エラー (action={action}):\n{errorStr}");
+                }
                 return null;
             }
 
@@ -404,7 +462,7 @@ namespace IwaraDownloader.Services
 
             var psi = new ProcessStartInfo
             {
-                FileName = _pythonPath,
+                FileName = PythonPath,
                 Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -423,10 +481,12 @@ namespace IwaraDownloader.Services
             };
 
             // stderrから進捗をリアルタイム取得
+            var errorOutput = new System.Text.StringBuilder();
             process.ErrorDataReceived += (s, e) =>
             {
                 if (e.Data != null)
                 {
+                    errorOutput.AppendLine(e.Data);
                     Debug.WriteLine($"Python stderr: {e.Data}");
                     
                     // Progress: XX.X% 形式をパース
@@ -437,6 +497,13 @@ namespace IwaraDownloader.Services
                         {
                             percentProgress.Report(pct);
                         }
+                    }
+                    // LoggingServiceにも出力（エラーレベルの判定）
+                    else if (e.Data.Contains("Error") || e.Data.Contains("error") || 
+                             e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
+                             e.Data.Contains("403") || e.Data.Contains("429"))
+                    {
+                        LoggingService.Instance.Warn($"Python: {e.Data}");
                     }
                 }
             };
@@ -451,6 +518,11 @@ namespace IwaraDownloader.Services
 
             if (string.IsNullOrEmpty(outputStr))
             {
+                var errorStr = errorOutput.ToString().Trim();
+                if (!string.IsNullOrEmpty(errorStr))
+                {
+                    LoggingService.Instance.Error($"Pythonスクリプト実行エラー (action={action}):\n{errorStr}");
+                }
                 return null;
             }
 
@@ -461,6 +533,7 @@ namespace IwaraDownloader.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"JSON parse error: {ex.Message}");
+                LoggingService.Instance.Error($"Python出力JSONパースエラー: {ex.Message}\nOutput: {outputStr}");
                 return null;
             }
         }
