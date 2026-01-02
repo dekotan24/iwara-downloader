@@ -31,7 +31,7 @@ A Windows desktop application for downloading videos from iwara.tv with channel 
 |------|-------------|
 | OS | Windows 10/11 (64-bit) |
 | Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.8 or higher (tested on 3.10-3.13) |
+| Python | 3.8 or higher (tested on 3.10) |
 
 ## Installation
 
@@ -220,25 +220,3 @@ This project is built with reference to:
 Coded with assistance from:
 - [Claude](https://claude.ai) by Anthropic
 
-## Changelog
-
-### v1.1.0 (2026-01-03)
-- Added splash screen
-- Added bulk URL import
-- Added duplicate check tool
-- Added statistics dashboard
-- Added batch file rename
-- Added completion/error sounds
-- Added GitHub update check
-- Added resume on startup
-- Added filename template
-- Added column sorting
-- Added "All Videos", "Not Downloaded", "Downloaded" tree nodes
-- Fixed context menu not opening on first click
-- Fixed download progress sync issues
-- Improved 403 error handling (rate limit vs permission denied)
-- Added curl_cffi support for better Cloudflare bypass
-- Added logging functionality
-
-### v1.0.0
-- Initial release
