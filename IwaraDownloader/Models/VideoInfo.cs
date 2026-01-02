@@ -59,6 +59,12 @@ namespace IwaraDownloader.Models
         /// <summary>登録日時</summary>
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+        /// <summary>タグ（カンマ区切り）</summary>
+        public string Tags { get; set; } = string.Empty;
+
+        /// <summary>ユーザーメモ</summary>
+        public string Memo { get; set; } = string.Empty;
+
         /// <summary>
         /// 動画の長さを表示用にフォーマット
         /// </summary>
@@ -102,5 +108,41 @@ namespace IwaraDownloader.Models
         /// ローカルファイルが存在するか
         /// </summary>
         public bool LocalFileExists => !string.IsNullOrEmpty(LocalFilePath) && File.Exists(LocalFilePath);
+
+        /// <summary>
+        /// タグリストを取得
+        /// </summary>
+        public List<string> TagList => string.IsNullOrEmpty(Tags) 
+            ? new List<string>() 
+            : Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+        /// <summary>
+        /// タグを追加
+        /// </summary>
+        public void AddTag(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag)) return;
+            var tags = TagList;
+            if (!tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+            {
+                tags.Add(tag.Trim());
+                Tags = string.Join(",", tags);
+            }
+        }
+
+        /// <summary>
+        /// タグを削除
+        /// </summary>
+        public void RemoveTag(string tag)
+        {
+            var tags = TagList;
+            tags.RemoveAll(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+            Tags = string.Join(",", tags);
+        }
+
+        /// <summary>
+        /// タグがあるかチェック
+        /// </summary>
+        public bool HasTag(string tag) => TagList.Contains(tag, StringComparer.OrdinalIgnoreCase);
     }
 }
