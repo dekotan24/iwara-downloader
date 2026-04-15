@@ -1,6 +1,6 @@
 # IwaraDownloader
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -24,6 +24,7 @@ A Windows desktop application for downloading videos from iwara.tv with channel 
 - **Notification Sound** - Play sound on download completion or error
 - **System Tray** - Run in background with tray icon
 - **Toast Notifications** - Get notified on download completion and new video detection
+- **UUID-based Duplicate Detection** (v1.1.1+) - Embeds iwara's file UUID into mp4 metadata to prevent re-downloading even after file renames or DB loss
 
 ## Requirements
 
@@ -57,6 +58,8 @@ Ensure Python 3.8+ is installed:
 1. Click "ログイン" (Login) button
 2. Enter your iwara.tv email and password
 3. After successful login, all features become available
+
+> ⚠️ **Login is required since v1.1.1.** Download features are disabled when not logged in (matching iwara's own behavior). Token expiration is verified on startup, and the app automatically logs out when the token expires.
 
 ## Usage
 
@@ -99,7 +102,7 @@ Ensure Python 3.8+ is installed:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Download Folder | Video save location | My Videos/Iwara |
-| Default Quality | Source / 540p / 360p | Source |
+| Default Quality | Source / 540p / 360p (iwara's three download qualities) | Source |
 | Concurrent Downloads | 1-3 (1-2 recommended) | 2 |
 | Retry Count | Number of retry attempts | 3 |
 | Check Interval | New video check interval | 60 min |
@@ -151,13 +154,16 @@ Application data is stored in:
 
 ```
 %APPDATA%\IwaraDownloader\
-├── settings.json         # App settings
-├── data.db               # Subscriptions and video info (SQLite)
-├── token.txt             # Login token
-├── python_path.txt       # Python path setting
-└── logs/                 # Log files
+├── settings.json             # App settings
+├── data.db                   # Subscriptions and video info (SQLite)
+├── token.txt                 # Login token
+├── python_path.txt           # Python path setting
+├── x_version_secret.txt      # iwara X-Version secret (v1.1.1+, 30-day cache)
+└── logs/                     # Log files
     └── IwaraDownloader_YYYYMMDD_HHMMSS.log
 ```
+
+Each artist folder also contains a hidden `.iwara_index.json` (v1.1.1+, used to accelerate UUID lookup scans).
 
 ## Troubleshooting
 
@@ -176,10 +182,20 @@ Application data is stored in:
 
 ### Download Fails
 
-- Check login status
+- Check login status (login is required since v1.1.1)
 - Verify the video is not private or deleted
 - Check disk space
 - If 403 errors occur frequently, increase rate limit values
+
+### All Videos Downloaded at 360p Only (Bug in v1.1.0 and Earlier)
+
+In v1.1.0 and earlier, an iwara frontend update changed the X-Version secret, causing the filesq API to return only 360p/preview qualities. This is permanently fixed in v1.1.1 with a 3-tier strategy:
+- Embedded secret → cached secret (30-day TTL) → dynamic extraction from `main.js`
+- The app only fetches `main.js` when a low-quality fallback is detected, then caches the newly extracted secret for 30 days
+
+### Tagging Existing Files with UUIDs (v1.1.1+)
+
+Settings → **Backup** tab → **"既存ファイルにタグを書き込む" (Write Tags to Existing Files)** button performs a batch write of iwara UUID tags to all mp4 files that are registered in the database. You can close the settings dialog mid-run (you'll get a confirmation prompt); cancelled migrations pick up where they left off on the next run.
 
 ### Cloudflare Errors
 
@@ -198,6 +214,7 @@ Application data is stored in:
 - System.Text.Json - JSON processing
 - System.Security.Cryptography.ProtectedData - Password encryption
 - NAudio - Audio playback
+- TagLibSharp - mp4 container UUID metadata (v1.1.1+)
 
 ## License
 
