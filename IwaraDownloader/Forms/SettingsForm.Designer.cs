@@ -249,8 +249,6 @@ namespace IwaraDownloader.Forms
             this.cmbQuality.FormattingEnabled = true;
             this.cmbQuality.Items.AddRange(new object[] {
                 "Source (最高画質)",
-                "1080p",
-                "720p",
                 "540p",
                 "360p"
             });
@@ -1010,6 +1008,7 @@ namespace IwaraDownloader.Forms
             // 
             this.tabBackup.Controls.Add(this.grpExport);
             this.tabBackup.Controls.Add(this.grpImport);
+            this.tabBackup.Controls.Add(this.grpMigration);
             this.tabBackup.Location = new Point(4, 24);
             this.tabBackup.Name = "tabBackup";
             this.tabBackup.Padding = new Padding(3);
@@ -1086,7 +1085,49 @@ namespace IwaraDownloader.Forms
             this.btnImportSubscriptions.UseVisualStyleBackColor = true;
             this.btnImportSubscriptions.Click += new EventHandler(this.btnImportSubscriptions_Click);
 
-            // 
+            //
+            // grpMigration
+            //
+            this.grpMigration.Controls.Add(this.btnMigrateExistingFiles);
+            this.grpMigration.Controls.Add(this.lblMigrationNote);
+            this.grpMigration.Controls.Add(this.lblMigrationProgress);
+            this.grpMigration.Location = new Point(6, 158);
+            this.grpMigration.Name = "grpMigration";
+            this.grpMigration.Size = new Size(440, 130);
+            this.grpMigration.TabIndex = 2;
+            this.grpMigration.TabStop = false;
+            this.grpMigration.Text = "既存ファイルのメタデータ移行";
+
+            //
+            // lblMigrationNote
+            //
+            this.lblMigrationNote.AutoSize = false;
+            this.lblMigrationNote.Location = new Point(10, 22);
+            this.lblMigrationNote.Name = "lblMigrationNote";
+            this.lblMigrationNote.Size = new Size(420, 44);
+            this.lblMigrationNote.Text = "過去にダウンロードした動画ファイルに iwara の UUID タグを書き込みます。\r\nタグを書き込むと、DB が消えた場合でもファイル名変更後でも再発見できます。";
+
+            //
+            // btnMigrateExistingFiles
+            //
+            this.btnMigrateExistingFiles.Location = new Point(10, 72);
+            this.btnMigrateExistingFiles.Name = "btnMigrateExistingFiles";
+            this.btnMigrateExistingFiles.Size = new Size(180, 27);
+            this.btnMigrateExistingFiles.TabIndex = 0;
+            this.btnMigrateExistingFiles.Text = "既存ファイルにタグを書き込む";
+            this.btnMigrateExistingFiles.UseVisualStyleBackColor = true;
+            this.btnMigrateExistingFiles.Click += new EventHandler(this.btnMigrateExistingFiles_Click);
+
+            //
+            // lblMigrationProgress
+            //
+            this.lblMigrationProgress.AutoSize = false;
+            this.lblMigrationProgress.Location = new Point(200, 78);
+            this.lblMigrationProgress.Name = "lblMigrationProgress";
+            this.lblMigrationProgress.Size = new Size(230, 20);
+            this.lblMigrationProgress.Text = "";
+
+            //
             // btnOk
             // 
             this.btnOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
@@ -1194,6 +1235,10 @@ namespace IwaraDownloader.Forms
         private TabPage tabAdvanced;
         private TabPage tabOther;
         private TabPage tabBackup;
+        private GroupBox grpMigration = new GroupBox();
+        private Button btnMigrateExistingFiles = new Button();
+        private Label lblMigrationNote = new Label();
+        private Label lblMigrationProgress = new Label();
         private GroupBox grpDownload;
         private Label lblDownloadFolder;
         private TextBox txtDownloadFolder;

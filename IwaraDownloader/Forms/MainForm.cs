@@ -212,6 +212,33 @@ namespace IwaraDownloader.Forms
             else
             {
                 UpdateStatusBar("準備完了");
+                // トークン有効性を API で非同期検証（失敗時は内部でログアウトされる）
+                _ = VerifyLoginInBackgroundAsync();
+            }
+        }
+
+        /// <summary>
+        /// 起動時にサーバー側でトークンが有効か検証する。
+        /// 失敗した場合はログイン状態 UI を更新し、ステータスバーに案内を出す。
+        /// </summary>
+        private async Task VerifyLoginInBackgroundAsync()
+        {
+            try
+            {
+                var (valid, error) = await _downloadManager.VerifyTokenAsync();
+                if (!valid)
+                {
+                    // VerifyTokenAsync の中で必要に応じて内部トークンは破棄済み
+                    this.BeginInvoke((Action)(() =>
+                    {
+                        UpdateLoginStatus();
+                        UpdateStatusBar($"ログインセッションが無効です: {error ?? "不明"}。再ログインしてください。");
+                    }));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"VerifyToken error: {ex.Message}");
             }
         }
 
@@ -435,7 +462,7 @@ namespace IwaraDownloader.Forms
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            using var form = new SettingsForm();
+            using var form = new SettingsForm(_downloadManager);
             if (form.ShowDialog() == DialogResult.OK)
             {
                 _downloadManager.UpdateAutoCheckTimer();

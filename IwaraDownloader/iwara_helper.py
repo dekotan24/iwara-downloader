@@ -7,6 +7,7 @@ Usage:
     python iwara_helper.py download <video_id> <output_path> [--token <token>]
 """
 
+import base64
 import cloudscraper
 import json
 import sys
@@ -15,6 +16,89 @@ import hashlib
 import re
 import time
 from urllib.parse import urlparse, parse_qs
+
+
+def _decode_jwt_payload(token: str) -> dict:
+    """JWT の payload を base64url デコードして辞書を返す。失敗時は空辞書。"""
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            return {}
+        payload_b64 = parts[1] + '=' * (-len(parts[1]) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload_b64.encode()))
+    except Exception:
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# X-Version secret 管理
+# ---------------------------------------------------------------------------
+# iwara は filesq に対する X-Version 検証用の secret を main.js にハードコード
+# している。iwara 側でフロントエンドが更新されると secret が差し替わり、古い値
+# を使うと filesq が 360/preview のみの劣化レスポンスを返すようになる。
+# そのため以下の二段構えで対応する:
+#   1. DEFAULT_SECRET を埋め込み (発掘された現行値)
+#   2. 劣化レスポンスを検知した時のみ main.js を取りに行って新 secret を抽出
+#      キャッシュファイルに永続化して 30 日間は再取得しない
+# セッション中は一度再取得を試したらそれ以上リトライしない(過剰取得の抑制)
+
+DEFAULT_X_VERSION_SECRET = 'mSvL05GfEmeEmsEYfGCnVpEjYgTJraJN'
+SECRET_CACHE_TTL_SECONDS = 30 * 24 * 3600  # 30日
+
+def _secret_cache_path() -> str:
+    base = os.environ.get('APPDATA') or os.path.expanduser('~')
+    return os.path.join(base, 'IwaraDownloader', 'x_version_secret.txt')
+
+def _load_cached_secret() -> str:
+    """キャッシュが 30 日以内なら返す。無効/古い場合は埋め込み値を返す。"""
+    try:
+        path = _secret_cache_path()
+        st = os.stat(path)
+        if time.time() - st.st_mtime < SECRET_CACHE_TTL_SECONDS:
+            with open(path, 'r', encoding='utf-8') as f:
+                s = f.read().strip()
+                if s:
+                    return s
+    except Exception:
+        pass
+    return DEFAULT_X_VERSION_SECRET
+
+def _save_cached_secret(secret: str) -> None:
+    try:
+        path = _secret_cache_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(secret)
+    except Exception as e:
+        print(f"Failed to cache secret: {e}", file=sys.stderr)
+
+def _extract_secret_from_main_js(scraper) -> str:
+    """iwara.tv のトップページから main.js URL を割り出し、secret を抽出する。
+
+    main.js のコードは以下のような形:
+        (0,u.q4)(c+"_"+o.expires+"_mSvL05GfEmeEmsEYfGCnVpEjYgTJraJN")
+    expires に続く "_<secret>" をキャプチャする。
+    """
+    try:
+        r = scraper.get('https://www.iwara.tv/', timeout=20)
+        if r.status_code != 200:
+            return ''
+        m = re.search(r'/main\.[a-f0-9]+\.js', r.text)
+        if not m:
+            return ''
+        js_url = 'https://www.iwara.tv' + m.group(0)
+        r = scraper.get(js_url, timeout=30)
+        if r.status_code != 200:
+            return ''
+        # expires 直後の "_<20文字以上の識別子>"
+        m = re.search(r'expires\s*\+\s*"_([A-Za-z0-9]{20,})"', r.text)
+        if m:
+            return m.group(1)
+        return ''
+    except Exception as e:
+        print(f"Failed to extract secret from main.js: {e}", file=sys.stderr)
+        return ''
+
 
 class IwaraAPI:
     def __init__(self, token=None, rate_limit_config=None):
@@ -28,6 +112,8 @@ class IwaraAPI:
         self.api_url = "https://api.iwara.tv"
         self.file_url = "https://files.iwara.tv"
         self.token = token
+        # X-Version secret の再取得はセッション中 1 回までに制限する
+        self._secret_refreshed = False
         
         # Rate limiting configuration
         self.rate_limit_config = rate_limit_config or {}
@@ -198,14 +284,62 @@ class IwaraAPI:
             
             data = r.json()
             self.token = data.get("token")
-            
+
             if self.token:
-                return {"success": True, "token": self.token}
+                payload = _decode_jwt_payload(self.token)
+                return {
+                    "success": True,
+                    "token": self.token,
+                    "expires_at": payload.get("exp"),
+                    "user_id": payload.get("id"),
+                    "token_type": payload.get("type"),
+                }
             else:
                 return {"success": False, "error": "No token in response"}
-                
+
         except Exception as e:
             return {"success": False, "error": f"Exception: {str(e)}"}
+
+    def verify_token(self) -> dict:
+        """保持しているトークンが API 的にまだ有効か検証する。
+
+        - トークンが無ければ LOGIN_REQUIRED
+        - JWT の exp が過ぎていれば TOKEN_EXPIRED
+        - /user エンドポイントを叩いて 200 が返るか確認
+        """
+        if not self.token:
+            return {"success": False, "error": "No token", "code": "LOGIN_REQUIRED"}
+
+        payload = _decode_jwt_payload(self.token)
+        exp = payload.get("exp")
+        if exp and time.time() >= exp:
+            return {"success": False, "error": "Token expired", "code": "TOKEN_EXPIRED", "expires_at": exp}
+
+        try:
+            r = self._request_with_retry(
+                'GET',
+                f"{self.api_url}/user",
+                headers={"Authorization": f"Bearer {self.token}"}
+            )
+            if r is None:
+                return {"success": False, "error": "No response from server", "code": "NETWORK_ERROR"}
+            if r.status_code in (401, 403):
+                return {"success": False, "error": f"Token rejected: HTTP {r.status_code}", "code": "TOKEN_INVALID"}
+            if r.status_code != 200:
+                return {"success": False, "error": f"HTTP {r.status_code}", "code": "API_ERROR"}
+
+            body = r.json()
+            user = body.get("user", {}) or {}
+            return {
+                "success": True,
+                "expires_at": exp,
+                "user_id": user.get("id"),
+                "username": user.get("username"),
+                "role": user.get("role"),
+                "premium": user.get("premium", False),
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Exception: {str(e)}", "code": "EXCEPTION"}
 
     def _auth_header(self) -> dict:
         """認証ヘッダーを返す"""
@@ -215,6 +349,8 @@ class IwaraAPI:
 
     def get_user_videos(self, username: str) -> dict:
         """ユーザーの全動画リストを取得"""
+        if not self.token:
+            return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
         try:
             # 1. プロフィールからuser_idを取得
             profile_r = self._request_with_retry(
@@ -315,6 +451,41 @@ class IwaraAPI:
             return f"https://i.iwara.tv/image/thumbnail/{file_id}/thumbnail-00.jpg"
         return ""
 
+    def _fetch_file_list(self, file_url: str, file_id: str, expires: str):
+        """filesq へ X-Version 付きでアクセスしてファイル一覧を取得する。
+
+        現在キャッシュされている secret で X-Version を計算する。
+        Returns: (files_list, error_dict_or_None)
+        """
+        secret = _load_cached_secret()
+        x_version = hashlib.sha1(
+            '_'.join([file_id, expires, secret]).encode()
+        ).hexdigest()
+        headers = self._auth_header()
+        headers['X-Version'] = x_version
+
+        r = self._request_with_retry('GET', file_url, headers=headers)
+        if r is None:
+            return [], {"success": False, "error": "No response from file server"}
+        if r.status_code == 403:
+            try:
+                body = r.json()
+                msg = body.get("message", "") or body.get("error", "")
+            except Exception:
+                msg = r.text[:100] if r.text else ""
+            return [], {"success": False, "error": f"Access denied to download: {msg or 'Private video or login required'}"}
+        if r.status_code != 200:
+            try:
+                body = r.json()
+                msg = body.get("message", "") or body.get("error", "")
+            except Exception:
+                msg = r.text[:100] if r.text else ""
+            return [], {"success": False, "error": f"File URL fetch failed: HTTP {r.status_code} - {msg}"}
+        try:
+            return r.json(), None
+        except Exception as e:
+            return [], {"success": False, "error": f"Failed to parse filesq response: {e}"}
+
     def get_video_info(self, video_id: str) -> dict:
         """動画情報を取得"""
         try:
@@ -354,6 +525,8 @@ class IwaraAPI:
 
     def get_download_url(self, video_id: str, quality: str = "Source") -> dict:
         """ダウンロードURLを取得"""
+        if not self.token:
+            return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
         try:
             # 動画情報を取得
             video_info = self.get_video_info(video_id)
@@ -366,64 +539,69 @@ class IwaraAPI:
             if not file_url:
                 return {"success": False, "error": "No fileUrl in video data"}
             
-            # ファイルURLにアクセスしてダウンロードリンク取得
-            # X-Versionヘッダーが必要
+            # ファイルURLにアクセスしてダウンロードリンク取得 (X-Version ヘッダー要)
             parsed = urlparse(file_url)
             path_parts = parsed.path.rstrip('/').split('/')
             query = parse_qs(parsed.query)
             expires = query.get('expires', [''])[0]
-            
-            # X-Version計算（yt-dlpのロジックから）
-            x_version = hashlib.sha1(
-                '_'.join([path_parts[-1], expires, '5nFp9kmbNnHdAFhaqMvt']).encode()
-            ).hexdigest()
-            
-            headers = self._auth_header()
-            headers['X-Version'] = x_version
-            
-            r = self._request_with_retry('GET', file_url, headers=headers)
-            
-            if r is None:
-                return {"success": False, "error": "No response from file server"}
-            
-            if r.status_code == 403:
-                try:
-                    body = r.json()
-                    msg = body.get("message", "") or body.get("error", "")
-                except:
-                    msg = r.text[:100] if r.text else ""
-                return {"success": False, "error": f"Access denied to download: {msg or 'Private video or login required'}"}
-            
-            if r.status_code != 200:
-                try:
-                    body = r.json()
-                    msg = body.get("message", "") or body.get("error", "")
-                except:
-                    msg = r.text[:100] if r.text else ""
-                return {"success": False, "error": f"File URL fetch failed: HTTP {r.status_code} - {msg}"}
-            
-            files = r.json()
-            
-            # 指定画質のURLを探す
+            file_id_part = path_parts[-1]
+
+            files, err = self._fetch_file_list(file_url, file_id_part, expires)
+            if err:
+                return err
+
+            # 劣化レスポンス判定: Source / 540 が欠けてて、かつ 360/preview しか無い場合、
+            # secret が iwara 側で変更された可能性を疑う。セッション中 1 度だけ main.js を
+            # 取りに行って新しい secret を抽出し、キャッシュ更新後に再試行する。
+            names_set = {f.get('name') for f in files}
+            high_q = {'Source', '540'}
+            if not (high_q & names_set) and not self._secret_refreshed:
+                self._secret_refreshed = True
+                print("Low-quality only response detected. Refreshing X-Version secret from main.js...", file=sys.stderr)
+                new_secret = _extract_secret_from_main_js(self.scraper)
+                if new_secret and new_secret != _load_cached_secret():
+                    _save_cached_secret(new_secret)
+                    print(f"X-Version secret updated (cached). Retrying filesq...", file=sys.stderr)
+                    files, err = self._fetch_file_list(file_url, file_id_part, expires)
+                    if err:
+                        return err
+                elif new_secret:
+                    print("Secret unchanged — likely the video itself has no high-quality version.", file=sys.stderr)
+                else:
+                    print("Failed to extract secret from main.js.", file=sys.stderr)
+
+            def _extract_url(f):
+                """src から利用可能な URL を取り出す (download 優先、なければ view)"""
+                src = f.get("src", {}) or {}
+                return src.get("download") or src.get("view")
+
+            # 利用可能な画質一覧をログ出力（デバッグ用）
+            available = [f.get("name") for f in files if f.get("name")]
+            print(f"Available qualities for {video_id}: {available}", file=sys.stderr)
+
+            # 画質の優先順位（高→低）
+            quality_order = ["Source", "540", "360", "preview"]
+
+            # 指定画質があれば最優先で探す
+            search_order = []
+            if quality and quality in quality_order:
+                search_order.append(quality)
+            for q in quality_order:
+                if q not in search_order:
+                    search_order.append(q)
+
             download_url = None
-            for f in files:
-                if f.get("name") == quality:
-                    download_url = f.get("src", {}).get("download")
-                    break
-            
-            # Sourceが見つからなければ最高画質を選択
-            if not download_url and files:
-                # 画質の優先順位
-                quality_order = ["Source", "540", "360", "preview"]
-                for q in quality_order:
-                    for f in files:
-                        if f.get("name") == q:
-                            download_url = f.get("src", {}).get("download")
+            for q in search_order:
+                for f in files:
+                    if f.get("name") == q:
+                        url = _extract_url(f)
+                        if url:
+                            download_url = url
                             quality = q
                             break
-                    if download_url:
-                        break
-            
+                if download_url:
+                    break
+
             if not download_url:
                 return {"success": False, "error": "No download URL found"}
             
@@ -431,18 +609,27 @@ class IwaraAPI:
             if download_url.startswith("//"):
                 download_url = "https:" + download_url
             
+            # 動画のメタ情報(file_id / author)を抽出して返す
+            user_obj = video_data.get("user") or {}
+            file_obj = video_data.get("file") or {}
+
             return {
                 "success": True,
                 "url": download_url,
                 "quality": quality,
-                "title": video_data.get("title", video_id)
+                "title": video_data.get("title", video_id),
+                "file_id": file_obj.get("id"),
+                "author_username": user_obj.get("username"),
+                "author_name": user_obj.get("name"),
             }
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
     def download_video(self, video_id: str, output_path: str, quality: str = "Source") -> dict:
         """動画をダウンロード"""
+        if not self.token:
+            return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
         try:
             # ダウンロードURL取得
             url_info = self.get_download_url(video_id, quality)
@@ -504,7 +691,11 @@ class IwaraAPI:
                 "success": True,
                 "path": output_path,
                 "size": downloaded,
-                "quality": url_info["quality"]
+                "quality": url_info.get("quality"),
+                "file_id": url_info.get("file_id"),
+                "author_username": url_info.get("author_username"),
+                "author_name": url_info.get("author_name"),
+                "title": url_info.get("title"),
             }
             
         except Exception as e:
@@ -558,7 +749,10 @@ def main():
             print(json.dumps({"success": False, "error": "Usage: login <email> <password>"}))
             sys.exit(1)
         result = api.login(sys.argv[2], sys.argv[3])
-        
+
+    elif action == "verify_token":
+        result = api.verify_token()
+
     elif action == "get_videos":
         if len(sys.argv) < 3:
             print(json.dumps({"success": False, "error": "Usage: get_videos <username>"}))

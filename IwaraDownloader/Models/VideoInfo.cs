@@ -38,6 +38,13 @@ namespace IwaraDownloader.Models
         /// <summary>ローカルファイルパス</summary>
         public string LocalFilePath { get; set; } = string.Empty;
 
+        /// <summary>
+        /// iwara が割り当てる動画ファイルの UUID (例: 0b01dd60-8826-4a9f-a39b-7cd012ae7883)。
+        /// DL 済みファイルの mp4 カスタムタグにも同じ値が書き込まれる。
+        /// iwara 側で動画マスターが差し替わると変わるため、再DLの判定指標になる。
+        /// </summary>
+        public string FileUuid { get; set; } = string.Empty;
+
         /// <summary>ファイルサイズ（バイト）</summary>
         public long FileSize { get; set; }
 

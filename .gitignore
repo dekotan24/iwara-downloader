@@ -6,3 +6,7 @@
 /IwaraDownloader/obj
 /IwaraDownloader/bin
 *.user
+
+# Python embeddable runtime artifacts
+**/__pycache__/
+*.pyc

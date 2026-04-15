@@ -12,16 +12,32 @@ namespace IwaraDownloader.Forms
         private readonly SettingsManager _settingsManager;
         private readonly DatabaseService _database;
         private readonly IwaraApiService _iwaraApi;
+        private readonly DownloadManager? _downloadManager;
+
+        // マイグレーション状態管理 (閉じる操作の制御用)
+        private CancellationTokenSource? _migrationCts;
+        private bool _migrationRunning;
 
         // チェック間隔の選択肢（分）
         private readonly int[] _checkIntervalMinutes = { 30, 60, 120, 360, 720, 1440 };
 
-        public SettingsForm()
+        // ComboBox の index と VideoQuality の対応表（cmbQuality の Items と同順）
+        private static readonly VideoQuality[] _qualityOrder =
+        {
+            VideoQuality.Source,
+            VideoQuality.Quality540p,
+            VideoQuality.Quality360p,
+        };
+
+        public SettingsForm() : this(null) { }
+
+        public SettingsForm(DownloadManager? downloadManager)
         {
             InitializeComponent();
             _settingsManager = SettingsManager.Instance;
             _database = DatabaseService.Instance;
             _iwaraApi = new IwaraApiService();
+            _downloadManager = downloadManager;
         }
 
         private void SettingsForm_Load(object sender, EventArgs e)
@@ -40,16 +56,9 @@ namespace IwaraDownloader.Forms
             // ダウンロード設定
             txtDownloadFolder.Text = settings.DownloadFolder;
             
-            // ComboBoxの選択（範囲チェック）
-            var qualityIndex = (int)settings.DefaultQuality;
-            if (qualityIndex >= 0 && qualityIndex < cmbQuality.Items.Count)
-            {
-                cmbQuality.SelectedIndex = qualityIndex;
-            }
-            else
-            {
-                cmbQuality.SelectedIndex = 0; // デフォルト: Source
-            }
+            // 画質 ComboBox（未対応enum値はSourceにフォールバック）
+            var qIdx = Array.IndexOf(_qualityOrder, settings.DefaultQuality);
+            cmbQuality.SelectedIndex = qIdx >= 0 ? qIdx : 0;
             numConcurrent.Value = settings.MaxConcurrentDownloads;
             numRetry.Value = settings.MaxRetryCount;
 
@@ -101,7 +110,10 @@ namespace IwaraDownloader.Forms
 
             // ダウンロード設定
             settings.DownloadFolder = txtDownloadFolder.Text;
-            settings.DefaultQuality = (VideoQuality)cmbQuality.SelectedIndex;
+            if (cmbQuality.SelectedIndex >= 0 && cmbQuality.SelectedIndex < _qualityOrder.Length)
+            {
+                settings.DefaultQuality = _qualityOrder[cmbQuality.SelectedIndex];
+            }
             settings.MaxConcurrentDownloads = (int)numConcurrent.Value;
             settings.MaxRetryCount = (int)numRetry.Value;
 
@@ -366,6 +378,105 @@ namespace IwaraDownloader.Forms
                     MessageBox.Show($"インポートに失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private async void btnMigrateExistingFiles_Click(object sender, EventArgs e)
+        {
+            if (_downloadManager == null)
+            {
+                MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                "ダウンロード済みの mp4 ファイルに iwara の UUID タグを書き込みます。\n" +
+                "DB に登録されている動画のうち、ローカルにファイルが存在するもの全てが対象です。\n\n" +
+                "処理中はバックグラウンドで動作します。設定画面を閉じる場合は確認ダイアログが出ます。\n\n" +
+                "続行しますか？",
+                "既存ファイルにタグを書き込む",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (confirm != DialogResult.OK) return;
+
+            _migrationCts = new CancellationTokenSource();
+            _migrationRunning = true;
+            btnMigrateExistingFiles.Enabled = false;
+            lblMigrationProgress.Text = "準備中...";
+
+            try
+            {
+                var progress = new Progress<string>(msg =>
+                {
+                    // BeginInvoke で UI スレッドに戻す。
+                    // IsDisposed チェックで Form 閉じた後のアクセスを防ぐ。
+                    if (IsDisposed || !IsHandleCreated) return;
+                    try
+                    {
+                        BeginInvoke((Action)(() =>
+                        {
+                            if (!IsDisposed) lblMigrationProgress.Text = msg;
+                        }));
+                    }
+                    catch (ObjectDisposedException) { /* Form が閉じられた */ }
+                    catch (InvalidOperationException) { /* ハンドル破棄後 */ }
+                });
+
+                var (total, tagged, skipped, failed) = await _downloadManager.MigrateExistingFilesAsync(progress, _migrationCts.Token);
+
+                if (!IsDisposed)
+                {
+                    MessageBox.Show(
+                        this,
+                        $"マイグレーションが完了しました。\n\n" +
+                        $"対象ファイル: {total}\n" +
+                        $"タグ書き込み: {tagged}\n" +
+                        $"スキップ (既に書き込み済み): {skipped}\n" +
+                        $"失敗: {failed}",
+                        "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // ユーザーが Form を閉じてキャンセルした場合
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed)
+                {
+                    MessageBox.Show(this, $"マイグレーションに失敗しました:\n{ex.Message}",
+                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            finally
+            {
+                _migrationRunning = false;
+                _migrationCts?.Dispose();
+                _migrationCts = null;
+                if (!IsDisposed)
+                    btnMigrateExistingFiles.Enabled = true;
+            }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_migrationRunning)
+            {
+                var result = MessageBox.Show(
+                    this,
+                    "マイグレーションの処理中です。中止して閉じますか？\n\n" +
+                    "中止すると、処理途中のファイルはタグ未書き込みのままになります。\n" +
+                    "(後でもう一度実行すれば続きから処理できます)",
+                    "確認",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                if (result == DialogResult.No)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                _migrationCts?.Cancel();
+            }
+            base.OnFormClosing(e);
         }
 
         #endregion
