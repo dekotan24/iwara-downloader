@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
     <RootNamespace>IwaraDownloader</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Authors>deko</Authors>
     <Description>Iwara video downloader</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -73,6 +73,9 @@
     
     <!-- NAudio for completion sound -->
     <PackageReference Include="NAudio" Version="2.2.1" />
+
+    <!-- TagLib# for mp4 metadata (UUID tagging) -->
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>

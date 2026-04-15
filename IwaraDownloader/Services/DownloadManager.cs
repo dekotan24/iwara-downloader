@@ -270,9 +270,31 @@ namespace IwaraDownloader.Services
                 var settings = SettingsManager.Instance.Settings;
                 var video = task.Video;
 
+                // --- 事前に動画情報を取得 (FileUuid / 最新 title / author) ---
+                // ここで得た FileUuid を用いて既存ファイル検出を行う
+                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
+                if (!urlInfo.Success)
+                {
+                    throw new Exception(urlInfo.Error ?? "動画情報の取得に失敗しました");
+                }
+
+                // video レコードを最新情報で補強
+                if (!string.IsNullOrEmpty(urlInfo.FileUuid))
+                    video.FileUuid = urlInfo.FileUuid;
+                if (!string.IsNullOrEmpty(urlInfo.AuthorUsername) && string.IsNullOrEmpty(video.AuthorUsername))
+                    video.AuthorUsername = urlInfo.AuthorUsername;
+                if (!string.IsNullOrEmpty(urlInfo.Title) && string.IsNullOrEmpty(video.Title))
+                    video.Title = urlInfo.Title;
+
+                // --- 既存ファイル検出 (UUID ベース) ---
+                if (TryReuseExistingLocalFile(task, video))
+                {
+                    return; // スキップ扱いで完了
+                }
+
                 // 出力パスを決定
                 string outputPath;
-                
+
                 // ファイル名テンプレートを適用
                 var filenameTemplate = settings.FilenameTemplate;
                 var generatedFilename = Helpers.ApplyFilenameTemplate(
@@ -307,6 +329,25 @@ namespace IwaraDownloader.Services
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
+                // --- リネーム追従: 保存先フォルダを FileUuid でスキャン ---
+                // 購読DL時のみ実行 (アーティストフォルダに限定されるため高速)
+                // IndexCacheService が .iwara_index.json に前回スキャン結果を保持しているため
+                // ファイルが更新されていない限り TagLib# 呼び出しは発生しない
+                if (task.IsSubscriptionDownload && !string.IsNullOrEmpty(video.FileUuid))
+                {
+                    var folderToScan = Path.GetDirectoryName(outputPath);
+                    if (!string.IsNullOrEmpty(folderToScan) && Directory.Exists(folderToScan))
+                    {
+                        var uuidMap = IndexCacheService.GetOrScan(folderToScan);
+                        if (uuidMap.TryGetValue(video.FileUuid, out var foundPath))
+                        {
+                            _logger.Info($"既存ファイルを再発見 (UUID マッチ): {video.Title} -> {foundPath}");
+                            MarkAsReusedFile(task, video, foundPath);
+                            return;
+                        }
+                    }
+                }
+
                 outputPath = Helpers.GetUniqueFilePath(outputPath);
 
                 // ダウンロード実行（IwaraApiService使用）
@@ -338,6 +379,24 @@ namespace IwaraDownloader.Services
                     video.Status = DownloadStatus.Completed;
                     video.DownloadedAt = DateTime.Now;
                     video.FileSize = new FileInfo(outputPath).Length;
+
+                    // mp4 にカスタムタグ (video_id / file_id) を書き込む
+                    if (!string.IsNullOrEmpty(video.FileUuid))
+                    {
+                        var tagOk = MetadataService.WriteIwaraTags(outputPath, video.VideoId, video.FileUuid);
+                        if (tagOk)
+                            _logger.Debug($"Wrote iwara tags: {Path.GetFileName(outputPath)}");
+                        else
+                            _logger.Warn($"Failed to write iwara tags: {Path.GetFileName(outputPath)}");
+                    }
+
+                    // フォルダのインデックスキャッシュを無効化 (新規ファイルを次回スキャンに反映)
+                    var outputDir = Path.GetDirectoryName(outputPath);
+                    if (!string.IsNullOrEmpty(outputDir))
+                    {
+                        IndexCacheService.Invalidate(outputDir);
+                    }
+
                     _database.UpdateVideo(video);
 
                     _logger.Info($"Download completed: {video.Title} ({video.FileSizeFormatted})");
@@ -411,6 +470,75 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 既存のローカルファイルが FileUuid で照合できる場合に再利用する。
+        /// true を返した場合、呼び出し元はダウンロードを行わずタスクを完了扱いにする。
+        /// </summary>
+        private bool TryReuseExistingLocalFile(DownloadTask task, VideoInfo video)
+        {
+            if (string.IsNullOrEmpty(video.FileUuid)) return false;
+
+            // 1. 自分自身の DB.LocalFilePath が有効かチェック
+            if (!string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
+            {
+                // タグが一致するか確認 (安全策: iwara 側でマスター差替時は再DL)
+                var (_, tagUuid) = MetadataService.ReadIwaraTags(video.LocalFilePath);
+                if (string.IsNullOrEmpty(tagUuid) || tagUuid == video.FileUuid)
+                {
+                    _logger.Info($"既にダウンロード済み: {video.Title}");
+                    MarkAsReusedFile(task, video, video.LocalFilePath);
+                    return true;
+                }
+            }
+
+            // 2. 別 VideoId で同じ FileUuid を持つ動画が DB にあれば再利用
+            var dup = _database.GetVideoByFileUuid(video.FileUuid);
+            if (dup != null && dup.Id != video.Id
+                && !string.IsNullOrEmpty(dup.LocalFilePath) && File.Exists(dup.LocalFilePath))
+            {
+                _logger.Info($"既存ファイルを再利用 (別 VideoId で登録済み): {video.Title} -> {dup.LocalFilePath}");
+                MarkAsReusedFile(task, video, dup.LocalFilePath);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 既存ファイルを再利用した扱いとして DB・タスクを完了状態に遷移させる。
+        /// </summary>
+        private void MarkAsReusedFile(DownloadTask task, VideoInfo video, string existingPath)
+        {
+            try
+            {
+                // mp4 にタグが無ければ書き足しておく (後の判定のため)
+                if (!string.IsNullOrEmpty(video.FileUuid))
+                {
+                    var (_, tagUuid) = MetadataService.ReadIwaraTags(existingPath);
+                    if (string.IsNullOrEmpty(tagUuid))
+                    {
+                        MetadataService.WriteIwaraTags(existingPath, video.VideoId, video.FileUuid);
+                    }
+                }
+
+                video.LocalFilePath = existingPath;
+                video.Status = DownloadStatus.Completed;
+                video.FileSize = new FileInfo(existingPath).Length;
+                if (video.DownloadedAt == null)
+                    video.DownloadedAt = DateTime.Now;
+                _database.UpdateVideo(video);
+
+                task.Status = DownloadStatus.Skipped;
+                task.Progress = 100;
+                task.CompletedAt = DateTime.Now;
+                TaskStatusChanged?.Invoke(this, task);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn($"MarkAsReusedFile failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// タスクをキャンセル
         /// </summary>
         public void CancelTask(string videoId)
@@ -471,18 +599,22 @@ namespace IwaraDownloader.Services
             {
                 progress?.Report($"動画情報を再取得中: {video.VideoId}");
 
-                var (success, downloadUrl, quality, title, error) = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
+                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
 
-                if (success && !string.IsNullOrEmpty(title))
+                if (urlInfo.Success && !string.IsNullOrEmpty(urlInfo.Title))
                 {
-                    video.Title = title;
+                    video.Title = urlInfo.Title;
+                    if (!string.IsNullOrEmpty(urlInfo.AuthorUsername))
+                        video.AuthorUsername = urlInfo.AuthorUsername;
+                    if (!string.IsNullOrEmpty(urlInfo.FileUuid))
+                        video.FileUuid = urlInfo.FileUuid;
                     _database.UpdateVideo(video);
-                    progress?.Report($"タイトル取得成功: {title}");
+                    progress?.Report($"タイトル取得成功: {urlInfo.Title}");
                     return true;
                 }
                 else
                 {
-                    progress?.Report($"取得失敗: {error}");
+                    progress?.Report($"取得失敗: {urlInfo.Error}");
                     return false;
                 }
             }
@@ -682,11 +814,11 @@ namespace IwaraDownloader.Services
 
             // IwaraApiServiceでダウンロードURL取得（動画情報確認）
             progress?.Report("動画情報を取得中...");
-            var (success, downloadUrl, quality, title, error) = await _iwaraApi.GetDownloadUrlAsync(videoId);
+            var urlInfo = await _iwaraApi.GetDownloadUrlAsync(videoId);
 
-            if (!success)
+            if (!urlInfo.Success)
             {
-                progress?.Report($"エラー: {error}");
+                progress?.Report($"エラー: {urlInfo.Error}");
                 // 失敗しても仮登録（後で再取得可能）
                 var failedVideo = new VideoInfo
                 {
@@ -694,17 +826,32 @@ namespace IwaraDownloader.Services
                     Title = $"Video {videoId}",
                     Url = url,
                     Status = DownloadStatus.Failed,
-                    LastErrorMessage = error
+                    LastErrorMessage = urlInfo.Error
                 };
                 failedVideo.Id = _database.AddVideo(failedVideo);
                 return null;
             }
 
+            // 既に FileUuid で DB 内に同一ファイルがあれば(別 VideoId で登録済み等)、
+            // ローカルファイルを再利用できるかチェック
+            if (!string.IsNullOrEmpty(urlInfo.FileUuid))
+            {
+                var dup = _database.GetVideoByFileUuid(urlInfo.FileUuid);
+                if (dup != null && !string.IsNullOrEmpty(dup.LocalFilePath) && File.Exists(dup.LocalFilePath))
+                {
+                    progress?.Report($"既存ファイルを再利用: {dup.LocalFilePath}");
+                    // 既存レコードを返す(これ以上何もしない)
+                    return null;
+                }
+            }
+
             var video = new VideoInfo
             {
                 VideoId = videoId,
-                Title = title ?? videoId,
+                Title = urlInfo.Title ?? videoId,
                 Url = url,
+                AuthorUsername = urlInfo.AuthorUsername ?? "",
+                FileUuid = urlInfo.FileUuid ?? "",
                 Status = DownloadStatus.Pending
             };
 
@@ -746,6 +893,13 @@ namespace IwaraDownloader.Services
         /// <summary>ログアウト</summary>
         public void Logout() => _iwaraApi.Logout();
 
+        /// <summary>トークン有効性検証（API 問い合わせ）</summary>
+        public Task<(bool Valid, string? Error)> VerifyTokenAsync()
+            => _iwaraApi.VerifyTokenAsync();
+
+        /// <summary>トークンの有効期限</summary>
+        public DateTime? TokenExpiresAt => _iwaraApi.TokenExpiresAt;
+
         /// <summary>セットアップ実行</summary>
         public Task<bool> RunSetupAsync(string pythonPath, IProgress<string>? progress = null)
             => _iwaraApi.RunSetupAsync(pythonPath, progress);
@@ -761,6 +915,139 @@ namespace IwaraDownloader.Services
             _downloadSemaphore.Dispose();
             _globalCts?.Dispose();
         }
+
+        #region Migration
+
+        /// <summary>
+        /// Phase 3 マイグレーション: 既に DL 済みだが mp4 に iwara タグが
+        /// 未書き込みのファイルに対して一括でタグを書き込む。
+        ///
+        /// DB.FileUuid が空の場合は iwara API で /video/{id} を叩いて FileUuid を
+        /// 取得してから書き込む。削除された動画は API エラーで失敗扱い。
+        /// </summary>
+        /// <returns>(対象件数, タグ書き込み成功件数, スキップ件数, 失敗件数)</returns>
+        public async Task<(int Total, int Tagged, int Skipped, int Failed)> MigrateExistingFilesAsync(
+            IProgress<string>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_iwaraApi.IsLoggedIn)
+            {
+                throw new InvalidOperationException("ログインが必要です。マイグレーションを実行する前にログインしてください。");
+            }
+
+            var all = _database.GetAllVideos();
+            var candidates = all.Where(v =>
+                !string.IsNullOrEmpty(v.LocalFilePath)
+                && File.Exists(v.LocalFilePath)
+                && (v.LocalFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
+                    || v.LocalFilePath.EndsWith(".m4v", StringComparison.OrdinalIgnoreCase))
+            ).ToList();
+
+            int total = candidates.Count;
+            int tagged = 0;
+            int skipped = 0;
+            int failed = 0;
+            int processed = 0;
+
+            var apiDelayMs = SettingsManager.Instance.Settings.ApiRequestDelayMs;
+
+            progress?.Report($"マイグレーション開始: {total} 件");
+            _logger.Info($"Phase3 マイグレーション開始: 候補 {total} 件");
+
+            foreach (var video in candidates)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                processed++;
+
+                try
+                {
+                    // 1. 既存タグ確認: ファイル側に既に正しいタグがあればスキップ
+                    var (_, existingFid) = MetadataService.ReadIwaraTags(video.LocalFilePath);
+
+                    // DB 側 FileUuid が空で、ファイル側に既にあれば取り込む
+                    if (string.IsNullOrEmpty(video.FileUuid) && !string.IsNullOrEmpty(existingFid))
+                    {
+                        video.FileUuid = existingFid;
+                        _database.UpdateVideo(video);
+                    }
+
+                    // タグが既に正しく書き込まれていればスキップ
+                    if (!string.IsNullOrEmpty(existingFid)
+                        && !string.IsNullOrEmpty(video.FileUuid)
+                        && existingFid == video.FileUuid)
+                    {
+                        skipped++;
+                        ReportProgressIfNeeded(progress, processed, total, tagged, skipped, failed);
+                        continue;
+                    }
+
+                    // 2. DB に FileUuid が無い場合は iwara API で取得
+                    if (string.IsNullOrEmpty(video.FileUuid))
+                    {
+                        progress?.Report($"API 取得中 ({processed}/{total}): {video.VideoId}");
+                        var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
+
+                        if (!urlInfo.Success || string.IsNullOrEmpty(urlInfo.FileUuid))
+                        {
+                            failed++;
+                            _logger.Warn($"FileUuid 取得失敗 ({video.VideoId} / {video.Title}): {urlInfo.Error ?? "no file_id"}");
+                            ReportProgressIfNeeded(progress, processed, total, tagged, skipped, failed);
+                            // レート制限遵守のため delay
+                            if (apiDelayMs > 0)
+                                await Task.Delay(apiDelayMs, cancellationToken);
+                            continue;
+                        }
+
+                        video.FileUuid = urlInfo.FileUuid;
+                        _database.UpdateVideo(video);
+
+                        // レート制限遵守のため delay
+                        if (apiDelayMs > 0)
+                            await Task.Delay(apiDelayMs, cancellationToken);
+                    }
+
+                    // 3. mp4 タグ書き込み
+                    var ok = MetadataService.WriteIwaraTags(video.LocalFilePath, video.VideoId, video.FileUuid);
+                    if (ok)
+                    {
+                        tagged++;
+                        // 書き込んだフォルダのキャッシュを無効化
+                        var dir = Path.GetDirectoryName(video.LocalFilePath);
+                        if (!string.IsNullOrEmpty(dir)) IndexCacheService.Invalidate(dir);
+                    }
+                    else
+                    {
+                        failed++;
+                        _logger.Warn($"タグ書き込み失敗: {video.LocalFilePath}");
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.Warn($"マイグレーション失敗 ({video.Title}): {ex.Message}");
+                }
+
+                ReportProgressIfNeeded(progress, processed, total, tagged, skipped, failed);
+            }
+
+            _logger.Info($"Phase3 マイグレーション完了: 合計 {total}, タグ付与 {tagged}, スキップ {skipped}, 失敗 {failed}");
+            progress?.Report($"完了: タグ付与 {tagged} / {total} (スキップ {skipped}, 失敗 {failed})");
+            return (total, tagged, skipped, failed);
+        }
+
+        private static void ReportProgressIfNeeded(IProgress<string>? progress, int processed, int total, int tagged, int skipped, int failed)
+        {
+            if (processed % 5 == 0 || processed == total)
+            {
+                progress?.Report($"処理中: {processed}/{total} (タグ付与 {tagged}, スキップ {skipped}, 失敗 {failed})");
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// 動画のメタデータをJSONで保存

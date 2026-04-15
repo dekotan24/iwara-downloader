@@ -20,14 +20,14 @@ namespace IwaraDownloader.Models
     }
 
     /// <summary>
-    /// 画質設定
+    /// 画質設定 (iwara のダウンロードUIに準拠: Source / 540 / 360)
+    /// 数値は旧 enum (Source=0, 1080p=1, 720p=2, 540p=3, 360p=4) と互換性を保つため
+    /// 明示的に指定する。既存 settings.json の数値がそのまま読み込める。
     /// </summary>
     public enum VideoQuality
     {
-        Source,
-        Quality1080p,
-        Quality720p,
-        Quality540p,
-        Quality360p
+        Source = 0,
+        Quality540p = 3,
+        Quality360p = 4,
     }
 }

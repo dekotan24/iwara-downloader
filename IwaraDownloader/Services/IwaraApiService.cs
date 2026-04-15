@@ -13,8 +13,11 @@ namespace IwaraDownloader.Services
         private readonly string _scriptPath;
         private string? _token;
 
-        /// <summary>ログイン済みかどうか</summary>
-        public bool IsLoggedIn => !string.IsNullOrEmpty(_token);
+        /// <summary>トークン（JWT）を保持しており、かつ JWT の exp が有効期限内である</summary>
+        public bool IsLoggedIn => !string.IsNullOrEmpty(_token) && !IsTokenExpired(_token);
+
+        /// <summary>トークンの有効期限（UTC）。無効なら null</summary>
+        public DateTime? TokenExpiresAt => string.IsNullOrEmpty(_token) ? null : GetJwtExpiration(_token);
 
         /// <summary>トークン</summary>
         public string? Token => _token;
@@ -133,7 +136,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// トークンを読み込み
+        /// トークンを読み込み。JWT の有効期限をチェックし、期限切れなら破棄する。
         /// </summary>
         private void LoadToken()
         {
@@ -143,11 +146,57 @@ namespace IwaraDownloader.Services
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "IwaraDownloader",
                     "token.txt");
-                
-                if (File.Exists(tokenPath))
-                    _token = File.ReadAllText(tokenPath).Trim();
+
+                if (!File.Exists(tokenPath)) return;
+
+                var token = File.ReadAllText(tokenPath).Trim();
+                if (string.IsNullOrEmpty(token)) return;
+
+                if (IsTokenExpired(token))
+                {
+                    LoggingService.Instance.Warn("保存されていたトークンの有効期限が切れていたため破棄しました。再ログインが必要です。");
+                    try { File.Delete(tokenPath); } catch { }
+                    return;
+                }
+
+                _token = token;
             }
             catch { }
+        }
+
+        /// <summary>
+        /// JWT の exp クレームをデコードして有効期限 (UTC) を取得する。失敗時は null
+        /// </summary>
+        private static DateTime? GetJwtExpiration(string token)
+        {
+            try
+            {
+                var parts = token.Split('.');
+                if (parts.Length != 3) return null;
+
+                var payloadB64 = parts[1]
+                    .Replace('-', '+').Replace('_', '/')
+                    .PadRight(parts[1].Length + (4 - parts[1].Length % 4) % 4, '=');
+                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payloadB64));
+                using var doc = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("exp", out var expProp)) return null;
+                if (!expProp.TryGetInt64(out var exp)) return null;
+                return DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// JWT の有効期限が切れているか判定 (60秒のleewayあり)
+        /// </summary>
+        private static bool IsTokenExpired(string token)
+        {
+            var exp = GetJwtExpiration(token);
+            if (exp == null) return false; // exp を持たないトークンは期限なし扱い
+            return DateTime.UtcNow >= exp.Value - TimeSpan.FromSeconds(60);
         }
 
         #endregion
@@ -324,10 +373,53 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// サーバーにトークンを問い合わせて有効性を確認する。起動時や長期アイドル復帰後に呼ぶ。
+        /// 期限切れ・サーバー拒否が判明した場合は内部トークンを破棄する。
+        /// </summary>
+        public async Task<(bool Valid, string? Error)> VerifyTokenAsync()
+        {
+            if (string.IsNullOrEmpty(_token))
+                return (false, "未ログインです");
+
+            if (IsTokenExpired(_token))
+            {
+                LoggingService.Instance.Warn("トークンの有効期限が切れています。再ログインが必要です。");
+                Logout();
+                return (false, "トークンの有効期限が切れています");
+            }
+
+            var result = await RunPythonAsync("verify_token");
+            if (result == null)
+                return (false, "トークンの検証に失敗しました（Python実行エラー）");
+
+            var root = result.RootElement;
+            if (root.TryGetProperty("success", out var success) && success.GetBoolean())
+                return (true, null);
+
+            var code = root.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+            var error = root.TryGetProperty("error", out var errorProp) ? errorProp.GetString() : "Unknown error";
+
+            // サーバー側で明確に無効と判定されたらトークンを破棄
+            if (code is "TOKEN_EXPIRED" or "TOKEN_INVALID" or "LOGIN_REQUIRED")
+            {
+                LoggingService.Instance.Warn($"トークンがサーバーに拒否されました ({code})。ログアウトします。");
+                Logout();
+            }
+
+            return (false, error);
+        }
+
+        /// <summary>
         /// ユーザーの動画リストを取得
         /// </summary>
         public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null)
         {
+            if (!IsLoggedIn)
+            {
+                progress?.Report("ログインが必要です。設定画面からログインしてください。");
+                return new List<VideoInfo>();
+            }
+
             progress?.Report($"{username}の動画一覧を取得中...");
 
             var result = await RunPythonAsync("get_videos", username);
@@ -377,41 +469,69 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// ダウンロードURLを取得
+        /// ダウンロードURLを取得 (file_id / author 情報込み)
         /// </summary>
-        public async Task<(bool Success, string? Url, string? Quality, string? Title, string? Error)> GetDownloadUrlAsync(string videoId)
+        public async Task<VideoUrlInfo> GetDownloadUrlAsync(string videoId)
         {
+            if (!IsLoggedIn)
+                return VideoUrlInfo.FromError("ログインが必要です。設定画面からログインしてください。");
+
             var result = await RunPythonAsync("get_url", videoId);
-            
+
             if (result == null)
-                return (false, null, null, null, "Pythonスクリプトの実行に失敗しました");
+                return VideoUrlInfo.FromError("Pythonスクリプトの実行に失敗しました");
 
             var root = result.RootElement;
-            
+
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
             {
-                var url = root.TryGetProperty("url", out var urlProp) ? urlProp.GetString() : null;
-                var quality = root.TryGetProperty("quality", out var qualityProp) ? qualityProp.GetString() : null;
-                var title = root.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : null;
-                return (true, url, quality, title, null);
+                return new VideoUrlInfo
+                {
+                    Success = true,
+                    Url = GetString(root, "url"),
+                    Quality = GetString(root, "quality"),
+                    Title = GetString(root, "title"),
+                    FileUuid = GetString(root, "file_id"),
+                    AuthorUsername = GetString(root, "author_username"),
+                    AuthorName = GetString(root, "author_name"),
+                };
             }
 
-            var error = root.TryGetProperty("error", out var errorProp) 
-                ? errorProp.GetString() 
-                : "Unknown error";
-            
-            return (false, null, null, null, error);
+            return VideoUrlInfo.FromError(GetString(root, "error") ?? "Unknown error");
+        }
+
+        private static string? GetString(JsonElement root, string name)
+            => root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+
+        /// <summary>
+        /// GetDownloadUrlAsync の戻り値
+        /// </summary>
+        public class VideoUrlInfo
+        {
+            public bool Success { get; set; }
+            public string? Url { get; set; }
+            public string? Quality { get; set; }
+            public string? Title { get; set; }
+            public string? FileUuid { get; set; }
+            public string? AuthorUsername { get; set; }
+            public string? AuthorName { get; set; }
+            public string? Error { get; set; }
+
+            public static VideoUrlInfo FromError(string error) => new() { Success = false, Error = error };
         }
 
         /// <summary>
         /// 動画をダウンロード（Pythonに任せる）
         /// </summary>
         public async Task<(bool Success, string? Error)> DownloadVideoAsync(
-            string videoId, 
+            string videoId,
             string outputPath,
             IProgress<string>? progress = null,
             IProgress<double>? percentProgress = null)
         {
+            if (!IsLoggedIn)
+                return (false, "ログインが必要です。設定画面からログインしてください。");
+
             progress?.Report($"ダウンロード中: {videoId}");
 
             var result = await RunPythonWithProgressAsync("download", percentProgress, videoId, outputPath);
