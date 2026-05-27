@@ -5,7 +5,7 @@ using IwaraDownloader.Utils;
 namespace IwaraDownloader.Services
 {
     /// <summary>
-    /// ダウンロードマネージャー（IwaraApiService使用版）
+    /// ダウンロードマネージャー(IwaraApiService使用版)
     /// </summary>
     public class DownloadManager : IDisposable
     {
@@ -35,6 +35,12 @@ namespace IwaraDownloader.Services
 
         /// <summary>アクティブなタスク数</summary>
         public int ActiveTaskCount => _activeTasks.Count;
+
+        /// <summary>純粋に DL 中のタスク数 (タグ書き込み中は含まない)</summary>
+        public int DownloadingCount => _activeTasks.Values.Count(t => t.Status == DownloadStatus.Downloading);
+
+        /// <summary>タグ書き込み中のタスク数</summary>
+        public int WritingTagsCount => _activeTasks.Values.Count(t => t.Status == DownloadStatus.WritingTags);
 
         /// <summary>待機中のタスク数</summary>
         public int PendingTaskCount => _pendingQueue.Count + _pendingTasks.Count;
@@ -81,7 +87,9 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 起動時に未完了のダウンロードを再開
+        /// 起動時に未完了のダウンロードを再開。
+        /// 大量 (数千件) のときに UI スレッドを止めないよう、すべて Task.Run で背後実行する。
+        /// 個別 EnqueueDownload は呼ばず、_pendingTasks/_pendingQueue へ直接バルク投入する。
         /// </summary>
         public void ResumeIncompleteDownloads()
         {
@@ -92,18 +100,34 @@ namespace IwaraDownloader.Services
                 return;
             }
 
-            // PendingまたはDownloading状態の動画を取得
-            var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
-            var downloadingVideos = _database.GetVideosByStatus(DownloadStatus.Downloading);
-
-            // Downloading状態のものはPendingにリセット（前回中断されたもの）
-            foreach (var video in downloadingVideos)
+            _ = Task.Run(() =>
             {
-                video.Status = DownloadStatus.Pending;
-                _database.UpdateVideo(video);
-                pendingVideos.Add(video);
-            }
+                try
+                {
+                    ResumeIncompleteDownloadsCore();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("ResumeIncompleteDownloads failed", ex);
+                }
+            });
+        }
 
+        private void ResumeIncompleteDownloadsCore()
+        {
+            // 0) 孤児 .part / .part.meta クリーンアップ
+            //   - .meta 無し .part: リジューム情報無いので削除
+            //   - .meta あり、DB照合で「対応動画が Completed (別場所保存済み) or DB から消えてる」→削除
+            //   - .meta あり、対応動画が Pending/Failed → 残す (次の DL でリジューム)
+            try { CleanupOrphanPartFiles(); }
+            catch (Exception ex) { _logger.Warn($"Orphan .part cleanup failed: {ex.Message}"); }
+
+            // 1) 前回中断分 (Downloading) は SQL 一発で Pending に降格
+            var reset = _database.BulkUpdateStatus(DownloadStatus.Downloading, DownloadStatus.Pending);
+            if (reset > 0) _logger.Info($"Reset {reset} Downloading rows to Pending (bulk)");
+
+            // 2) Pending な動画を取得
+            var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
             if (pendingVideos.Count == 0)
             {
                 _logger.Debug("No incomplete downloads to resume");
@@ -112,15 +136,160 @@ namespace IwaraDownloader.Services
 
             _logger.Info($"Resuming {pendingVideos.Count} incomplete downloads");
 
-            // キューに追加
+            // 3) SubscribedUser を 1 クエリで一括取得 → 辞書化 (個別 SELECT を避ける)
+            var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
+            var quality = SettingsManager.Instance.Settings.DefaultQuality;
+
+            int enqueued = 0;
             foreach (var video in pendingVideos)
             {
+                // 既にメモリキューに居るものはスキップ
+                if (_pendingTasks.ContainsKey(video.VideoId) || _activeTasks.ContainsKey(video.VideoId))
+                    continue;
+
                 SubscribedUser? user = null;
                 if (video.SubscribedUserId.HasValue)
+                    userMap.TryGetValue(video.SubscribedUserId.Value, out user);
+
+                var task = new DownloadTask
                 {
-                    user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                    Video = video,
+                    Status = DownloadStatus.Pending,
+                    IsSubscriptionDownload = video.SubscribedUserId.HasValue,
+                    Quality = quality,
+                    SubscribedUser = user
+                };
+
+                _pendingTasks[video.VideoId] = task;
+                _pendingQueue.Enqueue(task);
+                enqueued++;
+            }
+
+            _logger.Info($"Enqueued {enqueued} tasks (bulk, no per-task event fire)");
+
+            // 4) UI 通知は 1 回だけ (チャンネルツリー再描画)
+            AutoCheckCompleted?.Invoke(this, EventArgs.Empty);
+
+            // 5) キュー処理開始
+            if (_isRunning)
+            {
+                _ = ProcessQueueAsync();
+            }
+        }
+
+        /// <summary>
+        /// 孤児 .part / .part.meta を判定して削除する。
+        /// 起動時の ResumeIncompleteDownloadsCore から呼ばれる。
+        /// 判定:
+        ///   - .meta が無い .part → 削除 (リジューム不能)
+        ///   - .meta あり / .meta から file_id 取得 → DB 照合
+        ///       - 対応動画が Completed (= 別パスに保存済み) → 削除
+        ///       - DB に対応動画が無い → 削除
+        ///       - 対応動画が Pending/Failed/Downloading → 残す (次回 DL でリジューム)
+        ///   - .meta パース失敗 → 削除 (壊れたメタは再 DL の方が確実)
+        /// </summary>
+        private void CleanupOrphanPartFiles()
+        {
+            var scanFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var defaultFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            if (!string.IsNullOrEmpty(defaultFolder)) scanFolders.Add(defaultFolder);
+            foreach (var u in _database.GetAllSubscribedUsers())
+            {
+                if (!string.IsNullOrEmpty(u.CustomSavePath))
+                    scanFolders.Add(u.CustomSavePath);
+            }
+
+            int scanned = 0, deletedNoMeta = 0, deletedBadMeta = 0, deletedOrphan = 0, deletedCompleted = 0, kept = 0;
+
+            foreach (var folder in scanFolders)
+            {
+                if (!Directory.Exists(folder)) continue;
+
+                IEnumerable<string> partFiles;
+                try
+                {
+                    partFiles = Directory.EnumerateFiles(folder, "*.part", SearchOption.AllDirectories);
                 }
-                EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                catch (Exception ex)
+                {
+                    _logger.Warn($"Cannot enumerate .part files in {folder}: {ex.Message}");
+                    continue;
+                }
+
+                foreach (var partPath in partFiles)
+                {
+                    scanned++;
+                    var metaPath = partPath + ".meta";
+
+                    // ① .meta が無い → 削除
+                    if (!File.Exists(metaPath))
+                    {
+                        if (TryDelete(partPath)) deletedNoMeta++;
+                        continue;
+                    }
+
+                    // .meta から file_id を取り出す
+                    string? fileUuid = null;
+                    try
+                    {
+                        var json = File.ReadAllText(metaPath);
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("file_id", out var fidProp))
+                            fileUuid = fidProp.GetString();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Debug($"Bad .meta json ({metaPath}): {ex.Message}");
+                    }
+
+                    if (string.IsNullOrEmpty(fileUuid))
+                    {
+                        // ② .meta 壊れ → 削除
+                        if (TryDelete(partPath)) deletedBadMeta++;
+                        TryDelete(metaPath);
+                        continue;
+                    }
+
+                    // ③ DB 照合
+                    var video = _database.GetVideoByFileUuid(fileUuid);
+                    if (video == null)
+                    {
+                        // DB に対応動画なし (購読解除等) → 孤児
+                        if (TryDelete(partPath)) deletedOrphan++;
+                        TryDelete(metaPath);
+                        continue;
+                    }
+                    if (video.Status == DownloadStatus.Completed
+                        && !string.IsNullOrEmpty(video.LocalFilePath)
+                        && File.Exists(video.LocalFilePath))
+                    {
+                        // 別場所に完成品あり → 孤児
+                        if (TryDelete(partPath)) deletedCompleted++;
+                        TryDelete(metaPath);
+                        continue;
+                    }
+
+                    // それ以外 (Pending/Failed/Downloading) → 残す
+                    kept++;
+                }
+            }
+
+            if (scanned > 0)
+            {
+                _logger.Info(
+                    $".part cleanup: scanned={scanned}, kept={kept}, " +
+                    $"deletedNoMeta={deletedNoMeta}, deletedBadMeta={deletedBadMeta}, " +
+                    $"deletedOrphan={deletedOrphan}, deletedCompleted={deletedCompleted}");
+            }
+        }
+
+        private bool TryDelete(string path)
+        {
+            try { File.Delete(path); return true; }
+            catch (Exception ex)
+            {
+                _logger.Debug($"Failed to delete {path}: {ex.Message}");
+                return false;
             }
         }
 
@@ -175,6 +344,34 @@ namespace IwaraDownloader.Services
                 if (existingTask != null) return existingTask;
             }
 
+            // 外部動画 (YouTube埋め込み等) のDL設定判定
+            if (video.IsExternal)
+            {
+                var settings = SettingsManager.Instance.Settings;
+                bool shouldDownload = subscribedUser != null
+                    ? subscribedUser.ResolveDownloadExternal(settings.DownloadExternalVideosDefault)
+                    : settings.DownloadExternalVideosDefault;
+
+                if (!shouldDownload)
+                {
+                    _logger.Info($"外部動画スキップ (設定によりDLしない): {video.Title} [{video.EmbedUrl}]");
+                    video.Status = DownloadStatus.Skipped;
+                    video.LastErrorMessage = "外部動画DL設定がOFFのためスキップ";
+                    _database.UpdateVideo(video);
+
+                    var skippedTask = new DownloadTask
+                    {
+                        Video = video,
+                        Status = DownloadStatus.Skipped,
+                        IsSubscriptionDownload = isSubscriptionDownload,
+                        Quality = SettingsManager.Instance.Settings.DefaultQuality,
+                        SubscribedUser = subscribedUser
+                    };
+                    TaskStatusChanged?.Invoke(this, skippedTask);
+                    return skippedTask;
+                }
+            }
+
             var task = new DownloadTask
             {
                 Video = video,
@@ -192,7 +389,7 @@ namespace IwaraDownloader.Services
             _pendingTasks[video.VideoId] = task;
             _pendingQueue.Enqueue(task);
 
-            // イベント発火（UIに反映）
+            // イベント発火(UIに反映)
             TaskStatusChanged?.Invoke(this, task);
 
             // キュー処理を開始
@@ -222,25 +419,29 @@ namespace IwaraDownloader.Services
                         break;
                     }
 
-                    // キャンセルされたタスク（_pendingTasksから削除済み）はスキップ
+                    // キャンセルされたタスク(_pendingTasksから削除済み)はスキップ
                     if (!_pendingTasks.ContainsKey(task.Video.VideoId))
                     {
                         _logger.Debug($"Skipping cancelled task: {task.Video.VideoId}");
                         continue;
                     }
 
-                    // 待機中リストから削除
-                    _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                    // 注: _pendingTasks の削除は ExecuteDownloadAsync 冒頭で行う。
+                    // ここで先に削除すると、セマフォ待機/レート制限遅延の間タスクが
+                    // _pendingTasks にも _activeTasks にも居ない死角ができ、UI 上で
+                    // 「0DL中」と表示されてしまうため。
 
                     await _downloadSemaphore.WaitAsync(_globalCts.Token);
-                    
+
                     // レート制限：DL開始前に設定値分待機
                     var settings = SettingsManager.Instance.Settings;
                     var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
                     System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
                     await Task.Delay(delayMs, _globalCts.Token);
-                    
-                    _ = ExecuteDownloadAsync(task);
+
+                    // スレッドプール上で起動 (呼び出し元が UI スレッドのため、await の continuation が
+                    // UI に戻って WriteIwaraTags 等の同期I/Oで詰まるのを防ぐ)
+                    _ = Task.Run(() => ExecuteDownloadAsync(task));
                 }
             }
             finally
@@ -250,16 +451,19 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// ダウンロードを実行（IwaraApiService使用）
+        /// ダウンロードを実行(IwaraApiService使用)
         /// </summary>
         private async Task ExecuteDownloadAsync(DownloadTask task)
         {
             try
             {
+                // pending → active へ同タイミングで切り替え (UI 表示に死角を作らない)
+                _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                _activeTasks[task.Video.VideoId] = task;
+
                 task.CancellationTokenSource = new CancellationTokenSource();
                 task.Status = DownloadStatus.Downloading;
                 task.StartedAt = DateTime.Now;
-                _activeTasks[task.Video.VideoId] = task;
 
                 // DBのステータスも更新
                 task.Video.Status = DownloadStatus.Downloading;
@@ -270,9 +474,18 @@ namespace IwaraDownloader.Services
                 var settings = SettingsManager.Instance.Settings;
                 var video = task.Video;
 
+                // --- 外部動画 (YouTube埋め込み等) の場合は yt-dlp 経路へ ---
+                if (video.IsExternal)
+                {
+                    await ExecuteExternalDownloadAsync(task);
+                    return;
+                }
+
                 // --- 事前に動画情報を取得 (FileUuid / 最新 title / author) ---
                 // ここで得た FileUuid を用いて既存ファイル検出を行う
-                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
+                // site が空なら iwara.tv 扱い (旧データ互換)。iwara.ai 動画なら "www.iwara.ai" 指定。
+                var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
+                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
                 if (!urlInfo.Success)
                 {
                     throw new Exception(urlInfo.Error ?? "動画情報の取得に失敗しました");
@@ -285,6 +498,8 @@ namespace IwaraDownloader.Services
                     video.AuthorUsername = urlInfo.AuthorUsername;
                 if (!string.IsNullOrEmpty(urlInfo.Title) && string.IsNullOrEmpty(video.Title))
                     video.Title = urlInfo.Title;
+                if (!string.IsNullOrEmpty(urlInfo.Rating))
+                    video.Rating = urlInfo.Rating;
 
                 // --- 既存ファイル検出 (UUID ベース) ---
                 if (TryReuseExistingLocalFile(task, video))
@@ -350,45 +565,70 @@ namespace IwaraDownloader.Services
 
                 outputPath = Helpers.GetUniqueFilePath(outputPath);
 
-                // ダウンロード実行（IwaraApiService使用）
+                // ダウンロード実行(IwaraApiService使用)
                 var progress = new Progress<string>(msg =>
                 {
                     System.Diagnostics.Debug.WriteLine($"Download progress: {msg}");
                 });
 
                 // パーセント進捗を受け取ってイベント発火
+                // throttle: 並列DLで毎%発火 → UIスレッド詰まりを防ぐため 250ms 間引き。
+                // 0% 開始と 100% 完了は確実に通すため境界条件を別扱い。
+                long lastFireMs = 0;
+                bool sentZero = false;
                 var percentProgress = new Progress<double>(pct =>
                 {
                     task.Progress = pct;
-                    TaskProgressChanged?.Invoke(this, task);
+                    var nowMs = Environment.TickCount64;
+                    bool shouldFire = pct >= 100.0
+                                   || (!sentZero && pct > 0)
+                                   || nowMs - lastFireMs >= 250;
+                    if (shouldFire)
+                    {
+                        if (pct > 0) sentZero = true;
+                        lastFireMs = nowMs;
+                        TaskProgressChanged?.Invoke(this, task);
+                    }
                 });
+
+                // タスク個別CTとアプリ全体CTをリンク (どちらかキャンセルされたらpython側もKill)
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    task.CancellationTokenSource.Token,
+                    _globalCts?.Token ?? CancellationToken.None);
 
                 var (success, error) = await _iwaraApi.DownloadVideoAsync(
                     video.VideoId,
                     outputPath,
                     progress,
-                    percentProgress);
+                    percentProgress,
+                    linkedCts.Token,
+                    siteForApi);
 
                 if (success && File.Exists(outputPath))
                 {
-                    task.Status = DownloadStatus.Completed;
                     task.Progress = 100;
-                    task.CompletedAt = DateTime.Now;
-
                     video.LocalFilePath = outputPath;
-                    video.Status = DownloadStatus.Completed;
                     video.DownloadedAt = DateTime.Now;
                     video.FileSize = new FileInfo(outputPath).Length;
 
                     // mp4 にカスタムタグ (video_id / file_id) を書き込む
                     if (!string.IsNullOrEmpty(video.FileUuid))
                     {
+                        // ステータスを「タグ書き込み中」に切り替えて UI に反映
+                        task.Status = DownloadStatus.WritingTags;
+                        TaskStatusChanged?.Invoke(this, task);
+
                         var tagOk = MetadataService.WriteIwaraTags(outputPath, video.VideoId, video.FileUuid);
                         if (tagOk)
                             _logger.Debug($"Wrote iwara tags: {Path.GetFileName(outputPath)}");
                         else
                             _logger.Warn($"Failed to write iwara tags: {Path.GetFileName(outputPath)}");
                     }
+
+                    // タグ書き込みが終わってから Completed に確定
+                    task.Status = DownloadStatus.Completed;
+                    task.CompletedAt = DateTime.Now;
+                    video.Status = DownloadStatus.Completed;
 
                     // フォルダのインデックスキャッシュを無効化 (新規ファイルを次回スキャンに反映)
                     var outputDir = Path.GetDirectoryName(outputPath);
@@ -446,17 +686,75 @@ namespace IwaraDownloader.Services
 
                 var maxRetry = SettingsManager.Instance.Settings.MaxRetryCount;
                 _logger.Debug($"Download error: {task.Video.Title} - RetryCount={task.Video.RetryCount}, MaxRetry={maxRetry}");
-                
-                if (task.Video.RetryCount < maxRetry)
+
+                // CDN_UNAVAILABLE / All CDN candidates failed: iwara 側の CDN 振り分けが壊れていて
+                // Python ヘルパーが既に内部で 6 回 CDN ガチャを引いてる。
+                // ここから更にリトライしても無駄なので即時諦める (CPU・帯域節約)。
+                bool isCdnUnavailable = ex.Message.Contains("CDN_UNAVAILABLE")
+                                     || ex.Message.Contains("All CDN candidates failed");
+
+                // フレンド限定動画 (相互承認しないと見れない): 何度叩いても 403 が返るので即時諦める
+                bool isPrivateVideo = ex.Message.Contains("PRIVATE_VIDEO")
+                                   || ex.Message.Contains("errors.privateVideo")
+                                   || ex.Message.Contains("Private video");
+
+                // 動画削除・存在しない: iwara 側で完全に消えてるのでリトライ無駄
+                bool isVideoNotFound = ex.Message.Contains("VIDEO_NOT_FOUND")
+                                    || ex.Message.Contains("errors.notFound")
+                                    || ex.Message.Contains("Video not found");
+
+                bool isUnrecoverable = isCdnUnavailable || isPrivateVideo || isVideoNotFound;
+
+                if (task.Video.RetryCount < maxRetry && !isUnrecoverable)
                 {
                     _logger.Info($"Retrying download: {task.Video.Title} (attempt {task.Video.RetryCount + 1}/{maxRetry})");
-                    await Task.Delay(5000);
-                    EnqueueDownload(task.Video, task.IsSubscriptionDownload, task.SubscribedUser);
+                    // finally で _activeTasks から削除された後にエンキューする必要があるため
+                    // fire-and-forget で 5 秒待ってから再投入 (この catch 内で EnqueueDownload を
+                    // 呼ぶと重複チェックに引っかかって新規エンキューされない)
+                    var videoToRetry = task.Video;
+                    var isSubRetry = task.IsSubscriptionDownload;
+                    var userToRetry = task.SubscribedUser;
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(5000, _globalCts?.Token ?? CancellationToken.None);
+                            EnqueueDownload(videoToRetry, isSubRetry, userToRetry);
+                        }
+                        catch (OperationCanceledException) { /* シャットダウン中: 諦める */ }
+                        catch (Exception retryEx)
+                        {
+                            _logger.Warn($"Retry enqueue failed: {videoToRetry.Title} - {retryEx.Message}");
+                        }
+                    });
                 }
                 else
                 {
                     // 最終的に失敗した場合はエラー音を再生して通知
-                    _logger.Info($"Final failure, playing error sound: {task.Video.Title}");
+                    if (isPrivateVideo)
+                    {
+                        _logger.Warn($"Private video (friend-only), skipping retries: {task.Video.Title}");
+                        task.Video.RetryCount = Math.Max(task.Video.RetryCount, maxRetry);
+                        _database.UpdateVideo(task.Video);
+                    }
+                    else if (isVideoNotFound)
+                    {
+                        _logger.Warn($"Video not found on iwara, skipping retries: {task.Video.Title}");
+                        task.Video.RetryCount = Math.Max(task.Video.RetryCount, maxRetry);
+                        _database.UpdateVideo(task.Video);
+                    }
+                    else if (isCdnUnavailable)
+                    {
+                        _logger.Warn($"CDN unavailable, skipping retries: {task.Video.Title}");
+                        // RetryCount を max にしておいて、ユーザーが「失敗動画を一括再試行」しない限り
+                        // 自動チェックで再 DL が走らないようにする (iwara 側修正待ち)
+                        task.Video.RetryCount = Math.Max(task.Video.RetryCount, maxRetry);
+                        _database.UpdateVideo(task.Video);
+                    }
+                    else
+                    {
+                        _logger.Info($"Final failure, playing error sound: {task.Video.Title}");
+                    }
                     SoundService.Instance.PlayErrorSound();
                     NotificationService.Instance.NotifyDownloadError(task.Video.Title, ex.Message);
                 }
@@ -466,6 +764,108 @@ namespace IwaraDownloader.Services
                 _activeTasks.TryRemove(task.Video.VideoId, out _);
                 _downloadSemaphore.Release();
                 TaskStatusChanged?.Invoke(this, task);
+            }
+        }
+
+        /// <summary>
+        /// 外部動画 (YouTube埋め込み等) を yt-dlp 経由でダウンロード
+        /// </summary>
+        private async Task ExecuteExternalDownloadAsync(DownloadTask task)
+        {
+            var settings = SettingsManager.Instance.Settings;
+            var video = task.Video;
+
+            // ファイル名生成(拡張子は yt-dlp 側で補完される)
+            var generatedFilename = Helpers.ApplyFilenameTemplate(
+                settings.FilenameTemplate,
+                video.Title,
+                video.AuthorUsername,
+                video.VideoId,
+                video.PostedAt);
+
+            string outputPathNoExt;
+            if (task.IsSubscriptionDownload && task.SubscribedUser != null)
+            {
+                var savePath = task.SubscribedUser.GetSavePath(settings.DownloadFolder);
+                outputPathNoExt = Path.Combine(savePath, generatedFilename);
+            }
+            else if (task.IsSubscriptionDownload && !string.IsNullOrEmpty(video.AuthorUsername))
+            {
+                var sanitizedUsername = Helpers.SanitizeFileName(video.AuthorUsername);
+                outputPathNoExt = Path.Combine(settings.DownloadFolder, sanitizedUsername, generatedFilename);
+            }
+            else
+            {
+                outputPathNoExt = Path.Combine(settings.DownloadFolder, generatedFilename);
+            }
+
+            var dir = Path.GetDirectoryName(outputPathNoExt);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            _logger.Info($"外部動画DL開始: {video.Title} [{video.EmbedUrl}] -> {outputPathNoExt}");
+
+            var progress = new Progress<string>(msg =>
+            {
+                System.Diagnostics.Debug.WriteLine($"Ext DL progress: {msg}");
+            });
+            // throttle: 並列DLで毎%発火 → UIスレッド詰まりを防ぐため 250ms 間引き
+            long lastExtFireMs = 0;
+            bool sentExtZero = false;
+            var percentProgress = new Progress<double>(pct =>
+            {
+                task.Progress = pct;
+                var nowMs = Environment.TickCount64;
+                bool shouldFire = pct >= 100.0
+                               || (!sentExtZero && pct > 0)
+                               || nowMs - lastExtFireMs >= 250;
+                if (shouldFire)
+                {
+                    if (pct > 0) sentExtZero = true;
+                    lastExtFireMs = nowMs;
+                    TaskProgressChanged?.Invoke(this, task);
+                }
+            });
+
+            // タスク個別CTとアプリ全体CTをリンク (どちらかキャンセルされたらyt-dlp側もKill)
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                task.CancellationTokenSource?.Token ?? CancellationToken.None,
+                _globalCts?.Token ?? CancellationToken.None);
+
+            var (success, error, filePath) = await _iwaraApi.DownloadExternalVideoAsync(
+                video.EmbedUrl, outputPathNoExt, progress, percentProgress, linkedCts.Token);
+
+            if (success && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                task.Status = DownloadStatus.Completed;
+                task.Progress = 100;
+                task.CompletedAt = DateTime.Now;
+
+                video.LocalFilePath = filePath;
+                video.Status = DownloadStatus.Completed;
+                video.DownloadedAt = DateTime.Now;
+                try { video.FileSize = new FileInfo(filePath).Length; } catch { }
+
+                _database.UpdateVideo(video);
+                _logger.Info($"外部動画DL完了: {video.Title} ({video.FileSizeFormatted})");
+
+                SoundService.Instance.PlayCompletionSound();
+
+                if (video.SubscribedUserId.HasValue)
+                {
+                    var user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                    if (user != null)
+                    {
+                        user.DownloadedCount++;
+                        _database.UpdateSubscribedUser(user);
+                    }
+                }
+
+                NotificationService.Instance.NotifyDownloadComplete(video.Title, filePath);
+            }
+            else
+            {
+                throw new Exception(error ?? "外部動画ダウンロードに失敗しました");
             }
         }
 
@@ -591,7 +991,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 動画情報を再取得（タイトル等が取れていない場合用）
+        /// 動画情報を再取得(タイトル等が取れていない場合用)
         /// </summary>
         public async Task<bool> RefreshVideoInfoAsync(VideoInfo video, IProgress<string>? progress = null)
         {
@@ -599,7 +999,8 @@ namespace IwaraDownloader.Services
             {
                 progress?.Report($"動画情報を再取得中: {video.VideoId}");
 
-                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
+                var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
+                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
 
                 if (urlInfo.Success && !string.IsNullOrEmpty(urlInfo.Title))
                 {
@@ -626,7 +1027,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 新着動画をチェック（全チャンネル）
+        /// 新着動画をチェック(全チャンネル)
         /// </summary>
         public async Task CheckForNewVideosAsync(IProgress<string>? progress = null)
         {
@@ -636,7 +1037,7 @@ namespace IwaraDownloader.Services
 
             foreach (var user in users)
             {
-                // チャンネル間のディレイ（最初のユーザー以外）
+                // チャンネル間のディレイ(最初のユーザー以外)
                 if (!isFirstUser)
                 {
                     var channelDelay = Math.Max(settings.ChannelCheckDelayMs, 1000);
@@ -653,7 +1054,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 新着動画をチェック（単一チャンネル）
+        /// 新着動画をチェック(単一チャンネル)
         /// </summary>
         public async Task CheckForNewVideosAsync(SubscribedUser user, IProgress<string>? progress = null)
         {
@@ -661,8 +1062,9 @@ namespace IwaraDownloader.Services
             {
                 progress?.Report($"{user.Username}の動画を確認中...");
 
-                // IwaraApiServiceで動画一覧を取得
-                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress);
+                // IwaraApiServiceで動画一覧を取得 (user.Site で iwara.tv / iwara.ai 振り分け)
+                var siteForApi = string.IsNullOrEmpty(user.Site) ? null : user.Site;
+                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteForApi);
 
                 var newVideos = new List<VideoInfo>();
 
@@ -673,6 +1075,9 @@ namespace IwaraDownloader.Services
                         video.AuthorUserId = user.UserId;
                         video.AuthorUsername = user.Username;
                         video.SubscribedUserId = user.Id;
+                        // user.Site を継承 (購読チャンネルが iwara.ai なら動画も iwara.ai)
+                        if (string.IsNullOrEmpty(video.Site))
+                            video.Site = user.Site;
                         video.Status = DownloadStatus.Pending;
                         video.Id = _database.AddVideo(video);
                         newVideos.Add(video);
@@ -701,6 +1106,9 @@ namespace IwaraDownloader.Services
                 }
 
                 progress?.Report($"{user.Username}: {videos.Count}件の動画、{newVideos.Count}件の新着");
+
+                // orphan な Pending (前回の追加でエンキュー漏れた等) も拾い直す
+                EnqueuePendingVideosForUser(user);
             }
             catch (Exception ex)
             {
@@ -710,11 +1118,33 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 指定ユーザーの DB.Pending かつメモリキューに居ない動画を
+        /// EnqueueDownload で登録し直す。AutoDownloadOnCheck が OFF なら何もしない。
+        /// </summary>
+        private void EnqueuePendingVideosForUser(SubscribedUser user)
+        {
+            if (!SettingsManager.Instance.Settings.AutoDownloadOnCheck) return;
+
+            var orphans = _database.GetVideosBySubscribedUser(user.Id)
+                .Where(v => v.Status == DownloadStatus.Pending
+                         && !_pendingTasks.ContainsKey(v.VideoId)
+                         && !_activeTasks.ContainsKey(v.VideoId))
+                .ToList();
+
+            foreach (var video in orphans)
+            {
+                EnqueueDownload(video, true, user);
+            }
+        }
+
+        /// <summary>
         /// 購読ユーザーを追加
         /// </summary>
         public async Task<SubscribedUser?> AddSubscribedUserAsync(string input, IProgress<string>? progress = null)
         {
             string? username;
+            // URL から site (www.iwara.tv / www.iwara.ai) を判定
+            string siteHost = Helpers.ExtractSiteFromUrl(input);
 
             if (Helpers.IsUserProfileUrl(input))
             {
@@ -723,6 +1153,8 @@ namespace IwaraDownloader.Services
             else
             {
                 username = input.Trim();
+                // URL じゃない (ユーザー名直接入力) → デフォルト iwara.tv
+                siteHost = Helpers.SiteTv;
             }
 
             if (string.IsNullOrEmpty(username))
@@ -739,15 +1171,15 @@ namespace IwaraDownloader.Services
             }
 
             // IwaraApiServiceで動画一覧を取得
-            progress?.Report($"{username}のプロフィールを確認中...");
-            var videos = await _iwaraApi.GetUserVideosAsync(username, progress);
+            progress?.Report($"{username}のプロフィールを確認中... (site={siteHost})");
+            var videos = await _iwaraApi.GetUserVideosAsync(username, progress, siteHost);
 
             if (videos.Count == 0)
             {
-                progress?.Report($"{username}: 動画が見つかりませんでした（ユーザーが存在しないか、動画が0件の可能性があります）");
+                progress?.Report($"{username}: 動画が見つかりませんでした(ユーザーが存在しないか、動画が0件の可能性があります)");
             }
 
-            var profileUrl = $"https://www.iwara.tv/profile/{username}/videos";
+            var profileUrl = $"https://{siteHost}/profile/{username}/videos";
 
             var user = new SubscribedUser
             {
@@ -757,7 +1189,8 @@ namespace IwaraDownloader.Services
                 CreatedAt = DateTime.Now,
                 LastCheckedAt = DateTime.Now,
                 IsEnabled = true,
-                TotalVideoCount = videos.Count
+                TotalVideoCount = videos.Count,
+                Site = siteHost,
             };
 
             user.Id = _database.AddSubscribedUser(user);
@@ -771,6 +1204,8 @@ namespace IwaraDownloader.Services
                     video.AuthorUserId = user.UserId;
                     video.AuthorUsername = user.Username;
                     video.SubscribedUserId = user.Id;
+                    if (string.IsNullOrEmpty(video.Site))
+                        video.Site = user.Site;
                     video.Status = DownloadStatus.Pending;
                     video.Id = _database.AddVideo(video);
                     addedCount++;
@@ -785,6 +1220,9 @@ namespace IwaraDownloader.Services
                 var addedVideos = _database.GetVideosBySubscribedUser(user.Id);
                 NewVideosFound?.Invoke(this, (user, addedVideos));
             }
+
+            // AutoDownloadOnCheck が ON なら追加直後にキューへ
+            EnqueuePendingVideosForUser(user);
 
             return user;
         }
@@ -805,21 +1243,30 @@ namespace IwaraDownloader.Services
                 return null;
             }
 
+            // URL から site 判定 (iwara.ai 動画かどうか)
+            var siteHost = Helpers.ExtractSiteFromUrl(url);
+
             // 既にDBにあるか確認
             var existing = _database.GetVideoByVideoId(videoId);
             if (existing != null)
             {
+                // 既存動画の Site が未設定なら URL から推定して補完
+                if (string.IsNullOrEmpty(existing.Site))
+                {
+                    existing.Site = siteHost;
+                    _database.UpdateVideo(existing);
+                }
                 return EnqueueDownload(existing, false);
             }
 
-            // IwaraApiServiceでダウンロードURL取得（動画情報確認）
-            progress?.Report("動画情報を取得中...");
-            var urlInfo = await _iwaraApi.GetDownloadUrlAsync(videoId);
+            // IwaraApiServiceでダウンロードURL取得(動画情報確認)
+            progress?.Report($"動画情報を取得中... (site={siteHost})");
+            var urlInfo = await _iwaraApi.GetDownloadUrlAsync(videoId, siteHost);
 
             if (!urlInfo.Success)
             {
                 progress?.Report($"エラー: {urlInfo.Error}");
-                // 失敗しても仮登録（後で再取得可能）
+                // 失敗しても仮登録(後で再取得可能)
                 var failedVideo = new VideoInfo
                 {
                     VideoId = videoId,
@@ -852,6 +1299,7 @@ namespace IwaraDownloader.Services
                 Url = url,
                 AuthorUsername = urlInfo.AuthorUsername ?? "",
                 FileUuid = urlInfo.FileUuid ?? "",
+                Site = siteHost,
                 Status = DownloadStatus.Pending
             };
 
@@ -861,7 +1309,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// VideoIdでタスクを取得（アクティブ＋待機中）
+        /// VideoIdでタスクを取得(アクティブ＋待機中)
         /// </summary>
         public DownloadTask? GetTask(string videoId)
         {
@@ -893,7 +1341,7 @@ namespace IwaraDownloader.Services
         /// <summary>ログアウト</summary>
         public void Logout() => _iwaraApi.Logout();
 
-        /// <summary>トークン有効性検証（API 問い合わせ）</summary>
+        /// <summary>トークン有効性検証(API 問い合わせ)</summary>
         public Task<(bool Valid, string? Error)> VerifyTokenAsync()
             => _iwaraApi.VerifyTokenAsync();
 
@@ -926,7 +1374,7 @@ namespace IwaraDownloader.Services
         /// 取得してから書き込む。削除された動画は API エラーで失敗扱い。
         /// </summary>
         /// <returns>(対象件数, タグ書き込み成功件数, スキップ件数, 失敗件数)</returns>
-        public async Task<(int Total, int Tagged, int Skipped, int Failed)> MigrateExistingFilesAsync(
+        public Task<(int Total, int Tagged, int Skipped, int Failed)> MigrateExistingFilesAsync(
             IProgress<string>? progress = null,
             CancellationToken cancellationToken = default)
         {
@@ -935,6 +1383,16 @@ namespace IwaraDownloader.Services
                 throw new InvalidOperationException("ログインが必要です。マイグレーションを実行する前にログインしてください。");
             }
 
+            // UI スレッドをブロックしないようにバックグラウンドスレッドで実行
+            // (TagLib I/O と SQLite I/O が同期処理のため、UI から直接 await すると
+            //  最初の await が来るまでフリーズする)
+            return Task.Run(() => MigrateExistingFilesCoreAsync(progress, cancellationToken), cancellationToken);
+        }
+
+        private async Task<(int Total, int Tagged, int Skipped, int Failed)> MigrateExistingFilesCoreAsync(
+            IProgress<string>? progress,
+            CancellationToken cancellationToken)
+        {
             var all = _database.GetAllVideos();
             var candidates = all.Where(v =>
                 !string.IsNullOrEmpty(v.LocalFilePath)
@@ -985,7 +1443,8 @@ namespace IwaraDownloader.Services
                     if (string.IsNullOrEmpty(video.FileUuid))
                     {
                         progress?.Report($"API 取得中 ({processed}/{total}): {video.VideoId}");
-                        var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId);
+                        var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
+                        var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
 
                         if (!urlInfo.Success || string.IsNullOrEmpty(urlInfo.FileUuid))
                         {
@@ -999,6 +1458,9 @@ namespace IwaraDownloader.Services
                         }
 
                         video.FileUuid = urlInfo.FileUuid;
+                        // 自動 site フォールバックで取れた場合は DB にも反映 (次回以降に直接 iwara.ai 指定)
+                        if (!string.IsNullOrEmpty(urlInfo.ResolvedSite) && string.IsNullOrEmpty(video.Site))
+                            video.Site = urlInfo.ResolvedSite;
                         _database.UpdateVideo(video);
 
                         // レート制限遵守のため delay

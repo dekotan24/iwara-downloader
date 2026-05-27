@@ -13,10 +13,12 @@ namespace IwaraDownloader.Models
         Completed,
         /// <summary>失敗</summary>
         Failed,
-        /// <summary>スキップ（既存）</summary>
+        /// <summary>スキップ(既存)</summary>
         Skipped,
         /// <summary>一時停止</summary>
-        Paused
+        Paused,
+        /// <summary>タグ書き込み中 (mp4 メタデータ更新)</summary>
+        WritingTags
     }
 
     /// <summary>

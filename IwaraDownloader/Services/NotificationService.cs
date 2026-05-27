@@ -31,7 +31,7 @@ namespace IwaraDownloader.Services
         private NotificationService() { }
 
         /// <summary>
-        /// NotifyIconを設定（MainFormから呼び出し）
+        /// NotifyIconを設定(MainFormから呼び出し)
         /// </summary>
         public void SetNotifyIcon(NotifyIcon notifyIcon)
         {

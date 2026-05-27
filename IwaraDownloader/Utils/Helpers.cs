@@ -8,77 +8,71 @@ namespace IwaraDownloader.Utils
     /// </summary>
     public static class Helpers
     {
+        // 対応する iwara ドメイン (iwara.tv = 通常 / iwara.ai = AI動画専用)
+        // URL のホスト部 + API 呼び出し時の X-Site ヘッダー値として使う
+        public const string SiteTv = "www.iwara.tv";
+        public const string SiteAi = "www.iwara.ai";
+
+        // 動画/プロフィール URL を判定する正規表現 (両ドメイン対応)
+        private static readonly Regex RxVideoUrl =
+            new(@"iwara\.(?:tv|ai)/video/([^/\?]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex RxProfileUrl =
+            new(@"iwara\.(?:tv|ai)/profile/([^/\?]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>
-        /// iwara URLからユーザー名を抽出
+        /// iwara URLからユーザー名を抽出 (iwara.tv / iwara.ai 両対応)
         /// </summary>
-        /// <param name="url">プロフィールURL</param>
-        /// <returns>ユーザー名、抽出できない場合はnull</returns>
         public static string? ExtractUsernameFromUrl(string url)
         {
-            if (string.IsNullOrWhiteSpace(url))
-                return null;
-
-            // https://www.iwara.tv/profile/username または https://iwara.tv/profile/username/videos
-            var match = Regex.Match(url, @"iwara\.tv/profile/([^/\?]+)", RegexOptions.IgnoreCase);
-            if (match.Success)
-            {
-                return match.Groups[1].Value;
-            }
-
-            return null;
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            var m = RxProfileUrl.Match(url);
+            return m.Success ? m.Groups[1].Value : null;
         }
 
         /// <summary>
-        /// iwara URLから動画IDを抽出
+        /// iwara URLから動画IDを抽出 (iwara.tv / iwara.ai 両対応)
         /// </summary>
-        /// <param name="url">動画URL</param>
-        /// <returns>動画ID、抽出できない場合はnull</returns>
         public static string? ExtractVideoIdFromUrl(string url)
         {
-            if (string.IsNullOrWhiteSpace(url))
-                return null;
-
-            // https://www.iwara.tv/video/xxxxx/title
-            var match = Regex.Match(url, @"iwara\.tv/video/([^/\?]+)", RegexOptions.IgnoreCase);
-            if (match.Success)
-            {
-                return match.Groups[1].Value;
-            }
-
-            return null;
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            var m = RxVideoUrl.Match(url);
+            return m.Success ? m.Groups[1].Value : null;
         }
 
         /// <summary>
-        /// URLがiwaraのユーザーページかどうか
+        /// URL から site (www.iwara.tv / www.iwara.ai) を判定する。
+        /// X-Site ヘッダー値として使うため、ホスト名そのものを返す。
+        /// </summary>
+        public static string ExtractSiteFromUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return SiteTv;
+            // iwara.ai を含むなら ai、それ以外は tv
+            return url.Contains("iwara.ai", StringComparison.OrdinalIgnoreCase) ? SiteAi : SiteTv;
+        }
+
+        /// <summary>
+        /// URLがiwaraのユーザーページかどうか (iwara.tv / iwara.ai)
         /// </summary>
         public static bool IsUserProfileUrl(string url)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-                return false;
-            return Regex.IsMatch(url, @"iwara\.tv/profile/[^/\?]+", RegexOptions.IgnoreCase);
-        }
+            => !string.IsNullOrWhiteSpace(url) && RxProfileUrl.IsMatch(url);
 
         /// <summary>
-        /// ユーザー名が有効かどうか（英数字、@、_、-のみ許可）
+        /// ユーザー名が有効かどうか(英数字、@、_、-のみ許可)
         /// </summary>
         public static bool IsValidUsername(string username)
         {
             if (string.IsNullOrWhiteSpace(username))
                 return false;
-            
-            // 英数字、@、_、- のみ許可（1～50文字）
+
+            // 英数字、@、_、- のみ許可(1～50文字)
             return Regex.IsMatch(username, @"^[a-zA-Z0-9@_-]{1,50}$");
         }
 
         /// <summary>
-        /// URLがiwaraの動画ページかどうか
+        /// URLがiwaraの動画ページかどうか (iwara.tv / iwara.ai)
         /// </summary>
         public static bool IsVideoUrl(string url)
-        {
-            if (string.IsNullOrWhiteSpace(url))
-                return false;
-            return Regex.IsMatch(url, @"iwara\.tv/video/[^/\?]+", RegexOptions.IgnoreCase);
-        }
+            => !string.IsNullOrWhiteSpace(url) && RxVideoUrl.IsMatch(url);
 
         /// <summary>
         /// ファイル名として使用できない文字を置換
@@ -112,7 +106,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// 指定したパスでファイルを開く（関連付けられたアプリで）
+        /// 指定したパスでファイルを開く(関連付けられたアプリで)
         /// </summary>
         public static void OpenFile(string filePath)
         {
@@ -202,7 +196,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// ダウンロードフォルダのパスを生成（購読DL用）
+        /// ダウンロードフォルダのパスを生成(購読DL用)
         /// </summary>
         /// <param name="baseFolder">ベースフォルダ</param>
         /// <param name="username">ユーザー名</param>
@@ -223,7 +217,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// ダウンロードフォルダのパスを生成（個別DL用）
+        /// ダウンロードフォルダのパスを生成(個別DL用)
         /// </summary>
         /// <param name="baseFolder">ベースフォルダ</param>
         /// <param name="username">ユーザー名</param>
@@ -268,13 +262,13 @@ namespace IwaraDownloader.Utils
         /// <summary>
         /// ファイル名テンプレートを適用してファイル名を生成
         /// </summary>
-        /// <param name="template">テンプレート（{title}, {author}, {date}, {id}, {quality}）</param>
+        /// <param name="template">テンプレート({title}, {author}, {date}, {id}, {quality})</param>
         /// <param name="title">動画タイトル</param>
         /// <param name="author">投稿者名</param>
         /// <param name="videoId">動画ID</param>
         /// <param name="postedAt">投稿日</param>
         /// <param name="quality">画質</param>
-        /// <returns>ファイル名（拡張子なし）</returns>
+        /// <returns>ファイル名(拡張子なし)</returns>
         public static string ApplyFilenameTemplate(string template, string title, string author, string videoId, DateTime? postedAt, string quality = "")
         {
             if (string.IsNullOrWhiteSpace(template))

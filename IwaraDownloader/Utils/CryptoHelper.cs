@@ -9,14 +9,14 @@ namespace IwaraDownloader.Utils
     /// </summary>
     public static class CryptoHelper
     {
-        // マシン固有のエントロピーを使用（同じPCでのみ復号可能）
+        // マシン固有のエントロピーを使用(同じPCでのみ復号可能)
         private static readonly byte[] AdditionalEntropy = Encoding.UTF8.GetBytes("IwaraDownloader_v1");
 
         /// <summary>
         /// 文字列を暗号化
         /// </summary>
         /// <param name="plainText">平文</param>
-        /// <returns>暗号化された文字列（Base64）</returns>
+        /// <returns>暗号化された文字列(Base64)</returns>
         public static string Encrypt(string plainText)
         {
             if (string.IsNullOrEmpty(plainText))
@@ -41,7 +41,7 @@ namespace IwaraDownloader.Utils
         /// <summary>
         /// 暗号化された文字列を復号化
         /// </summary>
-        /// <param name="encryptedText">暗号化された文字列（Base64）</param>
+        /// <param name="encryptedText">暗号化された文字列(Base64)</param>
         /// <returns>復号化された平文</returns>
         public static string Decrypt(string encryptedText)
         {

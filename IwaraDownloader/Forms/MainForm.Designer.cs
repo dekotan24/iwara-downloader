@@ -32,6 +32,13 @@ namespace IwaraDownloader.Forms
             this.btnStartAll = new ToolStripButton();
             this.btnStopAll = new ToolStripButton();
             this.toolStripSeparator2 = new ToolStripSeparator();
+            this.btnClipMonitor = new ToolStripButton();
+            this.btnViewMode = new ToolStripButton();
+            this.btnNsfwFilter = new ToolStripDropDownButton();
+            this.menuNsfwAll = new ToolStripMenuItem();
+            this.menuNsfwSfw = new ToolStripMenuItem();
+            this.menuNsfwNsfw = new ToolStripMenuItem();
+            this.toolStripSeparator6 = new ToolStripSeparator();
             this.btnSettings = new ToolStripButton();
             this.toolStripSeparator3 = new ToolStripSeparator();
             this.btnSetup = new ToolStripButton();
@@ -45,6 +52,7 @@ namespace IwaraDownloader.Forms
             this.menuHelpGitHub = new ToolStripMenuItem();
             this.menuHelpSeparator1 = new ToolStripSeparator();
             this.menuToolsBulkImport = new ToolStripMenuItem();
+            this.menuToolsSearchImport = new ToolStripMenuItem();
             this.menuToolsDuplicateCheck = new ToolStripMenuItem();
             this.menuToolsStatistics = new ToolStripMenuItem();
 
@@ -60,6 +68,7 @@ namespace IwaraDownloader.Forms
             // 右: 動画リスト
             this.listViewVideos = new ListView();
             this.colVideoTitle = new ColumnHeader();
+            this.colVideoSource = new ColumnHeader();
             this.colVideoStatus = new ColumnHeader();
             this.colVideoProgress = new ColumnHeader();
             this.colVideoSize = new ColumnHeader();
@@ -83,24 +92,29 @@ namespace IwaraDownloader.Forms
             this.menuSeparator = new ToolStripSeparator();
             this.menuExit = new ToolStripMenuItem();
 
-            // コンテキストメニュー（チャンネル）
+            // コンテキストメニュー(チャンネル)
             this.contextMenuChannel = new ContextMenuStrip(this.components);
             this.menuChOpen = new ToolStripMenuItem();
             this.menuChCheckNow = new ToolStripMenuItem();
             this.menuChDownloadAll = new ToolStripMenuItem();
             this.menuChSeparator1 = new ToolStripSeparator();
             this.menuChSetSavePath = new ToolStripMenuItem();
+            this.menuChExternalDL = new ToolStripMenuItem();
+            this.menuChExternalDLInherit = new ToolStripMenuItem();
+            this.menuChExternalDLOn = new ToolStripMenuItem();
+            this.menuChExternalDLOff = new ToolStripMenuItem();
             this.menuChSeparator2 = new ToolStripSeparator();
             this.menuChEnable = new ToolStripMenuItem();
             this.menuChDisable = new ToolStripMenuItem();
             this.menuChSeparator3 = new ToolStripSeparator();
             this.menuChDelete = new ToolStripMenuItem();
 
-            // コンテキストメニュー（動画）
+            // コンテキストメニュー(動画)
             this.contextMenuVideo = new ContextMenuStrip(this.components);
             this.menuVidDownload = new ToolStripMenuItem();
             this.menuVidCancel = new ToolStripMenuItem();
             this.menuVidRetryFailed = new ToolStripMenuItem();
+            this.menuVidReDownload = new ToolStripMenuItem();
             this.menuVidRefreshInfo = new ToolStripMenuItem();
             this.menuVidCheckFileExists = new ToolStripMenuItem();
             this.menuVidSeparator1 = new ToolStripSeparator();
@@ -108,9 +122,12 @@ namespace IwaraDownloader.Forms
             this.menuVidOpenFolder = new ToolStripMenuItem();
             this.menuVidSeparator2 = new ToolStripSeparator();
             this.menuVidOpenPage = new ToolStripMenuItem();
+            this.menuVidOpenAuthor = new ToolStripMenuItem();
             this.menuVidCopyUrl = new ToolStripMenuItem();
             this.menuVidCopyTitle = new ToolStripMenuItem();
             this.menuVidSeparator3 = new ToolStripSeparator();
+            this.menuVidDetails = new ToolStripMenuItem();
+            this.menuVidSeparator4 = new ToolStripSeparator();
             this.menuVidDelete = new ToolStripMenuItem();
 
             // ImageList
@@ -269,7 +286,7 @@ namespace IwaraDownloader.Forms
             this.txtVideoFilter.Font = new Font("Yu Gothic UI", 9F);
             this.txtVideoFilter.Location = new Point(3, 3);
             this.txtVideoFilter.Name = "txtVideoFilter";
-            this.txtVideoFilter.PlaceholderText = "🔍 フィルター（タイトルで絞り込み）...";
+            this.txtVideoFilter.PlaceholderText = "🔍 フィルター(タイトルで絞り込み)...";
             this.txtVideoFilter.Size = new Size(630, 23);
             this.txtVideoFilter.TabIndex = 0;
             this.txtVideoFilter.TextChanged += new EventHandler(this.txtVideoFilter_TextChanged);
@@ -305,12 +322,15 @@ namespace IwaraDownloader.Forms
             // 
             this.listViewVideos.Columns.AddRange(new ColumnHeader[] {
                 this.colVideoTitle,
+                this.colVideoSource,
                 this.colVideoStatus,
                 this.colVideoProgress,
                 this.colVideoSize,
                 this.colVideoDate
             });
-            this.listViewVideos.ContextMenuStrip = this.contextMenuVideo;
+            // ContextMenuStrip は自前で MouseUp 内で Show() するため、自動紐付けは外す
+            // (仮想モード ListView の SelectedIndices 更新と自動 ContextMenu の競合回避)
+            // this.listViewVideos.ContextMenuStrip = this.contextMenuVideo;
             this.listViewVideos.Dock = DockStyle.Fill;
             this.listViewVideos.FullRowSelect = true;
             this.listViewVideos.GridLines = true;
@@ -328,39 +348,46 @@ namespace IwaraDownloader.Forms
             this.listViewVideos.SearchForVirtualItem += new SearchForVirtualItemEventHandler(this.listViewVideos_SearchForVirtualItem);
             this.listViewVideos.CacheVirtualItems += new CacheVirtualItemsEventHandler(this.listViewVideos_CacheVirtualItems);
             this.listViewVideos.ColumnClick += new ColumnClickEventHandler(this.listViewVideos_ColumnClick);
-            this.listViewVideos.DoubleClick += new EventHandler(this.listViewVideos_DoubleClick);
+            this.listViewVideos.MouseDoubleClick += new MouseEventHandler(this.listViewVideos_MouseDoubleClick);
             this.listViewVideos.KeyDown += new KeyEventHandler(this.listViewVideos_KeyDown);
+            this.listViewVideos.MouseUp += new MouseEventHandler(this.listViewVideos_MouseUp);
             this.listViewVideos.SelectedIndexChanged += new EventHandler(this.listViewVideos_SelectedIndexChanged);
 
-            // 
+            //
             // colVideoTitle
-            // 
+            //
             this.colVideoTitle.Text = "タイトル";
             this.colVideoTitle.Width = 350;
 
-            // 
+            //
+            // colVideoSource
+            //
+            this.colVideoSource.Text = "ソース";
+            this.colVideoSource.Width = 70;
+
+            //
             // colVideoStatus
-            // 
+            //
             this.colVideoStatus.Text = "状態";
             this.colVideoStatus.Width = 100;
 
-            // 
+            //
             // colVideoProgress
-            // 
+            //
             this.colVideoProgress.Text = "進捗";
             this.colVideoProgress.Width = 80;
 
-            // 
+            //
             // colVideoSize
-            // 
+            //
             this.colVideoSize.Text = "サイズ";
             this.colVideoSize.Width = 80;
 
-            // 
+            //
             // colVideoDate
-            // 
+            //
             this.colVideoDate.Text = "追加日時";
-            this.colVideoDate.Width = 100;
+            this.colVideoDate.Width = 130;
 
             // 
             // toolStrip
@@ -373,6 +400,10 @@ namespace IwaraDownloader.Forms
                 this.btnStartAll,
                 this.btnStopAll,
                 this.toolStripSeparator2,
+                this.btnClipMonitor,
+                this.btnViewMode,
+                this.btnNsfwFilter,
+                this.toolStripSeparator6,
                 this.btnSettings,
                 this.toolStripSeparator3,
                 this.btnSetup,
@@ -449,9 +480,66 @@ namespace IwaraDownloader.Forms
             this.toolStripSeparator2.Name = "toolStripSeparator2";
             this.toolStripSeparator2.Size = new Size(6, 25);
 
-            // 
+            //
+            // btnClipMonitor (クリップボード監視 ON/OFF)
+            //
+            this.btnClipMonitor.AutoToolTip = true;
+            this.btnClipMonitor.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            this.btnClipMonitor.Name = "btnClipMonitor";
+            this.btnClipMonitor.Size = new Size(100, 22);
+            this.btnClipMonitor.Text = "📋監視: OFF";
+            this.btnClipMonitor.ToolTipText = "クリップボード監視: iwara URL を自動でキュー追加";
+            this.btnClipMonitor.CheckOnClick = true;
+            this.btnClipMonitor.CheckedChanged += new EventHandler(this.btnClipMonitor_CheckedChanged);
+
+            //
+            // btnViewMode (表示モード切替)
+            //
+            this.btnViewMode.AutoToolTip = true;
+            this.btnViewMode.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            this.btnViewMode.Name = "btnViewMode";
+            this.btnViewMode.Size = new Size(70, 22);
+            this.btnViewMode.Text = "📋詳細";
+            this.btnViewMode.ToolTipText = "表示モード切替 (詳細 / サムネ)";
+            this.btnViewMode.CheckOnClick = true;
+            this.btnViewMode.CheckedChanged += new EventHandler(this.btnViewMode_CheckedChanged);
+
+            //
+            // btnNsfwFilter (NSFWフィルタ ドロップダウン)
+            //
+            this.btnNsfwFilter.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            this.btnNsfwFilter.Name = "btnNsfwFilter";
+            this.btnNsfwFilter.Size = new Size(60, 22);
+            this.btnNsfwFilter.Text = "🔞全部";
+            this.btnNsfwFilter.ToolTipText = "NSFW フィルタ";
+            this.btnNsfwFilter.DropDownItems.AddRange(new ToolStripItem[] {
+                this.menuNsfwAll, this.menuNsfwSfw, this.menuNsfwNsfw
+            });
+
+            //
+            // menuNsfwAll / menuNsfwSfw / menuNsfwNsfw
+            //
+            this.menuNsfwAll.Name = "menuNsfwAll";
+            this.menuNsfwAll.Text = "全部表示";
+            this.menuNsfwAll.Click += new EventHandler(this.menuNsfwAll_Click);
+
+            this.menuNsfwSfw.Name = "menuNsfwSfw";
+            this.menuNsfwSfw.Text = "SFW のみ (general)";
+            this.menuNsfwSfw.Click += new EventHandler(this.menuNsfwSfw_Click);
+
+            this.menuNsfwNsfw.Name = "menuNsfwNsfw";
+            this.menuNsfwNsfw.Text = "NSFW のみ (ecchi)";
+            this.menuNsfwNsfw.Click += new EventHandler(this.menuNsfwNsfw_Click);
+
+            //
+            // toolStripSeparator6
+            //
+            this.toolStripSeparator6.Name = "toolStripSeparator6";
+            this.toolStripSeparator6.Size = new Size(6, 25);
+
+            //
             // btnSettings
-            // 
+            //
             this.btnSettings.AutoToolTip = false;
             this.btnSettings.DisplayStyle = ToolStripItemDisplayStyle.Text;
             this.btnSettings.Name = "btnSettings";
@@ -516,6 +604,7 @@ namespace IwaraDownloader.Forms
                 this.menuHelpGitHub,
                 this.menuHelpSeparator1,
                 this.menuToolsBulkImport,
+                this.menuToolsSearchImport,
                 this.menuToolsDuplicateCheck,
                 this.menuToolsStatistics
             });
@@ -553,17 +642,25 @@ namespace IwaraDownloader.Forms
             this.menuHelpSeparator1.Name = "menuHelpSeparator1";
             this.menuHelpSeparator1.Size = new Size(177, 6);
 
-            // 
+            //
             // menuToolsBulkImport
-            // 
+            //
             this.menuToolsBulkImport.Name = "menuToolsBulkImport";
             this.menuToolsBulkImport.Size = new Size(180, 22);
             this.menuToolsBulkImport.Text = "URL一括インポート...";
             this.menuToolsBulkImport.Click += new EventHandler(this.menuToolsBulkImport_Click);
 
-            // 
+            //
+            // menuToolsSearchImport
+            //
+            this.menuToolsSearchImport.Name = "menuToolsSearchImport";
+            this.menuToolsSearchImport.Size = new Size(180, 22);
+            this.menuToolsSearchImport.Text = "iwara 検索インポート...";
+            this.menuToolsSearchImport.Click += new EventHandler(this.menuToolsSearchImport_Click);
+
+            //
             // menuToolsDuplicateCheck
-            // 
+            //
             this.menuToolsDuplicateCheck.Name = "menuToolsDuplicateCheck";
             this.menuToolsDuplicateCheck.Size = new Size(180, 22);
             this.menuToolsDuplicateCheck.Text = "重複チェック...";
@@ -663,6 +760,7 @@ namespace IwaraDownloader.Forms
                 this.menuChDownloadAll,
                 this.menuChSeparator1,
                 this.menuChSetSavePath,
+                this.menuChExternalDL,
                 this.menuChSeparator2,
                 this.menuChEnable,
                 this.menuChDisable,
@@ -711,6 +809,33 @@ namespace IwaraDownloader.Forms
             this.menuChSetSavePath.Text = "保存先を変更...";
             this.menuChSetSavePath.Click += new EventHandler(this.menuChSetSavePath_Click);
 
+            //
+            // menuChExternalDL (iwara外動画DL設定 - サブメニュー)
+            //
+            this.menuChExternalDL.Name = "menuChExternalDL";
+            this.menuChExternalDL.Size = new Size(179, 22);
+            this.menuChExternalDL.Text = "iwara外動画のDL";
+            this.menuChExternalDL.DropDownItems.AddRange(new ToolStripItem[] {
+                this.menuChExternalDLInherit,
+                this.menuChExternalDLOn,
+                this.menuChExternalDLOff
+            });
+
+            this.menuChExternalDLInherit.Name = "menuChExternalDLInherit";
+            this.menuChExternalDLInherit.Size = new Size(200, 22);
+            this.menuChExternalDLInherit.Text = "デフォルト設定に従う";
+            this.menuChExternalDLInherit.Click += new EventHandler(this.menuChExternalDLInherit_Click);
+
+            this.menuChExternalDLOn.Name = "menuChExternalDLOn";
+            this.menuChExternalDLOn.Size = new Size(200, 22);
+            this.menuChExternalDLOn.Text = "DLする";
+            this.menuChExternalDLOn.Click += new EventHandler(this.menuChExternalDLOn_Click);
+
+            this.menuChExternalDLOff.Name = "menuChExternalDLOff";
+            this.menuChExternalDLOff.Size = new Size(200, 22);
+            this.menuChExternalDLOff.Text = "DLしない";
+            this.menuChExternalDLOff.Click += new EventHandler(this.menuChExternalDLOff_Click);
+
             // 
             // menuChSeparator2
             // 
@@ -754,6 +879,7 @@ namespace IwaraDownloader.Forms
                 this.menuVidDownload,
                 this.menuVidCancel,
                 this.menuVidRetryFailed,
+                this.menuVidReDownload,
                 this.menuVidRefreshInfo,
                 this.menuVidCheckFileExists,
                 this.menuVidSeparator1,
@@ -761,13 +887,17 @@ namespace IwaraDownloader.Forms
                 this.menuVidOpenFolder,
                 this.menuVidSeparator2,
                 this.menuVidOpenPage,
+                this.menuVidOpenAuthor,
                 this.menuVidCopyUrl,
                 this.menuVidCopyTitle,
                 this.menuVidSeparator3,
+                this.menuVidDetails,
+                this.menuVidSeparator4,
                 this.menuVidDelete
             });
             this.contextMenuVideo.Name = "contextMenuVideo";
             this.contextMenuVideo.Size = new Size(180, 264);
+            this.contextMenuVideo.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuVideo_Opening);
 
             // 
             // menuVidDownload
@@ -786,17 +916,25 @@ namespace IwaraDownloader.Forms
             this.menuVidCancel.Text = "キャンセル";
             this.menuVidCancel.Click += new EventHandler(this.menuVidCancel_Click);
 
-            // 
+            //
             // menuVidRetryFailed
-            // 
+            //
             this.menuVidRetryFailed.Name = "menuVidRetryFailed";
             this.menuVidRetryFailed.Size = new Size(180, 22);
             this.menuVidRetryFailed.Text = "失敗を再試行";
             this.menuVidRetryFailed.Click += new EventHandler(this.menuVidRetryFailed_Click);
 
-            // 
+            //
+            // menuVidReDownload
+            //
+            this.menuVidReDownload.Name = "menuVidReDownload";
+            this.menuVidReDownload.Size = new Size(180, 22);
+            this.menuVidReDownload.Text = "再ダウンロード...";
+            this.menuVidReDownload.Click += new EventHandler(this.menuVidReDownload_Click);
+
+            //
             // menuVidRefreshInfo
-            // 
+            //
             this.menuVidRefreshInfo.Name = "menuVidRefreshInfo";
             this.menuVidRefreshInfo.Size = new Size(159, 22);
             this.menuVidRefreshInfo.Text = "情報再取得";
@@ -838,17 +976,25 @@ namespace IwaraDownloader.Forms
             this.menuVidSeparator2.Name = "menuVidSeparator2";
             this.menuVidSeparator2.Size = new Size(156, 6);
 
-            // 
+            //
             // menuVidOpenPage
-            // 
+            //
             this.menuVidOpenPage.Name = "menuVidOpenPage";
             this.menuVidOpenPage.Size = new Size(159, 22);
             this.menuVidOpenPage.Text = "ページを開く";
             this.menuVidOpenPage.Click += new EventHandler(this.menuVidOpenPage_Click);
 
-            // 
+            //
+            // menuVidOpenAuthor
+            //
+            this.menuVidOpenAuthor.Name = "menuVidOpenAuthor";
+            this.menuVidOpenAuthor.Size = new Size(180, 22);
+            this.menuVidOpenAuthor.Text = "投稿者のページを開く";
+            this.menuVidOpenAuthor.Click += new EventHandler(this.menuVidOpenAuthor_Click);
+
+            //
             // menuVidCopyUrl
-            // 
+            //
             this.menuVidCopyUrl.Name = "menuVidCopyUrl";
             this.menuVidCopyUrl.Size = new Size(180, 22);
             this.menuVidCopyUrl.Text = "URLをコピー";
@@ -862,15 +1008,29 @@ namespace IwaraDownloader.Forms
             this.menuVidCopyTitle.Text = "タイトルをコピー";
             this.menuVidCopyTitle.Click += new EventHandler(this.menuVidCopyTitle_Click);
 
-            // 
+            //
             // menuVidSeparator3
-            // 
+            //
             this.menuVidSeparator3.Name = "menuVidSeparator3";
             this.menuVidSeparator3.Size = new Size(156, 6);
 
-            // 
+            //
+            // menuVidDetails
+            //
+            this.menuVidDetails.Name = "menuVidDetails";
+            this.menuVidDetails.Size = new Size(180, 22);
+            this.menuVidDetails.Text = "詳細情報...";
+            this.menuVidDetails.Click += new EventHandler(this.menuVidDetails_Click);
+
+            //
+            // menuVidSeparator4
+            //
+            this.menuVidSeparator4.Name = "menuVidSeparator4";
+            this.menuVidSeparator4.Size = new Size(156, 6);
+
+            //
             // menuVidDelete
-            // 
+            //
             this.menuVidDelete.Name = "menuVidDelete";
             this.menuVidDelete.Size = new Size(180, 22);
             this.menuVidDelete.Text = "削除";
@@ -939,6 +1099,13 @@ namespace IwaraDownloader.Forms
         private ToolStripButton btnStartAll;
         private ToolStripButton btnStopAll;
         private ToolStripSeparator toolStripSeparator2;
+        private ToolStripButton btnClipMonitor;
+        private ToolStripButton btnViewMode;
+        private ToolStripDropDownButton btnNsfwFilter;
+        private ToolStripMenuItem menuNsfwAll;
+        private ToolStripMenuItem menuNsfwSfw;
+        private ToolStripMenuItem menuNsfwNsfw;
+        private ToolStripSeparator toolStripSeparator6;
         private ToolStripButton btnSettings;
         private ToolStripSeparator toolStripSeparator3;
         private ToolStripButton btnSetup;
@@ -952,6 +1119,7 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuHelpGitHub;
         private ToolStripSeparator menuHelpSeparator1;
         private ToolStripMenuItem menuToolsBulkImport;
+        private ToolStripMenuItem menuToolsSearchImport;
         private ToolStripMenuItem menuToolsDuplicateCheck;
         private ToolStripMenuItem menuToolsStatistics;
         private TreeView treeViewChannels;
@@ -961,6 +1129,7 @@ namespace IwaraDownloader.Forms
         private Panel panelVideoHeader;
         private Label lblVideoHeader;
         private ColumnHeader colVideoTitle;
+        private ColumnHeader colVideoSource;
         private ColumnHeader colVideoStatus;
         private ColumnHeader colVideoProgress;
         private ColumnHeader colVideoSize;
@@ -980,6 +1149,10 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuChDownloadAll;
         private ToolStripSeparator menuChSeparator1;
         private ToolStripMenuItem menuChSetSavePath;
+        private ToolStripMenuItem menuChExternalDL;
+        private ToolStripMenuItem menuChExternalDLInherit;
+        private ToolStripMenuItem menuChExternalDLOn;
+        private ToolStripMenuItem menuChExternalDLOff;
         private ToolStripSeparator menuChSeparator2;
         private ToolStripMenuItem menuChEnable;
         private ToolStripMenuItem menuChDisable;
@@ -989,15 +1162,19 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuVidDownload;
         private ToolStripMenuItem menuVidCancel;
         private ToolStripMenuItem menuVidRetryFailed;
+        private ToolStripMenuItem menuVidReDownload;
         private ToolStripMenuItem menuVidRefreshInfo;
         private ToolStripSeparator menuVidSeparator1;
         private ToolStripMenuItem menuVidPlay;
         private ToolStripMenuItem menuVidOpenFolder;
         private ToolStripSeparator menuVidSeparator2;
         private ToolStripMenuItem menuVidOpenPage;
+        private ToolStripMenuItem menuVidOpenAuthor;
         private ToolStripMenuItem menuVidCopyUrl;
         private ToolStripMenuItem menuVidCopyTitle;
         private ToolStripSeparator menuVidSeparator3;
+        private ToolStripMenuItem menuVidDetails;
+        private ToolStripSeparator menuVidSeparator4;
         private ToolStripMenuItem menuVidDelete;
         private ToolStripMenuItem menuVidCheckFileExists;
         private ImageList imageListTree;

@@ -18,7 +18,7 @@ namespace IwaraDownloader.Services
         private readonly Task _writerTask;
         private bool _disposed;
 
-        /// <summary>ログファイルの最大保持数（デフォルト: 10）</summary>
+        /// <summary>ログファイルの最大保持数(デフォルト: 10)</summary>
         public int MaxLogFiles { get; set; } = 10;
 
         /// <summary>ログレベル</summary>

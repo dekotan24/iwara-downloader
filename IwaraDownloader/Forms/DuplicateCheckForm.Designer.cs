@@ -42,7 +42,7 @@ namespace IwaraDownloader.Forms
             this.lblDescription.Location = new Point(12, 12);
             this.lblDescription.Name = "lblDescription";
             this.lblDescription.Size = new Size(400, 15);
-            this.lblDescription.Text = "複数のチャンネルに存在する同一動画（VideoId）を検出します。";
+            this.lblDescription.Text = "複数のチャンネルに存在する同一動画(VideoId)を検出します。";
 
             // 
             // splitContainer

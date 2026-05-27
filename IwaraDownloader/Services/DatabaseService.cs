@@ -41,7 +41,8 @@ namespace IwaraDownloader.Services
                 Directory.CreateDirectory(directory);
             }
 
-            _connectionString = $"Data Source={dbPath}";
+            // Pooling=true で接続再利用、Cache=Shared で WAL の効果を最大化
+            _connectionString = $"Data Source={dbPath};Pooling=True;Cache=Shared";
             InitializeDatabase();
         }
 
@@ -52,6 +53,14 @@ namespace IwaraDownloader.Services
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
+
+            // WAL モード有効化: 並行書込/読込で "database is locked" を減らす。
+            // synchronous=NORMAL は WAL と組み合わせて電源断耐性と速度のバランスを取る。
+            using (var pragma = connection.CreateCommand())
+            {
+                pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;";
+                pragma.ExecuteNonQuery();
+            }
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -67,7 +76,8 @@ namespace IwaraDownloader.Services
                     DownloadedCount INTEGER DEFAULT 0,
                     TotalVideoCount INTEGER DEFAULT 0,
                     IsEnabled INTEGER DEFAULT 1,
-                    CustomSavePath TEXT DEFAULT ''
+                    CustomSavePath TEXT DEFAULT '',
+                    DownloadExternalVideosOverride INTEGER NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS Videos (
@@ -92,6 +102,8 @@ namespace IwaraDownloader.Services
                     Tags TEXT DEFAULT '',
                     Memo TEXT DEFAULT '',
                     FileUuid TEXT DEFAULT '',
+                    EmbedUrl TEXT DEFAULT '',
+                    Rating TEXT DEFAULT '',
                     FOREIGN KEY (SubscribedUserId) REFERENCES SubscribedUsers(Id) ON DELETE SET NULL
                 );
 
@@ -99,10 +111,11 @@ namespace IwaraDownloader.Services
                 CREATE INDEX IF NOT EXISTS idx_videos_subscribed_user ON Videos(SubscribedUserId);
                 CREATE INDEX IF NOT EXISTS idx_videos_video_id ON Videos(VideoId);
                 CREATE INDEX IF NOT EXISTS idx_videos_file_uuid ON Videos(FileUuid);
+                -- Rating カラムのインデックスは MigrateVideosTable 内 (ALTER TABLE 後) で作成する
             ";
             command.ExecuteNonQuery();
 
-            // マイグレーション: CustomSavePathカラムを追加（既存DBの場合）
+            // マイグレーション: CustomSavePathカラムを追加(既存DBの場合)
             MigrateDatabase(connection);
 
             // マイグレーション結果の最終検証: 期待するカラムが全て存在するか確認
@@ -155,30 +168,32 @@ namespace IwaraDownloader.Services
         /// </summary>
         private void MigrateDatabase(SqliteConnection connection)
         {
-            // CustomSavePathカラムが存在しない場合は追加
+            // SubscribedUsers の列をPRAGMAで一括検査
+            bool hasCustomSavePath = false;
+            bool hasDownloadExternalOverride = false;
+            bool hasSubSite = false;
+
             var checkCmd = connection.CreateCommand();
             checkCmd.CommandText = "PRAGMA table_info(SubscribedUsers)";
-            bool hasCustomSavePath = false;
             using (var reader = checkCmd.ExecuteReader())
             {
                 while (reader.Read())
                 {
-                    if (reader.GetString(1) == "CustomSavePath")
-                    {
-                        hasCustomSavePath = true;
-                        break;
-                    }
+                    var columnName = reader.GetString(1);
+                    if (columnName == "CustomSavePath") hasCustomSavePath = true;
+                    if (columnName == "DownloadExternalVideosOverride") hasDownloadExternalOverride = true;
+                    if (columnName == "Site") hasSubSite = true;
                 }
             }
 
-            if (!hasCustomSavePath)
-            {
-                var alterCmd = connection.CreateCommand();
-                alterCmd.CommandText = "ALTER TABLE SubscribedUsers ADD COLUMN CustomSavePath TEXT DEFAULT ''";
-                alterCmd.ExecuteNonQuery();
-            }
+            AddColumnIfMissing(connection, hasCustomSavePath,
+                "ALTER TABLE SubscribedUsers ADD COLUMN CustomSavePath TEXT DEFAULT ''", "CustomSavePath");
+            AddColumnIfMissing(connection, hasDownloadExternalOverride,
+                "ALTER TABLE SubscribedUsers ADD COLUMN DownloadExternalVideosOverride INTEGER NULL", "DownloadExternalVideosOverride");
+            AddColumnIfMissing(connection, hasSubSite,
+                "ALTER TABLE SubscribedUsers ADD COLUMN Site TEXT DEFAULT ''", "SubscribedUsers.Site");
 
-            // VideosテーブルのTags/Memoカラムマイグレーション
+            // VideosテーブルのTags/Memo/FileUuid/EmbedUrl/Rating/Site カラムマイグレーション
             MigrateVideosTable(connection);
         }
 
@@ -190,6 +205,9 @@ namespace IwaraDownloader.Services
             bool hasTags = false;
             bool hasMemo = false;
             bool hasFileUuid = false;
+            bool hasEmbedUrl = false;
+            bool hasRating = false;
+            bool hasSite = false;
 
             try
             {
@@ -202,6 +220,9 @@ namespace IwaraDownloader.Services
                     if (columnName == "Tags") hasTags = true;
                     if (columnName == "Memo") hasMemo = true;
                     if (columnName == "FileUuid") hasFileUuid = true;
+                    if (columnName == "EmbedUrl") hasEmbedUrl = true;
+                    if (columnName == "Rating") hasRating = true;
+                    if (columnName == "Site") hasSite = true;
                 }
             }
             catch (Exception ex)
@@ -212,6 +233,7 @@ namespace IwaraDownloader.Services
 
             AddColumnIfMissing(connection, hasTags, "ALTER TABLE Videos ADD COLUMN Tags TEXT DEFAULT ''", "Tags");
             AddColumnIfMissing(connection, hasMemo, "ALTER TABLE Videos ADD COLUMN Memo TEXT DEFAULT ''", "Memo");
+            AddColumnIfMissing(connection, hasEmbedUrl, "ALTER TABLE Videos ADD COLUMN EmbedUrl TEXT DEFAULT ''", "EmbedUrl");
 
             if (!hasFileUuid)
             {
@@ -227,6 +249,25 @@ namespace IwaraDownloader.Services
                     LoggingService.Instance.Error($"FileUuid インデックスの作成に失敗しました: {ex.Message}");
                 }
             }
+
+            if (!hasRating)
+            {
+                AddColumnIfMissing(connection, false, "ALTER TABLE Videos ADD COLUMN Rating TEXT DEFAULT ''", "Rating");
+                try
+                {
+                    var indexCmd = connection.CreateCommand();
+                    indexCmd.CommandText = "CREATE INDEX IF NOT EXISTS idx_videos_rating ON Videos(Rating)";
+                    indexCmd.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Error($"Rating インデックスの作成に失敗しました: {ex.Message}");
+                }
+            }
+
+            // Site カラム (www.iwara.tv / www.iwara.ai 判別用)
+            AddColumnIfMissing(connection, hasSite,
+                "ALTER TABLE Videos ADD COLUMN Site TEXT DEFAULT ''", "Videos.Site");
         }
 
         private static void AddColumnIfMissing(SqliteConnection connection, bool exists, string alterSql, string columnName)
@@ -262,8 +303,8 @@ namespace IwaraDownloader.Services
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath)
-                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath);
+                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site)
+                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site);
                 SELECT last_insert_rowid();
             ";
             command.Parameters.AddWithValue("@UserId", user.UserId);
@@ -274,6 +315,9 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@CreatedAt", user.CreatedAt.ToString("o"));
             command.Parameters.AddWithValue("@IsEnabled", user.IsEnabled ? 1 : 0);
             command.Parameters.AddWithValue("@CustomSavePath", user.CustomSavePath ?? "");
+            command.Parameters.AddWithValue("@DownloadExternalVideosOverride",
+                user.DownloadExternalVideosOverride.HasValue ? (object)(user.DownloadExternalVideosOverride.Value ? 1 : 0) : DBNull.Value);
+            command.Parameters.AddWithValue("@Site", user.Site ?? "");
 
             return Convert.ToInt32(command.ExecuteScalar());
         }
@@ -297,7 +341,9 @@ namespace IwaraDownloader.Services
                     DownloadedCount = @DownloadedCount,
                     TotalVideoCount = @TotalVideoCount,
                     IsEnabled = @IsEnabled,
-                    CustomSavePath = @CustomSavePath
+                    CustomSavePath = @CustomSavePath,
+                    DownloadExternalVideosOverride = @DownloadExternalVideosOverride,
+                    Site = @Site
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", user.Id);
@@ -310,6 +356,9 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@TotalVideoCount", user.TotalVideoCount);
             command.Parameters.AddWithValue("@IsEnabled", user.IsEnabled ? 1 : 0);
             command.Parameters.AddWithValue("@CustomSavePath", user.CustomSavePath ?? "");
+            command.Parameters.AddWithValue("@DownloadExternalVideosOverride",
+                user.DownloadExternalVideosOverride.HasValue ? (object)(user.DownloadExternalVideosOverride.Value ? 1 : 0) : DBNull.Value);
+            command.Parameters.AddWithValue("@Site", user.Site ?? "");
 
             command.ExecuteNonQuery();
         }
@@ -425,13 +474,31 @@ namespace IwaraDownloader.Services
                 IsEnabled = reader.GetInt32(reader.GetOrdinal("IsEnabled")) == 1
             };
 
-            // CustomSavePathカラムが存在する場合のみ読み取り（マイグレーション対応）
+            // CustomSavePathカラムが存在する場合のみ読み取り(マイグレーション対応)
             try
             {
                 var ordinal = reader.GetOrdinal("CustomSavePath");
                 user.CustomSavePath = reader.IsDBNull(ordinal) ? "" : reader.GetString(ordinal);
             }
             catch { user.CustomSavePath = ""; }
+
+            // DownloadExternalVideosOverride カラム(マイグレーション対応)
+            try
+            {
+                var ordinal = reader.GetOrdinal("DownloadExternalVideosOverride");
+                user.DownloadExternalVideosOverride = reader.IsDBNull(ordinal)
+                    ? (bool?)null
+                    : reader.GetInt32(ordinal) == 1;
+            }
+            catch { user.DownloadExternalVideosOverride = null; }
+
+            // Site カラム (iwara.tv / iwara.ai 判別)
+            try
+            {
+                var ordinal = reader.GetOrdinal("Site");
+                user.Site = reader.IsDBNull(ordinal) ? "" : reader.GetString(ordinal);
+            }
+            catch { user.Site = ""; }
 
             return user;
         }
@@ -452,10 +519,10 @@ namespace IwaraDownloader.Services
             command.CommandText = @"
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid)
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site)
                 VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                     @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid);
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site);
                 SELECT last_insert_rowid();
             ";
             AddVideoParameters(command, video);
@@ -492,7 +559,10 @@ namespace IwaraDownloader.Services
                     LastErrorMessage = @LastErrorMessage,
                     Tags = @Tags,
                     Memo = @Memo,
-                    FileUuid = @FileUuid
+                    FileUuid = @FileUuid,
+                    EmbedUrl = @EmbedUrl,
+                    Rating = @Rating,
+                    Site = @Site
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", video.Id);
@@ -502,7 +572,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// FileUuid で動画を検索（ローカルに既に存在する動画の検出用）
+        /// FileUuid で動画を検索(ローカルに既に存在する動画の検出用)
         /// </summary>
         public VideoInfo? GetVideoByFileUuid(string fileUuid)
         {
@@ -600,6 +670,21 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// Status 一括変更 (例: Downloading → Pending を再起動時にまとめて行う)。
+        /// VideoInfo を1件ずつ UPDATE するより桁違いに速い。
+        /// </summary>
+        public int BulkUpdateStatus(DownloadStatus from, DownloadStatus to)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET Status = @to WHERE Status = @from";
+            command.Parameters.AddWithValue("@to", (int)to);
+            command.Parameters.AddWithValue("@from", (int)from);
+            return command.ExecuteNonQuery();
+        }
+
+        /// <summary>
         /// 動画をVideoIdで取得
         /// </summary>
         public VideoInfo? GetVideoByVideoId(string videoId)
@@ -655,7 +740,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// リトライ対象の動画を取得（失敗かつリトライ回数が上限未満）
+        /// リトライ対象の動画を取得(失敗かつリトライ回数が上限未満)
         /// </summary>
         public List<VideoInfo> GetRetryableVideos(int maxRetryCount)
         {
@@ -700,6 +785,9 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@Tags", video.Tags ?? "");
             command.Parameters.AddWithValue("@Memo", video.Memo ?? "");
             command.Parameters.AddWithValue("@FileUuid", video.FileUuid ?? "");
+            command.Parameters.AddWithValue("@EmbedUrl", video.EmbedUrl ?? "");
+            command.Parameters.AddWithValue("@Rating", video.Rating ?? "");
+            command.Parameters.AddWithValue("@Site", video.Site ?? "");
         }
 
         private static VideoInfo ReadVideo(SqliteDataReader reader)
@@ -726,12 +814,15 @@ namespace IwaraDownloader.Services
                 CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedAt"))),
                 Tags = TryGetString(reader, "Tags"),
                 Memo = TryGetString(reader, "Memo"),
-                FileUuid = TryGetString(reader, "FileUuid")
+                FileUuid = TryGetString(reader, "FileUuid"),
+                EmbedUrl = TryGetString(reader, "EmbedUrl"),
+                Rating = TryGetString(reader, "Rating"),
+                Site = TryGetString(reader, "Site")
             };
         }
 
         /// <summary>
-        /// カラムが存在する場合のみ文字列を取得（マイグレーション対応）
+        /// カラムが存在する場合のみ文字列を取得(マイグレーション対応)
         /// </summary>
         private static string TryGetString(SqliteDataReader reader, string columnName)
         {
@@ -751,7 +842,7 @@ namespace IwaraDownloader.Services
         #region Batch Operations
 
         /// <summary>
-        /// 複数の動画を一括追加（トランザクション使用で高速化）
+        /// 複数の動画を一括追加(トランザクション使用で高速化)
         /// </summary>
         /// <param name="videos">追加する動画リスト</param>
         /// <returns>追加された動画数</returns>
@@ -770,13 +861,13 @@ namespace IwaraDownloader.Services
                 command.CommandText = @"
                     INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                         DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid)
+                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site)
                     VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                         @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid)
+                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site)
                 ";
 
-                // パラメータを作成（再利用）
+                // パラメータを作成(再利用)
                 var pVideoId = command.Parameters.Add("@VideoId", SqliteType.Text);
                 var pTitle = command.Parameters.Add("@Title", SqliteType.Text);
                 var pUrl = command.Parameters.Add("@Url", SqliteType.Text);
@@ -797,6 +888,9 @@ namespace IwaraDownloader.Services
                 var pTags = command.Parameters.Add("@Tags", SqliteType.Text);
                 var pMemo = command.Parameters.Add("@Memo", SqliteType.Text);
                 var pFileUuid = command.Parameters.Add("@FileUuid", SqliteType.Text);
+                var pEmbedUrl = command.Parameters.Add("@EmbedUrl", SqliteType.Text);
+                var pRating = command.Parameters.Add("@Rating", SqliteType.Text);
+                var pSite = command.Parameters.Add("@Site", SqliteType.Text);
 
                 foreach (var video in videos)
                 {
@@ -820,6 +914,9 @@ namespace IwaraDownloader.Services
                     pTags.Value = video.Tags ?? "";
                     pMemo.Value = video.Memo ?? "";
                     pFileUuid.Value = video.FileUuid ?? "";
+                    pEmbedUrl.Value = video.EmbedUrl ?? "";
+                    pRating.Value = video.Rating ?? "";
+                    pSite.Value = video.Site ?? "";
 
                     addedCount += command.ExecuteNonQuery();
                 }
@@ -836,7 +933,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 複数の動画を一括更新（トランザクション使用で高速化）
+        /// 複数の動画を一括更新(トランザクション使用で高速化)
         /// </summary>
         /// <param name="videos">更新する動画リスト</param>
         /// <returns>更新された動画数</returns>
@@ -871,11 +968,14 @@ namespace IwaraDownloader.Services
                         LastErrorMessage = @LastErrorMessage,
                         Tags = @Tags,
                         Memo = @Memo,
-                        FileUuid = @FileUuid
+                        FileUuid = @FileUuid,
+                        EmbedUrl = @EmbedUrl,
+                        Rating = @Rating,
+                        Site = @Site
                     WHERE Id = @Id
                 ";
 
-                // パラメータを作成（再利用）
+                // パラメータを作成(再利用)
                 var pId = command.Parameters.Add("@Id", SqliteType.Integer);
                 var pTitle = command.Parameters.Add("@Title", SqliteType.Text);
                 var pUrl = command.Parameters.Add("@Url", SqliteType.Text);
@@ -895,6 +995,9 @@ namespace IwaraDownloader.Services
                 var pTags = command.Parameters.Add("@Tags", SqliteType.Text);
                 var pMemo = command.Parameters.Add("@Memo", SqliteType.Text);
                 var pFileUuid = command.Parameters.Add("@FileUuid", SqliteType.Text);
+                var pEmbedUrl = command.Parameters.Add("@EmbedUrl", SqliteType.Text);
+                var pRating = command.Parameters.Add("@Rating", SqliteType.Text);
+                var pSite = command.Parameters.Add("@Site", SqliteType.Text);
 
                 foreach (var video in videos)
                 {
@@ -917,6 +1020,9 @@ namespace IwaraDownloader.Services
                     pTags.Value = video.Tags ?? "";
                     pMemo.Value = video.Memo ?? "";
                     pFileUuid.Value = video.FileUuid ?? "";
+                    pEmbedUrl.Value = video.EmbedUrl ?? "";
+                    pRating.Value = video.Rating ?? "";
+                    pSite.Value = video.Site ?? "";
 
                     updatedCount += command.ExecuteNonQuery();
                 }
@@ -933,7 +1039,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 複数のVideoIdの存在確認を一括で行う（高速化）
+        /// 複数のVideoIdの存在確認を一括で行う(高速化)
         /// </summary>
         /// <param name="videoIds">確認するVideoIdリスト</param>
         /// <returns>存在するVideoIdのHashSet</returns>
@@ -975,7 +1081,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 複数の動画を一括削除（トランザクション使用）
+        /// 複数の動画を一括削除(トランザクション使用)
         /// </summary>
         /// <param name="ids">削除する動画IDリスト</param>
         /// <returns>削除された動画数</returns>
@@ -1055,7 +1161,7 @@ namespace IwaraDownloader.Services
                 }
             }
 
-            // 総ファイルサイズ（完了分）
+            // 総ファイルサイズ(完了分)
             cmd.CommandText = "SELECT COALESCE(SUM(FileSize), 0) FROM Videos WHERE Status = @Status";
             cmd.Parameters.AddWithValue("@Status", (int)DownloadStatus.Completed);
             stats.TotalDownloadedSize = Convert.ToInt64(cmd.ExecuteScalar());
@@ -1126,7 +1232,7 @@ namespace IwaraDownloader.Services
         /// <summary>ステータス別カウント</summary>
         public Dictionary<DownloadStatus, int> StatusCounts { get; set; } = new();
         
-        /// <summary>総ダウンロード済みサイズ（バイト）</summary>
+        /// <summary>総ダウンロード済みサイズ(バイト)</summary>
         public long TotalDownloadedSize { get; set; }
         
         /// <summary>チャンネル数</summary>

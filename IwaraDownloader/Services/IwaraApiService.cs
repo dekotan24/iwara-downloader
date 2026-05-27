@@ -5,7 +5,7 @@ using IwaraDownloader.Models;
 namespace IwaraDownloader.Services
 {
     /// <summary>
-    /// Python iwara_helper.py を呼び出すサービス（Embeddable Python対応）
+    /// Python iwara_helper.py を呼び出すサービス(Embeddable Python対応)
     /// </summary>
     public class IwaraApiService
     {
@@ -13,16 +13,16 @@ namespace IwaraDownloader.Services
         private readonly string _scriptPath;
         private string? _token;
 
-        /// <summary>トークン（JWT）を保持しており、かつ JWT の exp が有効期限内である</summary>
+        /// <summary>トークン(JWT)を保持しており、かつ JWT の exp が有効期限内である</summary>
         public bool IsLoggedIn => !string.IsNullOrEmpty(_token) && !IsTokenExpired(_token);
 
-        /// <summary>トークンの有効期限（UTC）。無効なら null</summary>
+        /// <summary>トークンの有効期限(UTC)。無効なら null</summary>
         public DateTime? TokenExpiresAt => string.IsNullOrEmpty(_token) ? null : GetJwtExpiration(_token);
 
         /// <summary>トークン</summary>
         public string? Token => _token;
 
-        /// <summary>Pythonパス（設定から取得）</summary>
+        /// <summary>Pythonパス(設定から取得)</summary>
         private string PythonPath => Utils.SettingsManager.Instance.Settings.PythonPath;
 
         /// <summary>Pythonが設定されているか</summary>
@@ -64,7 +64,7 @@ namespace IwaraDownloader.Services
         #region Python Path Management
 
         /// <summary>
-        /// Pythonパスを保存（設定に保存）
+        /// Pythonパスを保存(設定に保存)
         /// </summary>
         public void SavePythonPath(string pythonPath)
         {
@@ -217,20 +217,34 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// Pythonスクリプトを実行
+        /// Pythonスクリプトを実行 (site 指定可)
         /// </summary>
-        private async Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
+        private Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
+            => RunPythonAsync(action, null, args);
+
+        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, params string[] args)
         {
             if (!IsPythonConfigured)
             {
-                Debug.WriteLine("Python not configured");
+                var msg = $"Pythonが設定されていません (PythonPath=\"{PythonPath}\")。設定画面で正しいPythonパスを指定してください。" +
+                          " インストール直後の場合、PATHを反映するためにPCの再起動が必要なことがあります。";
+                Debug.WriteLine(msg);
+                LoggingService.Instance.Error($"[Python実行] {msg} (action={action})");
                 return null;
             }
 
             if (!IsScriptReady)
             {
-                Debug.WriteLine("Script not found");
+                var msg = $"iwara_helper.py が見つかりません ({_scriptPath})。インストールが破損している可能性があります。";
+                Debug.WriteLine(msg);
+                LoggingService.Instance.Error($"[Python実行] {msg} (action={action})");
                 return null;
+            }
+
+            if (!IsSetupDone)
+            {
+                LoggingService.Instance.Warn($"[Python実行] セットアップマーカーが見つかりません (.python_setup_done)。" +
+                    "ライブラリ未インストールの可能性があります。設定画面から再セットアップを実行してください。 (action={action})");
             }
 
             var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
@@ -249,6 +263,13 @@ namespace IwaraDownloader.Services
             if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
             {
                 allArgs.Add("--no-backoff");
+            }
+
+            // iwara.ai / iwara.tv 切替 (空なら省略=デフォルト www.iwara.tv)
+            if (!string.IsNullOrEmpty(site))
+            {
+                allArgs.Add("--site");
+                allArgs.Add($"\"{site}\"");
             }
 
             var psi = new ProcessStartInfo
@@ -280,7 +301,7 @@ namespace IwaraDownloader.Services
                     error.AppendLine(e.Data);
                     Debug.WriteLine($"Python stderr: {e.Data}");
                     
-                    // LoggingServiceにも出力（エラーレベルの判定）
+                    // LoggingServiceにも出力(エラーレベルの判定)
                     if (e.Data.Contains("Error") || e.Data.Contains("error") || 
                         e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
                         e.Data.Contains("403") || e.Data.Contains("429"))
@@ -390,7 +411,7 @@ namespace IwaraDownloader.Services
 
             var result = await RunPythonAsync("verify_token");
             if (result == null)
-                return (false, "トークンの検証に失敗しました（Python実行エラー）");
+                return (false, "トークンの検証に失敗しました(Python実行エラー)");
 
             var root = result.RootElement;
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
@@ -410,9 +431,9 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// ユーザーの動画リストを取得
+        /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)
         /// </summary>
-        public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null)
+        public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null)
         {
             if (!IsLoggedIn)
             {
@@ -422,7 +443,7 @@ namespace IwaraDownloader.Services
 
             progress?.Report($"{username}の動画一覧を取得中...");
 
-            var result = await RunPythonAsync("get_videos", username);
+            var result = await RunPythonAsync("get_videos", site, username);
             
             if (result == null)
             {
@@ -452,12 +473,17 @@ namespace IwaraDownloader.Services
                         VideoId = video.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
                         Title = video.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "",
                         ThumbnailUrl = video.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() ?? "" : "",
-                        DurationSeconds = video.TryGetProperty("duration", out var dur) && dur.ValueKind == JsonValueKind.Number 
+                        DurationSeconds = video.TryGetProperty("duration", out var dur) && dur.ValueKind == JsonValueKind.Number
                             ? (int)dur.GetDouble() : 0,
+                        EmbedUrl = video.TryGetProperty("embed_url", out var embed) ? embed.GetString() ?? "" : "",
+                        Rating = video.TryGetProperty("rating", out var rt) ? rt.GetString() ?? "" : "",
+                        Site = site ?? Utils.Helpers.SiteTv,
                         AuthorUserId = username,
                         AuthorUsername = username
                     };
-                    videoInfo.Url = $"https://www.iwara.tv/video/{videoInfo.VideoId}";
+                    // 動画 URL は site に応じて組み立て (iwara.tv / iwara.ai)
+                    var siteHost = string.IsNullOrEmpty(videoInfo.Site) ? Utils.Helpers.SiteTv : videoInfo.Site;
+                    videoInfo.Url = $"https://{siteHost}/video/{videoInfo.VideoId}";
                     videos.Add(videoInfo);
                 }
             }
@@ -469,14 +495,37 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// ダウンロードURLを取得 (file_id / author 情報込み)
+        /// ダウンロードURLを取得 (file_id / author 情報込み, site で iwara.tv / iwara.ai 切替)。
+        /// site 未指定で iwara.tv で叩いて "errors.differentSite" が返った場合は自動で iwara.ai を再試行する
+        /// (ローカルファイルから逆引きする ImportFromFolderWizard 等で site が不明なケース向け)。
         /// </summary>
-        public async Task<VideoUrlInfo> GetDownloadUrlAsync(string videoId)
+        public async Task<VideoUrlInfo> GetDownloadUrlAsync(string videoId, string? site = null)
         {
             if (!IsLoggedIn)
                 return VideoUrlInfo.FromError("ログインが必要です。設定画面からログインしてください。");
 
-            var result = await RunPythonAsync("get_url", videoId);
+            var info = await GetDownloadUrlInternalAsync(videoId, site);
+            // site が未指定 (= iwara.tv デフォルト) かつ "errors.differentSite" → iwara.ai で再試行
+            if (!info.Success
+                && string.IsNullOrEmpty(site)
+                && (info.Error?.Contains("differentSite", StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                Debug.WriteLine($"GetDownloadUrl: differentSite detected for {videoId}, retrying with www.iwara.ai");
+                var retry = await GetDownloadUrlInternalAsync(videoId, Utils.Helpers.SiteAi);
+                if (retry.Success)
+                {
+                    // 呼び出し側に site を伝えるため Rating の隣に既存フィールドを使う...のは美しくないので
+                    // 専用プロパティ ResolvedSite を VideoUrlInfo に追加
+                    retry.ResolvedSite = Utils.Helpers.SiteAi;
+                    return retry;
+                }
+            }
+            return info;
+        }
+
+        private async Task<VideoUrlInfo> GetDownloadUrlInternalAsync(string videoId, string? site)
+        {
+            var result = await RunPythonAsync("get_url", site, videoId);
 
             if (result == null)
                 return VideoUrlInfo.FromError("Pythonスクリプトの実行に失敗しました");
@@ -494,6 +543,7 @@ namespace IwaraDownloader.Services
                     FileUuid = GetString(root, "file_id"),
                     AuthorUsername = GetString(root, "author_username"),
                     AuthorName = GetString(root, "author_name"),
+                    Rating = GetString(root, "rating"),
                 };
             }
 
@@ -515,26 +565,36 @@ namespace IwaraDownloader.Services
             public string? FileUuid { get; set; }
             public string? AuthorUsername { get; set; }
             public string? AuthorName { get; set; }
+            public string? Rating { get; set; }
             public string? Error { get; set; }
+
+            /// <summary>
+            /// 自動 site フォールバックで成功した時にどちらの site で取れたかを返す。
+            /// 呼び出し側 (DownloadManager.MigrateExistingFiles 等) で DB の Site カラムに反映する。
+            /// 通常リクエストで成功した時は null。
+            /// </summary>
+            public string? ResolvedSite { get; set; }
 
             public static VideoUrlInfo FromError(string error) => new() { Success = false, Error = error };
         }
 
         /// <summary>
-        /// 動画をダウンロード（Pythonに任せる）
+        /// 動画をダウンロード(Pythonに任せる、site で iwara.tv / iwara.ai 切替)
         /// </summary>
         public async Task<(bool Success, string? Error)> DownloadVideoAsync(
             string videoId,
             string outputPath,
             IProgress<string>? progress = null,
-            IProgress<double>? percentProgress = null)
+            IProgress<double>? percentProgress = null,
+            CancellationToken ct = default,
+            string? site = null)
         {
             if (!IsLoggedIn)
                 return (false, "ログインが必要です。設定画面からログインしてください。");
 
             progress?.Report($"ダウンロード中: {videoId}");
 
-            var result = await RunPythonWithProgressAsync("download", percentProgress, videoId, outputPath);
+            var result = await RunPythonWithProgressAsync("download", percentProgress, ct, site, videoId, outputPath);
             
             if (result == null)
                 return (false, "Pythonスクリプトの実行に失敗しました");
@@ -555,9 +615,59 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// Pythonスクリプトを実行（進捗リアルタイム取得）
+        /// yt-dlp で外部動画(YouTube埋め込み等)をダウンロード
         /// </summary>
-        private async Task<JsonDocument?> RunPythonWithProgressAsync(string action, IProgress<double>? percentProgress, params string[] args)
+        public async Task<(bool Success, string? Error, string? FilePath)> DownloadExternalVideoAsync(
+            string embedUrl,
+            string outputPath,
+            IProgress<string>? progress = null,
+            IProgress<double>? percentProgress = null,
+            CancellationToken ct = default)
+        {
+            if (string.IsNullOrEmpty(embedUrl))
+                return (false, "埋め込みURLが空です", null);
+
+            progress?.Report($"外部動画DL中: {embedUrl}");
+
+            var ytDlpPath = Utils.SettingsManager.Instance.Settings.YtDlpPath;
+            if (string.IsNullOrWhiteSpace(ytDlpPath))
+                ytDlpPath = "yt-dlp";
+
+            var result = await RunPythonWithProgressAsync(
+                "download_external",
+                percentProgress,
+                ct,
+                embedUrl,
+                outputPath,
+                "--yt-dlp-path",
+                ytDlpPath);
+
+            if (result == null)
+                return (false, "Pythonスクリプトの実行に失敗しました", null);
+
+            var root = result.RootElement;
+
+            if (root.TryGetProperty("success", out var success) && success.GetBoolean())
+            {
+                var filePath = root.TryGetProperty("file_path", out var fpProp) ? fpProp.GetString() : null;
+                progress?.Report("外部動画DL完了");
+                return (true, null, filePath);
+            }
+
+            var error = root.TryGetProperty("error", out var errorProp)
+                ? errorProp.GetString()
+                : "Unknown error";
+
+            return (false, error, null);
+        }
+
+        /// <summary>
+        /// Pythonスクリプトを実行(進捗リアルタイム取得、site 指定可)
+        /// </summary>
+        private Task<JsonDocument?> RunPythonWithProgressAsync(string action, IProgress<double>? percentProgress, CancellationToken ct, params string[] args)
+            => RunPythonWithProgressAsync(action, percentProgress, ct, null, args);
+
+        private async Task<JsonDocument?> RunPythonWithProgressAsync(string action, IProgress<double>? percentProgress, CancellationToken ct, string? site, params string[] args)
         {
             if (!IsPythonConfigured)
             {
@@ -573,11 +683,17 @@ namespace IwaraDownloader.Services
 
             var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
             allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
-            
+
             if (!string.IsNullOrEmpty(_token))
             {
                 allArgs.Add("--token");
                 allArgs.Add($"\"{_token}\"");
+            }
+
+            if (!string.IsNullOrEmpty(site))
+            {
+                allArgs.Add("--site");
+                allArgs.Add($"\"{site}\"");
             }
 
             var psi = new ProcessStartInfo
@@ -618,7 +734,7 @@ namespace IwaraDownloader.Services
                             percentProgress.Report(pct);
                         }
                     }
-                    // LoggingServiceにも出力（エラーレベルの判定）
+                    // LoggingServiceにも出力(エラーレベルの判定)
                     else if (e.Data.Contains("Error") || e.Data.Contains("error") || 
                              e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
                              e.Data.Contains("403") || e.Data.Contains("429"))
@@ -632,7 +748,35 @@ namespace IwaraDownloader.Services
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            await process.WaitForExitAsync();
+            try
+            {
+                await process.WaitForExitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // アプリ終了/タスクキャンセル: yt-dlp/ffmpeg を含むプロセスツリーを Kill
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+
+                    // Kill は非同期完了なので、ゾンビ化防止のため終了確定まで短時間待機
+                    using var killWaitCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        await process.WaitForExitAsync(killWaitCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.WriteLine("Python process did not exit within 5s after Kill");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Python process Kill failed: {ex.Message}");
+                }
+                throw;
+            }
 
             var outputStr = output.ToString().Trim();
 
@@ -664,20 +808,58 @@ namespace IwaraDownloader.Services
         public async Task<bool> RunSetupAsync(string pythonPath, IProgress<string>? progress = null)
         {
             var setupBat = Path.Combine(_appDir, "iwara_setup.bat");
-            
+
+            LoggingService.Instance.Info($"[セットアップ開始] pythonPath={pythonPath}, setupBat={setupBat}, appDir={_appDir}");
+
             if (!File.Exists(setupBat))
             {
-                progress?.Report("iwara_setup.batが見つかりません");
+                var msg = $"iwara_setup.batが見つかりません ({setupBat})";
+                progress?.Report(msg);
+                LoggingService.Instance.Error($"[セットアップ] {msg}");
                 return false;
             }
 
             // Pythonパスを保存
             SavePythonPath(pythonPath);
+            LoggingService.Instance.Info($"[セットアップ] Pythonパスを保存: {pythonPath}");
 
-            // 古いマーカーファイルを削除（再セットアップ対応）
+            // 事前にPython自体の起動を試行(PATH 反映漏れの早期検出)
+            try
+            {
+                var checkPsi = new ProcessStartInfo
+                {
+                    FileName = pythonPath,
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                };
+                using var checkProc = Process.Start(checkPsi);
+                if (checkProc != null)
+                {
+                    await checkProc.WaitForExitAsync();
+                    var versionOut = (await checkProc.StandardOutput.ReadToEndAsync()).Trim();
+                    var versionErr = (await checkProc.StandardError.ReadToEndAsync()).Trim();
+                    if (checkProc.ExitCode == 0)
+                    {
+                        LoggingService.Instance.Info($"[セットアップ] Pythonバージョン確認OK: {versionOut} {versionErr}");
+                    }
+                    else
+                    {
+                        LoggingService.Instance.Warn($"[セットアップ] Python --version 失敗 (exit={checkProc.ExitCode}): out={versionOut} err={versionErr}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error($"[セットアップ] Python起動チェック失敗: {ex.Message}。PATH反映のためPC再起動が必要かも。{ex.GetType().Name}");
+            }
+
+            // 古いマーカーファイルを削除(再セットアップ対応)
             if (File.Exists(SetupMarkerPath))
             {
-                try { File.Delete(SetupMarkerPath); } catch { }
+                try { File.Delete(SetupMarkerPath); LoggingService.Instance.Info("[セットアップ] 既存マーカー削除"); } catch (Exception ex) { LoggingService.Instance.Warn($"[セットアップ] マーカー削除失敗: {ex.Message}"); }
             }
 
             progress?.Report("セットアップを実行中...");
@@ -698,19 +880,36 @@ namespace IwaraDownloader.Services
 
             using var process = new Process { StartInfo = psi };
 
+            var setupOutput = new System.Text.StringBuilder();
+            var setupError = new System.Text.StringBuilder();
+
             process.OutputDataReceived += (s, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
                     Debug.WriteLine($"Setup: {e.Data}");
+                    setupOutput.AppendLine(e.Data);
+                    LoggingService.Instance.Info($"[セットアップ stdout] {e.Data}");
                     progress?.Report(e.Data);
+                }
+            };
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Debug.WriteLine($"Setup stderr: {e.Data}");
+                    setupError.AppendLine(e.Data);
+                    LoggingService.Instance.Warn($"[セットアップ stderr] {e.Data}");
                 }
             };
 
             process.Start();
             process.BeginOutputReadLine();
-            
+            process.BeginErrorReadLine();
+
             await process.WaitForExitAsync();
+
+            LoggingService.Instance.Info($"[セットアップ] プロセス終了 ExitCode={process.ExitCode}");
 
             // プロセス終了後、少し待ってからマーカーファイルを確認
             await Task.Delay(500);
@@ -724,8 +923,22 @@ namespace IwaraDownloader.Services
                 setupSuccess = File.Exists(SetupMarkerPath);
             }
 
-            progress?.Report(setupSuccess ? "セットアップ完了" : "セットアップに失敗しました");
-            
+            if (setupSuccess)
+            {
+                LoggingService.Instance.Info("[セットアップ] 成功");
+                progress?.Report("セットアップ完了");
+            }
+            else
+            {
+                var errSummary = setupError.ToString().Trim();
+                var outSummary = setupOutput.ToString().Trim();
+                LoggingService.Instance.Error(
+                    $"[セットアップ] 失敗 ExitCode={process.ExitCode}, マーカー={File.Exists(SetupMarkerPath)}, " +
+                    $"PathHint='Pythonが新規インストール直後ならPC再起動でPATHを反映してください'\n" +
+                    $"--- stderr ---\n{errSummary}\n--- stdout(末尾) ---\n{(outSummary.Length > 1500 ? outSummary[^1500..] : outSummary)}");
+                progress?.Report("セットアップに失敗しました(詳細はログ参照)");
+            }
+
             return setupSuccess;
         }
 

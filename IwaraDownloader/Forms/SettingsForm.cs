@@ -18,10 +18,10 @@ namespace IwaraDownloader.Forms
         private CancellationTokenSource? _migrationCts;
         private bool _migrationRunning;
 
-        // チェック間隔の選択肢（分）
+        // チェック間隔の選択肢(分)
         private readonly int[] _checkIntervalMinutes = { 30, 60, 120, 360, 720, 1440 };
 
-        // ComboBox の index と VideoQuality の対応表（cmbQuality の Items と同順）
+        // ComboBox の index と VideoQuality の対応表(cmbQuality の Items と同順)
         private static readonly VideoQuality[] _qualityOrder =
         {
             VideoQuality.Source,
@@ -56,7 +56,7 @@ namespace IwaraDownloader.Forms
             // ダウンロード設定
             txtDownloadFolder.Text = settings.DownloadFolder;
             
-            // 画質 ComboBox（未対応enum値はSourceにフォールバック）
+            // 画質 ComboBox(未対応enum値はSourceにフォールバック)
             var qIdx = Array.IndexOf(_qualityOrder, settings.DefaultQuality);
             cmbQuality.SelectedIndex = qIdx >= 0 ? qIdx : 0;
             numConcurrent.Value = settings.MaxConcurrentDownloads;
@@ -67,6 +67,7 @@ namespace IwaraDownloader.Forms
             var intervalIndex = Array.IndexOf(_checkIntervalMinutes, settings.CheckIntervalMinutes);
             cmbCheckInterval.SelectedIndex = intervalIndex >= 0 ? intervalIndex : 1; // デフォルト1時間
             chkAutoDownload.Checked = settings.AutoDownloadOnCheck;
+            chkDownloadExternal.Checked = settings.DownloadExternalVideosDefault;
 
             // 通知・起動
             chkToast.Checked = settings.EnableToastNotification;
@@ -75,6 +76,7 @@ namespace IwaraDownloader.Forms
 
             // Python環境
             txtPythonPath.Text = settings.PythonPath;
+            txtYtDlpPath.Text = settings.YtDlpPath;
 
             // アカウント
             txtEmail.Text = settings.IwaraEmail;
@@ -124,6 +126,7 @@ namespace IwaraDownloader.Forms
                 settings.CheckIntervalMinutes = _checkIntervalMinutes[cmbCheckInterval.SelectedIndex];
             }
             settings.AutoDownloadOnCheck = chkAutoDownload.Checked;
+            settings.DownloadExternalVideosDefault = chkDownloadExternal.Checked;
 
             // 通知・起動
             settings.EnableToastNotification = chkToast.Checked;
@@ -132,6 +135,8 @@ namespace IwaraDownloader.Forms
 
             // Python環境
             settings.PythonPath = txtPythonPath.Text.Trim();
+            var ytDlp = txtYtDlpPath.Text.Trim();
+            settings.YtDlpPath = string.IsNullOrEmpty(ytDlp) ? "yt-dlp" : ytDlp;
 
             // アカウント
             settings.IwaraEmail = txtEmail.Text.Trim();
@@ -208,6 +213,20 @@ namespace IwaraDownloader.Forms
             }
         }
 
+        private void btnBrowseYtDlp_Click(object sender, EventArgs e)
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Filter = "yt-dlp実行ファイル (yt-dlp.exe;yt-dlp)|yt-dlp.exe;yt-dlp|すべてのファイル (*.*)|*.*",
+                Title = "yt-dlpの実行ファイルを選択"
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtYtDlpPath.Text = dialog.FileName;
+            }
+        }
+
         private async void btnReLogin_Click(object sender, EventArgs e)
         {
             var email = txtEmail.Text.Trim();
@@ -219,7 +238,7 @@ namespace IwaraDownloader.Forms
                 return;
             }
 
-            // 先に設定を保存（Pythonパスを含む）
+            // 先に設定を保存(Pythonパスを含む)
             SaveSettings();
 
             btnReLogin.Enabled = false;
@@ -455,6 +474,37 @@ namespace IwaraDownloader.Forms
                 if (!IsDisposed)
                     btnMigrateExistingFiles.Enabled = true;
             }
+        }
+
+        private void btnImportFromFolder_Click(object sender, EventArgs e)
+        {
+            if (_downloadManager == null)
+            {
+                MessageBox.Show(this, "DownloadManager が利用できません。",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            // SettingsForm が閉じても処理が続くよう、Owner は MainForm にする。
+            // SettingsForm 自身を Owner にすると、SettingsForm を閉じた瞬間に
+            // ImportFromFolderWizard も Dispose されてしまうので絶対避ける。
+            //   1) ShowDialog(MainForm) で開かれてれば this.Owner = MainForm
+            //   2) それ以外でも Application.OpenForms から MainForm を引っ張る
+            IWin32Window? ownerWindow = this.Owner;
+            if (ownerWindow == null)
+            {
+                foreach (Form f in Application.OpenForms)
+                {
+                    if (f is MainForm) { ownerWindow = f; break; }
+                }
+            }
+            // 最後の手段でも SettingsForm 自身は渡さない (= null で開く)。
+            ImportFromFolderWizard.ShowOrActivate(ownerWindow, _downloadManager);
+        }
+
+        private void btnDuplicateCheckOpen_Click(object sender, EventArgs e)
+        {
+            using var form = new DuplicateCheckForm();
+            form.ShowDialog(this);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -737,7 +787,7 @@ namespace IwaraDownloader.Forms
         #region Rate Limit Presets
 
         /// <summary>
-        /// 控えめプリセット（サーバー負荷を最小限に）
+        /// 控えめプリセット(サーバー負荷を最小限に)
         /// </summary>
         private void btnPresetConservative_Click(object sender, EventArgs e)
         {
@@ -751,7 +801,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 標準プリセット（バランス重視）
+        /// 標準プリセット(バランス重視)
         /// </summary>
         private void btnPresetStandard_Click(object sender, EventArgs e)
         {
@@ -765,7 +815,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 積極的プリセット（速度優先、エラー増加の可能性あり）
+        /// 積極的プリセット(速度優先、エラー増加の可能性あり)
         /// </summary>
         private void btnPresetAggressive_Click(object sender, EventArgs e)
         {

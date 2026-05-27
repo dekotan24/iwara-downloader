@@ -40,6 +40,8 @@ namespace IwaraDownloader.Forms
             this.chkAutoCheck = new CheckBox();
             this.lblCheckInterval = new Label();
             this.cmbCheckInterval = new ComboBox();
+            this.chkAutoDownload = new CheckBox();
+            this.chkDownloadExternal = new CheckBox();
 
             this.grpNotification = new GroupBox();
             this.chkToast = new CheckBox();
@@ -51,6 +53,10 @@ namespace IwaraDownloader.Forms
             this.txtPythonPath = new TextBox();
             this.btnBrowsePython = new Button();
             this.lblPythonNote = new Label();
+            this.lblYtDlpPath = new Label();
+            this.txtYtDlpPath = new TextBox();
+            this.btnBrowseYtDlp = new Button();
+            this.lblYtDlpNote = new Label();
             
             this.grpAccount = new GroupBox();
             this.lblEmail = new Label();
@@ -61,7 +67,7 @@ namespace IwaraDownloader.Forms
             this.btnReLogin = new Button();
             this.lblAccountNote = new Label();
 
-            // 詳細設定（レート制限）
+            // 詳細設定(レート制限)
             this.grpRateLimit = new GroupBox();
             this.lblApiDelay = new Label();
             this.numApiDelay = new NumericUpDown();
@@ -306,9 +312,10 @@ namespace IwaraDownloader.Forms
             this.grpAutoCheck.Controls.Add(this.lblCheckInterval);
             this.grpAutoCheck.Controls.Add(this.cmbCheckInterval);
             this.grpAutoCheck.Controls.Add(this.chkAutoDownload);
+            this.grpAutoCheck.Controls.Add(this.chkDownloadExternal);
             this.grpAutoCheck.Location = new Point(6, 157);
             this.grpAutoCheck.Name = "grpAutoCheck";
-            this.grpAutoCheck.Size = new Size(440, 85);
+            this.grpAutoCheck.Size = new Size(440, 110);
             this.grpAutoCheck.TabIndex = 1;
             this.grpAutoCheck.TabStop = false;
             this.grpAutoCheck.Text = "自動チェック";
@@ -352,10 +359,9 @@ namespace IwaraDownloader.Forms
             this.cmbCheckInterval.Size = new Size(100, 23);
             this.cmbCheckInterval.TabIndex = 2;
 
-            // 
+            //
             // chkAutoDownload
-            // 
-            this.chkAutoDownload = new CheckBox();
+            //
             this.chkAutoDownload.AutoSize = true;
             this.chkAutoDownload.Location = new Point(10, 55);
             this.chkAutoDownload.Name = "chkAutoDownload";
@@ -364,13 +370,24 @@ namespace IwaraDownloader.Forms
             this.chkAutoDownload.Text = "新着検出時に自動でDL開始";
             this.chkAutoDownload.UseVisualStyleBackColor = true;
 
+            //
+            // chkDownloadExternal
+            //
+            this.chkDownloadExternal.AutoSize = true;
+            this.chkDownloadExternal.Location = new Point(10, 80);
+            this.chkDownloadExternal.Name = "chkDownloadExternal";
+            this.chkDownloadExternal.Size = new Size(330, 19);
+            this.chkDownloadExternal.TabIndex = 4;
+            this.chkDownloadExternal.Text = "iwara外動画(YouTube埋め込み等)もDLする (デフォルト・チャンネル別に上書き可)";
+            this.chkDownloadExternal.UseVisualStyleBackColor = true;
+
             // 
             // grpNotification
             // 
             this.grpNotification.Controls.Add(this.chkToast);
             this.grpNotification.Controls.Add(this.chkStartMinimized);
             this.grpNotification.Controls.Add(this.chkMinimizeToTray);
-            this.grpNotification.Location = new Point(6, 248);
+            this.grpNotification.Location = new Point(6, 275);
             this.grpNotification.Name = "grpNotification";
             this.grpNotification.Size = new Size(440, 100);
             this.grpNotification.TabIndex = 2;
@@ -431,9 +448,13 @@ namespace IwaraDownloader.Forms
             this.grpPython.Controls.Add(this.txtPythonPath);
             this.grpPython.Controls.Add(this.btnBrowsePython);
             this.grpPython.Controls.Add(this.lblPythonNote);
+            this.grpPython.Controls.Add(this.lblYtDlpPath);
+            this.grpPython.Controls.Add(this.txtYtDlpPath);
+            this.grpPython.Controls.Add(this.btnBrowseYtDlp);
+            this.grpPython.Controls.Add(this.lblYtDlpNote);
             this.grpPython.Location = new Point(6, 6);
             this.grpPython.Name = "grpPython";
-            this.grpPython.Size = new Size(440, 90);
+            this.grpPython.Size = new Size(440, 160);
             this.grpPython.TabIndex = 0;
             this.grpPython.TabStop = false;
             this.grpPython.Text = "Python環境";
@@ -466,7 +487,37 @@ namespace IwaraDownloader.Forms
             this.lblPythonNote.Location = new Point(10, 60);
             this.lblPythonNote.Name = "lblPythonNote";
             this.lblPythonNote.Size = new Size(400, 15);
-            this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います（ライブラリの再インストールは不要）";
+            this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います(ライブラリの再インストールは不要)";
+
+            // lblYtDlpPath
+            this.lblYtDlpPath.AutoSize = true;
+            this.lblYtDlpPath.Location = new Point(10, 95);
+            this.lblYtDlpPath.Name = "lblYtDlpPath";
+            this.lblYtDlpPath.Size = new Size(80, 15);
+            this.lblYtDlpPath.Text = "yt-dlpパス:";
+
+            // txtYtDlpPath
+            this.txtYtDlpPath.Location = new Point(100, 92);
+            this.txtYtDlpPath.Name = "txtYtDlpPath";
+            this.txtYtDlpPath.Size = new Size(260, 23);
+            this.txtYtDlpPath.TabIndex = 3;
+
+            // btnBrowseYtDlp
+            this.btnBrowseYtDlp.Location = new Point(366, 91);
+            this.btnBrowseYtDlp.Name = "btnBrowseYtDlp";
+            this.btnBrowseYtDlp.Size = new Size(60, 25);
+            this.btnBrowseYtDlp.TabIndex = 4;
+            this.btnBrowseYtDlp.Text = "参照...";
+            this.btnBrowseYtDlp.UseVisualStyleBackColor = true;
+            this.btnBrowseYtDlp.Click += new EventHandler(this.btnBrowseYtDlp_Click);
+
+            // lblYtDlpNote
+            this.lblYtDlpNote.AutoSize = true;
+            this.lblYtDlpNote.ForeColor = Color.Gray;
+            this.lblYtDlpNote.Location = new Point(10, 125);
+            this.lblYtDlpNote.Name = "lblYtDlpNote";
+            this.lblYtDlpNote.Size = new Size(400, 15);
+            this.lblYtDlpNote.Text = "※ \"yt-dlp\" (PATH参照) でOK。未インストールなら自動で pip install を試行します";
 
             // 
             // grpAccount
@@ -478,7 +529,7 @@ namespace IwaraDownloader.Forms
             this.grpAccount.Controls.Add(this.lblLoginStatus);
             this.grpAccount.Controls.Add(this.btnReLogin);
             this.grpAccount.Controls.Add(this.lblAccountNote);
-            this.grpAccount.Location = new Point(6, 102);
+            this.grpAccount.Location = new Point(6, 175);
             this.grpAccount.Name = "grpAccount";
             this.grpAccount.Size = new Size(440, 165);
             this.grpAccount.TabIndex = 1;
@@ -776,7 +827,7 @@ namespace IwaraDownloader.Forms
             this.chkExponentialBackoff.Location = new Point(10, 85);
             this.chkExponentialBackoff.Name = "chkExponentialBackoff";
             this.chkExponentialBackoff.Size = new Size(320, 19);
-            this.chkExponentialBackoff.Text = "エクスポネンシャルバックオフを有効にする（連続エラー時に待機時間を増加）";
+            this.chkExponentialBackoff.Text = "エクスポネンシャルバックオフを有効にする(連続エラー時に待機時間を増加)";
             this.chkExponentialBackoff.UseVisualStyleBackColor = true;
 
             // lblAdvancedNote
@@ -1009,6 +1060,7 @@ namespace IwaraDownloader.Forms
             this.tabBackup.Controls.Add(this.grpExport);
             this.tabBackup.Controls.Add(this.grpImport);
             this.tabBackup.Controls.Add(this.grpMigration);
+            this.tabBackup.Controls.Add(this.grpImportTools);
             this.tabBackup.Location = new Point(4, 24);
             this.tabBackup.Name = "tabBackup";
             this.tabBackup.Padding = new Padding(3);
@@ -1128,6 +1180,50 @@ namespace IwaraDownloader.Forms
             this.lblMigrationProgress.Text = "";
 
             //
+            // grpImportTools (フォルダから取り込み・重複検出)
+            //
+            this.grpImportTools.Controls.Add(this.lblImportToolsNote);
+            this.grpImportTools.Controls.Add(this.btnImportFromFolder);
+            this.grpImportTools.Controls.Add(this.btnDuplicateCheckOpen);
+            this.grpImportTools.Location = new Point(6, 294);
+            this.grpImportTools.Name = "grpImportTools";
+            this.grpImportTools.Size = new Size(440, 130);
+            this.grpImportTools.TabIndex = 3;
+            this.grpImportTools.TabStop = false;
+            this.grpImportTools.Text = "ファイル取り込み・重複検出";
+
+            //
+            // lblImportToolsNote
+            //
+            this.lblImportToolsNote.AutoSize = false;
+            this.lblImportToolsNote.Location = new Point(10, 22);
+            this.lblImportToolsNote.Name = "lblImportToolsNote";
+            this.lblImportToolsNote.Size = new Size(420, 44);
+            this.lblImportToolsNote.Text = "他PCでDL済の mp4 (iwara タグ付き) をフォルダから取り込めます。\r\nDB と実ファイルの整合性確認は『重複ファイル検出』で行えます。";
+
+            //
+            // btnImportFromFolder
+            //
+            this.btnImportFromFolder.Location = new Point(10, 72);
+            this.btnImportFromFolder.Name = "btnImportFromFolder";
+            this.btnImportFromFolder.Size = new Size(190, 27);
+            this.btnImportFromFolder.TabIndex = 0;
+            this.btnImportFromFolder.Text = "フォルダから取り込み...";
+            this.btnImportFromFolder.UseVisualStyleBackColor = true;
+            this.btnImportFromFolder.Click += new EventHandler(this.btnImportFromFolder_Click);
+
+            //
+            // btnDuplicateCheckOpen
+            //
+            this.btnDuplicateCheckOpen.Location = new Point(210, 72);
+            this.btnDuplicateCheckOpen.Name = "btnDuplicateCheckOpen";
+            this.btnDuplicateCheckOpen.Size = new Size(190, 27);
+            this.btnDuplicateCheckOpen.TabIndex = 1;
+            this.btnDuplicateCheckOpen.Text = "重複ファイル検出...";
+            this.btnDuplicateCheckOpen.UseVisualStyleBackColor = true;
+            this.btnDuplicateCheckOpen.Click += new EventHandler(this.btnDuplicateCheckOpen_Click);
+
+            //
             // btnOk
             // 
             this.btnOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
@@ -1239,6 +1335,10 @@ namespace IwaraDownloader.Forms
         private Button btnMigrateExistingFiles = new Button();
         private Label lblMigrationNote = new Label();
         private Label lblMigrationProgress = new Label();
+        private GroupBox grpImportTools = new GroupBox();
+        private Label lblImportToolsNote = new Label();
+        private Button btnImportFromFolder = new Button();
+        private Button btnDuplicateCheckOpen = new Button();
         private GroupBox grpDownload;
         private Label lblDownloadFolder;
         private TextBox txtDownloadFolder;
@@ -1254,6 +1354,7 @@ namespace IwaraDownloader.Forms
         private Label lblCheckInterval;
         private ComboBox cmbCheckInterval;
         private CheckBox chkAutoDownload;
+        private CheckBox chkDownloadExternal;
         private GroupBox grpNotification;
         private CheckBox chkToast;
         private CheckBox chkStartMinimized;
@@ -1263,6 +1364,10 @@ namespace IwaraDownloader.Forms
         private TextBox txtPythonPath;
         private Button btnBrowsePython;
         private Label lblPythonNote;
+        private Label lblYtDlpPath;
+        private TextBox txtYtDlpPath;
+        private Button btnBrowseYtDlp;
+        private Label lblYtDlpNote;
         private GroupBox grpAccount;
         private Label lblEmail;
         private TextBox txtEmail;
@@ -1281,7 +1386,7 @@ namespace IwaraDownloader.Forms
         private Button btnCancel;
         private Button btnApply;
 
-        // 詳細設定（レート制限）
+        // 詳細設定(レート制限)
         private GroupBox grpRateLimit;
         private Label lblApiDelay;
         private NumericUpDown numApiDelay;

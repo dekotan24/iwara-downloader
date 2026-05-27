@@ -34,7 +34,7 @@ echo Python directory: %PYTHON_DIR%
 REM Check Python version
 echo Checking Python version...
 "%PYTHON_PATH%" --version
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo Failed to execute Python.
     exit /b 1
 )
@@ -53,19 +53,19 @@ for %%F in ("%PYTHON_DIR%python3*._pth") do (
 
 REM Check if pip exists
 "%PYTHON_PATH%" -m pip --version >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo pip not found. Downloading and installing get-pip.py...
     
     REM Download get-pip.py
     curl -sS https://bootstrap.pypa.io/get-pip.py -o "%PYTHON_DIR%get-pip.py"
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo Failed to download get-pip.py.
         exit /b 1
     )
     
     REM Install pip
     "%PYTHON_PATH%" "%PYTHON_DIR%get-pip.py" --no-warn-script-location
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo Failed to install pip.
         exit /b 1
     )
@@ -81,7 +81,7 @@ echo.
 REM Install cloudscraper
 echo Installing cloudscraper...
 "%PYTHON_PATH%" -m pip install cloudscraper --quiet --no-warn-script-location
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo Failed to install cloudscraper.
     exit /b 1
 )
@@ -89,8 +89,24 @@ if %errorlevel% neq 0 (
 REM Verify installation
 echo Verifying installation...
 "%PYTHON_PATH%" -c "import cloudscraper; print('cloudscraper OK')"
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo Failed to import cloudscraper.
+    exit /b 1
+)
+
+REM Install yt-dlp
+echo Installing yt-dlp...
+"%PYTHON_PATH%" -m pip install yt-dlp --quiet --no-warn-script-location
+if !errorlevel! neq 0 (
+    echo Failed to install yt-dlp.
+    exit /b 1
+)
+
+REM Verify yt-dlp
+echo Verifying yt-dlp...
+"%PYTHON_PATH%" -m yt_dlp --version
+if !errorlevel! neq 0 (
+    echo Failed to verify yt-dlp.
     exit /b 1
 )
 

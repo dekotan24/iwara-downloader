@@ -19,11 +19,34 @@ namespace IwaraDownloader.Services
         public const string KeyVideoId = "video_id";
         public const string KeyFileId = "file_id";
 
+        // mp4 への TagLib# 書き込み中の本数 (アプリ終了時の moov atom 破損防止用)
+        private static int _writesInProgress;
+
+        /// <summary>
+        /// 進行中の mp4 タグ書き込み数
+        /// </summary>
+        public static int WritesInProgress => System.Threading.Volatile.Read(ref _writesInProgress);
+
+        /// <summary>
+        /// 全ての mp4 タグ書き込みが完了するまで待機 (アプリ終了時に呼ぶ)。
+        /// タイムアウトを過ぎたら false を返す (それでも実行は終わる - 破損リスクあり)。
+        /// </summary>
+        public static bool WaitForWritesToComplete(int timeoutMs = 10000)
+        {
+            var sw = Stopwatch.StartNew();
+            while (WritesInProgress > 0 && sw.ElapsedMilliseconds < timeoutMs)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+            return WritesInProgress == 0;
+        }
+
         /// <summary>
         /// mp4 ファイルに iwara のメタ情報を書き込む。
         /// </summary>
         public static bool WriteIwaraTags(string filePath, string videoId, string fileUuid)
         {
+            System.Threading.Interlocked.Increment(ref _writesInProgress);
             try
             {
                 if (!System.IO.File.Exists(filePath)) return false;
@@ -46,6 +69,10 @@ namespace IwaraDownloader.Services
             {
                 Debug.WriteLine($"MetadataService.WriteIwaraTags failed: {ex.Message}");
                 return false;
+            }
+            finally
+            {
+                System.Threading.Interlocked.Decrement(ref _writesInProgress);
             }
         }
 

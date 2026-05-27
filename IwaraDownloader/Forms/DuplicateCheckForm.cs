@@ -35,7 +35,7 @@ namespace IwaraDownloader.Forms
             {
                 var allVideos = _database.GetAllVideos();
                 
-                // VideoIdで重複をグループ化（異なるSubscribedUserId間）
+                // VideoIdで重複をグループ化(異なるSubscribedUserId間)
                 var duplicateGroups = allVideos
                     .GroupBy(v => v.VideoId)
                     .Where(g => g.Select(v => v.SubscribedUserId).Distinct().Count() > 1)
@@ -79,7 +79,7 @@ namespace IwaraDownloader.Forms
                     dgvDuplicates.Columns["StatusSummary"].Width = 100;
                 }
 
-                lblStatus.Text = $"重複: {duplicateGroups.Count}件（{duplicateGroups.Sum(d => d.Videos.Count)}動画）";
+                lblStatus.Text = $"重複: {duplicateGroups.Count}件({duplicateGroups.Sum(d => d.Videos.Count)}動画)";
             }
             catch (Exception ex)
             {
@@ -142,7 +142,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 重複を解消（完了以外を削除）
+        /// 重複を解消(完了以外を削除)
         /// </summary>
         private void btnRemoveDuplicates_Click(object sender, EventArgs e)
         {
@@ -156,8 +156,8 @@ namespace IwaraDownloader.Forms
             var result = MessageBox.Show(
                 "重複動画を解消します。\n\n" +
                 "各VideoIdについて、以下の優先順位で1つを残し、他を削除します:\n" +
-                "1. 完了済み（ファイルが存在する）\n" +
-                "2. 完了済み（ファイルが存在しない）\n" +
+                "1. 完了済み(ファイルが存在する)\n" +
+                "2. 完了済み(ファイルが存在しない)\n" +
                 "3. 待機中\n" +
                 "4. 失敗\n\n" +
                 "続行しますか？",

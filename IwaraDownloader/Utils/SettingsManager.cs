@@ -90,7 +90,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// iwaraパスワードを設定（暗号化して保存）
+        /// iwaraパスワードを設定(暗号化して保存)
         /// </summary>
         public void SetIwaraPassword(string password)
         {
@@ -98,7 +98,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// iwaraパスワードを取得（復号化して取得）
+        /// iwaraパスワードを取得(復号化して取得)
         /// </summary>
         public string GetIwaraPassword()
         {
@@ -106,7 +106,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// 設定をJSON文字列としてエクスポート（パスワードは除外）
+        /// 設定をJSON文字列としてエクスポート(パスワードは除外)
         /// </summary>
         public string ExportToJson()
         {
@@ -120,7 +120,10 @@ namespace IwaraDownloader.Utils
                 EnableToastNotification = Settings.EnableToastNotification,
                 StartMinimized = Settings.StartMinimized,
                 AutoCheckEnabled = Settings.AutoCheckEnabled,
+                AutoDownloadOnCheck = Settings.AutoDownloadOnCheck,
+                DownloadExternalVideosDefault = Settings.DownloadExternalVideosDefault,
                 PythonPath = Settings.PythonPath,
+                YtDlpPath = Settings.YtDlpPath,
                 IwaraEmail = Settings.IwaraEmail,
                 IwaraUsername = Settings.IwaraUsername,
                 // パスワードは除外
@@ -132,7 +135,17 @@ namespace IwaraDownloader.Utils
                 PageFetchDelayMs = Settings.PageFetchDelayMs,
                 RateLimitBaseDelayMs = Settings.RateLimitBaseDelayMs,
                 RateLimitMaxDelayMs = Settings.RateLimitMaxDelayMs,
-                EnableExponentialBackoff = Settings.EnableExponentialBackoff
+                EnableExponentialBackoff = Settings.EnableExponentialBackoff,
+                // ファイル/通知/起動
+                FilenameTemplate = Settings.FilenameTemplate,
+                MinimizeToTray = Settings.MinimizeToTray,
+                SaveMetadata = Settings.SaveMetadata,
+                CheckUpdateOnStartup = Settings.CheckUpdateOnStartup,
+                ResumeDownloadsOnStartup = Settings.ResumeDownloadsOnStartup,
+                EnableCompletionSound = Settings.EnableCompletionSound,
+                CompletionSoundPath = Settings.CompletionSoundPath,
+                EnableErrorSound = Settings.EnableErrorSound,
+                ErrorSoundPath = Settings.ErrorSoundPath
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };
