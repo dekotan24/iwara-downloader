@@ -1,16 +1,20 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Http;
 
 namespace IwaraDownloader.Services
 {
     /// <summary>
-    /// 動画サムネイルを %APPDATA%\IwaraDownloader\thumbs にキャッシュして
-    /// UI に Image を非同期で供給するサービス。
+    /// 動画サムネイルを %APPDATA%\IwaraDownloader\thumbs にキャッシュして UI に供給。
+    ///
+    /// 取得順:
+    ///   1. メモリ/ディスクキャッシュ (即時返却)
+    ///   2. iwara からネット DL (レート制限あり: SettingsManager の ApiRequestDelayMs)
     ///
     /// 設計:
     ///   - キーは VideoId (.jpg として保存)
-    ///   - メモリ LRU で直近 200 枚保持 (タイル切替で高速戻り)
-    ///   - ダウンロードは並列度を制限 (HttpClient で 4 並列まで)
+    ///   - メモリ LRU で直近 200 枚保持
+    ///   - ネット DL は並列度 2 まで + 直前リクエストから ApiRequestDelayMs ms 空ける
     ///   - DL 完了時 ThumbnailReady イベントで UI に通知 → 仮想 ListView の RedrawItems
     /// </summary>
     public class ThumbnailCacheService : IDisposable
@@ -33,10 +37,17 @@ namespace IwaraDownloader.Services
 
         private readonly string _cacheDir;
         private readonly HttpClient _http;
-        private readonly ConcurrentDictionary<string, Image> _memCache = new();
+        // メモリ LRU: 同一 lock 配下で操作。Image 所有権はキャッシュ側。
+        // 外部に渡すのは必ず Bitmap clone (呼び出し側で Dispose 可能)。
+        private readonly object _memLock = new();
+        private readonly Dictionary<string, LinkedListNode<(string Key, Image Img)>> _memCache = new();
+        private readonly LinkedList<(string Key, Image Img)> _lruList = new();
         private readonly ConcurrentDictionary<string, byte> _inflight = new();
-        private readonly SemaphoreSlim _gate = new(4, 4);
+        private readonly SemaphoreSlim _netGate = new(2, 2);   // ネット DL 並列度
+        private long _lastNetRequestTick = 0;
+        private readonly object _netGapLock = new();
         private const int MaxMemCache = 200;
+        private volatile bool _disposed;
 
         private ThumbnailCacheService()
         {
@@ -52,87 +63,135 @@ namespace IwaraDownloader.Services
 
         public string GetCachePath(string videoId) => Path.Combine(_cacheDir, videoId + ".jpg");
 
-        /// <summary>同期取得: メモリ or ディスクキャッシュにあれば即返す (毎回クローンを返す)。なければ null。
-        /// 注意: Image.FromStream は stream の寿命を要求するため、必ず Bitmap にコピーして所有権を切る。
-        /// 呼び出し側 (ImageList.Images.Add 等) は受け取った Image を自由に管理してよい。
+        /// <summary>
+        /// メモリキャッシュのみから取得 (I/O ゼロ、UI スレッド安全)。返り値はクローン。
+        /// ディスクキャッシュは EnsureLoadedAsync で非同期に読み込む。
+        /// </summary>
+        public Image? TryGetMemoryCached(string videoId)
+        {
+            if (string.IsNullOrEmpty(videoId) || _disposed) return null;
+            // lock 内では「LRU 先頭へ移動」+ Image 参照取得のみ。
+            // Bitmap clone (ピクセルコピーで重い) は lock 外で実施して UI フリーズを防ぐ。
+            // LRU 先頭にしてあるので eviction 対象外 = clone 中に Dispose されるレースは起きない。
+            Image? source = null;
+            lock (_memLock)
+            {
+                if (_memCache.TryGetValue(videoId, out var node))
+                {
+                    _lruList.Remove(node);
+                    _lruList.AddFirst(node);
+                    source = node.Value.Img;
+                }
+            }
+            if (source == null) return null;
+            try { return new Bitmap(source); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Mem clone failed for {videoId}: {ex.Message}");
+                lock (_memLock)
+                {
+                    if (_memCache.TryGetValue(videoId, out var node))
+                    {
+                        _memCache.Remove(videoId);
+                        _lruList.Remove(node);
+                        try { node.Value.Img.Dispose(); } catch { }
+                    }
+                }
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 同期取得: メモリ → ディスク の順で探す (毎回クローン)。
+        /// ディスクから読み込んだ場合はメモリにも昇格させる。
+        /// バックフィル等の重い処理向け。UI スレッドでは TryGetMemoryCached を使う。
         /// </summary>
         public Image? TryGetCached(string videoId)
         {
-            if (string.IsNullOrEmpty(videoId)) return null;
-
-            if (_memCache.TryGetValue(videoId, out var cached))
-            {
-                // _memCache の所有権は ThumbnailCacheService、返り値は新規 Bitmap (呼び出し側で Dispose 安全)
-                try { return new Bitmap(cached); }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Mem clone failed for {videoId}: {ex.Message}");
-                    _memCache.TryRemove(videoId, out _);
-                }
-            }
+            var mem = TryGetMemoryCached(videoId);
+            if (mem != null) return mem;
 
             var path = GetCachePath(videoId);
-            if (File.Exists(path))
+            if (!File.Exists(path)) return null;
+            try
             {
-                try
+                var bytes = File.ReadAllBytes(path);
+                if (bytes.Length == 0) return null;
+                Bitmap stored;
+                using (var ms = new MemoryStream(bytes))
+                using (var loaded = Image.FromStream(ms))
                 {
-                    var bytes = File.ReadAllBytes(path);
-                    Bitmap stored;
-                    using (var ms = new MemoryStream(bytes))
-                    using (var loaded = Image.FromStream(ms))
-                    {
-                        // Image.FromStream は stream の寿命を要求する。必ず Bitmap コピーで切り離す。
-                        stored = new Bitmap(loaded);
-                    }
-                    PutMem(videoId, stored);
-                    return new Bitmap(stored); // 呼び出し側用に別コピー
+                    stored = new Bitmap(loaded);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Failed to load cached thumb {path}: {ex.Message}");
-                }
+                PutMem(videoId, stored);
+                return new Bitmap(stored);
             }
-            return null;
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to load cached thumb {path}: {ex.Message}");
+                return null;
+            }
         }
 
-        /// <summary>サムネ DL を非同期スケジュール (重複起動防止)</summary>
-        public void RequestAsync(string videoId, string url)
+        /// <summary>
+        /// 「メモリに無いがディスクには有る or URL から取得すべき」状態をバックグラウンドで解消する。
+        /// 完了で ThumbnailReady イベント発火。
+        /// UI スレッドから ImageList 更新のために呼ぶエントリポイント。
+        /// </summary>
+        public void EnsureLoadedAsync(string videoId, string? url)
         {
-            if (string.IsNullOrEmpty(videoId) || string.IsNullOrEmpty(url)) return;
-            if (_memCache.ContainsKey(videoId)) return;
-            if (File.Exists(GetCachePath(videoId))) return;
-            if (!_inflight.TryAdd(videoId, 1)) return;
+            if (string.IsNullOrEmpty(videoId) || _disposed) return;
+            lock (_memLock)
+            {
+                if (_memCache.ContainsKey(videoId)) return; // 既にメモリにあるなら呼ばれないはずだが念のため
+            }
+            if (!_inflight.TryAdd(videoId, 1)) return; // 二重スケジュール防止
 
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await _gate.WaitAsync();
-                    try
+                    // 1. ディスクキャッシュ
+                    var path = GetCachePath(videoId);
+                    if (File.Exists(path))
                     {
-                        var resp = await _http.GetAsync(url);
-                        if (!resp.IsSuccessStatusCode) return;
-                        var bytes = await resp.Content.ReadAsByteArrayAsync();
-                        if (bytes.Length == 0) return;
-                        var path = GetCachePath(videoId);
-                        await File.WriteAllBytesAsync(path, bytes);
-
-                        // メモリにもロード (stream を Image と切り離すため Bitmap でクローン)
-                        Bitmap stored;
-                        using (var ms = new MemoryStream(bytes))
-                        using (var img = Image.FromStream(ms))
+                        try
                         {
-                            stored = new Bitmap(img);
+                            var bytes = await File.ReadAllBytesAsync(path);
+                            if (bytes.Length > 0)
+                            {
+                                Bitmap stored;
+                                using (var ms = new MemoryStream(bytes))
+                                using (var img = Image.FromStream(ms))
+                                {
+                                    stored = new Bitmap(img);
+                                }
+                                PutMem(videoId, stored);
+                                if (!_disposed) ThumbnailReady?.Invoke(this, videoId);
+                                return;
+                            }
                         }
-                        PutMem(videoId, stored);
-
-                        ThumbnailReady?.Invoke(this, videoId);
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Disk thumb load fail {videoId}: {ex.Message}");
+                        }
                     }
-                    finally { _gate.Release(); }
+
+                    // 2. ネット DL (URL あれば)
+                    if (!string.IsNullOrEmpty(url))
+                    {
+                        await _netGate.WaitAsync();
+                        try
+                        {
+                            await EnforceNetDelayAsync();
+                            await DownloadFromUrlAsync(videoId, url);
+                        }
+                        finally { _netGate.Release(); }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Thumb fetch fail {videoId}: {ex.Message}");
+                    Debug.WriteLine($"EnsureLoadedAsync fail {videoId}: {ex.Message}");
                 }
                 finally
                 {
@@ -141,29 +200,160 @@ namespace IwaraDownloader.Services
             });
         }
 
+        /// <summary>
+        /// サムネ取得を非同期スケジュール (重複起動防止)。
+        /// キャッシュにあれば何もしない。なければ iwara からネット DL。
+        /// </summary>
+        public void RequestAsync(string videoId, string? url)
+        {
+            if (string.IsNullOrEmpty(videoId) || string.IsNullOrEmpty(url) || _disposed) return;
+            lock (_memLock)
+            {
+                if (_memCache.ContainsKey(videoId)) return;
+            }
+            if (File.Exists(GetCachePath(videoId))) return;
+            if (!_inflight.TryAdd(videoId, 1)) return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _netGate.WaitAsync();
+                    try
+                    {
+                        await EnforceNetDelayAsync();
+                        await DownloadFromUrlAsync(videoId, url);
+                    }
+                    finally { _netGate.Release(); }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Thumb request fail {videoId}: {ex.Message}");
+                }
+                finally
+                {
+                    _inflight.TryRemove(videoId, out _);
+                }
+            });
+        }
+
+        /// <summary>
+        /// RequestAsync の同期版 (完了まで待つ)。バックフィル処理で順次キャッシュしたい時に使う。
+        /// </summary>
+        public async Task<bool> EnsureCachedAsync(string videoId, string? url, CancellationToken ct = default)
+        {
+            if (string.IsNullOrEmpty(videoId) || _disposed) return false;
+            lock (_memLock)
+            {
+                if (_memCache.ContainsKey(videoId)) return true;
+            }
+            if (File.Exists(GetCachePath(videoId))) return true;
+            if (string.IsNullOrEmpty(url)) return false;
+            if (!_inflight.TryAdd(videoId, 1)) return false;
+
+            try
+            {
+                await _netGate.WaitAsync(ct);
+                try
+                {
+                    await EnforceNetDelayAsync();
+                    await DownloadFromUrlAsync(videoId, url);
+                    return File.Exists(GetCachePath(videoId));
+                }
+                finally { _netGate.Release(); }
+            }
+            finally
+            {
+                _inflight.TryRemove(videoId, out _);
+            }
+        }
+
+        /// <summary>ApiRequestDelayMs に従って前回ネット DL からの間隔を空ける (累積方式で並列レート制限正確)</summary>
+        private async Task EnforceNetDelayAsync()
+        {
+            int delayMs = Utils.SettingsManager.Instance.Settings.ApiRequestDelayMs;
+            if (delayMs <= 0) return;
+            long wait;
+            lock (_netGapLock)
+            {
+                var now = Environment.TickCount64;
+                // 「次に許可される時刻」を _lastNetRequestTick + delayMs に積み上げる
+                var next = Math.Max(_lastNetRequestTick + delayMs, now);
+                wait = next - now;
+                _lastNetRequestTick = next;
+            }
+            if (wait > 0) await Task.Delay((int)wait);
+        }
+
+        /// <summary>iwara サムネ URL から DL してキャッシュ</summary>
+        private async Task DownloadFromUrlAsync(string videoId, string url)
+        {
+            try
+            {
+                var resp = await _http.GetAsync(url);
+                if (!resp.IsSuccessStatusCode) return;
+                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                if (bytes.Length == 0) return;
+                var path = GetCachePath(videoId);
+                await File.WriteAllBytesAsync(path, bytes);
+
+                Bitmap stored;
+                using (var ms = new MemoryStream(bytes))
+                using (var img = Image.FromStream(ms))
+                {
+                    stored = new Bitmap(img);
+                }
+                PutMem(videoId, stored);
+
+                if (!_disposed) ThumbnailReady?.Invoke(this, videoId);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Net thumb fetch fail {videoId}: {ex.Message}");
+            }
+        }
+
         private void PutMem(string videoId, Image img)
         {
-            // 簡易 LRU: 上限超えたら 1 件 evict (順序保持なし、ザックリ FIFO)
-            if (_memCache.Count >= MaxMemCache)
+            // LRU: 既存キーなら置換、新規なら先頭追加、上限超なら末尾 evict
+            lock (_memLock)
             {
-                foreach (var k in _memCache.Keys)
+                if (_disposed) { try { img.Dispose(); } catch { } return; }
+                if (_memCache.TryGetValue(videoId, out var existing))
                 {
-                    if (_memCache.TryRemove(k, out var old))
-                    {
-                        try { old.Dispose(); } catch { }
-                    }
-                    break;
+                    // 旧 Bitmap を Dispose してから置換 (TryGetMemoryCached の Bitmap clone は完了済みのはず)
+                    try { existing.Value.Img.Dispose(); } catch { }
+                    _lruList.Remove(existing);
+                    _memCache.Remove(videoId);
+                }
+                var node = new LinkedListNode<(string, Image)>((videoId, img));
+                _lruList.AddFirst(node);
+                _memCache[videoId] = node;
+
+                while (_memCache.Count > MaxMemCache && _lruList.Last != null)
+                {
+                    var last = _lruList.Last;
+                    _lruList.RemoveLast();
+                    _memCache.Remove(last.Value.Key);
+                    try { last.Value.Img.Dispose(); } catch { }
                 }
             }
-            _memCache[videoId] = img;
         }
 
         public void Dispose()
         {
-            foreach (var kv in _memCache) { try { kv.Value.Dispose(); } catch { } }
-            _memCache.Clear();
-            _http.Dispose();
-            _gate.Dispose();
+            lock (_memLock)
+            {
+                _disposed = true;
+                foreach (var node in _memCache.Values)
+                {
+                    try { node.Value.Img.Dispose(); } catch { }
+                }
+                _memCache.Clear();
+                _lruList.Clear();
+            }
+            try { _http.Dispose(); } catch { }
+            try { _netGate.Dispose(); } catch { }
         }
     }
 }

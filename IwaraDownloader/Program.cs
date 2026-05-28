@@ -26,6 +26,10 @@ namespace IwaraDownloader
             // アプリケーション設定
             ApplicationConfiguration.Initialize();
 
+            // 子プロセス管理用 Job Object を初期化
+            // (親 (このプロセス) が死ぬと紐付けた子プロセス = Python ヘルパー等も自動 Kill される)
+            IwaraDownloader.Utils.ChildProcessJob.EnsureInitialized();
+
             // ログサービス初期化
             var logger = LoggingService.Instance;
             logger.Info("Application starting...");

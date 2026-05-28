@@ -263,6 +263,7 @@ namespace IwaraDownloader.Services
                 }
             };
             proc.Start();
+            IwaraDownloader.Utils.ChildProcessJob.AssignProcess(proc); // 親死亡で自動 Kill
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
             await proc.WaitForExitAsync(ct);

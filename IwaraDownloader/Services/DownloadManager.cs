@@ -19,7 +19,7 @@ namespace IwaraDownloader.Services
         private readonly System.Timers.Timer _autoCheckTimer;
         private CancellationTokenSource? _globalCts;
         private bool _isRunning;
-        private bool _isProcessingQueue;
+        private int _isProcessingQueue; // 0=idle, 1=running (Interlocked で更新)
 
         /// <summary>ダウンロード進捗イベント</summary>
         public event EventHandler<DownloadTask>? TaskProgressChanged;
@@ -62,10 +62,31 @@ namespace IwaraDownloader.Services
             var maxConcurrent = SettingsManager.Instance.Settings.MaxConcurrentDownloads;
             _downloadSemaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
 
-            // 自動チェックタイマー
+            // 自動チェックタイマー (重複起動防止 + 例外捕捉)
             _autoCheckTimer = new System.Timers.Timer();
-            _autoCheckTimer.Elapsed += async (s, e) => await CheckForNewVideosAsync();
+            _autoCheckTimer.Elapsed += async (s, e) =>
+            {
+                if (Interlocked.CompareExchange(ref _isAutoChecking, 1, 0) != 0)
+                {
+                    _logger.Debug("AutoCheck: 前回実行中のためスキップ");
+                    return;
+                }
+                try
+                {
+                    await CheckForNewVideosAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("AutoCheckTimer.Elapsed で例外", ex);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isAutoChecking, 0);
+                }
+            };
         }
+
+        private int _isAutoChecking; // 0=idle, 1=running
 
         /// <summary>
         /// ダウンロードマネージャーを開始
@@ -406,13 +427,18 @@ namespace IwaraDownloader.Services
         /// </summary>
         private async Task ProcessQueueAsync()
         {
-            // 重複実行防止
-            if (_isProcessingQueue) return;
-            _isProcessingQueue = true;
+            // 重複実行防止 (Interlocked で TOCTOU 排除)
+            if (Interlocked.CompareExchange(ref _isProcessingQueue, 1, 0) != 0) return;
 
             try
             {
-                while (_isRunning && _globalCts != null && !_globalCts.Token.IsCancellationRequested)
+                // Stop→Start で _globalCts が差し替わる前に Token を local snapshot。
+                // ループ中に Dispose されても ObjectDisposedException が起きないように
+                // 取得済みの token を最後まで使う。
+                var cts = _globalCts;
+                if (cts == null) return;
+                var token = cts.Token;
+                while (_isRunning && !token.IsCancellationRequested)
                 {
                     if (!_pendingQueue.TryDequeue(out var task))
                     {
@@ -431,13 +457,13 @@ namespace IwaraDownloader.Services
                     // _pendingTasks にも _activeTasks にも居ない死角ができ、UI 上で
                     // 「0DL中」と表示されてしまうため。
 
-                    await _downloadSemaphore.WaitAsync(_globalCts.Token);
+                    await _downloadSemaphore.WaitAsync(token);
 
                     // レート制限：DL開始前に設定値分待機
                     var settings = SettingsManager.Instance.Settings;
                     var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
                     System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
-                    await Task.Delay(delayMs, _globalCts.Token);
+                    await Task.Delay(delayMs, token);
 
                     // スレッドプール上で起動 (呼び出し元が UI スレッドのため、await の continuation が
                     // UI に戻って WriteIwaraTags 等の同期I/Oで詰まるのを防ぐ)
@@ -446,7 +472,7 @@ namespace IwaraDownloader.Services
             }
             finally
             {
-                _isProcessingQueue = false;
+                Interlocked.Exchange(ref _isProcessingQueue, 0);
             }
         }
 
@@ -500,6 +526,8 @@ namespace IwaraDownloader.Services
                     video.Title = urlInfo.Title;
                 if (!string.IsNullOrEmpty(urlInfo.Rating))
                     video.Rating = urlInfo.Rating;
+                if (!string.IsNullOrEmpty(urlInfo.ThumbnailUrl) && string.IsNullOrEmpty(video.ThumbnailUrl))
+                    video.ThumbnailUrl = urlInfo.ThumbnailUrl;
 
                 // --- 既存ファイル検出 (UUID ベース) ---
                 if (TryReuseExistingLocalFile(task, video))
@@ -1359,6 +1387,13 @@ namespace IwaraDownloader.Services
         public void Dispose()
         {
             Stop();
+            _autoCheckTimer.Stop();
+            // Elapsed のコールバックが ThreadPool に既に enqueue されていたら、
+            // _downloadSemaphore / _globalCts を触る経路があるため最大 5 秒だけ完了を待つ
+            SpinWait.SpinUntil(
+                () => Interlocked.CompareExchange(ref _isAutoChecking, 0, 0) == 0
+                      && Interlocked.CompareExchange(ref _isProcessingQueue, 0, 0) == 0,
+                5000);
             _autoCheckTimer.Dispose();
             _downloadSemaphore.Dispose();
             _globalCts?.Dispose();
@@ -1374,21 +1409,7 @@ namespace IwaraDownloader.Services
         /// 取得してから書き込む。削除された動画は API エラーで失敗扱い。
         /// </summary>
         /// <returns>(対象件数, タグ書き込み成功件数, スキップ件数, 失敗件数)</returns>
-        public Task<(int Total, int Tagged, int Skipped, int Failed)> MigrateExistingFilesAsync(
-            IProgress<string>? progress = null,
-            CancellationToken cancellationToken = default)
-        {
-            if (!_iwaraApi.IsLoggedIn)
-            {
-                throw new InvalidOperationException("ログインが必要です。マイグレーションを実行する前にログインしてください。");
-            }
-
-            // UI スレッドをブロックしないようにバックグラウンドスレッドで実行
-            // (TagLib I/O と SQLite I/O が同期処理のため、UI から直接 await すると
-            //  最初の await が来るまでフリーズする)
-            return Task.Run(() => MigrateExistingFilesCoreAsync(progress, cancellationToken), cancellationToken);
-        }
-
+        // 旧 public API は StartMigrateExistingFiles() に統一して二重起動を防止
         private async Task<(int Total, int Tagged, int Skipped, int Failed)> MigrateExistingFilesCoreAsync(
             IProgress<string>? progress,
             CancellationToken cancellationToken)
@@ -1507,6 +1528,197 @@ namespace IwaraDownloader.Services
             {
                 progress?.Report($"処理中: {processed}/{total} (タグ付与 {tagged}, スキップ {skipped}, 失敗 {failed})");
             }
+        }
+
+        /// <summary>
+        /// DB 内動画のサムネ URL を一括補完 + 実画像もキャッシュに DL。
+        ///   - FileUuid あり → API ゼロで URL 組立 → サムネ画像をネット DL してキャッシュ
+        ///   - FileUuid 無し → GetDownloadUrlAsync で URL 取得 → サムネ画像 DL してキャッシュ
+        /// サムネ画像 DL は ThumbnailCacheService 経由 (レート制限あり: ApiRequestDelayMs)
+        /// </summary>
+        /// <returns>(対象, URL補完, サムネ画像DL成功, 失敗)</returns>
+        // 旧 public API は StartBackfillThumbnails() に統一して二重起動を防止
+        private async Task<(int Total, int UrlResolved, int ThumbDownloaded, int Failed)> BackfillThumbnailsCoreAsync(
+            IProgress<string>? progress, CancellationToken ct)
+        {
+            var all = _database.GetAllVideos();
+            // サムネ URL が空、もしくは URL あるがキャッシュファイルが無い動画を対象に
+            var candidates = all.Where(v =>
+                string.IsNullOrEmpty(v.ThumbnailUrl)
+                || !System.IO.File.Exists(Services.ThumbnailCacheService.Instance.GetCachePath(v.VideoId))
+            ).ToList();
+            int total = candidates.Count;
+            int urlResolved = 0, thumbDl = 0, failed = 0;
+            var apiDelayMs = SettingsManager.Instance.Settings.ApiRequestDelayMs;
+            var thumbSvc = Services.ThumbnailCacheService.Instance;
+
+            progress?.Report($"サムネ補完開始: {total} 件");
+            _logger.Info($"Thumbnail backfill: {total} candidates");
+
+            int processed = 0;
+            foreach (var video in candidates)
+            {
+                ct.ThrowIfCancellationRequested();
+                processed++;
+
+                try
+                {
+                    // 1. URL を確定 (UUID あれば組立, 無ければ API 取得)
+                    if (string.IsNullOrEmpty(video.ThumbnailUrl))
+                    {
+                        if (!string.IsNullOrEmpty(video.FileUuid))
+                        {
+                            video.ThumbnailUrl = BuildThumbnailUrlFromUuid(video.FileUuid);
+                            _database.UpdateVideo(video);
+                            urlResolved++;
+                        }
+                        else if (_iwaraApi.IsLoggedIn)
+                        {
+                            progress?.Report($"API 取得中 ({processed}/{total}): {video.VideoId}");
+                            var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
+                            var info = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
+                            if (info.Success && !string.IsNullOrEmpty(info.ThumbnailUrl))
+                            {
+                                video.ThumbnailUrl = info.ThumbnailUrl;
+                                if (!string.IsNullOrEmpty(info.FileUuid) && string.IsNullOrEmpty(video.FileUuid))
+                                    video.FileUuid = info.FileUuid;
+                                _database.UpdateVideo(video);
+                                urlResolved++;
+                            }
+                            else
+                            {
+                                failed++;
+                                continue;
+                            }
+                            if (apiDelayMs > 0) await Task.Delay(apiDelayMs, ct);
+                        }
+                        else
+                        {
+                            failed++;
+                            continue;
+                        }
+                    }
+
+                    // 2. サムネ画像をネット DL (キャッシュ済みならスキップ)
+                    bool ok = await thumbSvc.EnsureCachedAsync(video.VideoId, video.ThumbnailUrl, ct);
+                    if (ok) thumbDl++;
+                    else failed++;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.Warn($"Thumbnail backfill failed ({video.VideoId}): {ex.Message}");
+                }
+
+                if (processed % 25 == 0 || processed == total)
+                {
+                    progress?.Report($"処理中: {processed}/{total} (URL確定 {urlResolved}, サムネDL {thumbDl}, 失敗 {failed})");
+                }
+            }
+
+            _logger.Info($"Thumbnail backfill done: total={total}, urlResolved={urlResolved}, thumbDl={thumbDl}, failed={failed}");
+            progress?.Report($"完了: URL確定 {urlResolved} / サムネDL {thumbDl} / 失敗 {failed} (合計 {total} 件)");
+            return (total, urlResolved, thumbDl, failed);
+        }
+
+        /// <summary>iwara のサムネ URL を file_id (UUID) から組み立てる</summary>
+        public static string BuildThumbnailUrlFromUuid(string fileUuid)
+            => $"https://i.iwara.tv/image/thumbnail/{fileUuid}/thumbnail-00.jpg";
+
+        #endregion
+
+        #region Background Tasks (settings 画面を閉じても継続する長時間タスク)
+
+        public event EventHandler<(string TaskName, string Message)>? BackgroundTaskProgress;
+        public event EventHandler<(string TaskName, string Summary, bool Success)>? BackgroundTaskCompleted;
+
+        public bool IsBackfillRunning { get; private set; }
+        public bool IsMigrationRunning { get; private set; }
+
+        /// <summary>サムネ URL + 画像をバックグラウンドで一括補完。既に走ってたら false (二重起動拒否)</summary>
+        public bool StartBackfillThumbnails()
+        {
+            if (IsBackfillRunning) return false;
+            IsBackfillRunning = true;
+            var name = "サムネ補完";
+            BackgroundTaskProgress?.Invoke(this, (name, "開始..."));
+
+            // Task.Run 外で token をスナップショット (Stop→Start で _globalCts が差し替わる前に固定)
+            var snapshot = _globalCts?.Token ?? CancellationToken.None;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var progress = new Progress<string>(msg =>
+                        BackgroundTaskProgress?.Invoke(this, (name, msg)));
+                    var (total, urlResolved, thumbDl, failed) = await BackfillThumbnailsCoreAsync(
+                        progress, snapshot);
+                    BackgroundTaskCompleted?.Invoke(this, (
+                        name,
+                        $"完了: URL確定 {urlResolved} / サムネDL {thumbDl} / 失敗 {failed} (合計 {total})",
+                        failed < total));
+                }
+                catch (OperationCanceledException)
+                {
+                    BackgroundTaskCompleted?.Invoke(this, (name, "中止しました", false));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("BackfillThumbnails error", ex);
+                    BackgroundTaskCompleted?.Invoke(this, (name, $"エラー: {ex.Message}", false));
+                }
+                finally
+                {
+                    IsBackfillRunning = false;
+                }
+            });
+            return true;
+        }
+
+        /// <summary>既存ファイルのタグ書き込みをバックグラウンドで実行</summary>
+        public bool StartMigrateExistingFiles()
+        {
+            if (IsMigrationRunning) return false;
+            if (!_iwaraApi.IsLoggedIn)
+            {
+                BackgroundTaskCompleted?.Invoke(this, ("タグマイグレーション", "ログインが必要です", false));
+                return false;
+            }
+            IsMigrationRunning = true;
+            var name = "タグマイグレーション";
+            BackgroundTaskProgress?.Invoke(this, (name, "開始..."));
+
+            // Task.Run 外で token をスナップショット
+            var snapshot = _globalCts?.Token ?? CancellationToken.None;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var progress = new Progress<string>(msg =>
+                        BackgroundTaskProgress?.Invoke(this, (name, msg)));
+                    var (total, tagged, skipped, failed) = await MigrateExistingFilesCoreAsync(
+                        progress, snapshot);
+                    BackgroundTaskCompleted?.Invoke(this, (
+                        name,
+                        $"完了: タグ {tagged} / スキップ {skipped} / 失敗 {failed} (合計 {total})",
+                        failed < total));
+                }
+                catch (OperationCanceledException)
+                {
+                    BackgroundTaskCompleted?.Invoke(this, (name, "中止しました", false));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("MigrateExistingFiles error", ex);
+                    BackgroundTaskCompleted?.Invoke(this, (name, $"エラー: {ex.Message}", false));
+                }
+                finally
+                {
+                    IsMigrationRunning = false;
+                }
+            });
+            return true;
         }
 
         #endregion

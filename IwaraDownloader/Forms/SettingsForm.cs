@@ -14,10 +14,6 @@ namespace IwaraDownloader.Forms
         private readonly IwaraApiService _iwaraApi;
         private readonly DownloadManager? _downloadManager;
 
-        // マイグレーション状態管理 (閉じる操作の制御用)
-        private CancellationTokenSource? _migrationCts;
-        private bool _migrationRunning;
-
         // チェック間隔の選択肢(分)
         private readonly int[] _checkIntervalMinutes = { 30, 60, 120, 360, 720, 1440 };
 
@@ -36,7 +32,10 @@ namespace IwaraDownloader.Forms
             InitializeComponent();
             _settingsManager = SettingsManager.Instance;
             _database = DatabaseService.Instance;
-            _iwaraApi = new IwaraApiService();
+            // DownloadManager と同じ IwaraApiService インスタンスを共有する。
+            // 別インスタンスにするとここでの再ログインが MainForm 側に伝播せず、
+            // 「設定画面で再ログイン → 閉じてもダウンロードがログイン状態にならない」となる。
+            _iwaraApi = downloadManager?.IwaraApi ?? new IwaraApiService();
             _downloadManager = downloadManager;
         }
 
@@ -399,80 +398,73 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        private async void btnMigrateExistingFiles_Click(object sender, EventArgs e)
+        private void btnMigrateExistingFiles_Click(object sender, EventArgs e)
         {
             if (_downloadManager == null)
             {
                 MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            if (_downloadManager.IsMigrationRunning)
+            {
+                MessageBox.Show(this, "既に実行中です。完了まで待ってから再度開始してください。",
+                    "実行中", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             var confirm = MessageBox.Show(
                 "ダウンロード済みの mp4 ファイルに iwara の UUID タグを書き込みます。\n" +
                 "DB に登録されている動画のうち、ローカルにファイルが存在するもの全てが対象です。\n\n" +
-                "処理中はバックグラウンドで動作します。設定画面を閉じる場合は確認ダイアログが出ます。\n\n" +
+                "★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。\n" +
+                "  進捗はメイン画面のステータスバーに表示されます。\n\n" +
                 "続行しますか？",
                 "既存ファイルにタグを書き込む",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question);
             if (confirm != DialogResult.OK) return;
 
-            _migrationCts = new CancellationTokenSource();
-            _migrationRunning = true;
-            btnMigrateExistingFiles.Enabled = false;
-            lblMigrationProgress.Text = "準備中...";
-
-            try
+            if (_downloadManager.StartMigrateExistingFiles())
             {
-                var progress = new Progress<string>(msg =>
-                {
-                    // BeginInvoke で UI スレッドに戻す。
-                    // IsDisposed チェックで Form 閉じた後のアクセスを防ぐ。
-                    if (IsDisposed || !IsHandleCreated) return;
-                    try
-                    {
-                        BeginInvoke((Action)(() =>
-                        {
-                            if (!IsDisposed) lblMigrationProgress.Text = msg;
-                        }));
-                    }
-                    catch (ObjectDisposedException) { /* Form が閉じられた */ }
-                    catch (InvalidOperationException) { /* ハンドル破棄後 */ }
-                });
-
-                var (total, tagged, skipped, failed) = await _downloadManager.MigrateExistingFilesAsync(progress, _migrationCts.Token);
-
-                if (!IsDisposed)
-                {
-                    MessageBox.Show(
-                        this,
-                        $"マイグレーションが完了しました。\n\n" +
-                        $"対象ファイル: {total}\n" +
-                        $"タグ書き込み: {tagged}\n" +
-                        $"スキップ (既に書き込み済み): {skipped}\n" +
-                        $"失敗: {failed}",
-                        "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                MessageBox.Show(this, "バックグラウンドで開始しました。\nこの画面を閉じても処理は継続されます。",
+                    "開始", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (OperationCanceledException)
+        }
+
+        /// <summary>
+        /// サムネ URL + 画像をバックグラウンドで一括補完。
+        /// 設定画面を閉じても継続実行され、進捗はメイン画面のステータスバーに反映。
+        /// </summary>
+        private void btnBackfillThumbnails_Click(object sender, EventArgs e)
+        {
+            if (_downloadManager == null)
             {
-                // ユーザーが Form を閉じてキャンセルした場合
+                MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            catch (Exception ex)
+            if (_downloadManager.IsBackfillRunning)
             {
-                if (!IsDisposed)
-                {
-                    MessageBox.Show(this, $"マイグレーションに失敗しました:\n{ex.Message}",
-                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show(this, "既に実行中です。完了まで待ってから再度開始してください。",
+                    "実行中", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
-            finally
+
+            var confirm = MessageBox.Show(
+                "DB 内の動画のうちサムネ URL が未保存 / 画像未キャッシュのものを補完します。\n\n" +
+                "・FileUuid を既に持つ動画 → 即時組み立て (API リクエスト不要)\n" +
+                "・FileUuid 無し動画 → iwara API で取得 (要ログイン・時間かかる)\n" +
+                "・確定後、サムネ画像もネット DL (レート制限あり)\n\n" +
+                "★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。\n" +
+                "  進捗はメイン画面のステータスバーに表示されます。\n\n" +
+                "続行しますか？",
+                "サムネ URL 一括補完",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (confirm != DialogResult.OK) return;
+
+            if (_downloadManager.StartBackfillThumbnails())
             {
-                _migrationRunning = false;
-                _migrationCts?.Dispose();
-                _migrationCts = null;
-                if (!IsDisposed)
-                    btnMigrateExistingFiles.Enabled = true;
+                MessageBox.Show(this, "バックグラウンドで開始しました。\nこの画面を閉じても処理は継続されます。",
+                    "開始", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -509,23 +501,7 @@ namespace IwaraDownloader.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (_migrationRunning)
-            {
-                var result = MessageBox.Show(
-                    this,
-                    "マイグレーションの処理中です。中止して閉じますか？\n\n" +
-                    "中止すると、処理途中のファイルはタグ未書き込みのままになります。\n" +
-                    "(後でもう一度実行すれば続きから処理できます)",
-                    "確認",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-                if (result == DialogResult.No)
-                {
-                    e.Cancel = true;
-                    return;
-                }
-                _migrationCts?.Cancel();
-            }
+            // バックグラウンドタスクはアプリ寿命で管理してるので、設定画面は自由に閉じてOK
             base.OnFormClosing(e);
         }
 

@@ -18,6 +18,14 @@ import subprocess
 import time
 from urllib.parse import urlparse, parse_qs
 
+# Windows コンソールで日本語タイトルを print(file=sys.stderr) するときの
+# UnicodeEncodeError 防止。C# 側で UTF-8 を指定していない場合も死なないように。
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 
 def _decode_jwt_payload(token: str) -> dict:
     """JWT の payload を base64url デコードして辞書を返す。失敗時は空辞書。"""
@@ -701,6 +709,7 @@ class IwaraAPI:
                 "author_username": user_obj.get("username"),
                 "author_name": user_obj.get("name"),
                 "rating": video_data.get("rating") or "",
+                "thumbnail": self._get_thumbnail_url(video_data),
             }
 
         except Exception as e:
@@ -787,6 +796,14 @@ class IwaraAPI:
         if resume_from > 0 and r.status_code == 200:
             print(f"Server ignored Range header, restarting from 0", file=sys.stderr)
             resume_from = 0
+        elif resume_from > 0 and r.status_code == 416:
+            # サーバー側ファイルが縮んだ (再エンコード等) → .part 破棄して 0 からやり直し
+            print(f"Range Not Satisfiable (416), discarding .part and retrying from 0", file=sys.stderr)
+            try: os.remove(part_path)
+            except Exception: pass
+            try: os.remove(meta_path)
+            except Exception: pass
+            return ('cdn_error', f"Range not satisfiable at {host}, retry from 0")
         elif resume_from > 0 and r.status_code != 206:
             return ('hard_error', f"Unexpected status {r.status_code} for Range request at {host}")
         elif resume_from == 0 and r.status_code != 200:
@@ -884,9 +901,10 @@ class IwaraAPI:
             return ('cdn_error', f"Size mismatch at {host}: got {downloaded}, expected {total_size}")
 
         # アトミックリネーム: .part → final
+        # os.replace は Windows でも上書き OK (POSIX 互換)。
+        # 旧コードの os.remove(output_path) は他プロセスが開いてる場合に
+        # PermissionError で破綻するため削除。
         try:
-            if os.path.exists(output_path):
-                os.remove(output_path)
             os.replace(part_path, output_path)
             try: os.remove(meta_path)
             except Exception: pass
@@ -1260,4 +1278,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException as _e:
+        # トップレベル例外を JSON にして stdout に返す。
+        # これがないと Python のトレースバックが stderr に出るだけで stdout が空になり、
+        # 呼び出し元 C# 側の json.parse が "Python 応答なし" になる。
+        try:
+            print(json.dumps({"success": False, "error": f"{type(_e).__name__}: {_e}"}, ensure_ascii=False))
+        except Exception:
+            pass
+        sys.exit(1)

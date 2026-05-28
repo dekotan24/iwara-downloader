@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using IwaraDownloader.Models;
 
@@ -54,10 +55,7 @@ namespace IwaraDownloader.Services
         private readonly IwaraApiService _api;
         public IwaraSearch(IwaraApiService api) { _api = api; }
 
-        public Task<SearchResultPage> SearchAsync(string query, int page = 0, int limit = 32, string? site = null)
-            => Task.Run(() => SearchCore(query, page, limit, site));
-
-        private SearchResultPage SearchCore(string query, int page, int limit, string? site)
+        public async Task<SearchResultPage> SearchAsync(string query, int page = 0, int limit = 32, string? site = null)
         {
             var result = new SearchResultPage { Page = page, Limit = limit };
             if (!_api.IsLoggedIn)
@@ -68,26 +66,42 @@ namespace IwaraDownloader.Services
             try
             {
                 // IwaraApiService に直接アクセスする手段が無いので Process を呼ぶ
+                // トークンは環境変数経由 (コマンドライン引数からの漏洩防止)
                 var siteArg = string.IsNullOrEmpty(site) ? "" : $" --site \"{site}\"";
                 var psi = new ProcessStartInfo
                 {
                     FileName = Utils.SettingsManager.Instance.Settings.PythonPath,
-                    Arguments = $"\"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "iwara_helper.py")}\" search \"{query.Replace("\"", "\\\"")}\" {page} {limit} --token \"{_api.Token}\"{siteArg}",
+                    Arguments = $"\"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "iwara_helper.py")}\" search \"{query.Replace("\"", "\\\"")}\" {page} {limit}{siteArg}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8,
                     WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
                 };
+                if (!string.IsNullOrEmpty(_api.Token))
+                {
+                    psi.EnvironmentVariables["IWARA_TOKEN"] = _api.Token;
+                }
                 using var proc = new Process { StartInfo = psi };
+                var stdoutBuf = new StringBuilder();
+                var stderrBuf = new StringBuilder();
+                proc.OutputDataReceived += (_, e) => { if (e.Data != null) stdoutBuf.AppendLine(e.Data); };
+                proc.ErrorDataReceived += (_, e) => { if (e.Data != null) stderrBuf.AppendLine(e.Data); };
                 proc.Start();
-                var stdout = proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit();
+                Utils.ChildProcessJob.AssignProcess(proc); // 親死亡で自動 Kill
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+                await proc.WaitForExitAsync();
+                proc.WaitForExit(); // ストリーム flush 完了を保証
 
+                var stdout = stdoutBuf.ToString();
                 if (string.IsNullOrWhiteSpace(stdout))
                 {
-                    result.Error = "Python 応答なし";
+                    result.Error = string.IsNullOrWhiteSpace(stderrBuf.ToString())
+                        ? "Python 応答なし"
+                        : $"Python エラー: {stderrBuf.ToString().Trim()}";
                     return result;
                 }
                 using var doc = JsonDocument.Parse(stdout);

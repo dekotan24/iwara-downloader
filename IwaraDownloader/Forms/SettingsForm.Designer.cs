@@ -1141,6 +1141,7 @@ namespace IwaraDownloader.Forms
             // grpMigration
             //
             this.grpMigration.Controls.Add(this.btnMigrateExistingFiles);
+            this.grpMigration.Controls.Add(this.btnBackfillThumbnails);
             this.grpMigration.Controls.Add(this.lblMigrationNote);
             this.grpMigration.Controls.Add(this.lblMigrationProgress);
             this.grpMigration.Location = new Point(6, 158);
@@ -1149,6 +1150,17 @@ namespace IwaraDownloader.Forms
             this.grpMigration.TabIndex = 2;
             this.grpMigration.TabStop = false;
             this.grpMigration.Text = "既存ファイルのメタデータ移行";
+
+            //
+            // btnBackfillThumbnails
+            //
+            this.btnBackfillThumbnails.Location = new Point(200, 72);
+            this.btnBackfillThumbnails.Name = "btnBackfillThumbnails";
+            this.btnBackfillThumbnails.Size = new Size(230, 27);
+            this.btnBackfillThumbnails.TabIndex = 3;
+            this.btnBackfillThumbnails.Text = "サムネURLを一括補完";
+            this.btnBackfillThumbnails.UseVisualStyleBackColor = true;
+            this.btnBackfillThumbnails.Click += new EventHandler(this.btnBackfillThumbnails_Click);
 
             //
             // lblMigrationNote
@@ -1333,6 +1345,7 @@ namespace IwaraDownloader.Forms
         private TabPage tabBackup;
         private GroupBox grpMigration = new GroupBox();
         private Button btnMigrateExistingFiles = new Button();
+        private Button btnBackfillThumbnails = new Button();
         private Label lblMigrationNote = new Label();
         private Label lblMigrationProgress = new Label();
         private GroupBox grpImportTools = new GroupBox();

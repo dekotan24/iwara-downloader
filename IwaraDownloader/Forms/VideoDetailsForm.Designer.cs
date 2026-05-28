@@ -19,6 +19,8 @@ namespace IwaraDownloader.Forms
 
             this.lblTitle = new Label();
             this.txtTitle = new TextBox();
+            this.lblSource = new Label();
+            this.txtSource = new TextBox();
             this.lblAuthor = new Label();
             this.txtAuthor = new TextBox();
             this.lblVideoId = new Label();
@@ -79,8 +81,9 @@ namespace IwaraDownloader.Forms
             this.tableLayout.Padding = new Padding(0, 0, 0, 6);
             this.tableLayout.AutoScroll = true;
 
-            // 行追加 (タイトル, 投稿者, ...)
+            // 行追加 (タイトル, ソース, 投稿者, ...)
             AddRow(lblTitle, "タイトル", txtTitle, multiline: false);
+            AddRow(lblSource, "ソース", txtSource, multiline: false);
             AddRow(lblAuthor, "投稿者", txtAuthor, multiline: false);
             AddRow(lblVideoId, "Video ID", txtVideoId, multiline: false);
             AddRow(lblFileUuid, "File UUID", txtFileUuid, multiline: false);
@@ -209,10 +212,10 @@ namespace IwaraDownloader.Forms
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, height + 4));
         }
 
-        private Label lblTitle, lblAuthor, lblVideoId, lblFileUuid, lblStatus, lblDuration, lblFileSize;
+        private Label lblTitle, lblSource, lblAuthor, lblVideoId, lblFileUuid, lblStatus, lblDuration, lblFileSize;
         private Label lblPostedAt, lblDownloadedAt, lblCreatedAt, lblUrl, lblLocalFilePath, lblRetry, lblLastError;
         private Label lblTags, lblMemo;
-        private TextBox txtTitle, txtAuthor, txtVideoId, txtFileUuid, txtStatus, txtDuration, txtFileSize;
+        private TextBox txtTitle, txtSource, txtAuthor, txtVideoId, txtFileUuid, txtStatus, txtDuration, txtFileSize;
         private TextBox txtPostedAt, txtDownloadedAt, txtCreatedAt, txtUrl, txtLocalFilePath, txtRetry, txtLastError;
         private TextBox txtTags, txtMemo;
         private Button btnOpenUrl, btnOpenFile, btnSave, btnCancel;

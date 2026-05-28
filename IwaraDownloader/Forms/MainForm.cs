@@ -94,6 +94,8 @@ namespace IwaraDownloader.Forms
             _downloadManager.TaskStatusChanged += OnTaskStatusChanged;
             _downloadManager.NewVideosFound += OnNewVideosFound;
             _downloadManager.AutoCheckCompleted += OnAutoCheckCompleted;
+            _downloadManager.BackgroundTaskProgress += OnBackgroundTaskProgress;
+            _downloadManager.BackgroundTaskCompleted += OnBackgroundTaskCompleted;
 
             // 環境チェック
             SplashForm.UpdateStatus("環境をチェック中...", 40);
@@ -110,6 +112,8 @@ namespace IwaraDownloader.Forms
             // ListViewソーター初期化
             SplashForm.UpdateStatus("UIを初期化中...", 70);
             InitializeListViewSorter();
+
+            // 動画コンテキストメニューは Designer で構築済み (Items.AddRange は InitializeComponent 内で完了)
 
             // UI モード復元 (NSFW フィルタ / 表示モード / クリップボード監視)
             // CheckedChanged ハンドラが走る → リスナー登録・設定保存が連動する
@@ -470,10 +474,14 @@ namespace IwaraDownloader.Forms
                 RefreshChannelTree();
                 RefreshVideoList();
             }
+            catch (Exception ex)
+            {
+                _logger.Error("新着確認中にエラー", ex);
+                UpdateStatusBar($"確認エラー: {ex.Message}");
+            }
             finally
             {
                 btnCheckNow.Enabled = true;
-                UpdateStatusBar("確認完了");
             }
         }
 
@@ -693,7 +701,7 @@ namespace IwaraDownloader.Forms
                 return;
             }
             UpdateVideoItem(task);
-            UpdateDownloadCount();
+            ScheduleDownloadCountUpdate();
         }
 
         private void OnTaskStatusChanged(object? sender, DownloadTask task)
@@ -705,7 +713,7 @@ namespace IwaraDownloader.Forms
             }
 
             UpdateVideoItem(task);
-            UpdateDownloadCount();
+            ScheduleDownloadCountUpdate();
 
             // どのステータス遷移でもキューノード内訳が変わるので Refresh
             // (debounce 200ms 経由で連続呼びはまとまる)
@@ -731,6 +739,39 @@ namespace IwaraDownloader.Forms
                 return;
             }
             RefreshChannelTree();
+        }
+
+        /// <summary>バックグラウンドタスクの進捗をステータスバーに表示</summary>
+        private void OnBackgroundTaskProgress(object? sender, (string TaskName, string Message) e)
+        {
+            if (InvokeRequired)
+            {
+                PostToUi(() => OnBackgroundTaskProgress(sender, e));
+                return;
+            }
+            UpdateStatusBar($"[{e.TaskName}] {e.Message}");
+        }
+
+        /// <summary>バックグラウンドタスク完了時の通知</summary>
+        private void OnBackgroundTaskCompleted(object? sender, (string TaskName, string Summary, bool Success) e)
+        {
+            if (InvokeRequired)
+            {
+                PostToUi(() => OnBackgroundTaskCompleted(sender, e));
+                return;
+            }
+            UpdateStatusBar($"[{e.TaskName}] {e.Summary}");
+            // 完了通知 (バルーン)
+            try
+            {
+                Services.NotificationService.Instance.ShowNotification(
+                    e.Success ? $"{e.TaskName} 完了" : $"{e.TaskName} 終了 (一部失敗)",
+                    e.Summary);
+            }
+            catch { }
+            // 動画リスト/ツリーを更新 (サムネ補完で URL が増えたら再描画したい)
+            RefreshChannelTree();
+            RefreshVideoList();
         }
 
         #endregion
@@ -1088,9 +1129,32 @@ namespace IwaraDownloader.Forms
             // キャッシュクリア
             ClearItemCache();
 
-            // 仮想リストサイズを更新
-            listViewVideos.VirtualListSize = _displayVideoList.Count;
-            listViewVideos.Invalidate();
+            // モードに応じて Items 投入 / VirtualListSize 設定
+            if (listViewVideos.View == View.LargeIcon)
+            {
+                // サムネモード: VirtualMode false で Items 直接投入 (件数制限あり)
+                int limit = Math.Min(_displayVideoList.Count, TileModeMaxItems);
+                listViewVideos.BeginUpdate();
+                try
+                {
+                    listViewVideos.Items.Clear();
+                    for (int i = 0; i < limit; i++)
+                    {
+                        try { listViewVideos.Items.Add(CreateVideoListItem(_displayVideoList[i])); }
+                        catch (Exception itemEx)
+                        {
+                            _logger.Warn($"Filter tile add failed at {i}: {itemEx.Message}");
+                        }
+                    }
+                }
+                finally { listViewVideos.EndUpdate(); }
+            }
+            else
+            {
+                // 詳細モード: 仮想リストサイズ更新
+                listViewVideos.VirtualListSize = _displayVideoList.Count;
+                listViewVideos.Invalidate();
+            }
 
             // フィルター結果をステータスに表示
             if (!query.IsEmpty || nsfwMode != 0)
@@ -1100,11 +1164,19 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 動画のソース（埋め込み元）を表示用文字列で返す
+        /// 動画のソース（投稿サイト / 埋め込み元）を表示用文字列で返す
+        ///   - iwara 本体: video.Site で iwara.tv / iwara.ai を区別 (空文字は tv 扱い)
+        ///   - 外部埋め込み: EmbedUrl のドメインから判定 (YouTube/ニコニコ/Vimeo/X/Bilibili)
         /// </summary>
         private static string GetVideoSourceLabel(VideoInfo video)
         {
-            if (!video.IsExternal) return "iwara";
+            if (!video.IsExternal)
+            {
+                // iwara 本体 (Site 空文字は旧データ → iwara.tv 扱い)
+                if (string.Equals(video.Site, Helpers.SiteAi, StringComparison.OrdinalIgnoreCase))
+                    return "iwara.ai";
+                return "iwara.tv";
+            }
 
             var url = video.EmbedUrl?.ToLowerInvariant() ?? string.Empty;
             if (url.Contains("youtube.com") || url.Contains("youtu.be"))
@@ -1229,15 +1301,29 @@ namespace IwaraDownloader.Forms
                 {
                     // データソースの動画情報を更新
                     _displayVideoList[i] = task.Video;
-                    
-                    // キャッシュを更新
-                    if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
+
+                    if (listViewVideos.VirtualMode)
                     {
-                        _itemCache[i - _cacheStartIndex] = CreateVideoListItem(task.Video);
+                        // 詳細モード (仮想): _itemCache の該当範囲を更新 → RedrawItems
+                        if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
+                        {
+                            _itemCache[i - _cacheStartIndex] = CreateVideoListItem(task.Video);
+                        }
+                        // RefreshVideoListCoreAsync の最中など _displayVideoList と VirtualListSize が
+                        // 一時的に不一致になる瞬間に RedrawItems(i, i) で InvalidArgument を踏むのを防ぐ
+                        if (i < listViewVideos.VirtualListSize)
+                        {
+                            listViewVideos.RedrawItems(i, i, false);
+                        }
                     }
-                    
-                    // 該当行を再描画
-                    listViewVideos.RedrawItems(i, i, false);
+                    else
+                    {
+                        // サムネモード (非仮想): Items[i] を再生成 (件数制限で範囲外の場合はスキップ)
+                        if (i >= 0 && i < listViewVideos.Items.Count)
+                        {
+                            listViewVideos.Items[i] = CreateVideoListItem(task.Video);
+                        }
+                    }
                     break;
                 }
             }
@@ -1285,8 +1371,6 @@ namespace IwaraDownloader.Forms
 
         private void listViewVideos_MouseDoubleClick(object? sender, MouseEventArgs e)
         {
-            // 右ダブルクリックでも DoubleClick イベントが発火する WinForms 仕様への対策。
-            // 左ボタンのみ反応にして、右ダブルクリックは MouseUp 経由の右クリックメニュー扱いに任せる。
             if (e.Button != MouseButtons.Left) return;
 
             var video = GetFirstSelectedVideo();
@@ -1294,12 +1378,10 @@ namespace IwaraDownloader.Forms
 
             if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
             {
-                // 完了済み → 再生
                 Process.Start(new ProcessStartInfo { FileName = video.LocalFilePath, UseShellExecute = true });
             }
             else
             {
-                // 未完了 → ページを開く
                 Helpers.OpenUrl(video.Url);
             }
         }
@@ -1312,31 +1394,16 @@ namespace IwaraDownloader.Forms
                 e.SuppressKeyPress = true; // ビープ音を防ぐ
 
                 listViewVideos.BeginUpdate();
-                for (int i = 0; i < _displayVideoList.Count; i++)
+                // サムネモードでは Items.Count が上限 (TileModeMaxItems=500)、
+                // 詳細(VirtualMode)では VirtualListSize=_displayVideoList.Count なのでこちらで OK
+                int max = listViewVideos.VirtualMode
+                    ? listViewVideos.VirtualListSize
+                    : listViewVideos.Items.Count;
+                for (int i = 0; i < max; i++)
                 {
                     listViewVideos.SelectedIndices.Add(i);
                 }
                 listViewVideos.EndUpdate();
-            }
-            // Apps キー (キーボード右下のメニューキー) / Shift+F10 で右クリックメニューを開く
-            // ContextMenuStrip 自動紐付けを外したため、手動で Show() する必要がある
-            else if (e.KeyCode == Keys.Apps || (e.Shift && e.KeyCode == Keys.F10))
-            {
-                e.SuppressKeyPress = true;
-                if (listViewVideos.SelectedIndices.Count == 0) return;
-
-                // フォーカスされた行の位置にメニューを表示
-                Point showAt;
-                var focused = listViewVideos.FocusedItem;
-                if (focused != null && focused.Bounds.Height > 0)
-                {
-                    showAt = new Point(focused.Bounds.X + 16, focused.Bounds.Y + focused.Bounds.Height);
-                }
-                else
-                {
-                    showAt = new Point(10, 10);
-                }
-                contextMenuVideo.Show(listViewVideos, showAt);
             }
             // Deleteで削除
             else if (e.KeyCode == Keys.Delete)
@@ -1366,33 +1433,53 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 選択中の動画を取得(仮想モード対応)
+        /// 選択中の動画を取得 (仮想モード/サムネモード両対応)
+        /// サムネモード: Items[i].Tag に格納された VideoInfo を直接取り出す (件数制限ありのため _displayVideoList と添字が合わない可能性に備える)
+        /// 仮想モード: _displayVideoList のインデックスで引く
         /// </summary>
         private List<VideoInfo> GetSelectedVideos()
         {
             var videos = new List<VideoInfo>();
+            bool tileMode = !listViewVideos.VirtualMode;
             foreach (int index in listViewVideos.SelectedIndices)
             {
-                if (index >= 0 && index < _displayVideoList.Count)
+                if (tileMode)
                 {
-                    videos.Add(_displayVideoList[index]);
+                    if (index >= 0 && index < listViewVideos.Items.Count
+                        && listViewVideos.Items[index].Tag is VideoInfo v)
+                    {
+                        videos.Add(v);
+                    }
+                }
+                else
+                {
+                    if (index >= 0 && index < _displayVideoList.Count)
+                    {
+                        videos.Add(_displayVideoList[index]);
+                    }
                 }
             }
             return videos;
         }
 
         /// <summary>
-        /// 最初の選択動画を取得(仮想モード対応)
+        /// 最初の選択動画を取得 (仮想モード/サムネモード両対応)
         /// </summary>
         private VideoInfo? GetFirstSelectedVideo()
         {
-            if (listViewVideos.SelectedIndices.Count > 0)
+            if (listViewVideos.SelectedIndices.Count == 0) return null;
+            int index = listViewVideos.SelectedIndices[0];
+            bool tileMode = !listViewVideos.VirtualMode;
+            if (tileMode)
             {
-                var index = listViewVideos.SelectedIndices[0];
+                if (index >= 0 && index < listViewVideos.Items.Count
+                    && listViewVideos.Items[index].Tag is VideoInfo v)
+                    return v;
+            }
+            else
+            {
                 if (index >= 0 && index < _displayVideoList.Count)
-                {
                     return _displayVideoList[index];
-                }
             }
             return null;
         }
@@ -1790,164 +1877,115 @@ namespace IwaraDownloader.Forms
         #region Video Context Menu
 
         /// <summary>
-        /// 右クリックでコンテキストメニューを自前表示 (ContextMenuStrip 自動紐付けは外してある)。
-        /// 仮想モード ListView では HitTest が返す Item.Selected 設定が反映されないので、
-        /// SelectedIndices を直接操作してから手動で contextMenuVideo.Show() を呼ぶ。
+        /// 右クリック時に項目を選択するための補助。WinForms 標準だと ContextMenuStrip 自動表示時に
+        /// 行が選択されない (空クリックでもメニュー出る) ので、MouseDown で行を選択しておく。
+        /// 仮想モード ListView では SelectedIndices を直接操作することで確実に反映される。
         /// </summary>
-        private void listViewVideos_MouseUp(object? sender, MouseEventArgs e)
+        private void listViewVideos_MouseDown(object? sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Right) return;
-
             var hit = listViewVideos.HitTest(e.X, e.Y);
-            if (hit?.Item != null && hit.Item.Index >= 0)
+            if (hit?.Item == null || hit.Item.Index < 0) return;
+
+            int idx = hit.Item.Index;
+            foreach (int si in listViewVideos.SelectedIndices)
             {
-                int idx = hit.Item.Index;
-                bool alreadySelected = false;
-                foreach (int si in listViewVideos.SelectedIndices)
-                {
-                    if (si == idx) { alreadySelected = true; break; }
-                }
-                if (!alreadySelected)
-                {
-                    listViewVideos.SelectedIndices.Clear();
-                    listViewVideos.SelectedIndices.Add(idx);
-                }
-                contextMenuVideo.Show(listViewVideos, e.X, e.Y);
+                if (si == idx) return;
             }
-            else if (listViewVideos.SelectedIndices.Count > 0)
-            {
-                // 空白での右クリック: 既存選択があるなら表示
-                contextMenuVideo.Show(listViewVideos, e.X, e.Y);
-            }
-            // 空白 + 選択なし: 何もしない (メニュー非表示)
+            listViewVideos.SelectedIndices.Clear();
+            listViewVideos.SelectedIndices.Add(idx);
         }
 
         /// <summary>
-        /// 動画コンテキストメニュー表示前に選択動画のステータスに応じて項目を動的に切替
+        /// Opening: 選択状態に応じて Visible トグルだけ行う (Items 操作は一切しない → AutoClose 正常)
+        /// 項目自体は Designer で固定定義済み。
         /// </summary>
-        private void contextMenuVideo_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
+        private void OnVideoContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            // 選択ゼロでも、マウス位置に項目があれば自動選択
+            if (listViewVideos.SelectedIndices.Count == 0)
+            {
+                var mousePos = listViewVideos.PointToClient(Control.MousePosition);
+                var hit = listViewVideos.HitTest(mousePos);
+                if (hit?.Item != null && hit.Item.Index >= 0)
+                {
+                    listViewVideos.SelectedIndices.Add(hit.Item.Index);
+                }
+            }
+
             var selected = GetSelectedVideos();
             if (selected.Count == 0)
             {
-                // 何も選択されていない場合はメニューを表示しない
                 e.Cancel = true;
                 return;
             }
 
             bool isSingle = selected.Count == 1;
             var single = isSingle ? selected[0] : null;
-
-            // ステータス集計（複数選択時にどれかが該当すれば true）
             bool hasPending = selected.Any(v => v.Status == DownloadStatus.Pending);
             bool hasDownloading = selected.Any(v => v.Status == DownloadStatus.Downloading);
             bool hasCompleted = selected.Any(v => v.Status == DownloadStatus.Completed);
             bool hasFailed = selected.Any(v => v.Status == DownloadStatus.Failed);
             bool hasPaused = selected.Any(v => v.Status == DownloadStatus.Paused);
             bool hasSkipped = selected.Any(v => v.Status == DownloadStatus.Skipped);
-
-            // ダウンロード可能：完了・進行中・キュー中 以外
             bool canDownload = selected.Any(v =>
                 v.Status != DownloadStatus.Completed &&
                 v.Status != DownloadStatus.Downloading &&
                 v.Status != DownloadStatus.Pending);
-
-            // キャンセル可能：DL中 or キュー中 or 一時停止
             bool canCancel = hasPending || hasDownloading || hasPaused;
-
-            // 再ダウンロード: 完了済みのみ (誤操作防止に確認ダイアログを後で出す)
-            bool canReDownload = hasCompleted;
-
-            // タイトル不完全（情報再取得対象）
             bool canRefreshInfo = selected.Any(v =>
                 string.IsNullOrEmpty(v.Title) || v.Title.StartsWith("Video "));
-
-            // ファイル存在チェック：完了が含まれる場合
-            bool canCheckFile = hasCompleted;
-
-            // 再生・フォルダ：単一選択 + 完了 + LocalFilePath が存在
-            bool canPlay = isSingle
-                && single!.Status == DownloadStatus.Completed
-                && !string.IsNullOrEmpty(single.LocalFilePath)
-                && File.Exists(single.LocalFilePath);
+            bool canPlay = isSingle && single!.Status == DownloadStatus.Completed
+                && !string.IsNullOrEmpty(single.LocalFilePath) && File.Exists(single.LocalFilePath);
             bool canOpenFolder = isSingle
-                && !string.IsNullOrEmpty(single!.LocalFilePath)
-                && File.Exists(single.LocalFilePath);
-
-            // ページを開く：単一選択 + URL あり
+                && !string.IsNullOrEmpty(single!.LocalFilePath) && File.Exists(single.LocalFilePath);
             bool canOpenPage = isSingle && !string.IsNullOrEmpty(single!.Url);
-
-            // 投稿者ページを開く: 単一選択 + AuthorUsername あり
             bool canOpenAuthor = isSingle && !string.IsNullOrEmpty(single!.AuthorUsername);
 
-            // 詳細情報: 単一選択時のみ
-            bool canShowDetails = isSingle;
-
-            // 表示切替
             menuVidDownload.Visible = canDownload;
-            menuVidDownload.Text = hasFailed && !hasSkipped
-                ? "ダウンロード (失敗をリトライ含む)"
-                : "ダウンロード";
-
+            menuVidDownload.Text = hasFailed && !hasSkipped ? "ダウンロード (失敗をリトライ含む)" : "ダウンロード";
             menuVidCancel.Visible = canCancel;
             menuVidRetryFailed.Visible = hasFailed;
-            menuVidReDownload.Visible = canReDownload;
+            menuVidReDownload.Visible = hasCompleted;
             menuVidRefreshInfo.Visible = canRefreshInfo;
-            menuVidCheckFileExists.Visible = canCheckFile;
-
+            menuVidCheckFileExists.Visible = hasCompleted;
             menuVidPlay.Visible = canPlay;
             menuVidOpenFolder.Visible = canOpenFolder;
-
             menuVidOpenPage.Visible = canOpenPage;
             menuVidOpenAuthor.Visible = canOpenAuthor;
             menuVidCopyUrl.Visible = true;
             menuVidCopyTitle.Visible = true;
-
-            menuVidDetails.Visible = canShowDetails;
+            menuVidDetails.Visible = isSingle;
             menuVidDelete.Visible = true;
 
-            // セパレータ動的調整
-            AdjustSeparatorVisibility(contextMenuVideo);
-
-            // 表示可能な実体項目が0件ならキャンセル
-            bool anyVisible = false;
-            foreach (ToolStripItem item in contextMenuVideo.Items)
-            {
-                if (item is ToolStripMenuItem && item.Visible)
-                {
-                    anyVisible = true;
-                    break;
-                }
-            }
-            if (!anyVisible) e.Cancel = true;
+            AdjustSeparators();
+            // 注意: Opening 中は ContextMenuStrip がまだ表示前なので、
+            // 子項目の .Visible は親が非表示のため常に false を返す。
+            // 表示判定に使うなら .Available を見る必要がある。
+            // ここではコピー系/削除が常に有効なので空判定は不要。
         }
 
-        /// <summary>
-        /// セパレータの前後に可視メニューがない場合、セパレータも非表示にする
-        /// </summary>
-        private static void AdjustSeparatorVisibility(ContextMenuStrip menu)
+        private void AdjustSeparators()
         {
-            var items = menu.Items;
+            var items = contextMenuVideo.Items;
             for (int i = 0; i < items.Count; i++)
             {
                 if (items[i] is not ToolStripSeparator) continue;
-
-                // 直前に可視メニュー (実体項目) があるか
-                bool prevVisible = false;
+                // Opening 中は親が未表示のため .Visible は false を返す。
+                // 設定値そのものは .Available で取れる。
+                bool prev = false;
                 for (int j = i - 1; j >= 0; j--)
                 {
                     if (items[j] is ToolStripSeparator) break;
-                    if (items[j].Visible) { prevVisible = true; break; }
+                    if (items[j].Available) { prev = true; break; }
                 }
-                // 直後に可視メニューがあるか
-                bool nextVisible = false;
+                bool next = false;
                 for (int j = i + 1; j < items.Count; j++)
                 {
                     if (items[j] is ToolStripSeparator) break;
-                    if (items[j].Visible) { nextVisible = true; break; }
+                    if (items[j].Available) { next = true; break; }
                 }
-
-                items[i].Visible = prevVisible && nextVisible;
+                items[i].Visible = prev && next;
             }
         }
 
@@ -2348,8 +2386,12 @@ namespace IwaraDownloader.Forms
 
         private void menuExit_Click(object sender, EventArgs e)
         {
+            // Application.Exit() を直叩きすると FormClosing 経由の
+            // メタデータ書き込み待機 (MetadataService.WaitForWritesToComplete)
+            // が走らず、mp4 タグ書き込み中なら moov atom が破損する可能性がある。
+            // _isClosing=true により MinimizeToTray 分岐をバイパスして FormClosing 経由で確実に終了する。
             _isClosing = true;
-            Application.Exit();
+            this.Close();
         }
 
         private void ShowMainWindow()
@@ -2372,6 +2414,26 @@ namespace IwaraDownloader.Forms
                 return;
             }
             lblStatus.Text = message;
+        }
+
+        // DL イベント高頻度時 (毎チャンクごとに発火) の DB 全件スキャン抑制用 debounce
+        private System.Windows.Forms.Timer? _downloadCountTimer;
+        private const int DownloadCountDebounceMs = 500;
+        private void ScheduleDownloadCountUpdate()
+        {
+            if (_isClosing || IsDisposed) return;
+            if (_downloadCountTimer == null)
+            {
+                _downloadCountTimer = new System.Windows.Forms.Timer { Interval = DownloadCountDebounceMs };
+                _downloadCountTimer.Tick += (_, _) =>
+                {
+                    _downloadCountTimer!.Stop();
+                    try { UpdateDownloadCount(); }
+                    catch (Exception ex) { _logger.Error("UpdateDownloadCount 例外", ex); }
+                };
+            }
+            _downloadCountTimer.Stop();
+            _downloadCountTimer.Start();
         }
 
         private void UpdateDownloadCount()
@@ -2497,7 +2559,10 @@ namespace IwaraDownloader.Forms
             else if (e.KeyCode == Keys.Enter)
             {
                 // Enterで動画リストにフォーカス移動(仮想モード対応)
-                if (_displayVideoList.Count > 0)
+                int max = listViewVideos.VirtualMode
+                    ? listViewVideos.VirtualListSize
+                    : listViewVideos.Items.Count;
+                if (max > 0)
                 {
                     listViewVideos.Focus();
                     listViewVideos.SelectedIndices.Clear();
@@ -2738,9 +2803,18 @@ namespace IwaraDownloader.Forms
         private HashSet<string> GetSelectedVideoIds()
         {
             var selectedIds = new HashSet<string>();
+            bool isTile = !listViewVideos.VirtualMode;
             foreach (int index in listViewVideos.SelectedIndices)
             {
-                if (index >= 0 && index < _displayVideoList.Count)
+                if (isTile)
+                {
+                    if (index >= 0 && index < listViewVideos.Items.Count
+                        && listViewVideos.Items[index].Tag is VideoInfo v)
+                    {
+                        selectedIds.Add(v.VideoId);
+                    }
+                }
+                else if (index >= 0 && index < _displayVideoList.Count)
                 {
                     selectedIds.Add(_displayVideoList[index].VideoId);
                 }
@@ -2756,9 +2830,16 @@ namespace IwaraDownloader.Forms
             if (selectedVideoIds.Count == 0) return;
 
             listViewVideos.SelectedIndices.Clear();
-            for (int i = 0; i < _displayVideoList.Count; i++)
+            // サムネモードは Items.Count が上限、詳細は _displayVideoList が上限
+            int max = listViewVideos.VirtualMode
+                ? _displayVideoList.Count
+                : listViewVideos.Items.Count;
+            for (int i = 0; i < max; i++)
             {
-                if (selectedVideoIds.Contains(_displayVideoList[i].VideoId))
+                string? id = listViewVideos.VirtualMode
+                    ? _displayVideoList[i].VideoId
+                    : (listViewVideos.Items[i].Tag as VideoInfo)?.VideoId;
+                if (id != null && selectedVideoIds.Contains(id))
                 {
                     listViewVideos.SelectedIndices.Add(i);
                 }
@@ -2766,23 +2847,25 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 特定の動画IDの行を再描画
+        /// 特定の動画IDの行を再描画 (仮想/非仮想モード両対応)
         /// </summary>
         private void InvalidateVideoItem(string videoId)
         {
             for (int i = 0; i < _displayVideoList.Count; i++)
             {
-                if (_displayVideoList[i].VideoId == videoId)
+                if (_displayVideoList[i].VideoId != videoId) continue;
+
+                if (listViewVideos.VirtualMode)
                 {
-                    // キャッシュを無効化
                     if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
-                    {
                         _itemCache[i - _cacheStartIndex] = CreateVideoListItem(_displayVideoList[i]);
-                    }
-                    // 該当行を再描画
                     listViewVideos.RedrawItems(i, i, false);
-                    break;
                 }
+                else if (i >= 0 && i < listViewVideos.Items.Count)
+                {
+                    listViewVideos.Items[i] = CreateVideoListItem(_displayVideoList[i]);
+                }
+                break;
             }
         }
 
@@ -2983,51 +3066,59 @@ namespace IwaraDownloader.Forms
 
         private async void OnClipboardChanged()
         {
-            // 起動直後やシャットダウン中の保護
-            if (IsDisposed || !IsHandleCreated || _isClosing) return;
-            if (!btnClipMonitor.Checked) return;
-
-            string text;
+            // async void: トップレベル例外を漏らさない (UI スレッドに上がると process crash)
             try
             {
-                if (!Clipboard.ContainsText()) return;
-                text = Clipboard.GetText() ?? "";
+                // 起動直後やシャットダウン中の保護
+                if (IsDisposed || !IsHandleCreated || _isClosing) return;
+                if (!btnClipMonitor.Checked) return;
+
+                string text;
+                try
+                {
+                    if (!Clipboard.ContainsText()) return;
+                    text = Clipboard.GetText() ?? "";
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Clipboard read failed: {ex.Message}");
+                    return;
+                }
+
+                text = text.Trim();
+                if (string.IsNullOrEmpty(text)) return;
+
+                // 同じ文字列を連打されないように直前と比較
+                if (text == _lastProcessedClipboardText) return;
+
+                // iwara URL のみ反応 (動画 or プロフィール)
+                bool isVideo = Helpers.IsVideoUrl(text);
+                bool isUser = Helpers.IsUserProfileUrl(text);
+                if (!isVideo && !isUser) return;
+
+                _lastProcessedClipboardText = text;
+
+                // 既に DB に登録済みの動画なら通知だけしてキューには入れない
+                if (isVideo)
+                {
+                    var vid = Helpers.ExtractVideoIdFromUrl(text);
+                    if (!string.IsNullOrEmpty(vid) && _database.GetVideoByVideoId(vid) != null)
+                    {
+                        UpdateStatusBar($"クリップボード: 既に登録済み ({vid})");
+                        return;
+                    }
+                    UpdateStatusBar($"クリップボード検出: 動画追加中...");
+                    await AddVideoAsync(text);
+                }
+                else
+                {
+                    UpdateStatusBar($"クリップボード検出: チャンネル追加中...");
+                    await AddUserAsync(text);
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Clipboard read failed: {ex.Message}");
-                return;
-            }
-
-            text = text.Trim();
-            if (string.IsNullOrEmpty(text)) return;
-
-            // 同じ文字列を連打されないように直前と比較
-            if (text == _lastProcessedClipboardText) return;
-
-            // iwara URL のみ反応 (動画 or プロフィール)
-            bool isVideo = Helpers.IsVideoUrl(text);
-            bool isUser = Helpers.IsUserProfileUrl(text);
-            if (!isVideo && !isUser) return;
-
-            _lastProcessedClipboardText = text;
-
-            // 既に DB に登録済みの動画なら通知だけしてキューには入れない
-            if (isVideo)
-            {
-                var vid = Helpers.ExtractVideoIdFromUrl(text);
-                if (!string.IsNullOrEmpty(vid) && _database.GetVideoByVideoId(vid) != null)
-                {
-                    UpdateStatusBar($"クリップボード: 既に登録済み ({vid})");
-                    return;
-                }
-                UpdateStatusBar($"クリップボード検出: 動画追加中...");
-                await AddVideoAsync(text);
-            }
-            else
-            {
-                UpdateStatusBar($"クリップボード検出: チャンネル追加中...");
-                await AddUserAsync(text);
+                _logger.Error("OnClipboardChanged で予期せぬ例外", ex);
             }
         }
 
@@ -3049,24 +3140,74 @@ namespace IwaraDownloader.Forms
             SetVideoListViewMode(tileMode);
         }
 
+        // サムネモード時の安全な最大表示件数 (これ以上は UI 操作が重くなる)
+        private const int TileModeMaxItems = 500;
+
         /// <summary>
-        /// 表示モード切替 (詳細リスト ↔ サムネタイル)
+        /// 表示モード切替 (詳細リスト ↔ サムネタイル)。
+        /// VirtualMode / Items / SelectedIndices / VirtualListSize の更新順序が不正だと
+        /// "InvalidArgument index" の内部例外が出る。
+        /// 安全な順序: 選択クリア → サイズ 0 化 → モード切替 → 表示モード切替 → 投入。
         /// </summary>
         private void SetVideoListViewMode(bool tileMode)
         {
-            if (tileMode)
+            try
             {
-                EnsureThumbInfrastructure();
-                listViewVideos.LargeImageList = _thumbImageList;
-                listViewVideos.View = View.LargeIcon;
-                listViewVideos.TileSize = new Size(ThumbWidth + 8, ThumbHeight + 8);
+                listViewVideos.BeginUpdate();
+                try
+                {
+                    // どちらの方向でも、まず選択状態と Items / VirtualListSize を完全クリア
+                    listViewVideos.SelectedIndices.Clear();
+                    if (listViewVideos.VirtualMode)
+                    {
+                        listViewVideos.VirtualListSize = 0;  // VirtualMode true のとき先に 0 化
+                    }
+                    listViewVideos.Items.Clear();
+
+                    if (tileMode)
+                    {
+                        EnsureThumbInfrastructure();
+                        listViewVideos.VirtualMode = false;
+                        listViewVideos.LargeImageList = _thumbImageList;
+                        listViewVideos.View = View.LargeIcon;
+
+                        int count = _displayVideoList.Count;
+                        int limit = Math.Min(count, TileModeMaxItems);
+                        for (int i = 0; i < limit; i++)
+                        {
+                            try
+                            {
+                                listViewVideos.Items.Add(CreateVideoListItem(_displayVideoList[i]));
+                            }
+                            catch (Exception itemEx)
+                            {
+                                _logger.Warn($"Tile mode item add failed at {i}: {itemEx.GetType().Name}: {itemEx.Message}");
+                            }
+                        }
+
+                        if (count > limit)
+                            UpdateStatusBar($"サムネモード: 全{count}件中先頭{limit}件を表示中 (フィルタで絞ってください)");
+                        else
+                            UpdateStatusBar($"サムネモード: {limit}件");
+                    }
+                    else
+                    {
+                        listViewVideos.View = View.Details;
+                        listViewVideos.VirtualMode = true;
+                        listViewVideos.VirtualListSize = _displayVideoList.Count;
+                    }
+                }
+                finally { listViewVideos.EndUpdate(); }
+
+                ClearItemCache();
+                listViewVideos.Invalidate();
             }
-            else
+            catch (Exception ex)
             {
-                listViewVideos.View = View.Details;
+                _logger.Error($"SetVideoListViewMode({tileMode}) failed", ex);
+                MessageBox.Show($"表示モード切替でエラー:\n{ex.GetType().Name}: {ex.Message}",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            ClearItemCache();
-            listViewVideos.Invalidate();
         }
 
         /// <summary>サムネ用 ImageList とプレースホルダー画像を 1 回だけ用意する</summary>
@@ -3104,40 +3245,64 @@ namespace IwaraDownloader.Forms
         private void HandleThumbnailReady(string videoId)
         {
             if (_thumbImageList == null) return;
-            // 該当行を再描画 (RetrieveVirtualItem で再度 ImageKey 引き直す)
+
+            // ImageList に画像を追加 (TryGetCached 経由でメモリ/ディスクから読み込み)
+            if (!_thumbImageList.Images.ContainsKey(videoId))
+            {
+                var img = ThumbnailCacheService.Instance.TryGetCached(videoId);
+                if (img != null)
+                {
+                    try { _thumbImageList.Images.Add(videoId, img); }
+                    catch (Exception ex) { Debug.WriteLine($"ImageList add fail in ThumbReady: {ex.Message}"); }
+                }
+            }
+
+            // 該当行を再描画
             for (int i = 0; i < _displayVideoList.Count; i++)
             {
-                if (_displayVideoList[i].VideoId == videoId)
+                if (_displayVideoList[i].VideoId != videoId) continue;
+
+                if (listViewVideos.View == View.LargeIcon && !listViewVideos.VirtualMode)
                 {
+                    // サムネモード: 通常 ListView → 該当 Item の ImageKey を再セットして RedrawItems
+                    if (i < listViewVideos.Items.Count)
+                    {
+                        listViewVideos.Items[i].ImageKey = videoId;
+                        listViewVideos.RedrawItems(i, i, false);
+                    }
+                }
+                else
+                {
+                    // 仮想モード Details: キャッシュ更新 + RedrawItems
                     if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
                     {
                         _itemCache[i - _cacheStartIndex] = CreateVideoListItem(_displayVideoList[i]);
                     }
                     listViewVideos.RedrawItems(i, i, false);
-                    break;
                 }
+                break;
             }
         }
 
-        /// <summary>サムネを ImageList に確実に入れる (まだ無ければ DL 開始)。返り値はキー名。</summary>
+        /// <summary>サムネを ImageList に確実に入れる (UI スレッドで I/O ゼロ)。返り値はキー名。
+        /// メモリキャッシュにあれば即追加、無ければバックグラウンドでロードして
+        /// ThumbnailReady で UI 更新する。</summary>
         private string EnsureThumbImageKey(VideoInfo video)
         {
             if (_thumbImageList == null) return "__placeholder__";
             var key = video.VideoId;
             if (_thumbImageList.Images.ContainsKey(key)) return key;
 
-            // メモリ/ディスクキャッシュにあれば即追加
-            var cached = ThumbnailCacheService.Instance.TryGetCached(video.VideoId);
-            if (cached != null)
+            // メモリキャッシュのみチェック (I/O しない、UI スレッド即時)
+            var mem = ThumbnailCacheService.Instance.TryGetMemoryCached(video.VideoId);
+            if (mem != null)
             {
-                try { _thumbImageList.Images.Add(key, cached); return key; }
+                try { _thumbImageList.Images.Add(key, mem); return key; }
                 catch (Exception ex) { Debug.WriteLine($"ImageList add fail: {ex.Message}"); }
             }
 
-            // 無ければ DL 開始 (完了で ThumbnailReady → 再描画)
-            if (!string.IsNullOrEmpty(video.ThumbnailUrl))
-                ThumbnailCacheService.Instance.RequestAsync(video.VideoId, video.ThumbnailUrl);
-
+            // ディスク or ネット をバックグラウンドでロード → ThumbnailReady → HandleThumbnailReady
+            ThumbnailCacheService.Instance.EnsureLoadedAsync(video.VideoId, video.ThumbnailUrl);
             return "__placeholder__";
         }
 

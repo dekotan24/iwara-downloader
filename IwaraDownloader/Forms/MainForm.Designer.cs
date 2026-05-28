@@ -109,26 +109,9 @@ namespace IwaraDownloader.Forms
             this.menuChSeparator3 = new ToolStripSeparator();
             this.menuChDelete = new ToolStripMenuItem();
 
-            // コンテキストメニュー(動画)
+            // コンテキストメニュー(動画) - 空の容器のみ宣言。
+            // 項目は Opening イベントで毎回動的に組み立てる (BuildVideoContextMenu)
             this.contextMenuVideo = new ContextMenuStrip(this.components);
-            this.menuVidDownload = new ToolStripMenuItem();
-            this.menuVidCancel = new ToolStripMenuItem();
-            this.menuVidRetryFailed = new ToolStripMenuItem();
-            this.menuVidReDownload = new ToolStripMenuItem();
-            this.menuVidRefreshInfo = new ToolStripMenuItem();
-            this.menuVidCheckFileExists = new ToolStripMenuItem();
-            this.menuVidSeparator1 = new ToolStripSeparator();
-            this.menuVidPlay = new ToolStripMenuItem();
-            this.menuVidOpenFolder = new ToolStripMenuItem();
-            this.menuVidSeparator2 = new ToolStripSeparator();
-            this.menuVidOpenPage = new ToolStripMenuItem();
-            this.menuVidOpenAuthor = new ToolStripMenuItem();
-            this.menuVidCopyUrl = new ToolStripMenuItem();
-            this.menuVidCopyTitle = new ToolStripMenuItem();
-            this.menuVidSeparator3 = new ToolStripSeparator();
-            this.menuVidDetails = new ToolStripMenuItem();
-            this.menuVidSeparator4 = new ToolStripSeparator();
-            this.menuVidDelete = new ToolStripMenuItem();
 
             // ImageList
             this.imageListTree = new ImageList(this.components);
@@ -328,9 +311,7 @@ namespace IwaraDownloader.Forms
                 this.colVideoSize,
                 this.colVideoDate
             });
-            // ContextMenuStrip は自前で MouseUp 内で Show() するため、自動紐付けは外す
-            // (仮想モード ListView の SelectedIndices 更新と自動 ContextMenu の競合回避)
-            // this.listViewVideos.ContextMenuStrip = this.contextMenuVideo;
+            this.listViewVideos.ContextMenuStrip = this.contextMenuVideo;
             this.listViewVideos.Dock = DockStyle.Fill;
             this.listViewVideos.FullRowSelect = true;
             this.listViewVideos.GridLines = true;
@@ -350,7 +331,7 @@ namespace IwaraDownloader.Forms
             this.listViewVideos.ColumnClick += new ColumnClickEventHandler(this.listViewVideos_ColumnClick);
             this.listViewVideos.MouseDoubleClick += new MouseEventHandler(this.listViewVideos_MouseDoubleClick);
             this.listViewVideos.KeyDown += new KeyEventHandler(this.listViewVideos_KeyDown);
-            this.listViewVideos.MouseUp += new MouseEventHandler(this.listViewVideos_MouseUp);
+            this.listViewVideos.MouseDown += new MouseEventHandler(this.listViewVideos_MouseDown);
             this.listViewVideos.SelectedIndexChanged += new EventHandler(this.listViewVideos_SelectedIndexChanged);
 
             //
@@ -872,174 +853,80 @@ namespace IwaraDownloader.Forms
             this.menuChDelete.Text = "削除";
             this.menuChDelete.Click += new EventHandler(this.menuChDelete_Click);
 
-            // 
-            // contextMenuVideo
-            // 
-            this.contextMenuVideo.Items.AddRange(new ToolStripItem[] {
-                this.menuVidDownload,
-                this.menuVidCancel,
-                this.menuVidRetryFailed,
-                this.menuVidReDownload,
-                this.menuVidRefreshInfo,
-                this.menuVidCheckFileExists,
-                this.menuVidSeparator1,
-                this.menuVidPlay,
-                this.menuVidOpenFolder,
-                this.menuVidSeparator2,
-                this.menuVidOpenPage,
-                this.menuVidOpenAuthor,
-                this.menuVidCopyUrl,
-                this.menuVidCopyTitle,
-                this.menuVidSeparator3,
-                this.menuVidDetails,
-                this.menuVidSeparator4,
-                this.menuVidDelete
-            });
-            this.contextMenuVideo.Name = "contextMenuVideo";
-            this.contextMenuVideo.Size = new Size(180, 264);
-            this.contextMenuVideo.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuVideo_Opening);
+            //
+            // contextMenuVideo (動画一覧の右クリックメニュー)
+            //   項目は Designer で固定定義 → Opening では Visible トグルのみ
+            //   動的 Items.AddRange だと AutoClose / Click イベントが壊れるため
+            //
+            this.menuVidDownload = new ToolStripMenuItem();
+            this.menuVidCancel = new ToolStripMenuItem();
+            this.menuVidRetryFailed = new ToolStripMenuItem();
+            this.menuVidReDownload = new ToolStripMenuItem();
+            this.menuVidRefreshInfo = new ToolStripMenuItem();
+            this.menuVidCheckFileExists = new ToolStripMenuItem();
+            this.menuVidSep1 = new ToolStripSeparator();
+            this.menuVidPlay = new ToolStripMenuItem();
+            this.menuVidOpenFolder = new ToolStripMenuItem();
+            this.menuVidSep2 = new ToolStripSeparator();
+            this.menuVidOpenPage = new ToolStripMenuItem();
+            this.menuVidOpenAuthor = new ToolStripMenuItem();
+            this.menuVidCopyUrl = new ToolStripMenuItem();
+            this.menuVidCopyTitle = new ToolStripMenuItem();
+            this.menuVidSep3 = new ToolStripSeparator();
+            this.menuVidDetails = new ToolStripMenuItem();
+            this.menuVidSep4 = new ToolStripSeparator();
+            this.menuVidDelete = new ToolStripMenuItem();
 
-            // 
-            // menuVidDownload
-            // 
-            this.menuVidDownload.Name = "menuVidDownload";
-            this.menuVidDownload.Size = new Size(180, 22);
+            this.contextMenuVideo.Name = "contextMenuVideo";
+            this.contextMenuVideo.Items.AddRange(new ToolStripItem[]
+            {
+                this.menuVidDownload, this.menuVidCancel, this.menuVidRetryFailed,
+                this.menuVidReDownload, this.menuVidRefreshInfo, this.menuVidCheckFileExists,
+                this.menuVidSep1,
+                this.menuVidPlay, this.menuVidOpenFolder,
+                this.menuVidSep2,
+                this.menuVidOpenPage, this.menuVidOpenAuthor, this.menuVidCopyUrl, this.menuVidCopyTitle,
+                this.menuVidSep3,
+                this.menuVidDetails,
+                this.menuVidSep4,
+                this.menuVidDelete,
+            });
+            this.contextMenuVideo.Opening += new System.ComponentModel.CancelEventHandler(this.OnVideoContextMenuOpening);
+
             this.menuVidDownload.Text = "ダウンロード";
             this.menuVidDownload.ShortcutKeyDisplayString = "Ctrl+D";
             this.menuVidDownload.Click += new EventHandler(this.menuVidDownload_Click);
-
-            // 
-            // menuVidCancel
-            // 
-            this.menuVidCancel.Name = "menuVidCancel";
-            this.menuVidCancel.Size = new Size(180, 22);
             this.menuVidCancel.Text = "キャンセル";
             this.menuVidCancel.Click += new EventHandler(this.menuVidCancel_Click);
-
-            //
-            // menuVidRetryFailed
-            //
-            this.menuVidRetryFailed.Name = "menuVidRetryFailed";
-            this.menuVidRetryFailed.Size = new Size(180, 22);
             this.menuVidRetryFailed.Text = "失敗を再試行";
             this.menuVidRetryFailed.Click += new EventHandler(this.menuVidRetryFailed_Click);
-
-            //
-            // menuVidReDownload
-            //
-            this.menuVidReDownload.Name = "menuVidReDownload";
-            this.menuVidReDownload.Size = new Size(180, 22);
             this.menuVidReDownload.Text = "再ダウンロード...";
             this.menuVidReDownload.Click += new EventHandler(this.menuVidReDownload_Click);
-
-            //
-            // menuVidRefreshInfo
-            //
-            this.menuVidRefreshInfo.Name = "menuVidRefreshInfo";
-            this.menuVidRefreshInfo.Size = new Size(159, 22);
             this.menuVidRefreshInfo.Text = "情報再取得";
             this.menuVidRefreshInfo.Click += new EventHandler(this.menuVidRefreshInfo_Click);
-
-            // 
-            // menuVidCheckFileExists
-            // 
-            this.menuVidCheckFileExists.Name = "menuVidCheckFileExists";
-            this.menuVidCheckFileExists.Size = new Size(180, 22);
             this.menuVidCheckFileExists.Text = "ファイル存在チェック";
             this.menuVidCheckFileExists.Click += new EventHandler(this.menuVidCheckFileExists_Click);
-
-            // 
-            // menuVidSeparator1
-            // 
-            this.menuVidSeparator1.Name = "menuVidSeparator1";
-            this.menuVidSeparator1.Size = new Size(156, 6);
-
-            // 
-            // menuVidPlay
-            // 
-            this.menuVidPlay.Name = "menuVidPlay";
-            this.menuVidPlay.Size = new Size(159, 22);
             this.menuVidPlay.Text = "再生";
             this.menuVidPlay.Click += new EventHandler(this.menuVidPlay_Click);
-
-            // 
-            // menuVidOpenFolder
-            // 
-            this.menuVidOpenFolder.Name = "menuVidOpenFolder";
-            this.menuVidOpenFolder.Size = new Size(159, 22);
             this.menuVidOpenFolder.Text = "フォルダを開く";
             this.menuVidOpenFolder.Click += new EventHandler(this.menuVidOpenFolder_Click);
-
-            // 
-            // menuVidSeparator2
-            // 
-            this.menuVidSeparator2.Name = "menuVidSeparator2";
-            this.menuVidSeparator2.Size = new Size(156, 6);
-
-            //
-            // menuVidOpenPage
-            //
-            this.menuVidOpenPage.Name = "menuVidOpenPage";
-            this.menuVidOpenPage.Size = new Size(159, 22);
             this.menuVidOpenPage.Text = "ページを開く";
             this.menuVidOpenPage.Click += new EventHandler(this.menuVidOpenPage_Click);
-
-            //
-            // menuVidOpenAuthor
-            //
-            this.menuVidOpenAuthor.Name = "menuVidOpenAuthor";
-            this.menuVidOpenAuthor.Size = new Size(180, 22);
             this.menuVidOpenAuthor.Text = "投稿者のページを開く";
             this.menuVidOpenAuthor.Click += new EventHandler(this.menuVidOpenAuthor_Click);
-
-            //
-            // menuVidCopyUrl
-            //
-            this.menuVidCopyUrl.Name = "menuVidCopyUrl";
-            this.menuVidCopyUrl.Size = new Size(180, 22);
             this.menuVidCopyUrl.Text = "URLをコピー";
             this.menuVidCopyUrl.Click += new EventHandler(this.menuVidCopyUrl_Click);
-
-            // 
-            // menuVidCopyTitle
-            // 
-            this.menuVidCopyTitle.Name = "menuVidCopyTitle";
-            this.menuVidCopyTitle.Size = new Size(180, 22);
             this.menuVidCopyTitle.Text = "タイトルをコピー";
             this.menuVidCopyTitle.Click += new EventHandler(this.menuVidCopyTitle_Click);
-
-            //
-            // menuVidSeparator3
-            //
-            this.menuVidSeparator3.Name = "menuVidSeparator3";
-            this.menuVidSeparator3.Size = new Size(156, 6);
-
-            //
-            // menuVidDetails
-            //
-            this.menuVidDetails.Name = "menuVidDetails";
-            this.menuVidDetails.Size = new Size(180, 22);
             this.menuVidDetails.Text = "詳細情報...";
             this.menuVidDetails.Click += new EventHandler(this.menuVidDetails_Click);
-
-            //
-            // menuVidSeparator4
-            //
-            this.menuVidSeparator4.Name = "menuVidSeparator4";
-            this.menuVidSeparator4.Size = new Size(156, 6);
-
-            //
-            // menuVidDelete
-            //
-            this.menuVidDelete.Name = "menuVidDelete";
-            this.menuVidDelete.Size = new Size(180, 22);
             this.menuVidDelete.Text = "削除";
             this.menuVidDelete.ShortcutKeyDisplayString = "Delete";
             this.menuVidDelete.Click += new EventHandler(this.menuVidDelete_Click);
 
-            // 
+            //
             // imageListTree
-            // 
+            //
             this.imageListTree.ColorDepth = ColorDepth.Depth32Bit;
             this.imageListTree.ImageSize = new Size(16, 16);
             this.imageListTree.TransparentColor = Color.Transparent;
@@ -1159,24 +1046,16 @@ namespace IwaraDownloader.Forms
         private ToolStripSeparator menuChSeparator3;
         private ToolStripMenuItem menuChDelete;
         private ContextMenuStrip contextMenuVideo;
-        private ToolStripMenuItem menuVidDownload;
-        private ToolStripMenuItem menuVidCancel;
-        private ToolStripMenuItem menuVidRetryFailed;
-        private ToolStripMenuItem menuVidReDownload;
-        private ToolStripMenuItem menuVidRefreshInfo;
-        private ToolStripSeparator menuVidSeparator1;
-        private ToolStripMenuItem menuVidPlay;
-        private ToolStripMenuItem menuVidOpenFolder;
-        private ToolStripSeparator menuVidSeparator2;
-        private ToolStripMenuItem menuVidOpenPage;
-        private ToolStripMenuItem menuVidOpenAuthor;
-        private ToolStripMenuItem menuVidCopyUrl;
-        private ToolStripMenuItem menuVidCopyTitle;
-        private ToolStripSeparator menuVidSeparator3;
+        private ToolStripMenuItem menuVidDownload, menuVidCancel, menuVidRetryFailed, menuVidReDownload;
+        private ToolStripMenuItem menuVidRefreshInfo, menuVidCheckFileExists;
+        private ToolStripSeparator menuVidSep1;
+        private ToolStripMenuItem menuVidPlay, menuVidOpenFolder;
+        private ToolStripSeparator menuVidSep2;
+        private ToolStripMenuItem menuVidOpenPage, menuVidOpenAuthor, menuVidCopyUrl, menuVidCopyTitle;
+        private ToolStripSeparator menuVidSep3;
         private ToolStripMenuItem menuVidDetails;
-        private ToolStripSeparator menuVidSeparator4;
+        private ToolStripSeparator menuVidSep4;
         private ToolStripMenuItem menuVidDelete;
-        private ToolStripMenuItem menuVidCheckFileExists;
         private ImageList imageListTree;
         private Panel panelVideoFilter;
         private TextBox txtVideoFilter;

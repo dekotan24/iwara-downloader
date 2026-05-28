@@ -25,6 +25,7 @@ namespace IwaraDownloader.Forms
         private void PopulateFields()
         {
             txtTitle.Text = _video.Title;
+            txtSource.Text = GetSourceLabel(_video);
             txtAuthor.Text = _video.AuthorUsername;
             txtVideoId.Text = _video.VideoId;
             txtFileUuid.Text = _video.FileUuid;
@@ -45,6 +46,27 @@ namespace IwaraDownloader.Forms
             btnOpenUrl.Enabled = !string.IsNullOrEmpty(_video.Url);
             btnOpenFile.Enabled = !string.IsNullOrEmpty(_video.LocalFilePath)
                                 && System.IO.File.Exists(_video.LocalFilePath);
+        }
+
+        /// <summary>
+        /// ソース表示用 (iwara.tv / iwara.ai / YouTube / niconico 等)。
+        /// MainForm.GetVideoSourceLabel と同じロジック。
+        /// </summary>
+        private static string GetSourceLabel(VideoInfo v)
+        {
+            if (!v.IsExternal)
+            {
+                if (string.Equals(v.Site, Helpers.SiteAi, StringComparison.OrdinalIgnoreCase))
+                    return "iwara.ai";
+                return "iwara.tv";
+            }
+            var url = v.EmbedUrl?.ToLowerInvariant() ?? string.Empty;
+            if (url.Contains("youtube.com") || url.Contains("youtu.be")) return "YouTube";
+            if (url.Contains("vimeo.com")) return "Vimeo";
+            if (url.Contains("twitter.com") || url.Contains("x.com")) return "X/Twitter";
+            if (url.Contains("nicovideo.jp")) return "ニコニコ";
+            if (url.Contains("bilibili.com")) return "Bilibili";
+            return "外部";
         }
 
         private static string GetStatusText(DownloadStatus status) => status switch

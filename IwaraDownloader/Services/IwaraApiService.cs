@@ -248,17 +248,14 @@ namespace IwaraDownloader.Services
             }
 
             var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
-            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\"")); 
-            
-            if (!string.IsNullOrEmpty(_token))
-            {
-                allArgs.Add("--token");
-                allArgs.Add($"\"{_token}\"");
-            }
+            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
+
+            // トークンは環境変数 IWARA_TOKEN 経由で渡す (tasklist /v / WMI で他プロセスから
+            // コマンドラインを読まれた時の JWT 漏洩を防ぐ)。Python 側は環境変数フォールバック対応済み。
 
             // レート制限設定を追加
             allArgs.AddRange(GetRateLimitArgs());
-            
+
             // バックオフ無効の場合
             if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
             {
@@ -281,8 +278,13 @@ namespace IwaraDownloader.Services
                 RedirectStandardError = true,
                 CreateNoWindow = true,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
+                StandardErrorEncoding = System.Text.Encoding.UTF8,
                 WorkingDirectory = _appDir
             };
+            if (!string.IsNullOrEmpty(_token))
+            {
+                psi.EnvironmentVariables["IWARA_TOKEN"] = _token;
+            }
 
             Debug.WriteLine($"Running: {PythonPath} {psi.Arguments}");
 
@@ -316,6 +318,7 @@ namespace IwaraDownloader.Services
             };
 
             process.Start();
+            Utils.ChildProcessJob.AssignProcess(process); // 親死亡で自動 Kill
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
@@ -544,6 +547,7 @@ namespace IwaraDownloader.Services
                     AuthorUsername = GetString(root, "author_username"),
                     AuthorName = GetString(root, "author_name"),
                     Rating = GetString(root, "rating"),
+                    ThumbnailUrl = GetString(root, "thumbnail"),
                 };
             }
 
@@ -566,6 +570,7 @@ namespace IwaraDownloader.Services
             public string? AuthorUsername { get; set; }
             public string? AuthorName { get; set; }
             public string? Rating { get; set; }
+            public string? ThumbnailUrl { get; set; }
             public string? Error { get; set; }
 
             /// <summary>
@@ -684,11 +689,7 @@ namespace IwaraDownloader.Services
             var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
             allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
 
-            if (!string.IsNullOrEmpty(_token))
-            {
-                allArgs.Add("--token");
-                allArgs.Add($"\"{_token}\"");
-            }
+            // トークンは環境変数経由 (コマンドライン引数からの漏洩防止)
 
             if (!string.IsNullOrEmpty(site))
             {
@@ -705,8 +706,13 @@ namespace IwaraDownloader.Services
                 RedirectStandardError = true,
                 CreateNoWindow = true,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
+                StandardErrorEncoding = System.Text.Encoding.UTF8,
                 WorkingDirectory = _appDir
             };
+            if (!string.IsNullOrEmpty(_token))
+            {
+                psi.EnvironmentVariables["IWARA_TOKEN"] = _token;
+            }
 
             using var process = new Process { StartInfo = psi };
             var output = new System.Text.StringBuilder();
@@ -745,6 +751,7 @@ namespace IwaraDownloader.Services
             };
 
             process.Start();
+            Utils.ChildProcessJob.AssignProcess(process); // 親死亡で自動 Kill
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
@@ -904,6 +911,7 @@ namespace IwaraDownloader.Services
             };
 
             process.Start();
+            Utils.ChildProcessJob.AssignProcess(process); // 親死亡で自動 Kill
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 

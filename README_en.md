@@ -1,30 +1,44 @@
 # IwaraDownloader
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A Windows desktop application for downloading videos from iwara.tv with channel subscription and automatic new video detection.
+A Windows desktop app for downloading videos from iwara.tv / iwara.ai with channel subscriptions, automatic new-video detection, resume, thumbnail view, and more.
 
 **[日本語 README](README.md)**
 
-## Features
+## Key Features
 
-- **Channel Subscription** - Subscribe to your favorite users and automatically check for new videos
-- **Batch Download** - Download multiple videos from subscribed channels at once
-- **Single Video Download** - Download individual videos by URL
-- **Download Queue** - Manage multiple concurrent downloads (up to 3 parallel)
-- **Auto Check** - Automatically detect new videos at specified intervals
-- **Resume on Startup** - Automatically resume incomplete downloads
-- **Statistics Dashboard** - View download statistics, success rates, and daily trends
-- **Bulk URL Import** - Import multiple URLs from text or file
-- **Duplicate Check** - Detect and manage duplicate videos
-- **Batch Rename** - Rename downloaded files using customizable templates
-- **Notification Sound** - Play sound on download completion or error
-- **System Tray** - Run in background with tray icon
-- **Toast Notifications** - Get notified on download completion and new video detection
-- **UUID-based Duplicate Detection** (v1.1.1+) - Embeds iwara's file UUID into mp4 metadata to prevent re-downloading even after file renames or DB loss
+### Downloading
+- **Channel subscriptions** – follow your favorite uploaders and auto-check for new uploads
+- **Bulk download** – queue all videos from a channel at once
+- **Single download** – paste a video URL to add it
+- **Queue management** – up to 3 parallel downloads
+- **Scheduled checks** – automatic new-video detection at a configurable interval
+- **Resume** – continue interrupted downloads via HTTP Range, validated with file_id / size / ETag
+- **Auto-resume on launch** – pending downloads restart automatically when the app starts
+- **iwara.ai support** – site is auto-detected from the URL (iwara.tv / iwara.ai)
+
+### UI / Convenience
+- **Thumbnail view** – toggle between detail list and tile (thumbnail) mode
+- **Clipboard watcher** – copy an iwara URL to enqueue it automatically
+- **Search import** – pull results from the iwara search API and import in bulk
+- **NSFW filter** – All / SFW / NSFW filtering
+- **Rich context menu** – play / open folder / open author page / re-download / file-exists check / details / copy URL
+- **Double-click play** – completed videos open locally, otherwise open the iwara page
+- **Overall progress** – the status bar shows the average progress of active downloads
+- **System tray** – runs in the background with toast notifications
+
+### Management
+- **Duplicate check** – detect and remove duplicate videos
+- **UUID-based deduplication** – embeds the iwara UUID in the mp4, so dedupe survives file renames and DB loss
+- **Backfill UUID tags on existing files** – write iwara UUIDs onto previously downloaded files in the background
+- **Backfill thumbnails** – fetch thumbnails for existing videos in the background
+- **Batch rename** – template-based renaming
+- **Bulk URL import** – add multiple URLs from text or a file
+- **Statistics dashboard** – totals, success rate, daily trends
 
 ## Requirements
 
@@ -32,7 +46,7 @@ A Windows desktop application for downloading videos from iwara.tv with channel 
 |------|-------------|
 | OS | Windows 10/11 (64-bit) |
 | Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.8 or higher (tested on 3.10) |
+| Python | 3.8+ (tested on 3.10) |
 
 ## Installation
 
@@ -40,199 +54,184 @@ A Windows desktop application for downloading videos from iwara.tv with channel 
 
 Download the latest release from [Releases](https://github.com/dekotan24/iwara-downloader/releases) and extract to any folder.
 
-### 2. Python Setup
+### 2. Python environment
 
-Ensure Python 3.8+ is installed:
-- Download from [Python Official Site](https://www.python.org/downloads/)
-- Or use [Python Embeddable Package](https://www.python.org/downloads/)
+Python 3.8 or later is required ([python.org](https://www.python.org/downloads/)). The Embeddable Package works as well.
 
-### 3. Initial Setup
+### 3. First-time setup
 
-1. Run `IwaraDownloader.exe`
-2. Click "環境セットアップ" (Environment Setup) button
-3. Enter your Python path (e.g., `C:\Python311\python.exe`)
-4. Wait for setup to complete (cloudscraper will be installed automatically)
+1. Launch `IwaraDownloader.exe`
+2. Click **Environment Setup**
+3. Enter your Python path (e.g. `C:\Python311\python.exe`)
+4. Required packages (cloudscraper, etc.) are installed automatically
 
 ### 4. Login
 
-1. Click "ログイン" (Login) button
-2. Enter your iwara.tv email and password
-3. After successful login, all features become available
+1. Click **Login**
+2. Enter your iwara.tv email and password (credentials are stored locally only; the token is passed to Python via an environment variable to prevent leakage through the process list)
+3. All features are available after login
 
-> ⚠️ **Login is required since v1.1.1.** Download features are disabled when not logged in (matching iwara's own behavior). Token expiration is verified on startup, and the app automatically logs out when the token expires.
+> ⚠️ **Login is required since v1.1.1.** The token's expiration is verified at startup; if expired, the app logs out automatically.
 
 ## Usage
 
-### Subscribe to a Channel
+### Subscribe to a channel
+1. Type a username or profile URL (`https://www.iwara.tv/profile/username`) into the URL bar
+2. Press Enter or click **Add**
 
-1. Enter username or profile URL (`https://www.iwara.tv/profile/username`) in the URL input field
-2. Press Enter or click "追加" (Add) button
-3. The channel will appear in the left panel
+### Download videos
+**From a channel:**
+1. Pick a channel from the left list
+2. Select videos in the right list (multi-select supported)
+3. Right-click → **Download**
 
-### Download Videos
+**Single video:**
+- Paste `https://www.iwara.tv/video/xxxxx` (or `iwara.ai`) into the URL bar → Enter
 
-**From Channel:**
-1. Select a channel from the left panel
-2. Select videos to download (multi-select supported)
-3. Right-click → "ダウンロード" (Download)
+**Via clipboard:**
+- Turn on **Clipboard watcher** in the toolbar; copying an iwara URL automatically enqueues it
 
-**Single Video:**
-1. Enter video URL (`https://www.iwara.tv/video/xxxxx`) in the URL input field
-2. Press Enter to add to download queue
+**Search import:**
+- Menu → **Search import** to pull iwara search results in bulk
 
-**Bulk Import:**
-1. Menu → "URL一括インポート" (Bulk URL Import)
-2. Paste URLs or load from file
-3. Click "インポート" (Import)
+### Keyboard shortcuts
 
-### Keyboard Shortcuts
+| Key | Action |
+|------|--------|
+| `F5` | Check for new uploads |
+| `Ctrl+D` | Download selected |
+| `Ctrl+F` | Focus the filter box |
+| `Ctrl+A` | Select all |
+| `Delete` | Remove selected |
 
-| Shortcut | Action |
-|----------|--------|
-| `F5` | Check for new videos |
-| `Ctrl+D` | Download selected videos |
-| `Ctrl+F` | Focus filter box |
-| `Ctrl+A` | Select all videos |
-| `Delete` | Delete selected videos |
+## Settings
 
-## Configuration
+### General
 
-### Basic Settings
+| Item | Description | Default |
+|------|-------------|---------|
+| Save folder | Where videos go | My Videos/Iwara |
+| Default quality | Source / 540p / 360p | Source |
+| Concurrent downloads | 1–3 (1–2 recommended) | 2 |
+| Retry count | On failure | 3 |
+| Auto-check interval | New-upload polling | 60 min |
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| Download Folder | Video save location | My Videos/Iwara |
-| Default Quality | Source / 540p / 360p (iwara's three download qualities) | Source |
-| Concurrent Downloads | 1-3 (1-2 recommended) | 2 |
-| Retry Count | Number of retry attempts | 3 |
-| Check Interval | New video check interval | 60 min |
+### Filename template
 
-### Filename Template
-
-Available variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{title}` | Video title | My Video |
-| `{author}` | Uploader name | username |
-| `{date}` | Upload date | 2025-01-01 |
-| `{id}` | Video ID | AbCdEfGh |
-| `{quality}` | Quality | Source |
+| Variable | Example |
+|----------|---------|
+| `{title}` | My Video |
+| `{author}` | username |
+| `{date}` | 2025-01-01 |
+| `{id}` | AbCdEfGh |
+| `{quality}` | Source |
 
 Default: `{id}_{title}`
 
-### Rate Limiting
+### Rate limits
 
-For heavy users with many subscriptions:
+Tune these if you subscribe to many channels or download a lot.
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| API Request Delay | Delay between API requests | 1000ms |
-| Download Delay | Delay after each download | 3000ms |
-| Channel Check Delay | Delay between channel checks | 5000ms |
-| Page Fetch Delay | Delay when paginating | 500ms |
-| Rate Limit Base Delay | Base delay on 429/403 error | 30000ms |
-| Exponential Backoff | Increase delay on consecutive errors | ON |
+| Item | Default |
+|------|---------|
+| API request interval | 1000ms |
+| Download interval | 3000ms |
+| Channel poll interval | 5000ms |
+| Page fetch interval | 500ms |
+| Wait on 429/403 | 30000ms |
+| Exponential backoff | ON |
 
-> ⚠️ Setting values too low may result in access restrictions (403/429 errors).
+> ⚠️ Values that are too small can trigger 403/429.
 
-## File Structure
+## Data locations
 
-```
-IwaraDownloader/
-├── IwaraDownloader.exe    # Main application
-├── iwara_helper.py        # Python API helper
-├── iwara_setup.bat        # Python environment setup
-├── task_complete.mp3      # Completion sound (default)
-├── task_error.mp3         # Error sound (default)
-└── [DLLs and other files]
-```
-
-## Data Location
-
-Application data is stored in:
+Everything is stored locally — nothing is sent externally.
 
 ```
 %APPDATA%\IwaraDownloader\
-├── settings.json             # App settings
-├── data.db                   # Subscriptions and video info (SQLite)
-├── token.txt                 # Login token
-├── python_path.txt           # Python path setting
-├── x_version_secret.txt      # iwara X-Version secret (v1.1.1+, 30-day cache)
-└── logs/                     # Log files
-    └── IwaraDownloader_YYYYMMDD_HHMMSS.log
+├── settings.json             # app settings
+├── data.db                   # subscriptions / videos (SQLite)
+├── token.txt                 # login token
+├── python_path.txt           # Python path config
+├── x_version_secret.txt      # iwara X-Version secret (30-day cache)
+├── thumbs/                   # thumbnail cache
+└── logs/                     # logs
 ```
 
-Each artist folder also contains a hidden `.iwara_index.json` (v1.1.1+, used to accelerate UUID lookup scans).
+Each save folder also gets an `.iwara_index.json` to speed up UUID-based scanning.
+
+## What's new in v2.0.0
+
+### New features
+- iwara.ai support (auto-detect from URL, distinguished in the source column)
+- Resume downloads (Range + integrity check)
+- Thumbnail view mode and bulk thumbnail backfill
+- Event-driven clipboard watcher
+- Search import, NSFW filter, overall progress
+- Rich context menu / double-click playback
+
+### Stability & security
+- JWT tokens are now passed via the `IWARA_TOKEN` environment variable instead of the command line (prevents leakage through `tasklist` / process listings)
+- Background tasks (tag migration, thumbnail backfill) keep running after the settings window closes
+- Child processes are bound to a Windows Job Object (`KILL_ON_JOB_CLOSE`) — no more zombies when the parent dies
+- LRU thumbnail cache rewritten as a lock-guarded LinkedList; cumulative rate limiter
+- DownloadManager double-start prevention moved to `Interlocked.CompareExchange`
+- `ProcessQueueAsync` snapshots the CancellationToken locally to fix Dispose races
+- async-void event handlers now have outer try/catch
+- mp4 atom corruption on exit during tag writes is prevented (Close-path waits for writes)
+- Python helper: top-level try/except returns JSON, UTF-8 enforced, HTTP 416 discards `.part` and retries from 0
+- High-frequency UI updates are debounced (500ms) to avoid freezes
 
 ## Troubleshooting
 
-### Setup Fails
+### Setup fails
+- Check the Python path
+- Check your internet connection (required to install cloudscraper)
+- Make sure antivirus isn't blocking it
 
-- Verify Python path is correct
-- Check internet connection (required for cloudscraper installation)
-- Check if antivirus is blocking the process
-- Ensure Python version is 3.8 or higher
+### Login fails
+- Verify your email/password
+- Confirm you can log into iwara.tv directly
+- Confirm environment setup completed
 
-### Login Fails
+### Downloads fail
+- Confirm you are logged in
+- Check the video isn't private or removed
+- Check free disk space
+- Raise rate-limit values if you see frequent 403/429
 
-- Verify email and password are correct
-- Check if you can login directly on iwara.tv
-- Ensure environment setup is complete
+### Everything downloads as 360p (≤ v1.1.0)
+Fixed for good in v1.1.1 (three-stage fallback for the X-Version secret).
 
-### Download Fails
-
-- Check login status (login is required since v1.1.1)
-- Verify the video is not private or deleted
-- Check disk space
-- If 403 errors occur frequently, increase rate limit values
-
-### All Videos Downloaded at 360p Only (Bug in v1.1.0 and Earlier)
-
-In v1.1.0 and earlier, an iwara frontend update changed the X-Version secret, causing the filesq API to return only 360p/preview qualities. This is permanently fixed in v1.1.1 with a 3-tier strategy:
-- Embedded secret → cached secret (30-day TTL) → dynamic extraction from `main.js`
-- The app only fetches `main.js` when a low-quality fallback is detected, then caches the newly extracted secret for 30 days
-
-### Tagging Existing Files with UUIDs (v1.1.1+)
-
-Settings → **Backup** tab → **"既存ファイルにタグを書き込む" (Write Tags to Existing Files)** button performs a batch write of iwara UUID tags to all mp4 files that are registered in the database. You can close the settings dialog mid-run (you'll get a confirmation prompt); cancelled migrations pick up where they left off on the next run.
-
-### Cloudflare Errors
-
-- Run environment setup again
+### Cloudflare errors
+- Re-run environment setup
 - Wait a while and retry
-- Check if curl_cffi was installed (optional, for better Cloudflare bypass)
 
 ## Dependencies
 
 ### Python
-- [cloudscraper](https://github.com/VeNoMouS/cloudscraper) - Cloudflare bypass
-- [curl_cffi](https://github.com/yifeikong/curl_cffi) - TLS fingerprint spoofing (optional)
+- [cloudscraper](https://github.com/VeNoMouS/cloudscraper) – Cloudflare bypass
 
 ### .NET
-- Microsoft.Data.Sqlite - SQLite database
-- System.Text.Json - JSON processing
-- System.Security.Cryptography.ProtectedData - Password encryption
-- NAudio - Audio playback
-- TagLibSharp - mp4 container UUID metadata (v1.1.1+)
+- Microsoft.Data.Sqlite
+- System.Text.Json
+- System.Security.Cryptography.ProtectedData
+- NAudio
+- TagLibSharp
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
-- This software is intended for personal use only
-- Copyright of downloaded videos belongs to their respective owners
-- The author is not responsible for any damages or losses caused by the use of this software
-- Please comply with iwara.tv's terms of service
+- This software is intended for personal use
+- Copyrights of downloaded videos belong to their respective owners
+- The author is not liable for any damages or losses arising from use of this software
+- Please follow the terms of use of iwara.tv / iwara.ai
 
-## Acknowledgments
-
-This project is built with reference to:
+## Credits
 
 - [iwara-python-api](https://github.com/xiatg/iwara-python-api)
 - [cloudscraper](https://github.com/VeNoMouS/cloudscraper)
-
-Coded with assistance from:
-- [Claude](https://claude.ai) by Anthropic
+- Some coding was assisted by [Claude](https://claude.ai) by Anthropic
