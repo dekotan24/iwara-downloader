@@ -36,7 +36,7 @@ namespace IwaraDownloader.Forms
             this.lblDescription.Location = new Point(12, 12);
             this.lblDescription.Name = "lblDescription";
             this.lblDescription.Size = new Size(350, 15);
-            this.lblDescription.Text = "iwara.tv の動画URLを入力してください（1行に1URL、または連続入力可）";
+            this.lblDescription.Text = "iwara.tv の動画URLを入力してください(1行に1URL、または連続入力可)";
 
             // 
             // txtUrls

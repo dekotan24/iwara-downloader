@@ -9,7 +9,8 @@ namespace IwaraDownloader.Services
     /// </summary>
     public class UpdateService
     {
-        private static readonly HttpClient _httpClient = new();
+        // 既定の100秒タイムアウトだと設定画面の手動チェックでUIが固まるので短縮
+        private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
         private const string GitHubApiUrl = "https://api.github.com/repos/dekotan24/iwara-downloader/releases/latest";
         private const string ReleasesPageUrl = "https://github.com/dekotan24/iwara-downloader/releases";
 

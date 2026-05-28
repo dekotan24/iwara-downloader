@@ -14,8 +14,17 @@ import sys
 import os
 import hashlib
 import re
+import subprocess
 import time
 from urllib.parse import urlparse, parse_qs
+
+# Windows コンソールで日本語タイトルを print(file=sys.stderr) するときの
+# UnicodeEncodeError 防止。C# 側で UTF-8 を指定していない場合も死なないように。
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
 
 
 def _decode_jwt_payload(token: str) -> dict:
@@ -101,7 +110,7 @@ def _extract_secret_from_main_js(scraper) -> str:
 
 
 class IwaraAPI:
-    def __init__(self, token=None, rate_limit_config=None):
+    def __init__(self, token=None, rate_limit_config=None, site=None):
         self.scraper = cloudscraper.create_scraper(
             browser={
                 'browser': 'chrome',
@@ -109,9 +118,13 @@ class IwaraAPI:
                 'desktop': True
             }
         )
+        # iwara.tv / iwara.ai いずれも同じ api.iwara.tv エンドポイントを使う。
+        # 動画の所属サイト判別は X-Site ヘッダー (= ホスト名 www.iwara.tv / www.iwara.ai)。
         self.api_url = "https://api.iwara.tv"
         self.file_url = "https://files.iwara.tv"
         self.token = token
+        # site が空文字 / None なら iwara.tv 扱い (旧データ互換)
+        self.site = site if site else "www.iwara.tv"
         # X-Version secret の再取得はセッション中 1 回までに制限する
         self._secret_refreshed = False
         
@@ -319,7 +332,7 @@ class IwaraAPI:
             r = self._request_with_retry(
                 'GET',
                 f"{self.api_url}/user",
-                headers={"Authorization": f"Bearer {self.token}"}
+                headers=self._auth_header()
             )
             if r is None:
                 return {"success": False, "error": "No response from server", "code": "NETWORK_ERROR"}
@@ -342,10 +355,65 @@ class IwaraAPI:
             return {"success": False, "error": f"Exception: {str(e)}", "code": "EXCEPTION"}
 
     def _auth_header(self) -> dict:
-        """認証ヘッダーを返す"""
+        """認証 + X-Site ヘッダーを返す。
+        iwara.tv 動画は X-Site=www.iwara.tv (なくても動くがフロントエンドが必ず送るので合わせる)。
+        iwara.ai 動画は X-Site=www.iwara.ai が必須 (無いと errors.differentSite で 301)。"""
+        h = {"X-Site": self.site}
         if self.token:
-            return {"Authorization": f"Bearer {self.token}"}
-        return {}
+            h["Authorization"] = f"Bearer {self.token}"
+        return h
+
+    def search_videos(self, query: str, page: int = 0, limit: int = 32) -> dict:
+        """iwara 検索 API で動画一覧を取得 (購読してないチャンネルからも検索可能)。
+        iwara の /api/search は現在 500 を返す事があるため /api/videos?query= を使う。"""
+        if not self.token:
+            return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
+        try:
+            r = self._request_with_retry(
+                'GET',
+                f"{self.api_url}/videos",
+                params={'query': query, 'page': page, 'limit': limit, 'sort': 'date'},
+                headers=self._auth_header()
+            )
+            if r is None:
+                return {"success": False, "error": "No response from server"}
+            if r.status_code == 403:
+                return {"success": False, "error": "Search blocked (403): login may be required"}
+            if r.status_code != 200:
+                try:
+                    body = r.json()
+                    msg = body.get("message", "") or body.get("error", "")
+                except Exception:
+                    msg = r.text[:100] if r.text else ""
+                return {"success": False, "error": f"Search failed: HTTP {r.status_code} - {msg}"}
+
+            data = r.json()
+            results = data.get("results", []) or []
+            videos = []
+            for v in results:
+                user = v.get("user") or {}
+                file_info = v.get("file") or {}
+                videos.append({
+                    "id": v.get("id"),
+                    "title": v.get("title", ""),
+                    "thumbnail": self._get_thumbnail_url(v),
+                    "duration": file_info.get("duration", 0) or 0,
+                    "rating": v.get("rating") or "",
+                    "author_username": user.get("username", ""),
+                    "author_name": user.get("name", ""),
+                    "embed_url": v.get("embedUrl") or "",
+                    "private": v.get("private", False),
+                    "created_at": v.get("createdAt"),
+                })
+            return {
+                "success": True,
+                "count": data.get("count", len(videos)),
+                "page": page,
+                "limit": limit,
+                "videos": videos,
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Exception: {e}"}
 
     def get_user_videos(self, username: str) -> dict:
         """ユーザーの全動画リストを取得"""
@@ -382,7 +450,7 @@ class IwaraAPI:
                 return {"success": False, "error": f"Profile fetch failed: HTTP {profile_r.status_code} - {msg}"}
             
             profile_data = profile_r.json()
-            user_id = profile_data.get("user", {}).get("id")
+            user_id = (profile_data.get("user") or {}).get("id")
             
             if not user_id:
                 return {"success": False, "error": "User ID not found"}
@@ -420,14 +488,17 @@ class IwaraAPI:
                     break
                 
                 for video in results:
+                    file_info = video.get("file") or {}
                     videos.append({
                         "id": video.get("id"),
                         "title": video.get("title"),
                         "slug": video.get("slug"),
                         "thumbnail": self._get_thumbnail_url(video),
-                        "duration": video.get("file", {}).get("duration", 0),
+                        "duration": file_info.get("duration", 0),
                         "created_at": video.get("createdAt"),
-                        "private": video.get("private", False)
+                        "private": video.get("private", False),
+                        "embed_url": video.get("embedUrl") or "",
+                        "rating": video.get("rating") or ""
                     })
                 
                 print(f"Fetched page {page + 1}, {len(results)} videos (total: {len(videos)})", file=sys.stderr)
@@ -446,7 +517,8 @@ class IwaraAPI:
 
     def _get_thumbnail_url(self, video: dict) -> str:
         """サムネイルURLを生成"""
-        file_id = video.get("file", {}).get("id")
+        file_info = video.get("file") or {}
+        file_id = file_info.get("id")
         if file_id:
             return f"https://i.iwara.tv/image/thumbnail/{file_id}/thumbnail-00.jpg"
         return ""
@@ -480,6 +552,13 @@ class IwaraAPI:
                 msg = body.get("message", "") or body.get("error", "")
             except Exception:
                 msg = r.text[:100] if r.text else ""
+            # 動画が削除された/存在しない: リトライしても永遠に同じ結果
+            if r.status_code == 404 or (msg and "notFound" in msg):
+                return [], {
+                    "success": False,
+                    "error": f"Video not found on iwara: HTTP {r.status_code} - {msg}",
+                    "code": "VIDEO_NOT_FOUND",
+                }
             return [], {"success": False, "error": f"File URL fetch failed: HTTP {r.status_code} - {msg}"}
         try:
             return r.json(), None
@@ -508,6 +587,14 @@ class IwaraAPI:
                     msg = body.get("message", "") or body.get("error", "")
                 except:
                     msg = ""
+                # フレンド限定動画: 相互承認してないと見れない。リトライしても無駄なので
+                # 専用 code で明示する (C# 側で即座に Failed 確定 / リトライ抑制)
+                if msg and "privateVideo" in msg:
+                    return {
+                        "success": False,
+                        "error": f"Private video (friend-only): {msg}",
+                        "code": "PRIVATE_VIDEO",
+                    }
                 return {"success": False, "error": f"Access denied: {msg or 'Private video or login required'}"}
             
             if r.status_code != 200:
@@ -575,11 +662,11 @@ class IwaraAPI:
                 src = f.get("src", {}) or {}
                 return src.get("download") or src.get("view")
 
-            # 利用可能な画質一覧をログ出力（デバッグ用）
+            # 利用可能な画質一覧をログ出力(デバッグ用)
             available = [f.get("name") for f in files if f.get("name")]
             print(f"Available qualities for {video_id}: {available}", file=sys.stderr)
 
-            # 画質の優先順位（高→低）
+            # 画質の優先順位(高→低)
             quality_order = ["Source", "540", "360", "preview"]
 
             # 指定画質があれば最優先で探す
@@ -621,85 +708,459 @@ class IwaraAPI:
                 "file_id": file_obj.get("id"),
                 "author_username": user_obj.get("username"),
                 "author_name": user_obj.get("name"),
+                "rating": video_data.get("rating") or "",
+                "thumbnail": self._get_thumbnail_url(video_data),
             }
 
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    # filesq が振り分けてくる CDN ホストのうち、現状 404/接続不能を返す群。
+    # 完全な hardcode はせずに、セッション中に学習した死亡 CDN として参照する。
+    # (起動時は空で始まる。コードレベルで除外せず、サーバー応答に基づいて判定する)
+    _DEAD_CDN_CONNECTION_TIMEOUT = 8  # 接続テスト用の短いタイムアウト(秒)
+    _CDN_REDIRECT_MAX_RETRIES = 6     # 別 CDN を引き当てるための get_download_url 再試行回数
+    # リジューム時に末尾を再 DL するマージン。プロセス kill 等で flush 未完了のゴミバイトを上書きするため。
+    _RESUME_REWIND_BYTES = 65536
+
+    @staticmethod
+    def _part_paths(output_path: str):
+        """outputPath に対応する .part / .meta パスを返す"""
+        return (output_path + ".part", output_path + ".part.meta")
+
+    @staticmethod
+    def _read_resume_meta(meta_path: str):
+        try:
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _write_resume_meta(meta_path: str, data: dict):
+        try:
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
+        except Exception as e:
+            print(f"Failed to write meta: {e}", file=sys.stderr)
+
+    def _try_download_once(self, download_url: str, output_path: str,
+                           file_id: str = "", resume_meta: dict = None):
+        """単一の download_url で実際にダウンロードする。Range レジューム対応。
+        戻り値: (kind, payload)
+          kind='success' → payload は size(int)
+          kind='cdn_error' → payload は error_str (404 / 接続不能 / 5xx — CDN 切替で回復可能)
+          kind='auth_error' → payload は error_str (403 — リトライ無意味)
+          kind='hard_error' → payload は error_str (致命的)
+        """
+        from urllib.parse import urlparse
+        host = urlparse(download_url).netloc
+
+        part_path, meta_path = self._part_paths(output_path)
+
+        # レジューム判定: .part が存在し、メタ情報の file_id が一致するなら続きから
+        resume_from = 0
+        if file_id and os.path.exists(part_path) and resume_meta:
+            meta_fid = resume_meta.get('file_id', '')
+            current_part_size = os.path.getsize(part_path)
+            if meta_fid == file_id and current_part_size > self._RESUME_REWIND_BYTES:
+                # 末尾の数 KB は安全マージンで上書き再 DL (flush 未完了のゴミ対策)
+                resume_from = current_part_size - self._RESUME_REWIND_BYTES
+                print(f"Resuming from {resume_from} bytes (part size={current_part_size}, file_id match)",
+                      file=sys.stderr)
+            elif meta_fid != file_id:
+                # ファイルが差し替わってる: .part 破棄
+                print(f"file_id mismatch (meta={meta_fid[:8]}.., new={file_id[:8]}..), discarding .part",
+                      file=sys.stderr)
+                try: os.remove(part_path)
+                except Exception: pass
+                try: os.remove(meta_path)
+                except Exception: pass
+
+        req_headers = {}
+        if resume_from > 0:
+            req_headers['Range'] = f'bytes={resume_from}-'
+
+        try:
+            r = self.scraper.get(download_url, stream=True, timeout=30, headers=req_headers or None)
+        except Exception as e:
+            return ('cdn_error', f"Connection failed to {host}: {type(e).__name__}: {str(e)[:200]}")
+
+        if r.status_code == 403:
+            return ('auth_error', f"Download blocked (403) at {host}")
+        if r.status_code in (404, 410):
+            return ('cdn_error', f"CDN returned {r.status_code} at {host}")
+        if r.status_code in (500, 502, 503, 504):
+            return ('cdn_error', f"CDN returned {r.status_code} at {host}")
+        # Range リクエストの正常応答は 206。サーバーが Range 非対応で 200 を返した場合は最初から扱い。
+        if resume_from > 0 and r.status_code == 200:
+            print(f"Server ignored Range header, restarting from 0", file=sys.stderr)
+            resume_from = 0
+        elif resume_from > 0 and r.status_code == 416:
+            # サーバー側ファイルが縮んだ (再エンコード等) → .part 破棄して 0 からやり直し
+            print(f"Range Not Satisfiable (416), discarding .part and retrying from 0", file=sys.stderr)
+            try: os.remove(part_path)
+            except Exception: pass
+            try: os.remove(meta_path)
+            except Exception: pass
+            return ('cdn_error', f"Range not satisfiable at {host}, retry from 0")
+        elif resume_from > 0 and r.status_code != 206:
+            return ('hard_error', f"Unexpected status {r.status_code} for Range request at {host}")
+        elif resume_from == 0 and r.status_code != 200:
+            return ('hard_error', f"Download failed: HTTP {r.status_code} at {host}")
+
+        # 整合性検証: Content-Range から元ファイル全体サイズを取得して .meta と照合
+        # 206 の場合: "bytes 100-999/270593201" → total=270593201
+        # 200 の場合: Content-Length が total
+        content_range = r.headers.get('content-range', '')
+        if content_range and '/' in content_range:
+            try:
+                total_size = int(content_range.rsplit('/', 1)[1])
+            except Exception:
+                total_size = 0
+        else:
+            total_size = int(r.headers.get('content-length', 0)) + resume_from
+
+        server_etag = r.headers.get('etag', '')
+
+        # メタの size/etag と矛盾していれば .part 破棄して最初からやり直し
+        if resume_meta and resume_from > 0:
+            meta_size = resume_meta.get('size', 0)
+            meta_etag = resume_meta.get('etag', '')
+            if meta_size and total_size and meta_size != total_size:
+                print(f"size mismatch (meta={meta_size}, server={total_size}), discarding .part",
+                      file=sys.stderr)
+                try: os.remove(part_path)
+                except Exception: pass
+                try: os.remove(meta_path)
+                except Exception: pass
+                return ('cdn_error', f"Resume size mismatch at {host}")
+            if meta_etag and server_etag and meta_etag != server_etag:
+                print(f"etag mismatch (meta={meta_etag}, server={server_etag}), discarding .part",
+                      file=sys.stderr)
+                try: os.remove(part_path)
+                except Exception: pass
+                try: os.remove(meta_path)
+                except Exception: pass
+                return ('cdn_error', f"Resume etag mismatch at {host}")
+
+        try:
+            os.makedirs(os.path.dirname(part_path) or '.', exist_ok=True)
+        except Exception as e:
+            return ('hard_error', f"Cannot create output directory: {e}")
+
+        # .meta を書き込む (file_id / size / etag を保存)
+        if file_id:
+            self._write_resume_meta(meta_path, {
+                'file_id': file_id,
+                'size': total_size,
+                'etag': server_etag,
+                'last_modified': r.headers.get('last-modified', ''),
+            })
+
+        # ファイルハンドル: resume 時は r+b で seek、新規は wb。
+        # Windows の 'ab' モードは seek を無視して必ず末尾追記するので使わない
+        # (truncate 後に他プロセスが書き込んだ場合に上書きできず巨大化するため)。
+        downloaded = resume_from
+        last_percent = -1
+        try:
+            if resume_from > 0:
+                fh = open(part_path, 'r+b')
+                fh.truncate(resume_from)
+                fh.seek(resume_from)
+            else:
+                fh = open(part_path, 'wb')
+        except Exception as e:
+            return ('hard_error', f"Cannot prepare .part file: {e}")
+
+        try:
+            with fh as f:
+                for chunk in r.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            progress = (downloaded / total_size) * 100
+                            current_percent = int(progress)
+                            if current_percent > last_percent:
+                                print(f"Progress: {current_percent}%", file=sys.stderr)
+                                last_percent = current_percent
+        except Exception as e:
+            msg = str(e)
+            is_network = any(s in msg for s in (
+                "Connection broken", "Connection reset", "ConnectionReset",
+                "Read timed out", "ReadTimeoutError", "ConnectionError",
+                "Max retries exceeded", "RemoteDisconnected",
+            ))
+            kind2 = 'cdn_error' if is_network else 'hard_error'
+            # .part / .meta は残しておく (次回リジューム)
+            return (kind2, f"Stream error at {host} ({downloaded} bytes): {type(e).__name__}: {msg[:200]}")
+
+        # 完了サイズ検証
+        if total_size > 0 and downloaded != total_size:
+            return ('cdn_error', f"Size mismatch at {host}: got {downloaded}, expected {total_size}")
+
+        # アトミックリネーム: .part → final
+        # os.replace は Windows でも上書き OK (POSIX 互換)。
+        # 旧コードの os.remove(output_path) は他プロセスが開いてる場合に
+        # PermissionError で破綻するため削除。
+        try:
+            os.replace(part_path, output_path)
+            try: os.remove(meta_path)
+            except Exception: pass
+        except Exception as e:
+            return ('hard_error', f"Failed to finalize {output_path}: {e}")
+
+        print("Progress: 100%", file=sys.stderr)
+        return ('success', downloaded)
+
     def download_video(self, video_id: str, output_path: str, quality: str = "Source") -> dict:
-        """動画をダウンロード"""
+        """動画をダウンロード。CDN 404/接続不能時は別 CDN を引き当てるため
+        get_download_url をリトライする (iwara の filesq がリクエスト毎に
+        ランダム CDN を返すので、いずれ生きてる CDN が選ばれることを期待)。"""
         if not self.token:
             return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
-        try:
-            # ダウンロードURL取得
+
+        from urllib.parse import urlparse
+        last_error = None
+        last_quality = None
+        last_title = None
+        last_file_id = None
+        last_author_username = None
+        last_author_name = None
+        tried_hosts = []
+        cdn_failure_count = 0
+
+        for attempt in range(self._CDN_REDIRECT_MAX_RETRIES):
             url_info = self.get_download_url(video_id, quality)
             if not url_info["success"]:
-                return url_info
-            
+                # filesq 段階で失敗 → CDN 切替では救えないので即時返す
+                if attempt == 0:
+                    return url_info
+                # 既に何度か CDN 試行済みなら、最後のエラーを返す
+                err = f"{url_info.get('error', 'unknown')} (after {attempt} CDN retries: {last_error})"
+                return {"success": False, "error": err, "code": url_info.get("code")}
+
             download_url = url_info["url"]
-            
-            # ダウンロード
-            print(f"Downloading: {url_info['title']} ({url_info['quality']})", file=sys.stderr)
-            
-            r = self.scraper.get(download_url, stream=True)
-            
-            if r.status_code == 403:
-                try:
-                    # ストリームの場合はボディを読み取れないことがある
-                    msg = "Access denied"
-                except:
-                    msg = "Access denied"
-                return {"success": False, "error": f"Download blocked (403): {msg}"}
-            
-            if r.status_code == 404:
-                return {"success": False, "error": "Download URL expired or not found (404)"}
-            
-            if r.status_code != 200:
-                return {"success": False, "error": f"Download failed: HTTP {r.status_code}"}
-            
-            # ファイルサイズ
-            total_size = int(r.headers.get('content-length', 0))
-            
-            # 出力ディレクトリ作成
+            last_quality = url_info.get("quality")
+            last_title = url_info.get("title")
+            last_file_id = url_info.get("file_id") or ""
+            last_author_username = url_info.get("author_username")
+            last_author_name = url_info.get("author_name")
+            host = urlparse(download_url).netloc
+
+            # レジューム判定用: 既存 .part / .meta を読み込み
+            _, meta_path = self._part_paths(output_path)
+            resume_meta = self._read_resume_meta(meta_path)
+
+            print(f"Downloading: {last_title} ({last_quality}) [attempt {attempt+1}/{self._CDN_REDIRECT_MAX_RETRIES}, host={host}]",
+                  file=sys.stderr)
+
             try:
-                os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+                kind, payload = self._try_download_once(
+                    download_url, output_path,
+                    file_id=last_file_id, resume_meta=resume_meta,
+                )
             except Exception as e:
-                return {"success": False, "error": f"Cannot create output directory: {e}"}
-            
-            # ダウンロード（1%ごとに進捗出力）
-            downloaded = 0
-            last_percent = -1
-            try:
-                with open(output_path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=65536):  # 64KBチャンク
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total_size > 0:
-                                progress = (downloaded / total_size) * 100
-                                current_percent = int(progress)
-                                # 1%ごとに出力
-                                if current_percent > last_percent:
-                                    print(f"Progress: {current_percent}%", file=sys.stderr)
-                                    last_percent = current_percent
-            except IOError as e:
-                return {"success": False, "error": f"File write error: {e}"}
-            
-            print("Progress: 100%", file=sys.stderr)  # 完了
-            
-            return {
-                "success": True,
-                "path": output_path,
-                "size": downloaded,
-                "quality": url_info.get("quality"),
-                "file_id": url_info.get("file_id"),
-                "author_username": url_info.get("author_username"),
-                "author_name": url_info.get("author_name"),
-                "title": url_info.get("title"),
-            }
-            
-        except Exception as e:
-            return {"success": False, "error": f"Download exception: {str(e)}"}
+                kind, payload = ('hard_error', f"Download exception: {e}")
+
+            if kind == 'success':
+                return {
+                    "success": True,
+                    "path": output_path,
+                    "size": payload,
+                    "quality": last_quality,
+                    "file_id": last_file_id,
+                    "author_username": last_author_username,
+                    "author_name": last_author_name,
+                    "title": last_title,
+                    "cdn_retries": attempt,
+                }
+
+            tried_hosts.append(f"{host}={payload}")
+            last_error = payload
+
+            if kind == 'auth_error':
+                # 403 は権限問題なので CDN 切替では救えない
+                return {"success": False, "error": payload, "code": "ACCESS_DENIED"}
+            if kind == 'hard_error':
+                # ディスク書込失敗等
+                return {"success": False, "error": payload}
+
+            # cdn_error: 別 CDN を引き当てるため再試行
+            cdn_failure_count += 1
+            print(f"CDN error ({payload}), retrying with fresh URL...", file=sys.stderr)
+            # 連続失敗時は少し待ってからリトライ (filesq のキャッシュ更新を期待)
+            time.sleep(min(1.0 + 0.5 * attempt, 3.0))
+
+        # 全 CDN 失敗
+        return {
+            "success": False,
+            "error": f"All CDN candidates failed ({cdn_failure_count} retries): {' | '.join(tried_hosts[-self._CDN_REDIRECT_MAX_RETRIES:])}",
+            "code": "CDN_UNAVAILABLE",
+        }
+
+
+
+def _resolve_yt_dlp(yt_dlp_path: str) -> str | None:
+    """yt-dlp 実行コマンドを解決。見つからなければ None"""
+    import shutil
+    if not yt_dlp_path:
+        yt_dlp_path = "yt-dlp"
+    # フルパス指定の場合
+    if os.path.isabs(yt_dlp_path) and os.path.isfile(yt_dlp_path):
+        return yt_dlp_path
+    # PATH 検索
+    found = shutil.which(yt_dlp_path)
+    if found:
+        return found
+    # python -m yt_dlp も試す
+    try:
+        subprocess.run([sys.executable, "-m", "yt_dlp", "--version"],
+                       capture_output=True, check=True, timeout=15)
+        return f"{sys.executable} -m yt_dlp"
+    except Exception:
+        return None
+
+
+def _install_yt_dlp() -> tuple[bool, str]:
+    """pip install yt-dlp を実行"""
+    try:
+        print("yt-dlp が見つからないため pip でインストールを試行中...", file=sys.stderr)
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-U", "yt-dlp"],
+            capture_output=True, text=True, timeout=300
+        )
+        if result.returncode == 0:
+            print("yt-dlp インストール完了", file=sys.stderr)
+            return True, ""
+        return False, result.stderr or result.stdout
+    except Exception as e:
+        return False, str(e)
+
+
+def _update_yt_dlp(yt_dlp_cmd: str) -> tuple[bool, str]:
+    """yt-dlp 自体を -U で更新(pip 経由インストールの場合は pip --upgrade)"""
+    try:
+        # python -m yt_dlp 形式の場合は pip で更新
+        if yt_dlp_cmd.startswith(sys.executable):
+            print("yt-dlp を pip で更新中...", file=sys.stderr)
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"],
+                capture_output=True, text=True, timeout=300
+            )
+        else:
+            # スタンドアロン版は -U で自己更新
+            cmd_parts = yt_dlp_cmd.split()
+            print(f"yt-dlp を -U で更新中: {yt_dlp_cmd}", file=sys.stderr)
+            result = subprocess.run(
+                cmd_parts + ["-U"],
+                capture_output=True, text=True, timeout=300
+            )
+        return result.returncode == 0, (result.stderr or result.stdout)
+    except Exception as e:
+        return False, str(e)
+
+
+def _run_yt_dlp(yt_dlp_cmd: str, embed_url: str, output_path: str) -> tuple[bool, str]:
+    """yt-dlp を実行して動画をDL。output_path はフルパス(拡張子抜きの場合は -o テンプレート扱い)"""
+    try:
+        # output_path はファイル名フォーマット(拡張子なしの想定)
+        # 拡張子なしならテンプレートとして使用、ありなら % 不要
+        if "." not in os.path.basename(output_path):
+            out_template = output_path + ".%(ext)s"
+        else:
+            out_template = output_path
+
+        cmd_parts = yt_dlp_cmd.split()
+        full_cmd = cmd_parts + [
+            "-o", out_template,
+            "--no-playlist",
+            "--no-warnings",
+            "--newline",  # 進捗を行単位で
+            "--merge-output-format", "mp4",
+            embed_url,
+        ]
+        print(f"yt-dlp 実行: {' '.join(full_cmd)}", file=sys.stderr)
+
+        process = subprocess.Popen(
+            full_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+        )
+        last_lines = []
+        for line in process.stdout:
+            line = line.rstrip()
+            print(line, file=sys.stderr)
+            last_lines.append(line)
+            if len(last_lines) > 20:
+                last_lines.pop(0)
+            # Progress: XX% 形式に変換して進捗通知
+            import re
+            m = re.search(r'\[download\]\s+([\d.]+)%', line)
+            if m:
+                print(f"Progress: {m.group(1)}%", file=sys.stderr)
+
+        rc = process.wait()
+        if rc == 0:
+            return True, ""
+        return False, "\n".join(last_lines[-5:])
+    except Exception as e:
+        return False, str(e)
+
+
+def download_external_video(embed_url: str, output_path: str, yt_dlp_path: str = "yt-dlp") -> dict:
+    """yt-dlp で外部動画をDL。未インストールなら pip 自動DL、失敗時は -U して再試行"""
+    if not embed_url:
+        return {"success": False, "error": "embed_url is empty"}
+
+    yt_dlp_cmd = _resolve_yt_dlp(yt_dlp_path)
+
+    # yt-dlp 不在 → pip install
+    if yt_dlp_cmd is None:
+        ok, err = _install_yt_dlp()
+        if not ok:
+            return {"success": False, "error": f"yt-dlp のインストールに失敗しました: {err[:300]}"}
+        yt_dlp_cmd = _resolve_yt_dlp(yt_dlp_path)
+        if yt_dlp_cmd is None:
+            return {"success": False, "error": "yt-dlp インストール後も実行コマンドを解決できませんでした"}
+
+    # DL 試行
+    ok, err = _run_yt_dlp(yt_dlp_cmd, embed_url, output_path)
+    if ok:
+        # 実際に保存されたファイルを探す
+        saved = _find_saved_file(output_path)
+        return {"success": True, "file_path": saved, "url": embed_url}
+
+    # 失敗 → yt-dlp 更新して再試行
+    print(f"yt-dlp DL 失敗、-U 後に再試行: {err[:200]}", file=sys.stderr)
+    upd_ok, upd_err = _update_yt_dlp(yt_dlp_cmd)
+    if not upd_ok:
+        return {"success": False, "error": f"yt-dlp DL失敗かつ更新も失敗: {err[:200]} / 更新エラー: {upd_err[:200]}"}
+
+    yt_dlp_cmd = _resolve_yt_dlp(yt_dlp_path) or yt_dlp_cmd
+    ok2, err2 = _run_yt_dlp(yt_dlp_cmd, embed_url, output_path)
+    if ok2:
+        saved = _find_saved_file(output_path)
+        return {"success": True, "file_path": saved, "url": embed_url, "updated": True}
+    return {"success": False, "error": f"yt-dlp DL失敗(更新後も失敗): {err2[:300]}"}
+
+
+def _find_saved_file(base_path: str) -> str:
+    """yt-dlp が出力したファイルを探す(拡張子を補完)"""
+    if os.path.isfile(base_path):
+        return base_path
+    import glob
+    # base_path + .xxx を探す
+    candidates = glob.glob(base_path + ".*")
+    if candidates:
+        # 最新のファイル
+        return max(candidates, key=os.path.getmtime)
+    # 拡張子付きで探した結果
+    return base_path
 
 
 def parse_rate_limit_args():
@@ -738,11 +1199,18 @@ def main():
     # 環境変数からも取得可能
     if not token:
         token = os.environ.get("IWARA_TOKEN")
-    
+
+    # --site で iwara.tv / iwara.ai を切替 (デフォルト www.iwara.tv)
+    site = None
+    for i, arg in enumerate(sys.argv):
+        if arg == "--site" and i + 1 < len(sys.argv):
+            site = sys.argv[i + 1]
+            break
+
     # レート制限設定をパース
     rate_limit_config = parse_rate_limit_args()
-    
-    api = IwaraAPI(token=token, rate_limit_config=rate_limit_config)
+
+    api = IwaraAPI(token=token, rate_limit_config=rate_limit_config, site=site)
     
     if action == "login":
         if len(sys.argv) < 4:
@@ -770,7 +1238,37 @@ def main():
             print(json.dumps({"success": False, "error": "Usage: get_url <video_id>"}))
             sys.exit(1)
         result = api.get_download_url(sys.argv[2])
-        
+
+    elif action == "search":
+        if len(sys.argv) < 3:
+            print(json.dumps({"success": False, "error": "Usage: search <query> [page] [limit]"}))
+            sys.exit(1)
+        query = sys.argv[2]
+        page = 0
+        limit = 32
+        # オプション位置引数 (page, limit)
+        try:
+            if len(sys.argv) >= 4 and not sys.argv[3].startswith("--"):
+                page = int(sys.argv[3])
+            if len(sys.argv) >= 5 and not sys.argv[4].startswith("--"):
+                limit = int(sys.argv[4])
+        except ValueError:
+            pass
+        result = api.search_videos(query, page=page, limit=limit)
+
+    elif action == "download_external":
+        if len(sys.argv) < 4:
+            print(json.dumps({"success": False, "error": "Usage: download_external <embed_url> <output_path> [--yt-dlp-path <path>]"}))
+            sys.exit(1)
+        embed_url = sys.argv[2]
+        output_path = sys.argv[3]
+        yt_dlp_path = "yt-dlp"
+        for i, arg in enumerate(sys.argv):
+            if arg == "--yt-dlp-path" and i + 1 < len(sys.argv):
+                yt_dlp_path = sys.argv[i + 1]
+                break
+        result = download_external_video(embed_url, output_path, yt_dlp_path)
+
     else:
         result = {"success": False, "error": f"Unknown action: {action}"}
     
@@ -780,4 +1278,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException as _e:
+        # トップレベル例外を JSON にして stdout に返す。
+        # これがないと Python のトレースバックが stderr に出るだけで stdout が空になり、
+        # 呼び出し元 C# 側の json.parse が "Python 応答なし" になる。
+        try:
+            print(json.dumps({"success": False, "error": f"{type(_e).__name__}: {_e}"}, ensure_ascii=False))
+        except Exception:
+            pass
+        sys.exit(1)

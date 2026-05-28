@@ -255,7 +255,7 @@ namespace IwaraDownloader.Forms
             this.grpConflictActions.Size = new Size(410, 65);
             this.grpConflictActions.TabIndex = 1;
             this.grpConflictActions.TabStop = false;
-            this.grpConflictActions.Text = "重複ファイルの処理（選択項目）";
+            this.grpConflictActions.Text = "重複ファイルの処理(選択項目)";
 
             // 
             // btnOverwrite

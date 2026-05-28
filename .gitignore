@@ -1,7 +1,6 @@
-﻿################################################################################
-# この .gitignore ファイルは Microsoft(R) Visual Studio によって自動的に作成されました。
 ################################################################################
-
+# Visual Studio
+################################################################################
 /.vs
 /IwaraDownloader/obj
 /IwaraDownloader/bin
@@ -10,3 +9,49 @@
 # Python embeddable runtime artifacts
 **/__pycache__/
 *.pyc
+/IwaraDownloader/Python310/
+/IwaraDownloader/.python_setup_done
+
+################################################################################
+# 機密データ・ユーザーデータ (絶対にコミットしないこと)
+################################################################################
+# JWT トークン・認証情報
+token.txt
+*.token
+*credential*
+*credentials*
+*.env
+.env*
+
+# 設定ファイル (個人のメールアドレス/パスが入る可能性)
+appsettings.json
+settings.json
+user_settings.json
+config.local.*
+
+# データベース
+*.db
+*.sqlite
+*.sqlite3
+videos.db*
+
+# キャッシュ・サムネ画像 (個人の DL 履歴が漏れる)
+thumbs/
+cache/
+x_version_secret.txt
+
+# ログ (個人 ID/トークン断片が混じる可能性)
+logs/
+*.log
+
+# ローカルテストデータ・スクラッチ
+scratch/
+sandbox/
+*.local.*
+
+# OS / IDE 雑多
+Thumbs.db
+.DS_Store
+*.swp
+.idea/
+.vscode/

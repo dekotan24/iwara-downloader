@@ -26,6 +26,10 @@ namespace IwaraDownloader
             // アプリケーション設定
             ApplicationConfiguration.Initialize();
 
+            // 子プロセス管理用 Job Object を初期化
+            // (親 (このプロセス) が死ぬと紐付けた子プロセス = Python ヘルパー等も自動 Kill される)
+            IwaraDownloader.Utils.ChildProcessJob.EnsureInitialized();
+
             // ログサービス初期化
             var logger = LoggingService.Instance;
             logger.Info("Application starting...");
@@ -34,6 +38,8 @@ namespace IwaraDownloader
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            // fire-and-forget Task 内の未捕捉例外 (await されない _ = Task.Run など)
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
 
             try
             {
@@ -71,6 +77,20 @@ namespace IwaraDownloader
             {
                 ShowErrorAndLog(ex);
             }
+        }
+
+        /// <summary>
+        /// fire-and-forget Task の未観測例外 (GC されるまで気付かれない)。
+        /// アプリは落とさず、ログに残してダイアログは出さない (頻度未知のため UI 連発回避)。
+        /// </summary>
+        private static void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            try
+            {
+                LoggingService.Instance.Error("Unobserved task exception", e.Exception);
+            }
+            catch { }
+            e.SetObserved();
         }
 
         /// <summary>

@@ -2,11 +2,12 @@ using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 using IwaraDownloader.Utils;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace IwaraDownloader.Forms
 {
     /// <summary>
-    /// メインフォーム（JD2風ツリー構造UI）
+    /// メインフォーム(JD2風ツリー構造UI)
     /// </summary>
     public partial class MainForm : Form
     {
@@ -22,13 +23,14 @@ namespace IwaraDownloader.Forms
         private const string NODE_ALL_DOWNLOADS = "__ALL_DOWNLOADS__";
         private const string NODE_NOT_DOWNLOADED = "__NOT_DOWNLOADED__";
         private const string NODE_DOWNLOADED = "__DOWNLOADED__";
+        private const string NODE_SKIPPED = "__SKIPPED__";
         private const string NODE_FAILED_VIDEOS = "__FAILED_VIDEOS__";
         private const string NODE_SINGLE_VIDEOS = "__SINGLE_VIDEOS__";
         
-        // フィルター用の全動画キャッシュ（フィルター前）
+        // フィルター用の全動画キャッシュ(フィルター前)
         private List<VideoInfo> _allVideoList = new();
         
-        // 表示用の動画リスト（フィルター・ソート適用後）
+        // 表示用の動画リスト(フィルター・ソート適用後)
         private List<VideoInfo> _displayVideoList = new();
         
         // 仮想モード用キャッシュ
@@ -36,11 +38,17 @@ namespace IwaraDownloader.Forms
         private int _cacheStartIndex = 0;
         
         // ソート設定
-        private int _sortColumn = 4; // デフォルトは追加日時
-        private SortOrder _sortOrder = SortOrder.Descending; // デフォルトは降順（新しい順）
+        private int _sortColumn = 5; // デフォルトは追加日時
+        private SortOrder _sortOrder = SortOrder.Descending; // デフォルトは降順(新しい順)
         
         // フィルター
         private string _currentFilterText = "";
+
+        // サムネ表示用 (タイルモード)
+        private ImageList? _thumbImageList;
+        private Image? _placeholderThumb;
+        private const int ThumbWidth = 160;
+        private const int ThumbHeight = 90;
 
         public MainForm()
         {
@@ -86,6 +94,8 @@ namespace IwaraDownloader.Forms
             _downloadManager.TaskStatusChanged += OnTaskStatusChanged;
             _downloadManager.NewVideosFound += OnNewVideosFound;
             _downloadManager.AutoCheckCompleted += OnAutoCheckCompleted;
+            _downloadManager.BackgroundTaskProgress += OnBackgroundTaskProgress;
+            _downloadManager.BackgroundTaskCompleted += OnBackgroundTaskCompleted;
 
             // 環境チェック
             SplashForm.UpdateStatus("環境をチェック中...", 40);
@@ -102,6 +112,14 @@ namespace IwaraDownloader.Forms
             // ListViewソーター初期化
             SplashForm.UpdateStatus("UIを初期化中...", 70);
             InitializeListViewSorter();
+
+            // 動画コンテキストメニューは Designer で構築済み (Items.AddRange は InitializeComponent 内で完了)
+
+            // UI モード復元 (NSFW フィルタ / 表示モード / クリップボード監視)
+            // CheckedChanged ハンドラが走る → リスナー登録・設定保存が連動する
+            SetNsfwFilter(settings.NsfwFilterMode);
+            btnViewMode.Checked = settings.VideoListViewMode == 1;
+            btnClipMonitor.Checked = settings.EnableClipboardMonitor;
 
             // ダウンロードマネージャー開始
             SplashForm.UpdateStatus("ダウンロードマネージャーを開始中...", 80);
@@ -127,6 +145,33 @@ namespace IwaraDownloader.Forms
         {
             // フォームが表示されたらスプラッシュを閉じる
             SplashForm.CloseSplash();
+
+            // 初回起動時: 環境が未セットアップなら自動でウィザード起動
+            var (pythonReady, scriptReady) = _downloadManager.CheckEnvironment();
+            if (!pythonReady || !scriptReady)
+            {
+                BeginInvoke((Action)(() => ShowSetupWizard(autoTriggered: true)));
+            }
+        }
+
+        /// <summary>
+        /// セットアップウィザードを開く
+        /// </summary>
+        private void ShowSetupWizard(bool autoTriggered = false)
+        {
+            using var wiz = new SetupWizardForm();
+            var result = wiz.ShowDialog(this);
+            if (result == DialogResult.OK)
+            {
+                btnSetup.BackColor = SystemColors.Control;
+                MessageBox.Show("セットアップが完了しました!", "完了",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else if (autoTriggered)
+            {
+                UpdateStatusBar("セットアップ未完了。「環境セットアップ」ボタンから再実行できます。");
+            }
+            CheckEnvironment();
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -144,8 +189,26 @@ namespace IwaraDownloader.Forms
             }
 
             _downloadManager.Stop();
+            // mp4 タグ書き込み中の moov atom 破損を防ぐため、書き込み完了まで最大10秒待機
+            // (進行中の書き込みが無ければ即座に戻る)
+            Services.MetadataService.WaitForWritesToComplete(10000);
             _downloadManager.Dispose();
             notifyIcon.Visible = false;
+
+            // クリップボードリスナー / サムネイベントを解除 (OS リソース漏れ防止)
+            if (_clipboardListenerRegistered)
+            {
+                try { RemoveClipboardFormatListener(this.Handle); } catch { }
+                _clipboardListenerRegistered = false;
+            }
+            if (_thumbImageList != null)
+            {
+                try { Services.ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady; } catch { }
+                try { _thumbImageList.Dispose(); } catch { }
+                try { _placeholderThumb?.Dispose(); } catch { }
+                _thumbImageList = null;
+                _placeholderThumb = null;
+            }
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
@@ -199,8 +262,14 @@ namespace IwaraDownloader.Forms
         private void CheckEnvironment()
         {
             var (pythonReady, scriptReady) = _downloadManager.CheckEnvironment();
+            bool setupComplete = pythonReady && scriptReady;
 
-            if (!pythonReady || !scriptReady)
+            // セットアップ完了時はボタンと前後セパレータを非表示
+            btnSetup.Visible = !setupComplete;
+            toolStripSeparator3.Visible = !setupComplete;
+            toolStripSeparator4.Visible = !setupComplete;
+
+            if (!setupComplete)
             {
                 UpdateStatusBar("環境が未セットアップです。「環境セットアップ」ボタンをクリックしてください。");
                 btnSetup.BackColor = Color.Yellow;
@@ -212,7 +281,7 @@ namespace IwaraDownloader.Forms
             else
             {
                 UpdateStatusBar("準備完了");
-                // トークン有効性を API で非同期検証（失敗時は内部でログアウトされる）
+                // トークン有効性を API で非同期検証(失敗時は内部でログアウトされる)
                 _ = VerifyLoginInBackgroundAsync();
             }
         }
@@ -242,43 +311,9 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        private async void btnSetup_Click(object sender, EventArgs e)
+        private void btnSetup_Click(object sender, EventArgs e)
         {
-            var pythonPath = ShowInputDialog(
-                "環境セットアップ",
-                "Pythonのパスを入力してください（例: C:\\Python311\\python.exe）",
-                "python");
-
-            if (string.IsNullOrEmpty(pythonPath))
-                return;
-
-            btnSetup.Enabled = false;
-            UpdateStatusBar("セットアップ中...");
-
-            try
-            {
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                var success = await _downloadManager.RunSetupAsync(pythonPath, progress);
-
-                if (success)
-                {
-                    btnSetup.BackColor = SystemColors.Control;
-                    MessageBox.Show("セットアップが完了しました！", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    MessageBox.Show("セットアップに失敗しました。\nPythonのパスを確認してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"セットアップ中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                btnSetup.Enabled = true;
-                CheckEnvironment();
-            }
+            ShowSetupWizard();
         }
 
         #endregion
@@ -341,7 +376,7 @@ namespace IwaraDownloader.Forms
                 var (success, error) = await _downloadManager.LoginAsync(email, password);
                 if (success)
                 {
-                    // ログイン成功時にメールアドレスを設定に保存（パスワードは保存しない）
+                    // ログイン成功時にメールアドレスを設定に保存(パスワードは保存しない)
                     var settings = SettingsManager.Instance.Settings;
                     settings.IwaraEmail = email;
                     SettingsManager.Instance.Save();
@@ -439,10 +474,14 @@ namespace IwaraDownloader.Forms
                 RefreshChannelTree();
                 RefreshVideoList();
             }
+            catch (Exception ex)
+            {
+                _logger.Error("新着確認中にエラー", ex);
+                UpdateStatusBar($"確認エラー: {ex.Message}");
+            }
             finally
             {
                 btnCheckNow.Enabled = true;
-                UpdateStatusBar("確認完了");
             }
         }
 
@@ -463,7 +502,9 @@ namespace IwaraDownloader.Forms
         private void btnSettings_Click(object sender, EventArgs e)
         {
             using var form = new SettingsForm(_downloadManager);
-            if (form.ShowDialog() == DialogResult.OK)
+            // Owner を MainForm にしておく (SettingsForm 内からモードレス子ウィンドウを
+            // MainForm 直下に置きたい場合に this.Owner で取得できるように)
+            if (form.ShowDialog(this) == DialogResult.OK)
             {
                 _downloadManager.UpdateAutoCheckTimer();
             }
@@ -634,39 +675,56 @@ namespace IwaraDownloader.Forms
 
         #region Download Manager Events
 
+        /// <summary>
+        /// UI スレッドへ非同期で処理を投げる。Invoke (同期) は大量並列イベント時に
+        /// スレッドプール側が UI スレッド完了を待ち続けてフリーズするため使わない。
+        /// Disposing/IsDisposed 中は ObjectDisposedException を避けるため何もしない。
+        /// </summary>
+        private void PostToUi(Action action)
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated) return;
+            try
+            {
+                BeginInvoke(action);
+            }
+            catch (InvalidOperationException)
+            {
+                // ハンドル破棄レース (ObjectDisposedException は InvalidOperationException のサブ): 無視
+            }
+        }
+
         private void OnTaskProgressChanged(object? sender, DownloadTask task)
         {
             if (InvokeRequired)
             {
-                Invoke(() => OnTaskProgressChanged(sender, task));
+                PostToUi(() => OnTaskProgressChanged(sender, task));
                 return;
             }
             UpdateVideoItem(task);
-            UpdateDownloadCount();
+            ScheduleDownloadCountUpdate();
         }
 
         private void OnTaskStatusChanged(object? sender, DownloadTask task)
         {
             if (InvokeRequired)
             {
-                Invoke(() => OnTaskStatusChanged(sender, task));
+                PostToUi(() => OnTaskStatusChanged(sender, task));
                 return;
             }
 
             UpdateVideoItem(task);
-            UpdateDownloadCount();
-            
-            if (task.Status == DownloadStatus.Completed || task.Status == DownloadStatus.Failed)
-            {
-                RefreshChannelTree();
-            }
+            ScheduleDownloadCountUpdate();
+
+            // どのステータス遷移でもキューノード内訳が変わるので Refresh
+            // (debounce 200ms 経由で連続呼びはまとまる)
+            RefreshChannelTree();
         }
 
         private void OnNewVideosFound(object? sender, (SubscribedUser User, List<VideoInfo> Videos) e)
         {
             if (InvokeRequired)
             {
-                Invoke(() => OnNewVideosFound(sender, e));
+                PostToUi(() => OnNewVideosFound(sender, e));
                 return;
             }
             RefreshChannelTree();
@@ -677,37 +735,124 @@ namespace IwaraDownloader.Forms
         {
             if (InvokeRequired)
             {
-                Invoke(() => OnAutoCheckCompleted(sender, e));
+                PostToUi(() => OnAutoCheckCompleted(sender, e));
                 return;
             }
             RefreshChannelTree();
+        }
+
+        /// <summary>バックグラウンドタスクの進捗をステータスバーに表示</summary>
+        private void OnBackgroundTaskProgress(object? sender, (string TaskName, string Message) e)
+        {
+            if (InvokeRequired)
+            {
+                PostToUi(() => OnBackgroundTaskProgress(sender, e));
+                return;
+            }
+            UpdateStatusBar($"[{e.TaskName}] {e.Message}");
+        }
+
+        /// <summary>バックグラウンドタスク完了時の通知</summary>
+        private void OnBackgroundTaskCompleted(object? sender, (string TaskName, string Summary, bool Success) e)
+        {
+            if (InvokeRequired)
+            {
+                PostToUi(() => OnBackgroundTaskCompleted(sender, e));
+                return;
+            }
+            UpdateStatusBar($"[{e.TaskName}] {e.Summary}");
+            // 完了通知 (バルーン)
+            try
+            {
+                Services.NotificationService.Instance.ShowNotification(
+                    e.Success ? $"{e.TaskName} 完了" : $"{e.TaskName} 終了 (一部失敗)",
+                    e.Summary);
+            }
+            catch { }
+            // 動画リスト/ツリーを更新 (サムネ補完で URL が増えたら再描画したい)
+            RefreshChannelTree();
+            RefreshVideoList();
         }
 
         #endregion
 
         #region Channel Tree
 
+        // 短時間に複数のイベント (DL完了など) が連続発火しても UI 更新を統合するためのデバウンスタイマー
+        private System.Windows.Forms.Timer? _channelTreeRefreshTimer;
+        private const int TreeRefreshDebounceMs = 200;
+
         /// <summary>
-        /// チャンネルツリーを更新
+        /// チャンネルツリーを更新 (debounce + 非同期DBアクセス)
+        /// <summary>
+        /// 外部 (ImportFromFolderWizard 等) からインポート完了通知を受けたときに
+        /// チャンネル一覧 + 動画リストの両方を更新するフック。
+        /// debounce 機構が内蔵されてるので連続呼出しでも安全。
+        /// </summary>
+        public void RefreshAfterImport()
+        {
+            if (IsDisposed) return;
+            if (InvokeRequired) { try { BeginInvoke((Action)RefreshAfterImport); } catch { } return; }
+            RefreshChannelTree();
+            RefreshVideoList();
+        }
+
+        /// 短時間に複数回呼ばれても DB クエリは1回だけ実行される。
         /// </summary>
         private void RefreshChannelTree()
         {
+            if (IsDisposed) return;
+            if (_channelTreeRefreshTimer == null)
+            {
+                _channelTreeRefreshTimer = new System.Windows.Forms.Timer { Interval = TreeRefreshDebounceMs };
+                _channelTreeRefreshTimer.Tick += async (_, _) =>
+                {
+                    _channelTreeRefreshTimer.Stop();
+                    await RefreshChannelTreeCoreAsync();
+                };
+            }
+            _channelTreeRefreshTimer.Stop();
+            _channelTreeRefreshTimer.Start();
+        }
+
+        private async Task RefreshChannelTreeCoreAsync()
+        {
+            if (IsDisposed) return;
+
+            // DB クエリをバックグラウンドスレッドで実行 (DatabaseService は接続毎使い捨てでスレッドセーフ)
+            List<VideoInfo> allVideos;
+            List<SubscribedUser> users;
+            try
+            {
+                allVideos = await Task.Run(() => _database.GetAllVideos());
+                users = await Task.Run(() => _database.GetAllSubscribedUsers());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RefreshChannelTree DB error: {ex.Message}");
+                return;
+            }
+
+            if (IsDisposed) return;
+
             treeViewChannels.BeginUpdate();
-            
+
             // 選択状態を保存
             var selectedTag = treeViewChannels.SelectedNode?.Tag;
-            
+
             treeViewChannels.Nodes.Clear();
 
-            // データベースから一括取得（パフォーマンス最適化）
-            var allVideos = _database.GetAllVideos();
             var totalCount = allVideos.Count;
             var completedCount = allVideos.Count(v => v.Status == DownloadStatus.Completed);
             var failedCount = allVideos.Count(v => v.Status == DownloadStatus.Failed);
-            var notDownloadedCount = allVideos.Count(v => v.Status != DownloadStatus.Completed);
-            
-            // DL中/待機中はDownloadManagerのアクティブなタスクから取得（リアルタイム同期）
-            var downloadingCount = _downloadManager.ActiveTaskCount;
+            var skippedCount = allVideos.Count(v => v.Status == DownloadStatus.Skipped);
+            // 未DL: Completed / Skipped を除外したもの (Pending/Failed/Downloading等)
+            var notDownloadedCount = allVideos.Count(v =>
+                v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Skipped);
+
+            // DL中/タグ書込中/待機中は DownloadManager のアクティブなタスクから取得(リアルタイム同期)
+            var downloadingCount = _downloadManager.DownloadingCount;
+            var writingTagsCount = _downloadManager.WritingTagsCount;
             var pendingCount = _downloadManager.PendingTaskCount;
 
             // 「全ての動画」ノード
@@ -719,14 +864,18 @@ namespace IwaraDownloader.Forms
             treeViewChannels.Nodes.Add(allVideosNode);
 
             // 「ダウンロードキュー」ノード
-            var queueCount = downloadingCount + pendingCount;
+            var queueCount = downloadingCount + writingTagsCount + pendingCount;
             var allDownloadsNode = new TreeNode($"📥 ダウンロードキュー")
             {
                 Tag = NODE_ALL_DOWNLOADS
             };
             if (queueCount > 0)
             {
-                allDownloadsNode.Text += $" ({downloadingCount}DL中/{pendingCount}待機)";
+                var parts = new List<string>();
+                if (downloadingCount > 0) parts.Add($"{downloadingCount}DL中");
+                if (writingTagsCount > 0) parts.Add($"{writingTagsCount}タグ書込");
+                if (pendingCount > 0) parts.Add($"{pendingCount}待機");
+                allDownloadsNode.Text += $" ({string.Join("/", parts)})";
                 allDownloadsNode.NodeFont = new Font(treeViewChannels.Font, FontStyle.Bold);
             }
             treeViewChannels.Nodes.Add(allDownloadsNode);
@@ -753,6 +902,17 @@ namespace IwaraDownloader.Forms
                 treeViewChannels.Nodes.Add(downloadedNode);
             }
 
+            // 「スキップ」ノード
+            if (skippedCount > 0)
+            {
+                var skippedNode = new TreeNode($"⏭️ スキップ [{skippedCount}]")
+                {
+                    Tag = NODE_SKIPPED,
+                    ForeColor = Color.Gray
+                };
+                treeViewChannels.Nodes.Add(skippedNode);
+            }
+
             // 「エラー」ノード
             if (failedCount > 0)
             {
@@ -775,8 +935,7 @@ namespace IwaraDownloader.Forms
                 treeViewChannels.Nodes.Add(singleNode);
             }
 
-            // 登録チャンネル
-            var users = _database.GetAllSubscribedUsers();
+            // 登録チャンネル (users は await で取得済み)
             foreach (var user in users)
             {
                 var videos = allVideos.Where(v => v.SubscribedUserId == user.Id).ToList();
@@ -836,6 +995,7 @@ namespace IwaraDownloader.Forms
                     NODE_ALL_DOWNLOADS => "ダウンロード中/待機中",
                     NODE_NOT_DOWNLOADED => "未DL動画",
                     NODE_DOWNLOADED => "DL済動画",
+                    NODE_SKIPPED => "スキップ動画",
                     NODE_FAILED_VIDEOS => "エラー一覧",
                     NODE_SINGLE_VIDEOS => "単発動画",
                     _ => "動画一覧"
@@ -853,123 +1013,196 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        // NodeMouseClickは不要（contextMenuChannel_Opening内でノード選択を行う）
+        // NodeMouseClickは不要(contextMenuChannel_Opening内でノード選択を行う)
 
         #endregion
 
         #region Video List
 
+        private System.Windows.Forms.Timer? _videoListRefreshTimer;
+        private const int VideoListRefreshDebounceMs = 200;
+
         /// <summary>
-        /// 動画リストを更新（仮想モード対応）
+        /// 動画リストを更新(仮想モード対応, debounce + 非同期DB)
         /// </summary>
         private void RefreshVideoList()
         {
-            // 選択状態を保存
-            var selectedVideoIds = GetSelectedVideoIds();
-            
-            List<VideoInfo> videos;
-            var selectedNode = treeViewChannels.SelectedNode;
+            if (IsDisposed) return;
+            if (_videoListRefreshTimer == null)
+            {
+                _videoListRefreshTimer = new System.Windows.Forms.Timer { Interval = VideoListRefreshDebounceMs };
+                _videoListRefreshTimer.Tick += async (_, _) =>
+                {
+                    _videoListRefreshTimer.Stop();
+                    await RefreshVideoListCoreAsync();
+                };
+            }
+            _videoListRefreshTimer.Stop();
+            _videoListRefreshTimer.Start();
+        }
 
-            if (selectedNode?.Tag is SubscribedUser user)
+        private async Task RefreshVideoListCoreAsync()
+        {
+            if (IsDisposed) return;
+
+            // 選択状態 / 選択ノードを UI スレッドで先に取得
+            var selectedVideoIds = GetSelectedVideoIds();
+            var selectedNode = treeViewChannels.SelectedNode;
+            var tagObj = selectedNode?.Tag;
+
+            // DB クエリをバックグラウンドで実行
+            List<VideoInfo> videos;
+            try
             {
-                // チャンネルの動画
-                videos = _database.GetVideosBySubscribedUser(user.Id);
+                videos = await Task.Run(() =>
+                {
+                    if (tagObj is SubscribedUser user)
+                    {
+                        return _database.GetVideosBySubscribedUser(user.Id);
+                    }
+                    if (tagObj is string tag)
+                    {
+                        return tag switch
+                        {
+                            NODE_ALL_VIDEOS => _database.GetAllVideos(),
+                            NODE_ALL_DOWNLOADS => _database.GetVideosByStatus(DownloadStatus.Downloading)
+                                .Concat(_database.GetVideosByStatus(DownloadStatus.Pending)).ToList(),
+                            NODE_NOT_DOWNLOADED => _database.GetAllVideos()
+                                .Where(v => v.Status != DownloadStatus.Completed
+                                         && v.Status != DownloadStatus.Skipped).ToList(),
+                            NODE_DOWNLOADED => _database.GetVideosByStatus(DownloadStatus.Completed),
+                            NODE_SKIPPED => _database.GetVideosByStatus(DownloadStatus.Skipped),
+                            NODE_FAILED_VIDEOS => _database.GetVideosByStatus(DownloadStatus.Failed),
+                            NODE_SINGLE_VIDEOS => _database.GetAllVideos()
+                                .Where(v => !v.SubscribedUserId.HasValue).ToList(),
+                            _ => new List<VideoInfo>(),
+                        };
+                    }
+                    return new List<VideoInfo>();
+                });
             }
-            else if (selectedNode?.Tag is string tag)
+            catch (Exception ex)
             {
-                if (tag == NODE_ALL_VIDEOS)
-                {
-                    // 全ての動画
-                    videos = _database.GetAllVideos();
-                }
-                else if (tag == NODE_ALL_DOWNLOADS)
-                {
-                    // ダウンロード中/待機中
-                    var downloadingList = _database.GetVideosByStatus(DownloadStatus.Downloading);
-                    var pendingList = _database.GetVideosByStatus(DownloadStatus.Pending);
-                    videos = downloadingList.Concat(pendingList).ToList();
-                }
-                else if (tag == NODE_NOT_DOWNLOADED)
-                {
-                    // 未DL動画（完了以外全て）
-                    videos = _database.GetAllVideos().Where(v => v.Status != DownloadStatus.Completed).ToList();
-                }
-                else if (tag == NODE_DOWNLOADED)
-                {
-                    // DL済動画
-                    videos = _database.GetVideosByStatus(DownloadStatus.Completed);
-                }
-                else if (tag == NODE_FAILED_VIDEOS)
-                {
-                    // エラー一覧
-                    videos = _database.GetVideosByStatus(DownloadStatus.Failed);
-                }
-                else // NODE_SINGLE_VIDEOS
-                {
-                    // 単発動画
-                    videos = _database.GetAllVideos().Where(v => !v.SubscribedUserId.HasValue).ToList();
-                }
+                Debug.WriteLine($"RefreshVideoList DB error: {ex.Message}");
+                return;
             }
-            else
-            {
-                videos = new List<VideoInfo>();
-            }
+
+            if (IsDisposed) return;
 
             // 元データを保存
             _allVideoList = videos;
-            
+
             // フィルターとソートを適用して表示
             ApplyVideoFilter();
-            
+
             // 選択状態を復元
             RestoreSelectedVideoIds(selectedVideoIds);
         }
 
         /// <summary>
-        /// 動画リストにフィルターを適用（仮想モード対応）
+        /// 動画リストにフィルターを適用(仮想モード対応)
         /// </summary>
         private void ApplyVideoFilter()
         {
-            var filterText = _currentFilterText.Trim().ToLower();
-            
-            // フィルター適用
-            if (string.IsNullOrEmpty(filterText))
+            // NSFW フィルタ (検索テキストとは独立、設定値で常時適用)
+            var nsfwMode = SettingsManager.Instance.Settings.NsfwFilterMode;
+            IEnumerable<VideoInfo> source = _allVideoList;
+            if (nsfwMode == 1) // SFW のみ
+                source = source.Where(v => string.IsNullOrEmpty(v.Rating) || v.Rating == "general");
+            else if (nsfwMode == 2) // NSFW のみ
+                source = source.Where(v => v.Rating == "ecchi" || v.Rating == "nsfw");
+
+            // 検索クエリパース
+            var query = SearchQuery.Parse(_currentFilterText);
+            if (query.IsEmpty)
             {
-                _displayVideoList = new List<VideoInfo>(_allVideoList);
+                _displayVideoList = source.ToList();
             }
             else
             {
-                _displayVideoList = _allVideoList
-                    .Where(v => v.Title.ToLower().Contains(filterText) ||
-                                v.AuthorUsername.ToLower().Contains(filterText))
-                    .ToList();
+                _displayVideoList = source.Where(query.Match).ToList();
             }
-            
+
             // ソート適用
             SortDisplayVideoList();
-            
+
             // キャッシュクリア
             ClearItemCache();
-            
-            // 仮想リストサイズを更新
-            listViewVideos.VirtualListSize = _displayVideoList.Count;
-            listViewVideos.Invalidate();
-            
+
+            // モードに応じて Items 投入 / VirtualListSize 設定
+            if (listViewVideos.View == View.LargeIcon)
+            {
+                // サムネモード: VirtualMode false で Items 直接投入 (件数制限あり)
+                int limit = Math.Min(_displayVideoList.Count, TileModeMaxItems);
+                listViewVideos.BeginUpdate();
+                try
+                {
+                    listViewVideos.Items.Clear();
+                    for (int i = 0; i < limit; i++)
+                    {
+                        try { listViewVideos.Items.Add(CreateVideoListItem(_displayVideoList[i])); }
+                        catch (Exception itemEx)
+                        {
+                            _logger.Warn($"Filter tile add failed at {i}: {itemEx.Message}");
+                        }
+                    }
+                }
+                finally { listViewVideos.EndUpdate(); }
+            }
+            else
+            {
+                // 詳細モード: 仮想リストサイズ更新
+                listViewVideos.VirtualListSize = _displayVideoList.Count;
+                listViewVideos.Invalidate();
+            }
+
             // フィルター結果をステータスに表示
-            if (!string.IsNullOrEmpty(filterText))
+            if (!query.IsEmpty || nsfwMode != 0)
             {
                 UpdateStatusBar($"フィルター: {_displayVideoList.Count}/{_allVideoList.Count}件");
             }
         }
 
+        /// <summary>
+        /// 動画のソース（投稿サイト / 埋め込み元）を表示用文字列で返す
+        ///   - iwara 本体: video.Site で iwara.tv / iwara.ai を区別 (空文字は tv 扱い)
+        ///   - 外部埋め込み: EmbedUrl のドメインから判定 (YouTube/ニコニコ/Vimeo/X/Bilibili)
+        /// </summary>
+        private static string GetVideoSourceLabel(VideoInfo video)
+        {
+            if (!video.IsExternal)
+            {
+                // iwara 本体 (Site 空文字は旧データ → iwara.tv 扱い)
+                if (string.Equals(video.Site, Helpers.SiteAi, StringComparison.OrdinalIgnoreCase))
+                    return "iwara.ai";
+                return "iwara.tv";
+            }
+
+            var url = video.EmbedUrl?.ToLowerInvariant() ?? string.Empty;
+            if (url.Contains("youtube.com") || url.Contains("youtu.be"))
+                return "YouTube";
+            if (url.Contains("vimeo.com"))
+                return "Vimeo";
+            if (url.Contains("twitter.com") || url.Contains("x.com"))
+                return "X/Twitter";
+            if (url.Contains("nicovideo.jp"))
+                return "ニコニコ";
+            if (url.Contains("bilibili.com"))
+                return "Bilibili";
+            return "外部";
+        }
+
         private ListViewItem CreateVideoListItem(VideoInfo video)
         {
-            var statusIcon = GetStatusIcon(video.Status);
-            var statusText = GetStatusText(video.Status);
-            
+            var task = _downloadManager.GetTask(video.VideoId);
+
+            // 実行中タスクがあれば task.Status を優先 (DB の video.Status より新しい)
+            var effectiveStatus = task != null ? task.Status : video.Status;
+            var statusIcon = GetStatusIcon(effectiveStatus);
+            var statusText = GetStatusText(effectiveStatus);
+
             // 進捗表示
             var progressText = "-";
-            var task = _downloadManager.GetTask(video.VideoId);
             if (task != null && task.Status == DownloadStatus.Downloading)
             {
                 if (task.Progress > 0)
@@ -989,6 +1222,10 @@ namespace IwaraDownloader.Forms
                     progressText = "DL中...";
                 }
             }
+            else if (task != null && task.Status == DownloadStatus.WritingTags)
+            {
+                progressText = "タグ書込中...";
+            }
             else if (video.Status == DownloadStatus.Completed)
             {
                 progressText = "100%";
@@ -1001,26 +1238,37 @@ namespace IwaraDownloader.Forms
             var item = new ListViewItem(new[]
             {
                 $"{statusIcon} {video.Title}",
+                GetVideoSourceLabel(video),
                 statusText,
                 progressText,
                 video.FileSizeFormatted,
-                video.CreatedAt.ToString("yyyy/MM/dd")
+                video.CreatedAt.ToString("yyyy/MM/dd HH:mm")
             })
             {
                 Tag = video
             };
 
-            // 状態に応じた色分け
-            item.ForeColor = video.Status switch
+            // タイル (サムネ) モード時はキーを設定 (Details モードでは無視される)
+            if (listViewVideos.View == View.LargeIcon && _thumbImageList != null)
+            {
+                item.ImageKey = EnsureThumbImageKey(video);
+            }
+
+            // 状態に応じた色分け (task.Status を優先)
+            // Skipped でも LocalFilePath が残っている場合 (過去にDL済) は完了色を維持
+            bool hasLocalFile = !string.IsNullOrEmpty(video.LocalFilePath);
+            item.ForeColor = effectiveStatus switch
             {
                 DownloadStatus.Completed => Color.Green,
                 DownloadStatus.Failed => Color.Red,
                 DownloadStatus.Downloading => Color.Blue,
+                DownloadStatus.WritingTags => Color.MediumPurple,
                 DownloadStatus.Pending => Color.DarkOrange,
+                DownloadStatus.Skipped => hasLocalFile ? Color.Green : Color.Gray,
                 _ => Color.Black
             };
 
-            // ツールチップ（エラー詳細表示）
+            // ツールチップ(エラー詳細表示)
             if (video.Status == DownloadStatus.Failed && !string.IsNullOrEmpty(video.LastErrorMessage))
             {
                 item.ToolTipText = $"エラー: {video.LastErrorMessage}\nリトライ: {video.RetryCount}回";
@@ -1042,7 +1290,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// ダウンロードタスクの表示を更新（仮想モード対応）
+        /// ダウンロードタスクの表示を更新(仮想モード対応)
         /// </summary>
         private void UpdateVideoItem(DownloadTask task)
         {
@@ -1053,15 +1301,29 @@ namespace IwaraDownloader.Forms
                 {
                     // データソースの動画情報を更新
                     _displayVideoList[i] = task.Video;
-                    
-                    // キャッシュを更新
-                    if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
+
+                    if (listViewVideos.VirtualMode)
                     {
-                        _itemCache[i - _cacheStartIndex] = CreateVideoListItem(task.Video);
+                        // 詳細モード (仮想): _itemCache の該当範囲を更新 → RedrawItems
+                        if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
+                        {
+                            _itemCache[i - _cacheStartIndex] = CreateVideoListItem(task.Video);
+                        }
+                        // RefreshVideoListCoreAsync の最中など _displayVideoList と VirtualListSize が
+                        // 一時的に不一致になる瞬間に RedrawItems(i, i) で InvalidArgument を踏むのを防ぐ
+                        if (i < listViewVideos.VirtualListSize)
+                        {
+                            listViewVideos.RedrawItems(i, i, false);
+                        }
                     }
-                    
-                    // 該当行を再描画
-                    listViewVideos.RedrawItems(i, i, false);
+                    else
+                    {
+                        // サムネモード (非仮想): Items[i] を再生成 (件数制限で範囲外の場合はスキップ)
+                        if (i >= 0 && i < listViewVideos.Items.Count)
+                        {
+                            listViewVideos.Items[i] = CreateVideoListItem(task.Video);
+                        }
+                    }
                     break;
                 }
             }
@@ -1083,6 +1345,7 @@ namespace IwaraDownloader.Forms
             {
                 DownloadStatus.Pending => "⏳",
                 DownloadStatus.Downloading => "🔄",
+                DownloadStatus.WritingTags => "🏷️",
                 DownloadStatus.Completed => "✅",
                 DownloadStatus.Failed => "❌",
                 DownloadStatus.Skipped => "⏭️",
@@ -1097,6 +1360,7 @@ namespace IwaraDownloader.Forms
             {
                 DownloadStatus.Pending => "待機中",
                 DownloadStatus.Downloading => "DL中",
+                DownloadStatus.WritingTags => "タグ書込中",
                 DownloadStatus.Completed => "完了",
                 DownloadStatus.Failed => "失敗",
                 DownloadStatus.Skipped => "スキップ",
@@ -1105,32 +1369,37 @@ namespace IwaraDownloader.Forms
             };
         }
 
-        private void listViewVideos_DoubleClick(object sender, EventArgs e)
+        private void listViewVideos_MouseDoubleClick(object? sender, MouseEventArgs e)
         {
+            if (e.Button != MouseButtons.Left) return;
+
             var video = GetFirstSelectedVideo();
             if (video == null) return;
 
             if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
             {
-                // 完了済み → 再生
                 Process.Start(new ProcessStartInfo { FileName = video.LocalFilePath, UseShellExecute = true });
             }
             else
             {
-                // 未完了 → ページを開く
                 Helpers.OpenUrl(video.Url);
             }
         }
 
         private void listViewVideos_KeyDown(object sender, KeyEventArgs e)
         {
-            // Ctrl+A で全選択（仮想モード対応）
+            // Ctrl+A で全選択(仮想モード対応)
             if (e.Control && e.KeyCode == Keys.A)
             {
                 e.SuppressKeyPress = true; // ビープ音を防ぐ
-                
+
                 listViewVideos.BeginUpdate();
-                for (int i = 0; i < _displayVideoList.Count; i++)
+                // サムネモードでは Items.Count が上限 (TileModeMaxItems=500)、
+                // 詳細(VirtualMode)では VirtualListSize=_displayVideoList.Count なのでこちらで OK
+                int max = listViewVideos.VirtualMode
+                    ? listViewVideos.VirtualListSize
+                    : listViewVideos.Items.Count;
+                for (int i = 0; i < max; i++)
                 {
                     listViewVideos.SelectedIndices.Add(i);
                 }
@@ -1149,7 +1418,7 @@ namespace IwaraDownloader.Forms
             var selectedCount = listViewVideos.SelectedIndices.Count;
             if (selectedCount > 0)
             {
-                // 選択中の合計サイズを計算（仮想モード対応）
+                // 選択中の合計サイズを計算(仮想モード対応)
                 long totalSize = 0;
                 foreach (int index in listViewVideos.SelectedIndices)
                 {
@@ -1164,33 +1433,53 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 選択中の動画を取得（仮想モード対応）
+        /// 選択中の動画を取得 (仮想モード/サムネモード両対応)
+        /// サムネモード: Items[i].Tag に格納された VideoInfo を直接取り出す (件数制限ありのため _displayVideoList と添字が合わない可能性に備える)
+        /// 仮想モード: _displayVideoList のインデックスで引く
         /// </summary>
         private List<VideoInfo> GetSelectedVideos()
         {
             var videos = new List<VideoInfo>();
+            bool tileMode = !listViewVideos.VirtualMode;
             foreach (int index in listViewVideos.SelectedIndices)
             {
-                if (index >= 0 && index < _displayVideoList.Count)
+                if (tileMode)
                 {
-                    videos.Add(_displayVideoList[index]);
+                    if (index >= 0 && index < listViewVideos.Items.Count
+                        && listViewVideos.Items[index].Tag is VideoInfo v)
+                    {
+                        videos.Add(v);
+                    }
+                }
+                else
+                {
+                    if (index >= 0 && index < _displayVideoList.Count)
+                    {
+                        videos.Add(_displayVideoList[index]);
+                    }
                 }
             }
             return videos;
         }
 
         /// <summary>
-        /// 最初の選択動画を取得（仮想モード対応）
+        /// 最初の選択動画を取得 (仮想モード/サムネモード両対応)
         /// </summary>
         private VideoInfo? GetFirstSelectedVideo()
         {
-            if (listViewVideos.SelectedIndices.Count > 0)
+            if (listViewVideos.SelectedIndices.Count == 0) return null;
+            int index = listViewVideos.SelectedIndices[0];
+            bool tileMode = !listViewVideos.VirtualMode;
+            if (tileMode)
             {
-                var index = listViewVideos.SelectedIndices[0];
+                if (index >= 0 && index < listViewVideos.Items.Count
+                    && listViewVideos.Items[index].Tag is VideoInfo v)
+                    return v;
+            }
+            else
+            {
                 if (index >= 0 && index < _displayVideoList.Count)
-                {
                     return _displayVideoList[index];
-                }
             }
             return null;
         }
@@ -1227,11 +1516,39 @@ namespace IwaraDownloader.Forms
             menuChCheckNow.Visible = isUserNode;
             menuChSeparator1.Visible = isUserNode;
             menuChSetSavePath.Visible = isUserNode;
+            menuChExternalDL.Visible = isUserNode;
             menuChSeparator2.Visible = isUserNode;
-            menuChEnable.Visible = isUserNode;
-            menuChDisable.Visible = isUserNode;
             menuChSeparator3.Visible = isUserNode;
             menuChDelete.Visible = isUserNode;
+
+            if (isUserNode && selectedNode?.Tag is SubscribedUser u)
+            {
+                // 有効/無効はステータスに応じて片方だけ表示
+                menuChEnable.Visible = !u.IsEnabled;
+                menuChDisable.Visible = u.IsEnabled;
+
+                // 「今すぐ確認」は無効化中だとグレーアウト
+                menuChCheckNow.Enabled = u.IsEnabled;
+                menuChCheckNow.Text = u.IsEnabled ? "今すぐ確認" : "今すぐ確認 (無効化中)";
+
+                // iwara外動画DL設定の現在値をチェックマーク表示
+                menuChExternalDLInherit.Checked = !u.DownloadExternalVideosOverride.HasValue;
+                menuChExternalDLOn.Checked = u.DownloadExternalVideosOverride == true;
+                menuChExternalDLOff.Checked = u.DownloadExternalVideosOverride == false;
+
+                var globalDefault = Utils.SettingsManager.Instance.Settings.DownloadExternalVideosDefault;
+                menuChExternalDLInherit.Text = $"デフォルト設定に従う ({(globalDefault ? "ON" : "OFF")})";
+
+                // 保存先表示（カスタムが設定されているか視覚化）
+                menuChSetSavePath.Text = string.IsNullOrEmpty(u.CustomSavePath)
+                    ? "保存先を変更..."
+                    : "保存先を変更... (カスタム設定済み)";
+            }
+            else
+            {
+                menuChEnable.Visible = false;
+                menuChDisable.Visible = false;
+            }
 
             // 「全てダウンロード」はチャンネル・未 DL・エラー・単発動画ノードで表示
             var showDownloadAll = isUserNode || 
@@ -1341,21 +1658,147 @@ namespace IwaraDownloader.Forms
         {
             if (treeViewChannels.SelectedNode?.Tag is not SubscribedUser user) return;
 
+            var defaultDownloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var oldSavePath = user.GetSavePath(defaultDownloadFolder);
+
             using var dialog = new FolderBrowserDialog
             {
                 Description = $"{user.Username} の保存先フォルダを選択",
                 UseDescriptionForTitle = true,
-                SelectedPath = string.IsNullOrEmpty(user.CustomSavePath) 
-                    ? Path.Combine(SettingsManager.Instance.Settings.DownloadFolder, user.Username)
-                    : user.CustomSavePath
+                SelectedPath = oldSavePath
             };
 
-            if (dialog.ShowDialog() == DialogResult.OK)
+            if (dialog.ShowDialog() != DialogResult.OK) return;
+
+            var newSavePath = dialog.SelectedPath;
+            if (string.Equals(
+                    Path.GetFullPath(newSavePath).TrimEnd('\\'),
+                    Path.GetFullPath(oldSavePath).TrimEnd('\\'),
+                    StringComparison.OrdinalIgnoreCase))
             {
-                user.CustomSavePath = dialog.SelectedPath;
-                _database.UpdateSubscribedUser(user);
-                UpdateStatusBar($"保存先を変更しました: {dialog.SelectedPath}");
+                // 変更なし
+                return;
             }
+
+            // 既存DLファイルを列挙 (oldSavePath 配下のもの)
+            var allUserVideos = _database.GetVideosBySubscribedUser(user.Id);
+            var movableFiles = allUserVideos
+                .Where(v => !string.IsNullOrEmpty(v.LocalFilePath)
+                            && File.Exists(v.LocalFilePath)
+                            && IsPathUnder(v.LocalFilePath, oldSavePath))
+                .ToList();
+
+            bool doMove = false;
+            if (movableFiles.Count > 0)
+            {
+                long totalBytes = 0;
+                foreach (var v in movableFiles)
+                {
+                    try { totalBytes += new FileInfo(v.LocalFilePath).Length; } catch { }
+                }
+
+                // ドライブ判定 & 空き容量チェック
+                var driveOld = Path.GetPathRoot(Path.GetFullPath(oldSavePath))?.ToUpperInvariant();
+                var driveNew = Path.GetPathRoot(Path.GetFullPath(newSavePath))?.ToUpperInvariant();
+                bool sameDrive = string.Equals(driveOld, driveNew, StringComparison.OrdinalIgnoreCase);
+
+                string freeSpaceLine = "";
+                if (sameDrive)
+                {
+                    freeSpaceLine = "\n同ドライブのため瞬時に完了します。";
+                }
+                else if (!string.IsNullOrEmpty(driveNew))
+                {
+                    try
+                    {
+                        var di = new DriveInfo(driveNew);
+                        freeSpaceLine =
+                            $"\n移動先空き容量: {FormatSize(di.AvailableFreeSpace)}" +
+                            $" / 必要量: {FormatSize(totalBytes)}";
+                        if (di.AvailableFreeSpace < totalBytes)
+                        {
+                            MessageBox.Show(this,
+                                $"移動先ドライブ ({driveNew}) の空き容量が不足しています。\n\n" +
+                                $"必要: {FormatSize(totalBytes)}\n" +
+                                $"空き: {FormatSize(di.AvailableFreeSpace)}\n\n" +
+                                "保存先変更を中止します。",
+                                "容量不足", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        freeSpaceLine = $"\n(空き容量取得失敗: {ex.Message})";
+                    }
+                }
+
+                var confirm = MessageBox.Show(this,
+                    $"{user.Username} の保存先を変更します。\n\n" +
+                    $"既存DL済みファイル: {movableFiles.Count} 個 ({FormatSize(totalBytes)})\n" +
+                    $"移動元: {oldSavePath}\n" +
+                    $"移動先: {newSavePath}" + freeSpaceLine + "\n\n" +
+                    "これらのファイルを移動先に移しますか?\n\n" +
+                    "[はい]   ファイルを移動して保存先を変更\n" +
+                    "[いいえ] ファイルは移動せず保存先設定だけ変更\n" +
+                    "[キャンセル] 何もしない",
+                    "ファイル移動の確認",
+                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+
+                if (confirm == DialogResult.Cancel) return;
+                doMove = (confirm == DialogResult.Yes);
+            }
+
+            // 設定変更
+            user.CustomSavePath = newSavePath;
+            _database.UpdateSubscribedUser(user);
+            UpdateStatusBar($"保存先を変更しました: {newSavePath}");
+
+            if (doMove && movableFiles.Count > 0)
+            {
+                // 各ファイルの新パスを算出 (oldSavePath からの相対パスを保持)
+                var oldFull = Path.GetFullPath(oldSavePath).TrimEnd('\\');
+                var items = movableFiles.Select(v =>
+                {
+                    var full = Path.GetFullPath(v.LocalFilePath);
+                    var rel = full.Substring(oldFull.Length).TrimStart('\\', '/');
+                    var newPath = Path.Combine(newSavePath, rel);
+                    return (Video: v, NewPath: newPath);
+                }).ToList();
+
+                using var progressForm = new FileMoveProgressForm(items, _database);
+                progressForm.ShowDialog(this);
+
+                // キャッシュ無効化 + UI 再描画
+                Services.IndexCacheService.Invalidate(oldSavePath);
+                Services.IndexCacheService.Invalidate(newSavePath);
+                RefreshChannelTree();
+                RefreshVideoList();
+
+                UpdateStatusBar(
+                    $"移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
+            }
+        }
+
+        private static bool IsPathUnder(string filePath, string folderPath)
+        {
+            try
+            {
+                var fileFull = Path.GetFullPath(filePath);
+                var folderFull = Path.GetFullPath(folderPath).TrimEnd('\\') + '\\';
+                return fileFull.StartsWith(folderFull, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string FormatSize(long bytes)
+        {
+            if (bytes < 1024) return $"{bytes} B";
+            if (bytes < 1024L * 1024) return $"{bytes / 1024.0:F1} KB";
+            if (bytes < 1024L * 1024 * 1024) return $"{bytes / 1024.0 / 1024:F1} MB";
+            return $"{bytes / 1024.0 / 1024 / 1024:F2} GB";
         }
 
         private void menuChEnable_Click(object sender, EventArgs e)
@@ -1366,6 +1809,35 @@ namespace IwaraDownloader.Forms
                 _database.UpdateSubscribedUser(user);
                 RefreshChannelTree();
             }
+        }
+
+        private void menuChExternalDLInherit_Click(object sender, EventArgs e)
+        {
+            SetChannelExternalOverride(null);
+        }
+
+        private void menuChExternalDLOn_Click(object sender, EventArgs e)
+        {
+            SetChannelExternalOverride(true);
+        }
+
+        private void menuChExternalDLOff_Click(object sender, EventArgs e)
+        {
+            SetChannelExternalOverride(false);
+        }
+
+        private void SetChannelExternalOverride(bool? value)
+        {
+            if (treeViewChannels.SelectedNode?.Tag is not SubscribedUser user) return;
+            user.DownloadExternalVideosOverride = value;
+            _database.UpdateSubscribedUser(user);
+            var label = value switch
+            {
+                true => "DLする",
+                false => "DLしない",
+                null => "デフォルト設定に従う"
+            };
+            UpdateStatusBar($"{user.Username} のiwara外動画DL設定を「{label}」に変更しました");
         }
 
         private void menuChDisable_Click(object sender, EventArgs e)
@@ -1403,6 +1875,119 @@ namespace IwaraDownloader.Forms
         #endregion
 
         #region Video Context Menu
+
+        /// <summary>
+        /// 右クリック時に項目を選択するための補助。WinForms 標準だと ContextMenuStrip 自動表示時に
+        /// 行が選択されない (空クリックでもメニュー出る) ので、MouseDown で行を選択しておく。
+        /// 仮想モード ListView では SelectedIndices を直接操作することで確実に反映される。
+        /// </summary>
+        private void listViewVideos_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right) return;
+            var hit = listViewVideos.HitTest(e.X, e.Y);
+            if (hit?.Item == null || hit.Item.Index < 0) return;
+
+            int idx = hit.Item.Index;
+            foreach (int si in listViewVideos.SelectedIndices)
+            {
+                if (si == idx) return;
+            }
+            listViewVideos.SelectedIndices.Clear();
+            listViewVideos.SelectedIndices.Add(idx);
+        }
+
+        /// <summary>
+        /// Opening: 選択状態に応じて Visible トグルだけ行う (Items 操作は一切しない → AutoClose 正常)
+        /// 項目自体は Designer で固定定義済み。
+        /// </summary>
+        private void OnVideoContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // 選択ゼロでも、マウス位置に項目があれば自動選択
+            if (listViewVideos.SelectedIndices.Count == 0)
+            {
+                var mousePos = listViewVideos.PointToClient(Control.MousePosition);
+                var hit = listViewVideos.HitTest(mousePos);
+                if (hit?.Item != null && hit.Item.Index >= 0)
+                {
+                    listViewVideos.SelectedIndices.Add(hit.Item.Index);
+                }
+            }
+
+            var selected = GetSelectedVideos();
+            if (selected.Count == 0)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            bool isSingle = selected.Count == 1;
+            var single = isSingle ? selected[0] : null;
+            bool hasPending = selected.Any(v => v.Status == DownloadStatus.Pending);
+            bool hasDownloading = selected.Any(v => v.Status == DownloadStatus.Downloading);
+            bool hasCompleted = selected.Any(v => v.Status == DownloadStatus.Completed);
+            bool hasFailed = selected.Any(v => v.Status == DownloadStatus.Failed);
+            bool hasPaused = selected.Any(v => v.Status == DownloadStatus.Paused);
+            bool hasSkipped = selected.Any(v => v.Status == DownloadStatus.Skipped);
+            bool canDownload = selected.Any(v =>
+                v.Status != DownloadStatus.Completed &&
+                v.Status != DownloadStatus.Downloading &&
+                v.Status != DownloadStatus.Pending);
+            bool canCancel = hasPending || hasDownloading || hasPaused;
+            bool canRefreshInfo = selected.Any(v =>
+                string.IsNullOrEmpty(v.Title) || v.Title.StartsWith("Video "));
+            bool canPlay = isSingle && single!.Status == DownloadStatus.Completed
+                && !string.IsNullOrEmpty(single.LocalFilePath) && File.Exists(single.LocalFilePath);
+            bool canOpenFolder = isSingle
+                && !string.IsNullOrEmpty(single!.LocalFilePath) && File.Exists(single.LocalFilePath);
+            bool canOpenPage = isSingle && !string.IsNullOrEmpty(single!.Url);
+            bool canOpenAuthor = isSingle && !string.IsNullOrEmpty(single!.AuthorUsername);
+
+            menuVidDownload.Visible = canDownload;
+            menuVidDownload.Text = hasFailed && !hasSkipped ? "ダウンロード (失敗をリトライ含む)" : "ダウンロード";
+            menuVidCancel.Visible = canCancel;
+            menuVidRetryFailed.Visible = hasFailed;
+            menuVidReDownload.Visible = hasCompleted;
+            menuVidRefreshInfo.Visible = canRefreshInfo;
+            menuVidCheckFileExists.Visible = hasCompleted;
+            menuVidPlay.Visible = canPlay;
+            menuVidOpenFolder.Visible = canOpenFolder;
+            menuVidOpenPage.Visible = canOpenPage;
+            menuVidOpenAuthor.Visible = canOpenAuthor;
+            menuVidCopyUrl.Visible = true;
+            menuVidCopyTitle.Visible = true;
+            menuVidDetails.Visible = isSingle;
+            menuVidDelete.Visible = true;
+
+            AdjustSeparators();
+            // 注意: Opening 中は ContextMenuStrip がまだ表示前なので、
+            // 子項目の .Visible は親が非表示のため常に false を返す。
+            // 表示判定に使うなら .Available を見る必要がある。
+            // ここではコピー系/削除が常に有効なので空判定は不要。
+        }
+
+        private void AdjustSeparators()
+        {
+            var items = contextMenuVideo.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] is not ToolStripSeparator) continue;
+                // Opening 中は親が未表示のため .Visible は false を返す。
+                // 設定値そのものは .Available で取れる。
+                bool prev = false;
+                for (int j = i - 1; j >= 0; j--)
+                {
+                    if (items[j] is ToolStripSeparator) break;
+                    if (items[j].Available) { prev = true; break; }
+                }
+                bool next = false;
+                for (int j = i + 1; j < items.Count; j++)
+                {
+                    if (items[j] is ToolStripSeparator) break;
+                    if (items[j].Available) { next = true; break; }
+                }
+                items[i].Visible = prev && next;
+            }
+        }
 
         private void menuVidDownload_Click(object sender, EventArgs e)
         {
@@ -1689,6 +2274,102 @@ namespace IwaraDownloader.Forms
             UpdateStatusBar($"{deletedCount}件の動画を削除しました");
         }
 
+        /// <summary>
+        /// 投稿者のページ (iwara プロフィール) を開く
+        /// </summary>
+        private void menuVidOpenAuthor_Click(object sender, EventArgs e)
+        {
+            var video = GetFirstSelectedVideo();
+            if (video == null || string.IsNullOrEmpty(video.AuthorUsername)) return;
+            Helpers.OpenUrl($"https://www.iwara.tv/profile/{video.AuthorUsername}");
+        }
+
+        /// <summary>
+        /// 再ダウンロード: ローカルファイル削除 → Pending に戻して再キュー。
+        /// 完了済みファイルを意図的に取り直す用 (壊れた・別画質でやり直し等)。
+        /// </summary>
+        private void menuVidReDownload_Click(object sender, EventArgs e)
+        {
+            var selectedVideos = GetSelectedVideos()
+                .Where(v => v.Status == DownloadStatus.Completed)
+                .ToList();
+            if (selectedVideos.Count == 0) return;
+
+            var count = selectedVideos.Count;
+            var totalSize = selectedVideos.Sum(v => v.FileSize);
+            var message = count == 1
+                ? $"「{selectedVideos[0].Title}」を再ダウンロードします。\n\n" +
+                  $"既存ファイルは削除されます。続行しますか？"
+                : $"{count}件の動画を再ダウンロードします (合計 {FormatFileSize(totalSize)})。\n\n" +
+                  $"既存ファイルは削除されます。続行しますか？";
+
+            var result = MessageBox.Show(message, "再ダウンロード確認",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes) return;
+
+            int requeuedCount = 0;
+            foreach (var video in selectedVideos)
+            {
+                // ローカルファイル削除 (失敗してもログだけ残して継続)
+                if (!string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
+                {
+                    try { File.Delete(video.LocalFilePath); }
+                    catch (Exception ex) { Debug.WriteLine($"ファイル削除失敗 ({video.LocalFilePath}): {ex.Message}"); }
+                }
+                // メタデータ JSON もあれば削除
+                if (!string.IsNullOrEmpty(video.LocalFilePath))
+                {
+                    var metaPath = Path.ChangeExtension(video.LocalFilePath, ".json");
+                    if (File.Exists(metaPath))
+                    {
+                        try { File.Delete(metaPath); } catch { }
+                    }
+                    // インデックスキャッシュも無効化 (UUID マップから外す)
+                    var dir = Path.GetDirectoryName(video.LocalFilePath);
+                    if (!string.IsNullOrEmpty(dir))
+                        Services.IndexCacheService.Invalidate(dir);
+                }
+
+                // DB をリセット
+                video.LocalFilePath = string.Empty;
+                video.FileSize = 0;
+                video.Status = DownloadStatus.Pending;
+                video.DownloadedAt = null;
+                video.RetryCount = 0;
+                video.LastErrorMessage = null;
+                _database.UpdateVideo(video);
+
+                SubscribedUser? user = null;
+                if (video.SubscribedUserId.HasValue)
+                {
+                    user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                }
+                _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                requeuedCount++;
+            }
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"{requeuedCount}件を再ダウンロードキューに追加しました");
+        }
+
+        /// <summary>
+        /// 詳細情報ダイアログを開く (タグ・メモ編集も可)
+        /// </summary>
+        private void menuVidDetails_Click(object sender, EventArgs e)
+        {
+            var video = GetFirstSelectedVideo();
+            if (video == null) return;
+
+            using var form = new VideoDetailsForm(video, _database);
+            if (form.ShowDialog(this) == DialogResult.OK)
+            {
+                // タグ・メモ等の編集を反映 (該当行だけ再描画)
+                InvalidateVideoItem(video.VideoId);
+                UpdateStatusBar($"「{video.Title}」を更新しました");
+            }
+        }
+
         #endregion
 
         #region Tray Icon
@@ -1705,8 +2386,12 @@ namespace IwaraDownloader.Forms
 
         private void menuExit_Click(object sender, EventArgs e)
         {
+            // Application.Exit() を直叩きすると FormClosing 経由の
+            // メタデータ書き込み待機 (MetadataService.WaitForWritesToComplete)
+            // が走らず、mp4 タグ書き込み中なら moov atom が破損する可能性がある。
+            // _isClosing=true により MinimizeToTray 分岐をバイパスして FormClosing 経由で確実に終了する。
             _isClosing = true;
-            Application.Exit();
+            this.Close();
         }
 
         private void ShowMainWindow()
@@ -1731,6 +2416,26 @@ namespace IwaraDownloader.Forms
             lblStatus.Text = message;
         }
 
+        // DL イベント高頻度時 (毎チャンクごとに発火) の DB 全件スキャン抑制用 debounce
+        private System.Windows.Forms.Timer? _downloadCountTimer;
+        private const int DownloadCountDebounceMs = 500;
+        private void ScheduleDownloadCountUpdate()
+        {
+            if (_isClosing || IsDisposed) return;
+            if (_downloadCountTimer == null)
+            {
+                _downloadCountTimer = new System.Windows.Forms.Timer { Interval = DownloadCountDebounceMs };
+                _downloadCountTimer.Tick += (_, _) =>
+                {
+                    _downloadCountTimer!.Stop();
+                    try { UpdateDownloadCount(); }
+                    catch (Exception ex) { _logger.Error("UpdateDownloadCount 例外", ex); }
+                };
+            }
+            _downloadCountTimer.Stop();
+            _downloadCountTimer.Start();
+        }
+
         private void UpdateDownloadCount()
         {
             var downloading = _database.GetVideosByStatus(DownloadStatus.Downloading).Count;
@@ -1739,29 +2444,31 @@ namespace IwaraDownloader.Forms
             var completed = allVideos.Count(v => v.Status == DownloadStatus.Completed);
             var totalSize = allVideos.Where(v => v.Status == DownloadStatus.Completed).Sum(v => v.FileSize);
             var totalSizeStr = FormatFileSize(totalSize);
-            
-            lblDownloadCount.Text = $"DL: {downloading} / 待機: {pending} | 完了: {completed}件 ({totalSizeStr})";
-            
-            if (downloading > 0)
+
+            // キュー全体の進捗
+            //   - 文字列: 件数表記 ("DL 中 3件: 平均 42% / 待機 10件")
+            //   - プログレスバー: DL 中タスクの平均進捗 (ユーザーには 1 件ずつの体感に近い)
+            var activeTasks = _downloadManager.GetActiveTasks();
+            var dlTasks = activeTasks.Where(t => t.Status == DownloadStatus.Downloading).ToList();
+            int progressBarValue = 0;
+            string queueText = "";
+
+            if (dlTasks.Count > 0)
             {
-                // ダウンロード中の全体進捗を計算
-                var activeTasks = _downloadManager.GetActiveTasks();
-                if (activeTasks.Count > 0)
-                {
-                    var avgProgress = activeTasks.Average(t => t.Progress);
-                    progressBar.Style = ProgressBarStyle.Continuous;
-                    progressBar.Value = Math.Min(100, (int)avgProgress);
-                }
-                else
-                {
-                    progressBar.Style = ProgressBarStyle.Marquee;
-                }
+                double avgInProgress = dlTasks.Average(t => t.Progress);
+                progressBarValue = Math.Clamp((int)avgInProgress, 0, 100);
+                queueText = $" | キュー: DL中 {dlTasks.Count}件 平均{avgInProgress:F0}% / 待機 {pending}件";
             }
-            else
+            else if (pending > 0)
             {
-                progressBar.Style = ProgressBarStyle.Continuous;
-                progressBar.Value = 0;
+                // DL 開始待ち (セマフォ待ち or rate-limit delay 中)
+                queueText = $" | キュー: 待機 {pending}件";
             }
+
+            lblDownloadCount.Text = $"DL: {downloading} / 待機: {pending} | 完了: {completed}件 ({totalSizeStr}){queueText}";
+
+            progressBar.Style = ProgressBarStyle.Continuous;
+            progressBar.Value = progressBarValue;
         }
 
         /// <summary>
@@ -1851,8 +2558,11 @@ namespace IwaraDownloader.Forms
             }
             else if (e.KeyCode == Keys.Enter)
             {
-                // Enterで動画リストにフォーカス移動（仮想モード対応）
-                if (_displayVideoList.Count > 0)
+                // Enterで動画リストにフォーカス移動(仮想モード対応)
+                int max = listViewVideos.VirtualMode
+                    ? listViewVideos.VirtualListSize
+                    : listViewVideos.Items.Count;
+                if (max > 0)
                 {
                     listViewVideos.Focus();
                     listViewVideos.SelectedIndices.Clear();
@@ -1875,12 +2585,12 @@ namespace IwaraDownloader.Forms
         #region ListView Virtual Mode & Sorting
 
         /// <summary>
-        /// ListViewソート設定を初期化（仮想モード対応）
+        /// ListViewソート設定を初期化(仮想モード対応)
         /// </summary>
         private void InitializeListViewSorter()
         {
             // デフォルトは追加日時の降順
-            _sortColumn = 4;
+            _sortColumn = 5;
             _sortOrder = SortOrder.Descending;
             UpdateColumnHeaders();
         }
@@ -1939,7 +2649,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 仮想モード: キーボード検索（タイピングでアイテムにジャンプ）
+        /// 仮想モード: キーボード検索(タイピングでアイテムにジャンプ)
         /// </summary>
         private void listViewVideos_SearchForVirtualItem(object? sender, SearchForVirtualItemEventArgs e)
         {
@@ -1958,7 +2668,7 @@ namespace IwaraDownloader.Forms
                 }
             }
 
-            // 先頭から検索（ラップアラウンド）
+            // 先頭から検索(ラップアラウンド)
             for (int i = 0; i < startIndex; i++)
             {
                 if (_displayVideoList[i].Title.ToLower().StartsWith(searchText))
@@ -1970,7 +2680,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// カラムクリックでソート（仮想モード対応）
+        /// カラムクリックでソート(仮想モード対応)
         /// </summary>
         private void listViewVideos_ColumnClick(object? sender, ColumnClickEventArgs e)
         {
@@ -2026,10 +2736,11 @@ namespace IwaraDownloader.Forms
             Comparison<VideoInfo> comparison = _sortColumn switch
             {
                 0 => (a, b) => string.Compare(a.Title, b.Title, StringComparison.CurrentCulture),
-                1 => (a, b) => a.Status.CompareTo(b.Status),
-                2 => (a, b) => GetProgressValue(a).CompareTo(GetProgressValue(b)),
-                3 => (a, b) => a.FileSize.CompareTo(b.FileSize),
-                4 => (a, b) => a.CreatedAt.CompareTo(b.CreatedAt),
+                1 => (a, b) => string.Compare(GetVideoSourceLabel(a), GetVideoSourceLabel(b), StringComparison.Ordinal),
+                2 => (a, b) => a.Status.CompareTo(b.Status),
+                3 => (a, b) => GetProgressValue(a).CompareTo(GetProgressValue(b)),
+                4 => (a, b) => a.FileSize.CompareTo(b.FileSize),
+                5 => (a, b) => a.CreatedAt.CompareTo(b.CreatedAt),
                 _ => (a, b) => 0
             };
 
@@ -2042,7 +2753,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 進捗値を取得（ソート用）
+        /// 進捗値を取得(ソート用)
         /// </summary>
         private double GetProgressValue(VideoInfo video)
         {
@@ -2061,7 +2772,7 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private void UpdateColumnHeaders()
         {
-            var baseTexts = new[] { "タイトル", "状態", "進捗", "サイズ", "追加日時" };
+            var baseTexts = new[] { "タイトル", "ソース", "状態", "進捗", "サイズ", "追加日時" };
 
             for (int i = 0; i < listViewVideos.Columns.Count && i < baseTexts.Length; i++)
             {
@@ -2092,9 +2803,18 @@ namespace IwaraDownloader.Forms
         private HashSet<string> GetSelectedVideoIds()
         {
             var selectedIds = new HashSet<string>();
+            bool isTile = !listViewVideos.VirtualMode;
             foreach (int index in listViewVideos.SelectedIndices)
             {
-                if (index >= 0 && index < _displayVideoList.Count)
+                if (isTile)
+                {
+                    if (index >= 0 && index < listViewVideos.Items.Count
+                        && listViewVideos.Items[index].Tag is VideoInfo v)
+                    {
+                        selectedIds.Add(v.VideoId);
+                    }
+                }
+                else if (index >= 0 && index < _displayVideoList.Count)
                 {
                     selectedIds.Add(_displayVideoList[index].VideoId);
                 }
@@ -2110,9 +2830,16 @@ namespace IwaraDownloader.Forms
             if (selectedVideoIds.Count == 0) return;
 
             listViewVideos.SelectedIndices.Clear();
-            for (int i = 0; i < _displayVideoList.Count; i++)
+            // サムネモードは Items.Count が上限、詳細は _displayVideoList が上限
+            int max = listViewVideos.VirtualMode
+                ? _displayVideoList.Count
+                : listViewVideos.Items.Count;
+            for (int i = 0; i < max; i++)
             {
-                if (selectedVideoIds.Contains(_displayVideoList[i].VideoId))
+                string? id = listViewVideos.VirtualMode
+                    ? _displayVideoList[i].VideoId
+                    : (listViewVideos.Items[i].Tag as VideoInfo)?.VideoId;
+                if (id != null && selectedVideoIds.Contains(id))
                 {
                     listViewVideos.SelectedIndices.Add(i);
                 }
@@ -2120,23 +2847,25 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 特定の動画IDの行を再描画
+        /// 特定の動画IDの行を再描画 (仮想/非仮想モード両対応)
         /// </summary>
         private void InvalidateVideoItem(string videoId)
         {
             for (int i = 0; i < _displayVideoList.Count; i++)
             {
-                if (_displayVideoList[i].VideoId == videoId)
+                if (_displayVideoList[i].VideoId != videoId) continue;
+
+                if (listViewVideos.VirtualMode)
                 {
-                    // キャッシュを無効化
                     if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
-                    {
                         _itemCache[i - _cacheStartIndex] = CreateVideoListItem(_displayVideoList[i]);
-                    }
-                    // 該当行を再描画
                     listViewVideos.RedrawItems(i, i, false);
-                    break;
                 }
+                else if (i >= 0 && i < listViewVideos.Items.Count)
+                {
+                    listViewVideos.Items[i] = CreateVideoListItem(_displayVideoList[i]);
+                }
+                break;
             }
         }
 
@@ -2151,7 +2880,7 @@ namespace IwaraDownloader.Forms
         {
             try
             {
-                // 少し待ってからチェック（起動処理を妨げない）
+                // 少し待ってからチェック(起動処理を妨げない)
                 await Task.Delay(3000);
 
                 var result = await UpdateService.CheckForUpdateAsync();
@@ -2254,6 +2983,351 @@ namespace IwaraDownloader.Forms
         {
             using var form = new StatisticsForm();
             form.ShowDialog(this);
+        }
+
+        /// <summary>
+        /// iwara 検索インポート (グループ B で実装)
+        /// </summary>
+        private void menuToolsSearchImport_Click(object sender, EventArgs e)
+        {
+            using var form = new SearchImportForm(_downloadManager);
+            if (form.ShowDialog(this) == DialogResult.OK)
+            {
+                RefreshChannelTree();
+                RefreshVideoList();
+            }
+        }
+
+        #endregion
+
+        #region Clipboard Monitor
+
+        // クリップボード変更を Win32 メッセージで受け取る (Timer ポーリング不要)
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool AddClipboardFormatListener(IntPtr hwnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RemoveClipboardFormatListener(IntPtr hwnd);
+
+        private const int WM_CLIPBOARDUPDATE = 0x031D;
+
+        private bool _clipboardListenerRegistered = false;
+        private string? _lastProcessedClipboardText = null;
+
+        protected override void WndProc(ref Message m)
+        {
+            // 起動・破棄レース中はベースに任せる
+            if (m.Msg == WM_CLIPBOARDUPDATE)
+            {
+                try { OnClipboardChanged(); }
+                catch (Exception ex) { Debug.WriteLine($"Clipboard handler error: {ex.Message}"); }
+            }
+            base.WndProc(ref m);
+        }
+
+        /// <summary>
+        /// クリップボード ON/OFF トグル
+        /// </summary>
+        private void btnClipMonitor_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = btnClipMonitor.Checked;
+            btnClipMonitor.Text = enabled ? "📋監視: ON" : "📋監視: OFF";
+            btnClipMonitor.BackColor = enabled ? Color.LightGreen : SystemColors.Control;
+
+            // 設定保存
+            var settings = SettingsManager.Instance.Settings;
+            settings.EnableClipboardMonitor = enabled;
+            SettingsManager.Instance.Save();
+
+            // リスナー登録/解除
+            if (!IsHandleCreated) return; // Form_Load 内のセットアップ時など、ハンドル未作成なら後回し
+            if (enabled && !_clipboardListenerRegistered)
+            {
+                if (AddClipboardFormatListener(this.Handle))
+                {
+                    _clipboardListenerRegistered = true;
+                    UpdateStatusBar("クリップボード監視を開始");
+                }
+                else
+                {
+                    _logger?.Warn("AddClipboardFormatListener failed");
+                }
+            }
+            else if (!enabled && _clipboardListenerRegistered)
+            {
+                RemoveClipboardFormatListener(this.Handle);
+                _clipboardListenerRegistered = false;
+                UpdateStatusBar("クリップボード監視を停止");
+            }
+        }
+
+        // _logger は LoggingService の薄いラッパ。OnClipboardChanged 内でも使うので参照保持
+        private readonly LoggingService _logger = LoggingService.Instance;
+
+        private async void OnClipboardChanged()
+        {
+            // async void: トップレベル例外を漏らさない (UI スレッドに上がると process crash)
+            try
+            {
+                // 起動直後やシャットダウン中の保護
+                if (IsDisposed || !IsHandleCreated || _isClosing) return;
+                if (!btnClipMonitor.Checked) return;
+
+                string text;
+                try
+                {
+                    if (!Clipboard.ContainsText()) return;
+                    text = Clipboard.GetText() ?? "";
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Clipboard read failed: {ex.Message}");
+                    return;
+                }
+
+                text = text.Trim();
+                if (string.IsNullOrEmpty(text)) return;
+
+                // 同じ文字列を連打されないように直前と比較
+                if (text == _lastProcessedClipboardText) return;
+
+                // iwara URL のみ反応 (動画 or プロフィール)
+                bool isVideo = Helpers.IsVideoUrl(text);
+                bool isUser = Helpers.IsUserProfileUrl(text);
+                if (!isVideo && !isUser) return;
+
+                _lastProcessedClipboardText = text;
+
+                // 既に DB に登録済みの動画なら通知だけしてキューには入れない
+                if (isVideo)
+                {
+                    var vid = Helpers.ExtractVideoIdFromUrl(text);
+                    if (!string.IsNullOrEmpty(vid) && _database.GetVideoByVideoId(vid) != null)
+                    {
+                        UpdateStatusBar($"クリップボード: 既に登録済み ({vid})");
+                        return;
+                    }
+                    UpdateStatusBar($"クリップボード検出: 動画追加中...");
+                    await AddVideoAsync(text);
+                }
+                else
+                {
+                    UpdateStatusBar($"クリップボード検出: チャンネル追加中...");
+                    await AddUserAsync(text);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("OnClipboardChanged で予期せぬ例外", ex);
+            }
+        }
+
+        /// <summary>
+        /// 表示モード切替 (詳細 ↔ サムネ): 実装は C グループで完了
+        /// </summary>
+        private void btnViewMode_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyViewMode(btnViewMode.Checked);
+        }
+
+        // C グループ用のスタブ: ApplyViewMode は C: サムネ表示で本実装
+        private void ApplyViewMode(bool tileMode)
+        {
+            btnViewMode.Text = tileMode ? "🖼サムネ" : "📋詳細";
+            var settings = SettingsManager.Instance.Settings;
+            settings.VideoListViewMode = tileMode ? 1 : 0;
+            SettingsManager.Instance.Save();
+            SetVideoListViewMode(tileMode);
+        }
+
+        // サムネモード時の安全な最大表示件数 (これ以上は UI 操作が重くなる)
+        private const int TileModeMaxItems = 500;
+
+        /// <summary>
+        /// 表示モード切替 (詳細リスト ↔ サムネタイル)。
+        /// VirtualMode / Items / SelectedIndices / VirtualListSize の更新順序が不正だと
+        /// "InvalidArgument index" の内部例外が出る。
+        /// 安全な順序: 選択クリア → サイズ 0 化 → モード切替 → 表示モード切替 → 投入。
+        /// </summary>
+        private void SetVideoListViewMode(bool tileMode)
+        {
+            try
+            {
+                listViewVideos.BeginUpdate();
+                try
+                {
+                    // どちらの方向でも、まず選択状態と Items / VirtualListSize を完全クリア
+                    listViewVideos.SelectedIndices.Clear();
+                    if (listViewVideos.VirtualMode)
+                    {
+                        listViewVideos.VirtualListSize = 0;  // VirtualMode true のとき先に 0 化
+                    }
+                    listViewVideos.Items.Clear();
+
+                    if (tileMode)
+                    {
+                        EnsureThumbInfrastructure();
+                        listViewVideos.VirtualMode = false;
+                        listViewVideos.LargeImageList = _thumbImageList;
+                        listViewVideos.View = View.LargeIcon;
+
+                        int count = _displayVideoList.Count;
+                        int limit = Math.Min(count, TileModeMaxItems);
+                        for (int i = 0; i < limit; i++)
+                        {
+                            try
+                            {
+                                listViewVideos.Items.Add(CreateVideoListItem(_displayVideoList[i]));
+                            }
+                            catch (Exception itemEx)
+                            {
+                                _logger.Warn($"Tile mode item add failed at {i}: {itemEx.GetType().Name}: {itemEx.Message}");
+                            }
+                        }
+
+                        if (count > limit)
+                            UpdateStatusBar($"サムネモード: 全{count}件中先頭{limit}件を表示中 (フィルタで絞ってください)");
+                        else
+                            UpdateStatusBar($"サムネモード: {limit}件");
+                    }
+                    else
+                    {
+                        listViewVideos.View = View.Details;
+                        listViewVideos.VirtualMode = true;
+                        listViewVideos.VirtualListSize = _displayVideoList.Count;
+                    }
+                }
+                finally { listViewVideos.EndUpdate(); }
+
+                ClearItemCache();
+                listViewVideos.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"SetVideoListViewMode({tileMode}) failed", ex);
+                MessageBox.Show($"表示モード切替でエラー:\n{ex.GetType().Name}: {ex.Message}",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>サムネ用 ImageList とプレースホルダー画像を 1 回だけ用意する</summary>
+        private void EnsureThumbInfrastructure()
+        {
+            if (_thumbImageList != null) return;
+
+            _thumbImageList = new ImageList
+            {
+                ImageSize = new Size(ThumbWidth, ThumbHeight),
+                ColorDepth = ColorDepth.Depth32Bit,
+            };
+            // プレースホルダー: 灰色 + 中央に絵文字
+            _placeholderThumb = new Bitmap(ThumbWidth, ThumbHeight);
+            using (var g = Graphics.FromImage(_placeholderThumb))
+            {
+                g.Clear(Color.FromArgb(50, 50, 60));
+                using var f = new Font("Segoe UI Emoji", 24, FontStyle.Regular);
+                using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString("🎬", f, Brushes.LightGray, new RectangleF(0, 0, ThumbWidth, ThumbHeight), sf);
+            }
+            _thumbImageList.Images.Add("__placeholder__", _placeholderThumb);
+
+            // サムネ準備完了 → UI 更新
+            ThumbnailCacheService.Instance.ThumbnailReady += OnThumbnailReady;
+        }
+
+        private void OnThumbnailReady(object? sender, string videoId)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try { BeginInvoke((Action)(() => HandleThumbnailReady(videoId))); }
+            catch (InvalidOperationException) { /* ハンドル破棄レース */ }
+        }
+
+        private void HandleThumbnailReady(string videoId)
+        {
+            if (_thumbImageList == null) return;
+
+            // ImageList に画像を追加 (TryGetCached 経由でメモリ/ディスクから読み込み)
+            if (!_thumbImageList.Images.ContainsKey(videoId))
+            {
+                var img = ThumbnailCacheService.Instance.TryGetCached(videoId);
+                if (img != null)
+                {
+                    try { _thumbImageList.Images.Add(videoId, img); }
+                    catch (Exception ex) { Debug.WriteLine($"ImageList add fail in ThumbReady: {ex.Message}"); }
+                }
+            }
+
+            // 該当行を再描画
+            for (int i = 0; i < _displayVideoList.Count; i++)
+            {
+                if (_displayVideoList[i].VideoId != videoId) continue;
+
+                if (listViewVideos.View == View.LargeIcon && !listViewVideos.VirtualMode)
+                {
+                    // サムネモード: 通常 ListView → 該当 Item の ImageKey を再セットして RedrawItems
+                    if (i < listViewVideos.Items.Count)
+                    {
+                        listViewVideos.Items[i].ImageKey = videoId;
+                        listViewVideos.RedrawItems(i, i, false);
+                    }
+                }
+                else
+                {
+                    // 仮想モード Details: キャッシュ更新 + RedrawItems
+                    if (i >= _cacheStartIndex && i < _cacheStartIndex + _itemCache.Length)
+                    {
+                        _itemCache[i - _cacheStartIndex] = CreateVideoListItem(_displayVideoList[i]);
+                    }
+                    listViewVideos.RedrawItems(i, i, false);
+                }
+                break;
+            }
+        }
+
+        /// <summary>サムネを ImageList に確実に入れる (UI スレッドで I/O ゼロ)。返り値はキー名。
+        /// メモリキャッシュにあれば即追加、無ければバックグラウンドでロードして
+        /// ThumbnailReady で UI 更新する。</summary>
+        private string EnsureThumbImageKey(VideoInfo video)
+        {
+            if (_thumbImageList == null) return "__placeholder__";
+            var key = video.VideoId;
+            if (_thumbImageList.Images.ContainsKey(key)) return key;
+
+            // メモリキャッシュのみチェック (I/O しない、UI スレッド即時)
+            var mem = ThumbnailCacheService.Instance.TryGetMemoryCached(video.VideoId);
+            if (mem != null)
+            {
+                try { _thumbImageList.Images.Add(key, mem); return key; }
+                catch (Exception ex) { Debug.WriteLine($"ImageList add fail: {ex.Message}"); }
+            }
+
+            // ディスク or ネット をバックグラウンドでロード → ThumbnailReady → HandleThumbnailReady
+            ThumbnailCacheService.Instance.EnsureLoadedAsync(video.VideoId, video.ThumbnailUrl);
+            return "__placeholder__";
+        }
+
+        /// <summary>
+        /// NSFW フィルタ: 全部
+        /// </summary>
+        private void menuNsfwAll_Click(object sender, EventArgs e) => SetNsfwFilter(0);
+        private void menuNsfwSfw_Click(object sender, EventArgs e) => SetNsfwFilter(1);
+        private void menuNsfwNsfw_Click(object sender, EventArgs e) => SetNsfwFilter(2);
+
+        private void SetNsfwFilter(int mode)
+        {
+            var settings = SettingsManager.Instance.Settings;
+            settings.NsfwFilterMode = mode;
+            SettingsManager.Instance.Save();
+            btnNsfwFilter.Text = mode switch
+            {
+                1 => "🔞SFW",
+                2 => "🔞NSFW",
+                _ => "🔞全部"
+            };
+            menuNsfwAll.Checked = mode == 0;
+            menuNsfwSfw.Checked = mode == 1;
+            menuNsfwNsfw.Checked = mode == 2;
+            RefreshVideoList();
         }
 
         #endregion

@@ -14,14 +14,10 @@ namespace IwaraDownloader.Forms
         private readonly IwaraApiService _iwaraApi;
         private readonly DownloadManager? _downloadManager;
 
-        // マイグレーション状態管理 (閉じる操作の制御用)
-        private CancellationTokenSource? _migrationCts;
-        private bool _migrationRunning;
-
-        // チェック間隔の選択肢（分）
+        // チェック間隔の選択肢(分)
         private readonly int[] _checkIntervalMinutes = { 30, 60, 120, 360, 720, 1440 };
 
-        // ComboBox の index と VideoQuality の対応表（cmbQuality の Items と同順）
+        // ComboBox の index と VideoQuality の対応表(cmbQuality の Items と同順)
         private static readonly VideoQuality[] _qualityOrder =
         {
             VideoQuality.Source,
@@ -36,7 +32,10 @@ namespace IwaraDownloader.Forms
             InitializeComponent();
             _settingsManager = SettingsManager.Instance;
             _database = DatabaseService.Instance;
-            _iwaraApi = new IwaraApiService();
+            // DownloadManager と同じ IwaraApiService インスタンスを共有する。
+            // 別インスタンスにするとここでの再ログインが MainForm 側に伝播せず、
+            // 「設定画面で再ログイン → 閉じてもダウンロードがログイン状態にならない」となる。
+            _iwaraApi = downloadManager?.IwaraApi ?? new IwaraApiService();
             _downloadManager = downloadManager;
         }
 
@@ -56,7 +55,7 @@ namespace IwaraDownloader.Forms
             // ダウンロード設定
             txtDownloadFolder.Text = settings.DownloadFolder;
             
-            // 画質 ComboBox（未対応enum値はSourceにフォールバック）
+            // 画質 ComboBox(未対応enum値はSourceにフォールバック)
             var qIdx = Array.IndexOf(_qualityOrder, settings.DefaultQuality);
             cmbQuality.SelectedIndex = qIdx >= 0 ? qIdx : 0;
             numConcurrent.Value = settings.MaxConcurrentDownloads;
@@ -67,6 +66,7 @@ namespace IwaraDownloader.Forms
             var intervalIndex = Array.IndexOf(_checkIntervalMinutes, settings.CheckIntervalMinutes);
             cmbCheckInterval.SelectedIndex = intervalIndex >= 0 ? intervalIndex : 1; // デフォルト1時間
             chkAutoDownload.Checked = settings.AutoDownloadOnCheck;
+            chkDownloadExternal.Checked = settings.DownloadExternalVideosDefault;
 
             // 通知・起動
             chkToast.Checked = settings.EnableToastNotification;
@@ -75,6 +75,7 @@ namespace IwaraDownloader.Forms
 
             // Python環境
             txtPythonPath.Text = settings.PythonPath;
+            txtYtDlpPath.Text = settings.YtDlpPath;
 
             // アカウント
             txtEmail.Text = settings.IwaraEmail;
@@ -124,6 +125,7 @@ namespace IwaraDownloader.Forms
                 settings.CheckIntervalMinutes = _checkIntervalMinutes[cmbCheckInterval.SelectedIndex];
             }
             settings.AutoDownloadOnCheck = chkAutoDownload.Checked;
+            settings.DownloadExternalVideosDefault = chkDownloadExternal.Checked;
 
             // 通知・起動
             settings.EnableToastNotification = chkToast.Checked;
@@ -132,6 +134,8 @@ namespace IwaraDownloader.Forms
 
             // Python環境
             settings.PythonPath = txtPythonPath.Text.Trim();
+            var ytDlp = txtYtDlpPath.Text.Trim();
+            settings.YtDlpPath = string.IsNullOrEmpty(ytDlp) ? "yt-dlp" : ytDlp;
 
             // アカウント
             settings.IwaraEmail = txtEmail.Text.Trim();
@@ -208,6 +212,20 @@ namespace IwaraDownloader.Forms
             }
         }
 
+        private void btnBrowseYtDlp_Click(object sender, EventArgs e)
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Filter = "yt-dlp実行ファイル (yt-dlp.exe;yt-dlp)|yt-dlp.exe;yt-dlp|すべてのファイル (*.*)|*.*",
+                Title = "yt-dlpの実行ファイルを選択"
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txtYtDlpPath.Text = dialog.FileName;
+            }
+        }
+
         private async void btnReLogin_Click(object sender, EventArgs e)
         {
             var email = txtEmail.Text.Trim();
@@ -219,7 +237,7 @@ namespace IwaraDownloader.Forms
                 return;
             }
 
-            // 先に設定を保存（Pythonパスを含む）
+            // 先に設定を保存(Pythonパスを含む)
             SaveSettings();
 
             btnReLogin.Enabled = false;
@@ -380,102 +398,110 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        private async void btnMigrateExistingFiles_Click(object sender, EventArgs e)
+        private void btnMigrateExistingFiles_Click(object sender, EventArgs e)
         {
             if (_downloadManager == null)
             {
                 MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            if (_downloadManager.IsMigrationRunning)
+            {
+                MessageBox.Show(this, "既に実行中です。完了まで待ってから再度開始してください。",
+                    "実行中", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             var confirm = MessageBox.Show(
                 "ダウンロード済みの mp4 ファイルに iwara の UUID タグを書き込みます。\n" +
                 "DB に登録されている動画のうち、ローカルにファイルが存在するもの全てが対象です。\n\n" +
-                "処理中はバックグラウンドで動作します。設定画面を閉じる場合は確認ダイアログが出ます。\n\n" +
+                "★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。\n" +
+                "  進捗はメイン画面のステータスバーに表示されます。\n\n" +
                 "続行しますか？",
                 "既存ファイルにタグを書き込む",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question);
             if (confirm != DialogResult.OK) return;
 
-            _migrationCts = new CancellationTokenSource();
-            _migrationRunning = true;
-            btnMigrateExistingFiles.Enabled = false;
-            lblMigrationProgress.Text = "準備中...";
-
-            try
+            if (_downloadManager.StartMigrateExistingFiles())
             {
-                var progress = new Progress<string>(msg =>
-                {
-                    // BeginInvoke で UI スレッドに戻す。
-                    // IsDisposed チェックで Form 閉じた後のアクセスを防ぐ。
-                    if (IsDisposed || !IsHandleCreated) return;
-                    try
-                    {
-                        BeginInvoke((Action)(() =>
-                        {
-                            if (!IsDisposed) lblMigrationProgress.Text = msg;
-                        }));
-                    }
-                    catch (ObjectDisposedException) { /* Form が閉じられた */ }
-                    catch (InvalidOperationException) { /* ハンドル破棄後 */ }
-                });
+                MessageBox.Show(this, "バックグラウンドで開始しました。\nこの画面を閉じても処理は継続されます。",
+                    "開始", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
 
-                var (total, tagged, skipped, failed) = await _downloadManager.MigrateExistingFilesAsync(progress, _migrationCts.Token);
+        /// <summary>
+        /// サムネ URL + 画像をバックグラウンドで一括補完。
+        /// 設定画面を閉じても継続実行され、進捗はメイン画面のステータスバーに反映。
+        /// </summary>
+        private void btnBackfillThumbnails_Click(object sender, EventArgs e)
+        {
+            if (_downloadManager == null)
+            {
+                MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (_downloadManager.IsBackfillRunning)
+            {
+                MessageBox.Show(this, "既に実行中です。完了まで待ってから再度開始してください。",
+                    "実行中", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-                if (!IsDisposed)
+            var confirm = MessageBox.Show(
+                "DB 内の動画のうちサムネ URL が未保存 / 画像未キャッシュのものを補完します。\n\n" +
+                "・FileUuid を既に持つ動画 → 即時組み立て (API リクエスト不要)\n" +
+                "・FileUuid 無し動画 → iwara API で取得 (要ログイン・時間かかる)\n" +
+                "・確定後、サムネ画像もネット DL (レート制限あり)\n\n" +
+                "★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。\n" +
+                "  進捗はメイン画面のステータスバーに表示されます。\n\n" +
+                "続行しますか？",
+                "サムネ URL 一括補完",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (confirm != DialogResult.OK) return;
+
+            if (_downloadManager.StartBackfillThumbnails())
+            {
+                MessageBox.Show(this, "バックグラウンドで開始しました。\nこの画面を閉じても処理は継続されます。",
+                    "開始", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnImportFromFolder_Click(object sender, EventArgs e)
+        {
+            if (_downloadManager == null)
+            {
+                MessageBox.Show(this, "DownloadManager が利用できません。",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            // SettingsForm が閉じても処理が続くよう、Owner は MainForm にする。
+            // SettingsForm 自身を Owner にすると、SettingsForm を閉じた瞬間に
+            // ImportFromFolderWizard も Dispose されてしまうので絶対避ける。
+            //   1) ShowDialog(MainForm) で開かれてれば this.Owner = MainForm
+            //   2) それ以外でも Application.OpenForms から MainForm を引っ張る
+            IWin32Window? ownerWindow = this.Owner;
+            if (ownerWindow == null)
+            {
+                foreach (Form f in Application.OpenForms)
                 {
-                    MessageBox.Show(
-                        this,
-                        $"マイグレーションが完了しました。\n\n" +
-                        $"対象ファイル: {total}\n" +
-                        $"タグ書き込み: {tagged}\n" +
-                        $"スキップ (既に書き込み済み): {skipped}\n" +
-                        $"失敗: {failed}",
-                        "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    if (f is MainForm) { ownerWindow = f; break; }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // ユーザーが Form を閉じてキャンセルした場合
-            }
-            catch (Exception ex)
-            {
-                if (!IsDisposed)
-                {
-                    MessageBox.Show(this, $"マイグレーションに失敗しました:\n{ex.Message}",
-                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            finally
-            {
-                _migrationRunning = false;
-                _migrationCts?.Dispose();
-                _migrationCts = null;
-                if (!IsDisposed)
-                    btnMigrateExistingFiles.Enabled = true;
-            }
+            // 最後の手段でも SettingsForm 自身は渡さない (= null で開く)。
+            ImportFromFolderWizard.ShowOrActivate(ownerWindow, _downloadManager);
+        }
+
+        private void btnDuplicateCheckOpen_Click(object sender, EventArgs e)
+        {
+            using var form = new DuplicateCheckForm();
+            form.ShowDialog(this);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (_migrationRunning)
-            {
-                var result = MessageBox.Show(
-                    this,
-                    "マイグレーションの処理中です。中止して閉じますか？\n\n" +
-                    "中止すると、処理途中のファイルはタグ未書き込みのままになります。\n" +
-                    "(後でもう一度実行すれば続きから処理できます)",
-                    "確認",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-                if (result == DialogResult.No)
-                {
-                    e.Cancel = true;
-                    return;
-                }
-                _migrationCts?.Cancel();
-            }
+            // バックグラウンドタスクはアプリ寿命で管理してるので、設定画面は自由に閉じてOK
             base.OnFormClosing(e);
         }
 
@@ -737,7 +763,7 @@ namespace IwaraDownloader.Forms
         #region Rate Limit Presets
 
         /// <summary>
-        /// 控えめプリセット（サーバー負荷を最小限に）
+        /// 控えめプリセット(サーバー負荷を最小限に)
         /// </summary>
         private void btnPresetConservative_Click(object sender, EventArgs e)
         {
@@ -751,7 +777,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 標準プリセット（バランス重視）
+        /// 標準プリセット(バランス重視)
         /// </summary>
         private void btnPresetStandard_Click(object sender, EventArgs e)
         {
@@ -765,7 +791,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// 積極的プリセット（速度優先、エラー増加の可能性あり）
+        /// 積極的プリセット(速度優先、エラー増加の可能性あり)
         /// </summary>
         private void btnPresetAggressive_Click(object sender, EventArgs e)
         {

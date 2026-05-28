@@ -347,7 +347,7 @@ namespace IwaraDownloader.Forms
             return Status switch
             {
                 RenameStatus.Success => "成功",
-                RenameStatus.Skipped => "スキップ（同名）",
+                RenameStatus.Skipped => "スキップ(同名)",
                 RenameStatus.Conflict => $"重複: {Path.GetFileName(ConflictingPath)}",
                 RenameStatus.FileNotFound => "ファイル不在",
                 RenameStatus.Error => $"エラー: {ErrorMessage}",

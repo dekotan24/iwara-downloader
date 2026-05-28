@@ -11,7 +11,7 @@ namespace IwaraDownloader.Models
         /// <summary>iwaraユーザーID</summary>
         public string UserId { get; set; } = string.Empty;
 
-        /// <summary>ユーザー名（表示名）</summary>
+        /// <summary>ユーザー名(表示名)</summary>
         public string Username { get; set; } = string.Empty;
 
         /// <summary>プロフィールURL</summary>
@@ -38,11 +38,23 @@ namespace IwaraDownloader.Models
         /// <summary>有効/無効</summary>
         public bool IsEnabled { get; set; } = true;
 
-        /// <summary>カスタム保存先フォルダ（空の場合はデフォルトを使用）</summary>
+        /// <summary>カスタム保存先フォルダ(空の場合はデフォルトを使用)</summary>
         public string CustomSavePath { get; set; } = string.Empty;
 
+        /// <summary>iwara外動画(YouTube埋め込み等)のDL設定オーバーライド。null=グローバル設定継承、true=DLする、false=DLしない</summary>
+        public bool? DownloadExternalVideosOverride { get; set; }
+
+        /// <summary>所属サイト ("www.iwara.tv" or "www.iwara.ai")。空文字なら iwara.tv 扱い</summary>
+        public string Site { get; set; } = string.Empty;
+
         /// <summary>
-        /// 保存先フォルダを取得（カスタムがあればカスタム、なければデフォルト+ユーザー名）
+        /// グローバル設定を加味した実効値で「iwara外動画をDLするか」を返す
+        /// </summary>
+        public bool ResolveDownloadExternal(bool globalDefault)
+            => DownloadExternalVideosOverride ?? globalDefault;
+
+        /// <summary>
+        /// 保存先フォルダを取得(カスタムがあればカスタム、なければデフォルト+ユーザー名)
         /// </summary>
         public string GetSavePath(string defaultSavePath)
         {

@@ -91,7 +91,7 @@ namespace IwaraDownloader.Forms
                 });
             }
 
-            // ソート（DL数降順）
+            // ソート(DL数降順)
             dgvChannelStats.DataSource = channelStats
                 .OrderByDescending(c => c.CompletedVideos)
                 .ToList();

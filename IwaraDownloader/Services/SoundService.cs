@@ -106,7 +106,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 音声ファイルを非同期で再生（前の再生完了を待ってから再生）
+        /// 音声ファイルを非同期で再生(前の再生完了を待ってから再生)
         /// </summary>
         public void PlaySoundAsync(string filePath)
         {
@@ -120,7 +120,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 音声ファイルを再生（同期）
+        /// 音声ファイルを再生(同期)
         /// </summary>
         public void PlaySound(string filePath)
         {
@@ -131,7 +131,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 音声ファイルを再生（内部実装）
+        /// 音声ファイルを再生(内部実装)
         /// </summary>
         /// <param name="filePath">音声ファイルパス</param>
         /// <param name="waitForCompletion">再生完了まで待機するか</param>
@@ -160,10 +160,10 @@ namespace IwaraDownloader.Services
 
                 LoggingService.Instance.Debug($"Playing sound: {filePath}");
 
-                // 再生完了まで待機（オプション）
+                // 再生完了まで待機(オプション)
                 if (waitForCompletion)
                 {
-                    // 最大10秒待機（無限ループ防止）
+                    // 最大10秒待機(無限ループ防止)
                     _playbackCompleted.Wait(TimeSpan.FromSeconds(10));
                 }
             }
@@ -199,7 +199,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 再生を停止（内部実装、ロックなし）
+        /// 再生を停止(内部実装、ロックなし)
         /// </summary>
         private void StopSoundInternal()
         {

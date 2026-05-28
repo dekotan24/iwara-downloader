@@ -73,13 +73,13 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// ステータスアイコン（絵文字）を除去
+        /// ステータスアイコン(絵文字)を除去
         /// </summary>
         private static string RemoveStatusIcon(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
             
-            // 絵文字とスペースを除去（先頭2-3文字程度）
+            // 絵文字とスペースを除去(先頭2-3文字程度)
             var icons = new[] { "⏳", "🔄", "✅", "❌", "⏭️", "⏸️", "❓" };
             foreach (var icon in icons)
             {
@@ -113,7 +113,7 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// ファイルサイズとして比較（KB, MB, GB対応）
+        /// ファイルサイズとして比較(KB, MB, GB対応)
         /// </summary>
         private static int CompareFileSizes(string x, string y)
         {

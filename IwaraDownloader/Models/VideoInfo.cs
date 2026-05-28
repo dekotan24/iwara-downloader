@@ -11,6 +11,12 @@ namespace IwaraDownloader.Models
         /// <summary>iwara動画ID</summary>
         public string VideoId { get; set; } = string.Empty;
 
+        /// <summary>埋め込み元URL(YouTubeなどiwara外動画の場合に設定)。通常iwara動画では空</summary>
+        public string EmbedUrl { get; set; } = string.Empty;
+
+        /// <summary>iwara外動画(YouTube埋め込みなど)かどうか</summary>
+        public bool IsExternal => !string.IsNullOrEmpty(EmbedUrl);
+
         /// <summary>動画タイトル</summary>
         public string Title { get; set; } = string.Empty;
 
@@ -29,7 +35,7 @@ namespace IwaraDownloader.Models
         /// <summary>投稿者ユーザー名</summary>
         public string AuthorUsername { get; set; } = string.Empty;
 
-        /// <summary>動画の長さ（秒）</summary>
+        /// <summary>動画の長さ(秒)</summary>
         public int DurationSeconds { get; set; }
 
         /// <summary>投稿日時</summary>
@@ -45,7 +51,7 @@ namespace IwaraDownloader.Models
         /// </summary>
         public string FileUuid { get; set; } = string.Empty;
 
-        /// <summary>ファイルサイズ（バイト）</summary>
+        /// <summary>ファイルサイズ(バイト)</summary>
         public long FileSize { get; set; }
 
         /// <summary>ダウンロードステータス</summary>
@@ -54,7 +60,7 @@ namespace IwaraDownloader.Models
         /// <summary>ダウンロード日時</summary>
         public DateTime? DownloadedAt { get; set; }
 
-        /// <summary>関連する購読ユーザーID（個別DLの場合はnull）</summary>
+        /// <summary>関連する購読ユーザーID(個別DLの場合はnull)</summary>
         public int? SubscribedUserId { get; set; }
 
         /// <summary>リトライ回数</summary>
@@ -66,11 +72,20 @@ namespace IwaraDownloader.Models
         /// <summary>登録日時</summary>
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        /// <summary>タグ（カンマ区切り）</summary>
+        /// <summary>タグ(カンマ区切り)</summary>
         public string Tags { get; set; } = string.Empty;
 
         /// <summary>ユーザーメモ</summary>
         public string Memo { get; set; } = string.Empty;
+
+        /// <summary>iwara API の rating 値 ("general" / "ecchi" / 空="未取得"扱い)</summary>
+        public string Rating { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 所属サイト ("www.iwara.tv" or "www.iwara.ai")。
+        /// 空文字なら旧データ扱いで iwara.tv とみなす。API 呼び出し時に X-Site ヘッダーへ載せる。
+        /// </summary>
+        public string Site { get; set; } = string.Empty;
 
         /// <summary>
         /// 動画の長さを表示用にフォーマット

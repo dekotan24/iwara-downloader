@@ -1,11 +1,11 @@
 namespace IwaraDownloader.Models
 {
     /// <summary>
-    /// ダウンロードタスク（進捗管理用）
+    /// ダウンロードタスク(進捗管理用)
     /// </summary>
     public class DownloadTask
     {
-        /// <summary>タスクID（GUID）</summary>
+        /// <summary>タスクID(GUID)</summary>
         public string TaskId { get; set; } = Guid.NewGuid().ToString();
 
         /// <summary>動画情報</summary>
@@ -14,13 +14,13 @@ namespace IwaraDownloader.Models
         /// <summary>ステータス</summary>
         public DownloadStatus Status { get; set; } = DownloadStatus.Pending;
 
-        /// <summary>進捗（0-100）</summary>
+        /// <summary>進捗(0-100)</summary>
         public double Progress { get; set; }
 
-        /// <summary>ダウンロード速度（bytes/sec）</summary>
+        /// <summary>ダウンロード速度(bytes/sec)</summary>
         public long DownloadSpeed { get; set; }
 
-        /// <summary>推定残り時間（秒）</summary>
+        /// <summary>推定残り時間(秒)</summary>
         public int? EstimatedTimeRemaining { get; set; }
 
         /// <summary>開始日時</summary>
@@ -35,7 +35,7 @@ namespace IwaraDownloader.Models
         /// <summary>購読DLかどうか</summary>
         public bool IsSubscriptionDownload { get; set; }
 
-        /// <summary>購読ユーザー（カスタム保存先用）</summary>
+        /// <summary>購読ユーザー(カスタム保存先用)</summary>
         public SubscribedUser? SubscribedUser { get; set; }
 
         /// <summary>画質設定</summary>

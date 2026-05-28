@@ -13,10 +13,10 @@ namespace IwaraDownloader.Models
         /// <summary>デフォルト画質</summary>
         public VideoQuality DefaultQuality { get; set; } = VideoQuality.Source;
 
-        /// <summary>同時ダウンロード数（1-3）</summary>
+        /// <summary>同時ダウンロード数(1-3)</summary>
         public int MaxConcurrentDownloads { get; set; } = 2;
 
-        /// <summary>新着チェック間隔（分）</summary>
+        /// <summary>新着チェック間隔(分)</summary>
         public int CheckIntervalMinutes { get; set; } = 60;
 
         /// <summary>リトライ回数</summary>
@@ -24,31 +24,40 @@ namespace IwaraDownloader.Models
 
         #region Rate Limiting Settings
 
-        /// <summary>APIリクエスト間隔（ミリ秒）- 動画情報取得等</summary>
+        /// <summary>APIリクエスト間隔(ミリ秒)- 動画情報取得等</summary>
         public int ApiRequestDelayMs { get; set; } = 1000;
 
-        /// <summary>ダウンロード間隔（ミリ秒）- 動画DL完了後の待機</summary>
+        /// <summary>ダウンロード間隔(ミリ秒)- 動画DL完了後の待機</summary>
         public int DownloadDelayMs { get; set; } = 3000;
 
-        /// <summary>チャンネル巡回間隔（ミリ秒）- 次のチャンネルチェックまでの待機</summary>
+        /// <summary>チャンネル巡回間隔(ミリ秒)- 次のチャンネルチェックまでの待機</summary>
         public int ChannelCheckDelayMs { get; set; } = 5000;
 
-        /// <summary>429エラー時の基本待機時間（ミリ秒）</summary>
+        /// <summary>429エラー時の基本待機時間(ミリ秒)</summary>
         public int RateLimitBaseDelayMs { get; set; } = 30000;
 
-        /// <summary>429エラー時の最大待機時間（ミリ秒）</summary>
+        /// <summary>429エラー時の最大待機時間(ミリ秒)</summary>
         public int RateLimitMaxDelayMs { get; set; } = 300000;
 
         /// <summary>エクスポネンシャルバックオフを有効にする</summary>
         public bool EnableExponentialBackoff { get; set; } = true;
 
-        /// <summary>ページ取得間隔（ミリ秒）- 動画一覧のページング時</summary>
+        /// <summary>ページ取得間隔(ミリ秒)- 動画一覧のページング時</summary>
         public int PageFetchDelayMs { get; set; } = 500;
 
         #endregion
 
         /// <summary>トースト通知を有効にする</summary>
         public bool EnableToastNotification { get; set; } = true;
+
+        /// <summary>クリップボード監視を有効にする (iwara URL を自動でキュー追加)</summary>
+        public bool EnableClipboardMonitor { get; set; } = false;
+
+        /// <summary>NSFW フィルタモード: 0=全部 / 1=SFWのみ / 2=NSFWのみ</summary>
+        public int NsfwFilterMode { get; set; } = 0;
+
+        /// <summary>動画リストの表示モード: 0=詳細(列表示) / 1=サムネ(タイル)</summary>
+        public int VideoListViewMode { get; set; } = 0;
 
         /// <summary>起動時に最小化</summary>
         public bool StartMinimized { get; set; } = false;
@@ -62,18 +71,24 @@ namespace IwaraDownloader.Models
         /// <summary>チェック時に自動でダウンロードを開始</summary>
         public bool AutoDownloadOnCheck { get; set; } = true;
 
+        /// <summary>iwara外動画(YouTube埋め込み等)をデフォルトでDLするか(チャンネル個別設定で上書き可能)</summary>
+        public bool DownloadExternalVideosDefault { get; set; } = false;
+
+        /// <summary>yt-dlp実行パス(空または"yt-dlp"でPATH参照)。未インストールの場合は自動で pip install を試行</summary>
+        public string YtDlpPath { get; set; } = "yt-dlp";
+
         #region Sound Settings
 
         /// <summary>ダウンロード完了音を有効にする</summary>
         public bool EnableCompletionSound { get; set; } = false;
 
-        /// <summary>完了音のファイルパス（空の場合はシステム音）</summary>
+        /// <summary>完了音のファイルパス(空の場合はシステム音)</summary>
         public string CompletionSoundPath { get; set; } = string.Empty;
 
         /// <summary>ダウンロードエラー音を有効にする</summary>
         public bool EnableErrorSound { get; set; } = false;
 
-        /// <summary>エラー音のファイルパス（空の場合はシステム音）</summary>
+        /// <summary>エラー音のファイルパス(空の場合はシステム音)</summary>
         public string ErrorSoundPath { get; set; } = string.Empty;
 
         #endregion
@@ -112,10 +127,10 @@ namespace IwaraDownloader.Models
         /// <summary>iwaraメールアドレス</summary>
         public string IwaraEmail { get; set; } = string.Empty;
 
-        /// <summary>iwaraユーザー名（表示用）</summary>
+        /// <summary>iwaraユーザー名(表示用)</summary>
         public string IwaraUsername { get; set; } = string.Empty;
 
-        /// <summary>iwaraパスワード（暗号化済み）</summary>
+        /// <summary>iwaraパスワード(暗号化済み)</summary>
         public string IwaraPasswordEncrypted { get; set; } = string.Empty;
 
         /// <summary>設定ファイルのパス</summary>

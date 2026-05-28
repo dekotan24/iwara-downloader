@@ -3,7 +3,7 @@ using System.Drawing.Drawing2D;
 namespace IwaraDownloader.Forms
 {
     /// <summary>
-    /// スプラッシュスクリーン（スタイリッシュなデザイン）
+    /// スプラッシュスクリーン(スタイリッシュなデザイン)
     /// </summary>
     public partial class SplashForm : Form
     {
@@ -19,7 +19,7 @@ namespace IwaraDownloader.Forms
         {
             InitializeComponent();
             
-            // ダブルバッファリングを有効化（ちらつき防止）
+            // ダブルバッファリングを有効化(ちらつき防止)
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | 
                           ControlStyles.AllPaintingInWmPaint | 
                           ControlStyles.UserPaint, true);
@@ -70,7 +70,7 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// ステータスを更新（プログレスバーは常にMarqueeスタイル）
+        /// ステータスを更新(プログレスバーは常にMarqueeスタイル)
         /// </summary>
         public static void UpdateStatus(string message, int? progress = null)
         {
@@ -102,7 +102,7 @@ namespace IwaraDownloader.Forms
                 lblStatus.Text = message;
             }
             
-            // プログレスバーは常にMarqueeスタイル（動いている感を出す）
+            // プログレスバーは常にMarqueeスタイル(動いている感を出す)
             progressBar.Style = ProgressBarStyle.Marquee;
 
             Application.DoEvents();
@@ -126,7 +126,7 @@ namespace IwaraDownloader.Forms
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // 外枠（アクセントカラーのグロー効果）
+            // 外枠(アクセントカラーのグロー効果)
             using var glowPen = new Pen(Color.FromArgb(60, _accentColor), 3);
             e.Graphics.DrawRectangle(glowPen, 1, 1, this.Width - 3, this.Height - 3);
 
@@ -134,11 +134,11 @@ namespace IwaraDownloader.Forms
             using var borderPen = new Pen(Color.FromArgb(100, 120, 150), 1);
             e.Graphics.DrawRectangle(borderPen, 0, 0, this.Width - 1, this.Height - 1);
 
-            // 装飾ライン（アクセント）
+            // 装飾ライン(アクセント)
             using var accentPen = new Pen(_accentColor, 2);
             e.Graphics.DrawLine(accentPen, 30, 95, 370, 95);
 
-            // 角のアクセント（左上）
+            // 角のアクセント(左上)
             using var cornerBrush = new SolidBrush(Color.FromArgb(80, _accentColor));
             var cornerPoints = new Point[] 
             { 
@@ -148,7 +148,7 @@ namespace IwaraDownloader.Forms
             };
             e.Graphics.FillPolygon(cornerBrush, cornerPoints);
 
-            // 角のアクセント（右下）
+            // 角のアクセント(右下)
             var cornerPoints2 = new Point[] 
             { 
                 new Point(this.Width, this.Height), 
