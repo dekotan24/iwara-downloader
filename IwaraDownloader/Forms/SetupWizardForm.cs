@@ -21,7 +21,22 @@ namespace IwaraDownloader.Forms
         {
             InitializeComponent();
             _appDir = AppDomain.CurrentDomain.BaseDirectory;
+            // Designer の Anchor=Top|Right + 絶対 Location だと AutoScaleMode=Font の
+            // スケーリングや InitializeComponent 時の Panel サイズで Next ボタンが
+            // 右にはみ出すケースがある。右下基準で明示的に配置し直す。
+            this.Load += (_, _) => LayoutFooterButtons();
+            this.pnlFooter.SizeChanged += (_, _) => LayoutFooterButtons();
             UpdateStepUi();
+        }
+
+        private void LayoutFooterButtons()
+        {
+            const int rightMargin = 15;
+            const int gap = 5;
+            int y = (pnlFooter.ClientSize.Height - btnCancel.Height) / 2;
+            btnCancel.Location = new Point(pnlFooter.ClientSize.Width - rightMargin - btnCancel.Width, y);
+            btnNext.Location = new Point(btnCancel.Left - gap - btnNext.Width, y);
+            btnBack.Location = new Point(btnNext.Left - gap - btnBack.Width, y);
         }
 
         private void UpdateStepUi()

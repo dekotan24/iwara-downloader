@@ -5,7 +5,7 @@ REM Usage: set PYTHON_PATH=C:¥...¥python.exe && iwara_setup.bat
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo iwara-downloader Python Setup
+echo IwaraDownloader Python Setup
 echo ========================================
 echo.
 

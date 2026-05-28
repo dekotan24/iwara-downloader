@@ -78,7 +78,7 @@ namespace IwaraDownloader.Forms
             this.lblTitle.ForeColor = System.Drawing.Color.White;
             this.lblTitle.Location = new System.Drawing.Point(18, 10);
             this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Text = "iwara-downloader セットアップ";
+            this.lblTitle.Text = "IwaraDownloader セットアップ";
 
             // lblStep
             this.lblStep.AutoSize = true;
@@ -108,7 +108,7 @@ namespace IwaraDownloader.Forms
             this.lblWelcome.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
             this.lblWelcome.Location = new System.Drawing.Point(10, 20);
             this.lblWelcome.Name = "lblWelcome";
-            this.lblWelcome.Text = "iwara-downloader をご利用いただきありがとうございます。";
+            this.lblWelcome.Text = "IwaraDownloader をご利用いただきありがとうございます。";
 
             this.lblWelcomeDesc.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.lblWelcomeDesc.Location = new System.Drawing.Point(10, 60);
@@ -246,7 +246,7 @@ namespace IwaraDownloader.Forms
             this.lblCompleteDesc.Name = "lblCompleteDesc";
             this.lblCompleteDesc.Size = new System.Drawing.Size(550, 120);
             this.lblCompleteDesc.Text =
-                "iwara-downloader を使用する準備が整いました。\r\n" +
+                "IwaraDownloader を使用する準備が整いました。\r\n" +
                 "\r\n" +
                 "「完了」を押してウィザードを閉じてください。\r\n" +
                 "続いて画面上部の「ログイン」から iwara にログインしてください。";
@@ -299,7 +299,7 @@ namespace IwaraDownloader.Forms
             this.MinimizeBox = false;
             this.Name = "SetupWizardForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "iwara-downloader セットアップ";
+            this.Text = "IwaraDownloader セットアップ";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SetupWizardForm_FormClosing);
 
             this.pnlHeader.ResumeLayout(false);
