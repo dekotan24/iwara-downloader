@@ -160,28 +160,6 @@ Everything is stored locally — nothing is sent externally.
 
 Each save folder also gets an `.iwara_index.json` to speed up UUID-based scanning.
 
-## What's new in v2.0.0
-
-### New features
-- iwara.ai support (auto-detect from URL, distinguished in the source column)
-- Resume downloads (Range + integrity check)
-- Thumbnail view mode and bulk thumbnail backfill
-- Event-driven clipboard watcher
-- Search import, NSFW filter, overall progress
-- Rich context menu / double-click playback
-
-### Stability & security
-- JWT tokens are now passed via the `IWARA_TOKEN` environment variable instead of the command line (prevents leakage through `tasklist` / process listings)
-- Background tasks (tag migration, thumbnail backfill) keep running after the settings window closes
-- Child processes are bound to a Windows Job Object (`KILL_ON_JOB_CLOSE`) — no more zombies when the parent dies
-- LRU thumbnail cache rewritten as a lock-guarded LinkedList; cumulative rate limiter
-- DownloadManager double-start prevention moved to `Interlocked.CompareExchange`
-- `ProcessQueueAsync` snapshots the CancellationToken locally to fix Dispose races
-- async-void event handlers now have outer try/catch
-- mp4 atom corruption on exit during tag writes is prevented (Close-path waits for writes)
-- Python helper: top-level try/except returns JSON, UTF-8 enforced, HTTP 416 discards `.part` and retries from 0
-- High-frequency UI updates are debounced (500ms) to avoid freezes
-
 ## Troubleshooting
 
 ### Setup fails

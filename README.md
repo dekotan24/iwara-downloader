@@ -160,28 +160,6 @@ Python 3.8 以上が必要です（[Python 公式](https://www.python.org/downlo
 
 各保存フォルダ内には `.iwara_index.json` が作成され、UUID 照合スキャンを高速化します。
 
-## v2.0.0 の主な変更点
-
-### 新機能
-- iwara.ai 対応（URL 自動判別、ソース列で表示区別）
-- レジューム（Range + 整合性検証）
-- サムネビューモード、サムネ一括補完
-- クリップボード監視（イベント駆動）
-- 検索インポート、NSFW フィルタ、全体進捗
-- リッチ右クリック / ダブルクリック再生
-
-### 安定性 / セキュリティ
-- JWT トークンを環境変数経由に変更（コマンドラインからの漏洩を防止）
-- バックグラウンドタスク（タグ移行・サムネ補完）が設定画面を閉じても継続
-- 子プロセスを Windows Job Object でバインド（親死亡時に自動 Kill、ゾンビ防止）
-- LRU サムネキャッシュをロック保護 LinkedList ベースに刷新
-- DownloadManager の二重起動防止を Interlocked 化
-- ProcessQueueAsync の CancellationToken をスナップショットして Dispose レース解消
-- async void ハンドラに例外捕捉を追加
-- mp4 タグ書き込み中の終了で moov atom 破損を防ぐ
-- Python 側: トップレベル例外を JSON 化、UTF-8 強制、416 Range Not Satisfiable で `.part` 破棄して再試行
-- UI 高頻度更新を 500ms debounce してフリーズを抑制
-
 ## トラブルシューティング
 
 ### セットアップに失敗する
