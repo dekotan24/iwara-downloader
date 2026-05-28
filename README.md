@@ -46,7 +46,7 @@ iwara.tv / iwara.ai から動画をダウンロードするための Windows 用
 |------|------|
 | OS | Windows 10/11 (64bit) |
 | ランタイム | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.8 以上（3.10 で動作確認済） |
+| Python | 3.10 以上（3.10 で動作確認済） |
 
 ## インストール
 
@@ -56,7 +56,7 @@ iwara.tv / iwara.ai から動画をダウンロードするための Windows 用
 
 ### 2. Python 環境
 
-Python 3.8 以上が必要です（[Python 公式](https://www.python.org/downloads/)）。Embeddable Package でも可。
+Python 3.10 以上が必要です（[Python 公式](https://www.python.org/downloads/)）。Embeddable Package でも可。
 
 ### 3. 初回セットアップ
 

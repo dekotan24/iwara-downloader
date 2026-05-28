@@ -46,7 +46,7 @@ A Windows desktop app for downloading videos from iwara.tv / iwara.ai with chann
 |------|-------------|
 | OS | Windows 10/11 (64-bit) |
 | Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.8+ (tested on 3.10) |
+| Python | 3.10+ (tested on 3.10) |
 
 ## Installation
 
@@ -56,7 +56,7 @@ Download the latest release from [Releases](https://github.com/dekotan24/iwara-d
 
 ### 2. Python environment
 
-Python 3.8 or later is required ([python.org](https://www.python.org/downloads/)). The Embeddable Package works as well.
+Python 3.10 or later is required ([python.org](https://www.python.org/downloads/)). The Embeddable Package works as well.
 
 ### 3. First-time setup
 
