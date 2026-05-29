@@ -75,7 +75,10 @@ namespace IwaraDownloader.Services
                     };
                 }
 
-                var hasUpdate = latestVersion > CurrentVersion;
+                // GitHub のタグは "v2.0" (2要素) と "v1.1.1" (3要素) が混在する。
+                // Version.Parse("2.0") は Build=-1 になり、"2.0.0.0" との比較が不安定なので
+                // 両辺を Major.Minor.Build に正規化 (未定義 -1 は 0 扱い) してから比較する。
+                var hasUpdate = NormalizeVersion(latestVersion) > NormalizeVersion(CurrentVersion);
 
                 return new UpdateCheckResult
                 {
@@ -98,6 +101,14 @@ namespace IwaraDownloader.Services
                 };
             }
         }
+
+        /// <summary>
+        /// バージョンを Major.Minor.Build に正規化する。
+        /// Version.Parse は未指定要素を -1 にするため、それを 0 に丸めて比較を安定させる。
+        /// 例: "2.0" → 2.0.0, "2.0.0.0" → 2.0.0
+        /// </summary>
+        private static Version NormalizeVersion(Version v)
+            => new Version(Math.Max(0, v.Major), Math.Max(0, v.Minor), Math.Max(0, v.Build));
 
         /// <summary>
         /// リリースページを開く

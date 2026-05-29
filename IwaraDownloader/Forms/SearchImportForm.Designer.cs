@@ -23,6 +23,7 @@ namespace IwaraDownloader.Forms
             this.lblStatus = new Label();
             this.listResults = new ListView();
             this.btnSelectAll = new Button();
+            this.btnSelectNew = new Button();
             this.btnSelectNone = new Button();
             this.btnImport = new Button();
             this.btnClose = new Button();
@@ -37,30 +38,31 @@ namespace IwaraDownloader.Forms
             this.Padding = new Padding(10);
 
             // --- 検索バー (Site ドロップダウン + キーワード + 検索ボタン) ---
-            var searchPanel = new Panel { Dock = DockStyle.Top, Height = 36 };
-            this.cmbSite.Location = new Point(0, 6);
-            this.cmbSite.Size = new Size(120, 25);
+            // 旧実装は絶対座標 + Anchor=Right で、Panel 既定幅(200px)に子を追加した時点で
+            // 右マージンが負値になり、Dock で全幅化すると検索ボタンが画面外へ飛ぶバグがあった。
+            // Dock ベース (cmbSite=Left / btnSearch=Right / txtQuery=Fill) に置換して根本解消する。
+            var searchPanel = new Panel { Dock = DockStyle.Top, Height = 36, Padding = new Padding(0, 5, 0, 4) };
+
+            this.cmbSite.Dock = DockStyle.Left;
+            this.cmbSite.Width = 120;
             this.cmbSite.DropDownStyle = ComboBoxStyle.DropDownList;
             this.cmbSite.Items.AddRange(new object[] { "iwara.tv", "iwara.ai" });
             this.cmbSite.SelectedIndex = 0;
-            this.cmbSite.Anchor = AnchorStyles.Left | AnchorStyles.Top;
             this.cmbSite.SelectedIndexChanged += new EventHandler(cmbSite_SelectedIndexChanged);
 
-            this.txtQuery.Location = new Point(126, 6);
-            this.txtQuery.Size = new Size(554, 25);
-            this.txtQuery.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right;
+            this.btnSearch.Text = "検索";
+            this.btnSearch.Dock = DockStyle.Right;
+            this.btnSearch.Width = 80;
+            this.btnSearch.Click += new EventHandler(btnSearch_Click);
+
+            this.txtQuery.Dock = DockStyle.Fill;
             this.txtQuery.PlaceholderText = "検索キーワード (Enter で検索)";
             this.txtQuery.KeyDown += new KeyEventHandler(txtQuery_KeyDown);
 
-            this.btnSearch.Text = "検索";
-            this.btnSearch.Location = new Point(686, 5);
-            this.btnSearch.Size = new Size(80, 27);
-            this.btnSearch.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnSearch.Click += new EventHandler(btnSearch_Click);
-
-            searchPanel.Controls.Add(this.cmbSite);
+            // Dock の重なり順: 先に Left/Right を確定させ、Fill を最後に追加して中央を埋める。
             searchPanel.Controls.Add(this.txtQuery);
             searchPanel.Controls.Add(this.btnSearch);
+            searchPanel.Controls.Add(this.cmbSite);
 
             // --- 結果リスト ---
             this.listResults.Dock = DockStyle.Fill;
@@ -120,6 +122,9 @@ namespace IwaraDownloader.Forms
             this.btnSelectAll.Text = "全選択";
             this.btnSelectAll.Size = new Size(80, 26);
             this.btnSelectAll.Click += new EventHandler(btnSelectAll_Click);
+            this.btnSelectNew.Text = "DL済以外を全選択";
+            this.btnSelectNew.Size = new Size(130, 26);
+            this.btnSelectNew.Click += new EventHandler(btnSelectNew_Click);
             this.btnSelectNone.Text = "選択解除";
             this.btnSelectNone.Size = new Size(80, 26);
             this.btnSelectNone.Click += new EventHandler(btnSelectNone_Click);
@@ -131,6 +136,7 @@ namespace IwaraDownloader.Forms
             this.btnClose.DialogResult = DialogResult.Cancel;
             this.btnClose.Click += new EventHandler((s, e) => Close());
             actionPanel.Controls.Add(this.btnSelectAll);
+            actionPanel.Controls.Add(this.btnSelectNew);
             actionPanel.Controls.Add(this.btnSelectNone);
             actionPanel.Controls.Add(this.btnImport);
             actionPanel.Controls.Add(this.btnClose);
@@ -154,6 +160,7 @@ namespace IwaraDownloader.Forms
         private Label lblStatus;
         private ListView listResults;
         private Button btnSelectAll;
+        private Button btnSelectNew;
         private Button btnSelectNone;
         private Button btnImport;
         private Button btnClose;

@@ -1060,7 +1060,6 @@ namespace IwaraDownloader.Forms
             this.tabBackup.Controls.Add(this.grpExport);
             this.tabBackup.Controls.Add(this.grpImport);
             this.tabBackup.Controls.Add(this.grpMigration);
-            this.tabBackup.Controls.Add(this.grpImportTools);
             this.tabBackup.Location = new Point(4, 24);
             this.tabBackup.Name = "tabBackup";
             this.tabBackup.Padding = new Padding(3);
@@ -1192,50 +1191,6 @@ namespace IwaraDownloader.Forms
             this.lblMigrationProgress.Text = "";
 
             //
-            // grpImportTools (フォルダから取り込み・重複検出)
-            //
-            this.grpImportTools.Controls.Add(this.lblImportToolsNote);
-            this.grpImportTools.Controls.Add(this.btnImportFromFolder);
-            this.grpImportTools.Controls.Add(this.btnDuplicateCheckOpen);
-            this.grpImportTools.Location = new Point(6, 294);
-            this.grpImportTools.Name = "grpImportTools";
-            this.grpImportTools.Size = new Size(440, 130);
-            this.grpImportTools.TabIndex = 3;
-            this.grpImportTools.TabStop = false;
-            this.grpImportTools.Text = "ファイル取り込み・重複検出";
-
-            //
-            // lblImportToolsNote
-            //
-            this.lblImportToolsNote.AutoSize = false;
-            this.lblImportToolsNote.Location = new Point(10, 22);
-            this.lblImportToolsNote.Name = "lblImportToolsNote";
-            this.lblImportToolsNote.Size = new Size(420, 44);
-            this.lblImportToolsNote.Text = "他PCでDL済の mp4 (iwara タグ付き) をフォルダから取り込めます。\r\nDB と実ファイルの整合性確認は『重複ファイル検出』で行えます。";
-
-            //
-            // btnImportFromFolder
-            //
-            this.btnImportFromFolder.Location = new Point(10, 72);
-            this.btnImportFromFolder.Name = "btnImportFromFolder";
-            this.btnImportFromFolder.Size = new Size(190, 27);
-            this.btnImportFromFolder.TabIndex = 0;
-            this.btnImportFromFolder.Text = "フォルダから取り込み...";
-            this.btnImportFromFolder.UseVisualStyleBackColor = true;
-            this.btnImportFromFolder.Click += new EventHandler(this.btnImportFromFolder_Click);
-
-            //
-            // btnDuplicateCheckOpen
-            //
-            this.btnDuplicateCheckOpen.Location = new Point(210, 72);
-            this.btnDuplicateCheckOpen.Name = "btnDuplicateCheckOpen";
-            this.btnDuplicateCheckOpen.Size = new Size(190, 27);
-            this.btnDuplicateCheckOpen.TabIndex = 1;
-            this.btnDuplicateCheckOpen.Text = "重複ファイル検出...";
-            this.btnDuplicateCheckOpen.UseVisualStyleBackColor = true;
-            this.btnDuplicateCheckOpen.Click += new EventHandler(this.btnDuplicateCheckOpen_Click);
-
-            //
             // btnOk
             // 
             this.btnOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
@@ -1348,10 +1303,6 @@ namespace IwaraDownloader.Forms
         private Button btnBackfillThumbnails = new Button();
         private Label lblMigrationNote = new Label();
         private Label lblMigrationProgress = new Label();
-        private GroupBox grpImportTools = new GroupBox();
-        private Label lblImportToolsNote = new Label();
-        private Button btnImportFromFolder = new Button();
-        private Button btnDuplicateCheckOpen = new Button();
         private GroupBox grpDownload;
         private Label lblDownloadFolder;
         private TextBox txtDownloadFolder;

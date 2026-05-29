@@ -53,6 +53,8 @@ namespace IwaraDownloader.Forms
             this.txtTags = new TextBox();
             this.lblMemo = new Label();
             this.txtMemo = new TextBox();
+            this.lblFavorite = new Label();
+            this.chkFavorite = new CheckBox();
             this.btnSave = new Button();
             this.btnCancel = new Button();
             this.tableLayout = new TableLayoutPanel();
@@ -157,6 +159,24 @@ namespace IwaraDownloader.Forms
             AddRow(lblTags, "タグ (カンマ区切り)", txtTags, multiline: false, editable: true);
             AddRow(lblMemo, "メモ", txtMemo, multiline: true, height: 100, editable: true);
 
+            // お気に入り行 (ラベル + チェックボックス)
+            {
+                lblFavorite.Text = "お気に入り";
+                lblFavorite.TextAlign = ContentAlignment.MiddleLeft;
+                lblFavorite.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+                lblFavorite.AutoSize = false;
+                lblFavorite.Height = 26;
+                lblFavorite.Margin = new Padding(0, 0, 6, 0);
+
+                this.chkFavorite.Text = "★ お気に入りに登録";
+                this.chkFavorite.AutoSize = true;
+                this.chkFavorite.Dock = DockStyle.Fill;
+
+                tableLayout.Controls.Add(lblFavorite);
+                tableLayout.Controls.Add(this.chkFavorite);
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+            }
+
             // ============================================
             // ボタン: 保存 / キャンセル
             // ============================================
@@ -214,7 +234,8 @@ namespace IwaraDownloader.Forms
 
         private Label lblTitle, lblSource, lblAuthor, lblVideoId, lblFileUuid, lblStatus, lblDuration, lblFileSize;
         private Label lblPostedAt, lblDownloadedAt, lblCreatedAt, lblUrl, lblLocalFilePath, lblRetry, lblLastError;
-        private Label lblTags, lblMemo;
+        private Label lblTags, lblMemo, lblFavorite;
+        private CheckBox chkFavorite;
         private TextBox txtTitle, txtSource, txtAuthor, txtVideoId, txtFileUuid, txtStatus, txtDuration, txtFileSize;
         private TextBox txtPostedAt, txtDownloadedAt, txtCreatedAt, txtUrl, txtLocalFilePath, txtRetry, txtLastError;
         private TextBox txtTags, txtMemo;

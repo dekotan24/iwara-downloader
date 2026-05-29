@@ -87,6 +87,9 @@ namespace IwaraDownloader.Models
         /// </summary>
         public string Site { get; set; } = string.Empty;
 
+        /// <summary>お気に入りフラグ</summary>
+        public bool IsFavorite { get; set; }
+
         /// <summary>
         /// 動画の長さを表示用にフォーマット
         /// </summary>

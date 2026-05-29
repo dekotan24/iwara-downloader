@@ -109,6 +109,8 @@ namespace IwaraDownloader.Utils
                 ["status"] = v => StatusToText(v.Status),
                 ["rating"] = v => v.Rating,
                 ["site"] = v => v.Site,
+                ["fav"] = v => v.IsFavorite ? "true" : "false",
+                ["favorite"] = v => v.IsFavorite ? "true" : "false",
             };
 
         private static bool MatchTerm(VideoInfo v, Term t)

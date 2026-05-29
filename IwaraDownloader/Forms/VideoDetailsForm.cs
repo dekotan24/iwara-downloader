@@ -41,6 +41,7 @@ namespace IwaraDownloader.Forms
             txtLastError.Text = _video.LastErrorMessage ?? "";
             txtTags.Text = _video.Tags;
             txtMemo.Text = _video.Memo;
+            chkFavorite.Checked = _video.IsFavorite;
 
             // 開くボタンの有効/無効
             btnOpenUrl.Enabled = !string.IsNullOrEmpty(_video.Url);
@@ -103,6 +104,7 @@ namespace IwaraDownloader.Forms
 
             _video.Tags = normalizedTags;
             _video.Memo = txtMemo.Text ?? "";
+            _video.IsFavorite = chkFavorite.Checked;
             _database.UpdateVideo(_video);
         }
     }
