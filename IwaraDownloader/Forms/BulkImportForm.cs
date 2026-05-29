@@ -1,26 +1,30 @@
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
+using IwaraDownloader.Utils;
 using System.Text.RegularExpressions;
 
 namespace IwaraDownloader.Forms
 {
     /// <summary>
-    /// URL一括インポートフォーム
+    /// URL一括インポートフォーム。
+    /// 動画URL / 動画ID と、ユーザー(プロフィール)URL の両方に対応 (iwara.tv / iwara.ai)。
     /// </summary>
     public partial class BulkImportForm : Form
     {
         private readonly DatabaseService _database;
-        
+        private readonly DownloadManager? _downloadManager;
+
         /// <summary>インポートされた動画リスト</summary>
         public List<VideoInfo> ImportedVideos { get; } = new();
 
         /// <summary>重複としてスキップされた数</summary>
         public int DuplicateCount { get; private set; }
 
-        public BulkImportForm()
+        public BulkImportForm(DownloadManager? downloadManager = null)
         {
             InitializeComponent();
             _database = DatabaseService.Instance;
+            _downloadManager = downloadManager;
         }
 
         private void BulkImportForm_Load(object sender, EventArgs e)
@@ -94,68 +98,88 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private void UpdateStats()
         {
-            var (videoIds, _) = ExtractVideoIds(txtUrls.Text);
-            lblStats.Text = $"検出されたURL: {videoIds.Count}件";
+            var (videos, profiles) = ExtractEntries(txtUrls.Text);
+            lblStats.Text = $"検出: 動画 {videos.Count}件 / チャンネル {profiles.Count}件";
         }
 
         /// <summary>
-        /// テキストからVideoIdを抽出
+        /// テキストから「動画(id+url+site)」と「ユーザープロフィールURL」を抽出する。
+        /// iwara.tv / iwara.ai 両対応。プロフィールURL・動画URL・裸の動画IDを解釈する。
         /// </summary>
-        private (List<string> VideoIds, Dictionary<string, string> IdToUrl) ExtractVideoIds(string text)
+        private (List<VideoEntry> Videos, List<string> Profiles) ExtractEntries(string text)
         {
-            var videoIds = new List<string>();
-            var idToUrl = new Dictionary<string, string>();
-            
-            if (string.IsNullOrWhiteSpace(text))
-                return (videoIds, idToUrl);
+            var videos = new List<VideoEntry>();
+            var seenVideo = new HashSet<string>();
+            var profiles = new List<string>();
+            var seenProfile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // iwara.tv/video/{id} パターン
-            var regex = new Regex(@"(?:https?://)?(?:www\.)?iwara\.tv/video/([a-zA-Z0-9]+)", RegexOptions.IgnoreCase);
-            
+            if (string.IsNullOrWhiteSpace(text))
+                return (videos, profiles);
+
             var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
                     continue;
 
-                var match = regex.Match(trimmed);
-                if (match.Success)
+                // 1. ユーザープロフィールURL (iwara.tv/ai/profile/xxx)
+                if (Helpers.IsUserProfileUrl(trimmed))
                 {
-                    var videoId = match.Groups[1].Value;
-                    if (!videoIds.Contains(videoId))
-                    {
-                        videoIds.Add(videoId);
-                        idToUrl[videoId] = trimmed;
-                    }
+                    var uname = Helpers.ExtractUsernameFromUrl(trimmed) ?? trimmed;
+                    var site = Helpers.ExtractSiteFromUrl(trimmed);
+                    var key = $"{uname.ToLowerInvariant()}@{site}";
+                    if (seenProfile.Add(key))
+                        profiles.Add(trimmed);
+                    continue;
                 }
-                else if (trimmed.Length >= 8 && trimmed.Length <= 20 && 
-                         Regex.IsMatch(trimmed, @"^[a-zA-Z0-9]+$"))
+
+                // 2. 動画URL (iwara.tv/ai/video/xxx)
+                var vid = Helpers.ExtractVideoIdFromUrl(trimmed);
+                if (!string.IsNullOrEmpty(vid))
                 {
-                    // VideoIdのみの場合
-                    if (!videoIds.Contains(trimmed))
-                    {
-                        videoIds.Add(trimmed);
-                        idToUrl[trimmed] = $"https://www.iwara.tv/video/{trimmed}";
-                    }
+                    if (seenVideo.Add(vid))
+                        videos.Add(new VideoEntry(vid, trimmed, Helpers.ExtractSiteFromUrl(trimmed)));
+                    continue;
+                }
+
+                // 3. 裸の動画ID (英数字8〜20文字)
+                if (trimmed.Length >= 8 && trimmed.Length <= 20 && Regex.IsMatch(trimmed, @"^[a-zA-Z0-9]+$"))
+                {
+                    if (seenVideo.Add(trimmed))
+                        videos.Add(new VideoEntry(trimmed, $"https://{Helpers.SiteTv}/video/{trimmed}", Helpers.SiteTv));
                 }
             }
 
-            return (videoIds, idToUrl);
+            return (videos, profiles);
         }
+
+        private readonly record struct VideoEntry(string Id, string Url, string Site);
 
         /// <summary>
         /// インポート実行
         /// </summary>
         private async void btnImport_Click(object sender, EventArgs e)
         {
-            var (videoIds, idToUrl) = ExtractVideoIds(txtUrls.Text);
-            
-            if (videoIds.Count == 0)
+            var (videos, profiles) = ExtractEntries(txtUrls.Text);
+
+            if (videos.Count == 0 && profiles.Count == 0)
             {
-                MessageBox.Show("有効なURLが見つかりませんでした。", "エラー", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("有効な URL が見つかりませんでした。\n\n対応形式:\n・動画URL / 動画ID\n・チャンネル(プロフィール)URL\n  例: https://www.iwara.tv/profile/xxxx/videos\n(iwara.tv / iwara.ai 両対応)",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (profiles.Count > 0 && _downloadManager == null)
+            {
+                MessageBox.Show("チャンネル(プロフィール)URL の取り込みには内部初期化が必要です。動画URL/IDのみ処理します。",
+                    "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+            if (profiles.Count > 0 && _downloadManager != null && !_downloadManager.IsLoggedIn)
+            {
+                MessageBox.Show("チャンネル取り込みには iwara ログインが必要です。\n設定画面からログインしてください。",
+                    "ログイン必要", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -163,79 +187,93 @@ namespace IwaraDownloader.Forms
             btnImport.Text = "処理中...";
             progressBar.Visible = true;
             progressBar.Value = 0;
-            progressBar.Maximum = videoIds.Count;
+            progressBar.Maximum = Math.Max(1, videos.Count + profiles.Count);
 
             ImportedVideos.Clear();
             DuplicateCount = 0;
+            int addedChannels = 0, channelVideoTotal = 0, channelFailed = 0;
 
             try
             {
-                // 既存のVideoIdを一括取得
-                var existingIds = _database.GetExistingVideoIds(videoIds);
-
-                await Task.Run(() =>
+                // --- 動画 (id) の処理 ---
+                if (videos.Count > 0)
                 {
-                    foreach (var videoId in videoIds)
+                    var videoIds = videos.Select(v => v.Id).ToList();
+                    var existingIds = _database.GetExistingVideoIds(videoIds);
+
+                    await Task.Run(() =>
                     {
-                        // 重複チェック
-                        if (existingIds.Contains(videoId))
+                        foreach (var v in videos)
                         {
-                            DuplicateCount++;
-                        }
-                        else
-                        {
-                            var video = new VideoInfo
+                            if (existingIds.Contains(v.Id))
                             {
-                                VideoId = videoId,
-                                Title = $"[未取得] {videoId}",
-                                Url = idToUrl[videoId],
-                                Status = DownloadStatus.Pending,
-                                CreatedAt = DateTime.Now
-                            };
-                            ImportedVideos.Add(video);
+                                DuplicateCount++;
+                            }
+                            else
+                            {
+                                ImportedVideos.Add(new VideoInfo
+                                {
+                                    VideoId = v.Id,
+                                    Title = $"[未取得] {v.Id}",
+                                    Url = v.Url,
+                                    Site = v.Site,
+                                    Status = DownloadStatus.Pending,
+                                    CreatedAt = DateTime.Now
+                                });
+                            }
+                            this.Invoke(() => progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum));
                         }
+                    });
 
-                        // UI更新
-                        this.Invoke(() =>
-                        {
-                            progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
-                        });
-                    }
-                });
+                    if (ImportedVideos.Count > 0)
+                        _database.AddVideosBatch(ImportedVideos);
+                }
 
-                // 結果表示
-                var message = $"処理完了\n\n" +
-                    $"・追加対象: {ImportedVideos.Count}件\n" +
-                    $"・重複スキップ: {DuplicateCount}件";
-
-                if (ImportedVideos.Count > 0)
+                // --- チャンネル (profile) の処理 ---
+                if (profiles.Count > 0 && _downloadManager != null)
                 {
-                    var result = MessageBox.Show(
-                        message + "\n\nダウンロードキューに追加しますか？",
-                        "インポート結果",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Yes)
+                    var progress = new Progress<string>(msg =>
                     {
-                        // バッチ追加
-                        var addedCount = _database.AddVideosBatch(ImportedVideos);
-                        MessageBox.Show($"{addedCount}件をキューに追加しました。", 
-                            "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        
-                        this.DialogResult = DialogResult.OK;
-                        this.Close();
+                        if (!IsDisposed) btnImport.Text = "チャンネル取得中...";
+                    });
+                    foreach (var profileUrl in profiles)
+                    {
+                        try
+                        {
+                            var user = await _downloadManager.AddSubscribedUserAsync(profileUrl, progress);
+                            if (user != null)
+                            {
+                                addedChannels++;
+                                channelVideoTotal += user.TotalVideoCount;
+                            }
+                            else channelFailed++;
+                        }
+                        catch (Exception ex)
+                        {
+                            channelFailed++;
+                            LoggingService.Instance.Warn($"Bulk profile import failed ({profileUrl}): {ex.Message}");
+                        }
+                        progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
                     }
                 }
-                else
+
+                // 結果表示
+                var message = "処理完了\n\n" +
+                    $"・動画 追加: {ImportedVideos.Count}件 (重複スキップ {DuplicateCount}件)\n" +
+                    $"・チャンネル 追加: {addedChannels}件 (動画 {channelVideoTotal}件" +
+                    (channelFailed > 0 ? $" / 失敗 {channelFailed}件" : "") + ")";
+
+                MessageBox.Show(message, "インポート結果", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                if (ImportedVideos.Count > 0 || addedChannels > 0)
                 {
-                    MessageBox.Show(message, "インポート結果", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"インポート中にエラーが発生しました:\n{ex.Message}", 
+                MessageBox.Show($"インポート中にエラーが発生しました:\n{ex.Message}",
                     "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally

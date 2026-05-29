@@ -365,14 +365,19 @@ class IwaraAPI:
 
     def search_videos(self, query: str, page: int = 0, limit: int = 32) -> dict:
         """iwara 検索 API で動画一覧を取得 (購読してないチャンネルからも検索可能)。
-        iwara の /api/search は現在 500 を返す事があるため /api/videos?query= を使う。"""
+
+        正しいエンドポイントは /api/search?type=videos&query= 。
+        以前は type=video (単数) を使っていて 500 になり、/api/videos?query= に
+        フォールバックしていたが、/api/videos は query を無視して無関係な動画を返す
+        (キーワード未反映バグの原因) ため、type=videos (複数) の検索に修正。
+        レスポンス形 (results/count) と各動画の構造は /videos と同一。"""
         if not self.token:
             return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
         try:
             r = self._request_with_retry(
                 'GET',
-                f"{self.api_url}/videos",
-                params={'query': query, 'page': page, 'limit': limit, 'sort': 'date'},
+                f"{self.api_url}/search",
+                params={'type': 'videos', 'query': query, 'page': page, 'limit': limit},
                 headers=self._auth_header()
             )
             if r is None:

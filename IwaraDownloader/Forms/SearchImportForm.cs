@@ -123,6 +123,7 @@ namespace IwaraDownloader.Forms
             foreach (var item in items)
             {
                 var alreadyInDb = existing.Contains(item.VideoId);
+                item.AlreadyInDb = alreadyInDb;
                 var title = alreadyInDb ? $"[登録済] {item.Title}" : item.Title;
                 var lvi = new ListViewItem(new[]
                 {
@@ -154,6 +155,13 @@ namespace IwaraDownloader.Forms
         private void btnSelectAll_Click(object? sender, EventArgs e)
         {
             foreach (ListViewItem lvi in listResults.Items) lvi.Checked = true;
+        }
+
+        /// <summary>DL済 (DB登録済) を除いて全選択する。</summary>
+        private void btnSelectNew_Click(object? sender, EventArgs e)
+        {
+            foreach (ListViewItem lvi in listResults.Items)
+                lvi.Checked = lvi.Tag is SearchResultItem it && !it.AlreadyInDb;
         }
 
         private void btnSelectNone_Click(object? sender, EventArgs e)

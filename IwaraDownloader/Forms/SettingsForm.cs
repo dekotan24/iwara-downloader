@@ -468,36 +468,6 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        private void btnImportFromFolder_Click(object sender, EventArgs e)
-        {
-            if (_downloadManager == null)
-            {
-                MessageBox.Show(this, "DownloadManager が利用できません。",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            // SettingsForm が閉じても処理が続くよう、Owner は MainForm にする。
-            // SettingsForm 自身を Owner にすると、SettingsForm を閉じた瞬間に
-            // ImportFromFolderWizard も Dispose されてしまうので絶対避ける。
-            //   1) ShowDialog(MainForm) で開かれてれば this.Owner = MainForm
-            //   2) それ以外でも Application.OpenForms から MainForm を引っ張る
-            IWin32Window? ownerWindow = this.Owner;
-            if (ownerWindow == null)
-            {
-                foreach (Form f in Application.OpenForms)
-                {
-                    if (f is MainForm) { ownerWindow = f; break; }
-                }
-            }
-            // 最後の手段でも SettingsForm 自身は渡さない (= null で開く)。
-            ImportFromFolderWizard.ShowOrActivate(ownerWindow, _downloadManager);
-        }
-
-        private void btnDuplicateCheckOpen_Click(object sender, EventArgs e)
-        {
-            using var form = new DuplicateCheckForm();
-            form.ShowDialog(this);
-        }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {

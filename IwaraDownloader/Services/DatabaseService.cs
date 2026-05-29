@@ -104,6 +104,7 @@ namespace IwaraDownloader.Services
                     FileUuid TEXT DEFAULT '',
                     EmbedUrl TEXT DEFAULT '',
                     Rating TEXT DEFAULT '',
+                    IsFavorite INTEGER DEFAULT 0,
                     FOREIGN KEY (SubscribedUserId) REFERENCES SubscribedUsers(Id) ON DELETE SET NULL
                 );
 
@@ -208,6 +209,7 @@ namespace IwaraDownloader.Services
             bool hasEmbedUrl = false;
             bool hasRating = false;
             bool hasSite = false;
+            bool hasIsFavorite = false;
 
             try
             {
@@ -223,6 +225,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "EmbedUrl") hasEmbedUrl = true;
                     if (columnName == "Rating") hasRating = true;
                     if (columnName == "Site") hasSite = true;
+                    if (columnName == "IsFavorite") hasIsFavorite = true;
                 }
             }
             catch (Exception ex)
@@ -268,6 +271,22 @@ namespace IwaraDownloader.Services
             // Site カラム (www.iwara.tv / www.iwara.ai 判別用)
             AddColumnIfMissing(connection, hasSite,
                 "ALTER TABLE Videos ADD COLUMN Site TEXT DEFAULT ''", "Videos.Site");
+
+            // IsFavorite カラム (お気に入りフラグ)
+            if (!hasIsFavorite)
+            {
+                AddColumnIfMissing(connection, false, "ALTER TABLE Videos ADD COLUMN IsFavorite INTEGER DEFAULT 0", "IsFavorite");
+                try
+                {
+                    var indexCmd = connection.CreateCommand();
+                    indexCmd.CommandText = "CREATE INDEX IF NOT EXISTS idx_videos_is_favorite ON Videos(IsFavorite)";
+                    indexCmd.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Error($"IsFavorite インデックスの作成に失敗しました: {ex.Message}");
+                }
+            }
         }
 
         private static void AddColumnIfMissing(SqliteConnection connection, bool exists, string alterSql, string columnName)
@@ -519,10 +538,10 @@ namespace IwaraDownloader.Services
             command.CommandText = @"
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site)
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite)
                 VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                     @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site);
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite);
                 SELECT last_insert_rowid();
             ";
             AddVideoParameters(command, video);
@@ -562,12 +581,27 @@ namespace IwaraDownloader.Services
                     FileUuid = @FileUuid,
                     EmbedUrl = @EmbedUrl,
                     Rating = @Rating,
-                    Site = @Site
+                    Site = @Site,
+                    IsFavorite = @IsFavorite
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", video.Id);
             AddVideoParameters(command, video);
 
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// お気に入りフラグだけを高速に更新する(他カラムを触らない単発 UPDATE)。
+        /// </summary>
+        public void SetVideoFavorite(int videoId, bool isFavorite)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET IsFavorite = @IsFavorite WHERE Id = @Id";
+            command.Parameters.AddWithValue("@IsFavorite", isFavorite ? 1 : 0);
+            command.Parameters.AddWithValue("@Id", videoId);
             command.ExecuteNonQuery();
         }
 
@@ -788,6 +822,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@EmbedUrl", video.EmbedUrl ?? "");
             command.Parameters.AddWithValue("@Rating", video.Rating ?? "");
             command.Parameters.AddWithValue("@Site", video.Site ?? "");
+            command.Parameters.AddWithValue("@IsFavorite", video.IsFavorite ? 1 : 0);
         }
 
         private static VideoInfo ReadVideo(SqliteDataReader reader)
@@ -817,8 +852,25 @@ namespace IwaraDownloader.Services
                 FileUuid = TryGetString(reader, "FileUuid"),
                 EmbedUrl = TryGetString(reader, "EmbedUrl"),
                 Rating = TryGetString(reader, "Rating"),
-                Site = TryGetString(reader, "Site")
+                Site = TryGetString(reader, "Site"),
+                IsFavorite = TryGetInt(reader, "IsFavorite") == 1
             };
+        }
+
+        /// <summary>
+        /// カラムが存在する場合のみ整数を取得(マイグレーション対応)。無ければ 0。
+        /// </summary>
+        private static int TryGetInt(SqliteDataReader reader, string columnName)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal(columnName);
+                return reader.IsDBNull(ordinal) ? 0 : reader.GetInt32(ordinal);
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         /// <summary>

@@ -21,7 +21,13 @@ namespace IwaraDownloader.Services
         public DateTime? CreatedAt { get; set; }
         public bool IsPrivate { get; set; }
 
-        public string Url => $"https://www.iwara.tv/video/{VideoId}";
+        /// <summary>検索した所属サイト (www.iwara.tv / www.iwara.ai)。URL 生成に使う。</summary>
+        public string Site { get; set; } = "www.iwara.tv";
+
+        /// <summary>既に DB に登録済みか (UI 表示・選択制御用)。</summary>
+        public bool AlreadyInDb { get; set; }
+
+        public string Url => $"https://{(string.IsNullOrEmpty(Site) ? "www.iwara.tv" : Site)}/video/{VideoId}";
         public string DurationFormatted
         {
             get
@@ -130,6 +136,7 @@ namespace IwaraDownloader.Services
                             Rating = GetStr(v, "rating"),
                             EmbedUrl = GetStr(v, "embed_url"),
                             IsPrivate = v.TryGetProperty("private", out var pv) && pv.ValueKind == JsonValueKind.True,
+                            Site = string.IsNullOrEmpty(site) ? "www.iwara.tv" : site,
                         };
                         if (v.TryGetProperty("created_at", out var ca) && ca.ValueKind == JsonValueKind.String
                             && DateTime.TryParse(ca.GetString(), out var dt))

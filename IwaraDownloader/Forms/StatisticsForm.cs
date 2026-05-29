@@ -97,20 +97,23 @@ namespace IwaraDownloader.Forms
                 .ToList();
 
             // カラム設定
+            // 注意: AutoSizeColumnsMode = Fill のため Width は無視される。FillWeight で相対幅を指定する。
+            // また dgvDailyStats は非アクティブタブ上にあり Load 時点でハンドル未生成のため、
+            // Width を代入すると set_Thickness 内部で NullReferenceException が発生する (Fill では FillWeight が正解)。
             if (dgvChannelStats.Columns.Count > 0)
             {
                 dgvChannelStats.Columns["Username"].HeaderText = "チャンネル";
-                dgvChannelStats.Columns["Username"].Width = 150;
+                dgvChannelStats.Columns["Username"].FillWeight = 150;
                 dgvChannelStats.Columns["TotalVideos"].HeaderText = "総動画数";
-                dgvChannelStats.Columns["TotalVideos"].Width = 80;
+                dgvChannelStats.Columns["TotalVideos"].FillWeight = 80;
                 dgvChannelStats.Columns["CompletedVideos"].HeaderText = "完了";
-                dgvChannelStats.Columns["CompletedVideos"].Width = 60;
+                dgvChannelStats.Columns["CompletedVideos"].FillWeight = 60;
                 dgvChannelStats.Columns["FailedVideos"].HeaderText = "失敗";
-                dgvChannelStats.Columns["FailedVideos"].Width = 60;
+                dgvChannelStats.Columns["FailedVideos"].FillWeight = 60;
                 dgvChannelStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
-                dgvChannelStats.Columns["TotalSizeFormatted"].Width = 80;
+                dgvChannelStats.Columns["TotalSizeFormatted"].FillWeight = 80;
                 dgvChannelStats.Columns["StatusText"].HeaderText = "状態";
-                dgvChannelStats.Columns["StatusText"].Width = 60;
+                dgvChannelStats.Columns["StatusText"].FillWeight = 60;
 
                 // 非表示カラム
                 dgvChannelStats.Columns["TotalSize"].Visible = false;
@@ -147,11 +150,11 @@ namespace IwaraDownloader.Forms
             if (dgvDailyStats.Columns.Count > 0)
             {
                 dgvDailyStats.Columns["DateFormatted"].HeaderText = "日付";
-                dgvDailyStats.Columns["DateFormatted"].Width = 100;
+                dgvDailyStats.Columns["DateFormatted"].FillWeight = 100;
                 dgvDailyStats.Columns["Count"].HeaderText = "DL数";
-                dgvDailyStats.Columns["Count"].Width = 60;
+                dgvDailyStats.Columns["Count"].FillWeight = 60;
                 dgvDailyStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
-                dgvDailyStats.Columns["TotalSizeFormatted"].Width = 80;
+                dgvDailyStats.Columns["TotalSizeFormatted"].FillWeight = 80;
 
                 // 非表示カラム
                 dgvDailyStats.Columns["Date"].Visible = false;

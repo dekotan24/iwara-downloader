@@ -113,9 +113,9 @@ namespace IwaraDownloader.Forms
             // btnRemoveSelected
             // 
             this.btnRemoveSelected.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnRemoveSelected.Location = new Point(459, 25);
+            this.btnRemoveSelected.Location = new Point(419, 25);
             this.btnRemoveSelected.Name = "btnRemoveSelected";
-            this.btnRemoveSelected.Size = new Size(95, 27);
+            this.btnRemoveSelected.Size = new Size(135, 27);
             this.btnRemoveSelected.TabIndex = 2;
             this.btnRemoveSelected.Text = "選択項目を削除";
             this.btnRemoveSelected.UseVisualStyleBackColor = true;

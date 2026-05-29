@@ -1112,6 +1112,24 @@ namespace IwaraDownloader.Forms
             else if (nsfwMode == 2) // NSFW のみ
                 source = source.Where(v => v.Rating == "ecchi" || v.Rating == "nsfw");
 
+            // 詳細検索: お気に入りのみ
+            bool favOnly = chkFavOnly != null && chkFavOnly.Checked;
+            if (favOnly)
+                source = source.Where(v => v.IsFavorite);
+
+            // 詳細検索: タグ絞り込み (スペース/カンマ区切りで AND)
+            var tagFilterText = txtTagFilter?.Text ?? "";
+            string[] tagTerms = Array.Empty<string>();
+            if (!string.IsNullOrWhiteSpace(tagFilterText))
+            {
+                tagTerms = tagFilterText
+                    .Split(new[] { ',', ' ', '　' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(t => t.ToLowerInvariant())
+                    .ToArray();
+                if (tagTerms.Length > 0)
+                    source = source.Where(v => tagTerms.All(tt => (v.Tags ?? "").ToLowerInvariant().Contains(tt)));
+            }
+
             // 検索クエリパース
             var query = SearchQuery.Parse(_currentFilterText);
             if (query.IsEmpty)
@@ -1157,7 +1175,7 @@ namespace IwaraDownloader.Forms
             }
 
             // フィルター結果をステータスに表示
-            if (!query.IsEmpty || nsfwMode != 0)
+            if (!query.IsEmpty || nsfwMode != 0 || favOnly || tagTerms.Length > 0)
             {
                 UpdateStatusBar($"フィルター: {_displayVideoList.Count}/{_allVideoList.Count}件");
             }
@@ -1510,10 +1528,15 @@ namespace IwaraDownloader.Forms
             var selectedNode = clickedNode;
             var isUserNode = selectedNode?.Tag is SubscribedUser;
             var isSpecialNode = selectedNode?.Tag is string;
+            var specialTag = selectedNode?.Tag as string;
+
+            // ファイル存在チェックはチャンネルノード or「DL済動画」ノードで表示
+            bool canCheckFiles = isUserNode || specialTag == NODE_DOWNLOADED;
 
             // チャンネル用メニュー項目の表示/非表示
             menuChOpen.Visible = isUserNode;
             menuChCheckNow.Visible = isUserNode;
+            menuChCheckFiles.Visible = canCheckFiles;
             menuChSeparator1.Visible = isUserNode;
             menuChSetSavePath.Visible = isUserNode;
             menuChExternalDL.Visible = isUserNode;
@@ -1556,7 +1579,7 @@ namespace IwaraDownloader.Forms
             menuChDownloadAll.Visible = showDownloadAll;
 
             // メニュー項目がない場合はキャンセル
-            if (!showDownloadAll && !isUserNode)
+            if (!showDownloadAll && !isUserNode && !canCheckFiles)
             {
                 e.Cancel = true;
             }
@@ -1955,6 +1978,10 @@ namespace IwaraDownloader.Forms
             menuVidOpenAuthor.Visible = canOpenAuthor;
             menuVidCopyUrl.Visible = true;
             menuVidCopyTitle.Visible = true;
+            // お気に入り: 選択が全てお気に入りなら「削除」、でなければ「追加」
+            bool allFav = selected.All(v => v.IsFavorite);
+            menuVidFavorite.Visible = true;
+            menuVidFavorite.Text = allFav ? "★ お気に入りから削除" : "★ お気に入りに追加";
             menuVidDetails.Visible = isSingle;
             menuVidDelete.Visible = true;
 
@@ -2181,56 +2208,110 @@ namespace IwaraDownloader.Forms
         {
             var selectedVideos = GetSelectedVideos();
             if (selectedVideos.Count == 0) return;
+            CheckFilesExistence(selectedVideos, "ダウンロード済みの動画が選択されていません");
+        }
 
-            var checkedCount = 0;
-            var missingCount = 0;
-            var requeuedCount = 0;
+        // ファイル存在チェックの多重起動防止
+        private bool _isCheckingFiles = false;
 
-            foreach (var video in selectedVideos)
+        /// <summary>
+        /// 指定動画群の DL 済みファイルの実在をチェックし、見つからないものは
+        /// ステータスをリセットして DL キューに再投入する。動画/チャンネル両方の右クリックから利用。
+        /// 重い File.Exists 判定と DB 更新はバックグラウンドスレッドで行い、メイン UI を固めない。
+        /// </summary>
+        private async void CheckFilesExistence(IList<VideoInfo> videos, string noTargetMessage)
+        {
+            if (_isCheckingFiles)
             {
-                // ダウンロード済みの動画のみチェック
-                if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath))
+                UpdateStatusBar("ファイル存在チェックを実行中です…");
+                return;
+            }
+            _isCheckingFiles = true;
+            UpdateStatusBar($"ファイル存在チェック中… ({videos.Count}件)");
+
+            try
+            {
+                // バックグラウンド: File.Exists 判定 + 欠損ファイルのステータスリセット & DB 更新
+                var (checkedCount, missing) = await Task.Run(() =>
                 {
-                    checkedCount++;
-
-                    if (!File.Exists(video.LocalFilePath))
+                    int cnt = 0;
+                    var miss = new List<VideoInfo>();
+                    foreach (var video in videos)
                     {
-                        missingCount++;
-
-                        // ステータスをリセット
-                        video.Status = DownloadStatus.Pending;
-                        video.LocalFilePath = string.Empty;
-                        video.DownloadedAt = null;
-                        video.RetryCount = 0;
-                        video.LastErrorMessage = null;
-                        _database.UpdateVideo(video);
-
-                        // DLキューに追加
-                        SubscribedUser? user = null;
-                        if (video.SubscribedUserId.HasValue)
+                        if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath))
                         {
-                            user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                            cnt++;
+                            if (!File.Exists(video.LocalFilePath))
+                            {
+                                video.Status = DownloadStatus.Pending;
+                                video.LocalFilePath = string.Empty;
+                                video.DownloadedAt = null;
+                                video.RetryCount = 0;
+                                video.LastErrorMessage = null;
+                                try { _database.UpdateVideo(video); }
+                                catch (Exception ex) { _logger.Warn($"CheckFiles UpdateVideo failed for {video.VideoId}: {ex.Message}"); }
+                                miss.Add(video);
+                            }
                         }
-                        _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
-                        requeuedCount++;
                     }
+                    return (cnt, miss);
+                });
+
+                // ここから UI スレッド (await 継続): キュー投入 + 再描画
+                foreach (var video in missing)
+                {
+                    SubscribedUser? user = null;
+                    if (video.SubscribedUserId.HasValue)
+                        user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+                    _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
                 }
-            }
 
-            RefreshChannelTree();
-            RefreshVideoList();
+                RefreshChannelTree();
+                RefreshVideoList();
 
-            if (checkedCount == 0)
-            {
-                UpdateStatusBar("ダウンロード済みの動画が選択されていません");
+                if (checkedCount == 0)
+                    UpdateStatusBar(noTargetMessage);
+                else if (missing.Count == 0)
+                    UpdateStatusBar($"{checkedCount}件チェック: 全てのファイルが存在します");
+                else
+                    UpdateStatusBar($"{checkedCount}件チェック: {missing.Count}件のファイルが見つからず、キューに追加しました");
             }
-            else if (missingCount == 0)
+            catch (Exception ex)
             {
-                UpdateStatusBar($"{checkedCount}件チェック: 全てのファイルが存在します");
+                _logger.Error("ファイル存在チェックに失敗しました", ex);
+                UpdateStatusBar($"ファイル存在チェック失敗: {ex.Message}");
             }
-            else
+            finally
             {
-                UpdateStatusBar($"{checkedCount}件チェック: {missingCount}件のファイルが見つからず、{requeuedCount}件をキューに追加しました");
+                _isCheckingFiles = false;
+            }
+        }
+
+        /// <summary>
+        /// チャンネル右クリック / 「DL済動画」ノード右クリック: DL 済みファイルの存在チェック。
+        /// </summary>
+        private void menuChCheckFiles_Click(object sender, EventArgs e)
+        {
+            var tag = treeViewChannels.SelectedNode?.Tag;
+            if (tag is SubscribedUser user)
+            {
+                var videos = _database.GetVideosBySubscribedUser(user.Id);
+                if (videos.Count == 0)
+                {
+                    UpdateStatusBar($"「{user.Username}」には動画がありません");
+                    return;
+                }
+                CheckFilesExistence(videos, $"「{user.Username}」にダウンロード済みの動画がありません");
+            }
+            else if (tag as string == NODE_DOWNLOADED)
+            {
+                var videos = _database.GetVideosByStatus(DownloadStatus.Completed);
+                if (videos.Count == 0)
+                {
+                    UpdateStatusBar("DL済みの動画がありません");
+                    return;
+                }
+                CheckFilesExistence(videos, "DL済みの動画がありません");
             }
         }
 
@@ -2364,9 +2445,67 @@ namespace IwaraDownloader.Forms
             using var form = new VideoDetailsForm(video, _database);
             if (form.ShowDialog(this) == DialogResult.OK)
             {
-                // タグ・メモ等の編集を反映 (該当行だけ再描画)
+                // タグ・メモ・お気に入り等の編集を反映 (該当行だけ再描画)
                 InvalidateVideoItem(video.VideoId);
+                // お気に入りのみ表示中なら一覧から外れる可能性 → 再フィルタ
+                if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
                 UpdateStatusBar($"「{video.Title}」を更新しました");
+            }
+        }
+
+        /// <summary>
+        /// 右クリックメニュー: 選択動画のお気に入りをトグル。
+        /// 全てお気に入りなら解除、そうでなければ全て登録する。
+        /// </summary>
+        private void menuVidFavorite_Click(object sender, EventArgs e)
+        {
+            var selected = GetSelectedVideos();
+            if (selected.Count == 0) return;
+            bool newState = !selected.All(v => v.IsFavorite);
+            ToggleFavorite(selected, newState);
+        }
+
+        /// <summary>
+        /// 指定動画群のお気に入りを newState に設定し、DB 保存 + 該当行を再描画する。
+        /// </summary>
+        private void ToggleFavorite(IList<VideoInfo> videos, bool newState)
+        {
+            int changed = 0;
+            foreach (var v in videos)
+            {
+                if (v.IsFavorite == newState) continue;
+                v.IsFavorite = newState;
+                try { _database.SetVideoFavorite(v.Id, newState); }
+                catch (Exception ex) { _logger.Warn($"SetVideoFavorite failed for {v.VideoId}: {ex.Message}"); }
+                InvalidateVideoItem(v.VideoId);
+                changed++;
+            }
+            if (changed == 0) return;
+            // お気に入りのみ表示中なら、解除で一覧から外れる → 再フィルタ
+            if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
+            UpdateStatusBar(newState ? $"{changed}件をお気に入りに追加しました" : $"{changed}件をお気に入りから削除しました");
+        }
+
+        /// <summary>
+        /// サムネ表示時、サムネ右下の星アイコンをクリックしたらお気に入りトグル。
+        /// </summary>
+        private void listViewVideos_MouseClick(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            if (listViewVideos.View != View.LargeIcon || listViewVideos.VirtualMode) return;
+
+            var hit = listViewVideos.HitTest(e.Location);
+            if (hit?.Item == null) return;
+            int idx = hit.Item.Index;
+            if (idx < 0 || idx >= listViewVideos.Items.Count) return;
+
+            var iconBounds = listViewVideos.GetItemRect(idx, ItemBoundsPortion.Icon);
+            var imageRect = GetThumbImageRect(iconBounds);
+            if (!GetThumbStarHotspot(imageRect).Contains(e.Location)) return;
+
+            if (listViewVideos.Items[idx].Tag is VideoInfo video)
+            {
+                ToggleFavorite(new List<VideoInfo> { video }, !video.IsFavorite);
             }
         }
 
@@ -2955,13 +3094,21 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private void menuToolsBulkImport_Click(object sender, EventArgs e)
         {
-            using var form = new BulkImportForm();
+            using var form = new BulkImportForm(_downloadManager);
             if (form.ShowDialog(this) == DialogResult.OK)
             {
                 // リストを更新
                 RefreshChannelTree();
                 RefreshVideoList();
             }
+        }
+
+        /// <summary>
+        /// フォルダから取り込み (DL済み mp4 をスキャンして DB へ取り込むウィザード)。
+        /// </summary>
+        private void menuToolsImportFolder_Click(object sender, EventArgs e)
+        {
+            ImportFromFolderWizard.ShowOrActivate(this, _downloadManager);
         }
 
         /// <summary>
@@ -3246,13 +3393,23 @@ namespace IwaraDownloader.Forms
         {
             if (_thumbImageList == null) return;
 
-            // ImageList に画像を追加 (TryGetCached 経由でメモリ/ディスクから読み込み)
-            if (!_thumbImageList.Images.ContainsKey(videoId))
+            // 該当動画のお気に入り状態を反映した星付きサムネを ImageList に用意する
+            bool fav = false;
+            for (int j = 0; j < _displayVideoList.Count; j++)
+            {
+                if (_displayVideoList[j].VideoId == videoId) { fav = _displayVideoList[j].IsFavorite; break; }
+            }
+            var imgKey = ThumbKey(videoId, fav);
+            if (!_thumbImageList.Images.ContainsKey(imgKey))
             {
                 var img = ThumbnailCacheService.Instance.TryGetCached(videoId);
                 if (img != null)
                 {
-                    try { _thumbImageList.Images.Add(videoId, img); }
+                    try
+                    {
+                        using var composed = ComposeThumbWithStar(img, fav);
+                        _thumbImageList.Images.Add(imgKey, composed);
+                    }
                     catch (Exception ex) { Debug.WriteLine($"ImageList add fail in ThumbReady: {ex.Message}"); }
                 }
             }
@@ -3267,7 +3424,7 @@ namespace IwaraDownloader.Forms
                     // サムネモード: 通常 ListView → 該当 Item の ImageKey を再セットして RedrawItems
                     if (i < listViewVideos.Items.Count)
                     {
-                        listViewVideos.Items[i].ImageKey = videoId;
+                        listViewVideos.Items[i].ImageKey = imgKey;
                         listViewVideos.RedrawItems(i, i, false);
                     }
                 }
@@ -3287,17 +3444,26 @@ namespace IwaraDownloader.Forms
         /// <summary>サムネを ImageList に確実に入れる (UI スレッドで I/O ゼロ)。返り値はキー名。
         /// メモリキャッシュにあれば即追加、無ければバックグラウンドでロードして
         /// ThumbnailReady で UI 更新する。</summary>
+        // サムネ ImageList のキー。お気に入り状態を埋め込み、☆/★ の付いた別画像として共存させる
+        // (トグル時は ImageKey を差し替えるだけで済み、ImageList からの Remove によるインデックス破壊を避ける)。
+        private static string ThumbKey(string videoId, bool fav) => videoId + (fav ? "#f" : "#n");
+
         private string EnsureThumbImageKey(VideoInfo video)
         {
             if (_thumbImageList == null) return "__placeholder__";
-            var key = video.VideoId;
+            var key = ThumbKey(video.VideoId, video.IsFavorite);
             if (_thumbImageList.Images.ContainsKey(key)) return key;
 
             // メモリキャッシュのみチェック (I/O しない、UI スレッド即時)
             var mem = ThumbnailCacheService.Instance.TryGetMemoryCached(video.VideoId);
             if (mem != null)
             {
-                try { _thumbImageList.Images.Add(key, mem); return key; }
+                try
+                {
+                    using var composed = ComposeThumbWithStar(mem, video.IsFavorite);
+                    _thumbImageList.Images.Add(key, composed);
+                    return key;
+                }
                 catch (Exception ex) { Debug.WriteLine($"ImageList add fail: {ex.Message}"); }
             }
 
@@ -3307,26 +3473,92 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
-        /// NSFW フィルタ: 全部
+        /// サムネ画像の右下に半透明のお気に入り星 (★=登録済 / ☆=未登録) を合成した新しい Bitmap を返す。
+        /// 元画像は変更しない。返した Bitmap は ImageList へ Add 後に破棄してよい (内部でコピーされる)。
         /// </summary>
-        private void menuNsfwAll_Click(object sender, EventArgs e) => SetNsfwFilter(0);
-        private void menuNsfwSfw_Click(object sender, EventArgs e) => SetNsfwFilter(1);
-        private void menuNsfwNsfw_Click(object sender, EventArgs e) => SetNsfwFilter(2);
+        private static Bitmap ComposeThumbWithStar(Image baseImg, bool isFavorite)
+        {
+            var bmp = new Bitmap(ThumbWidth, ThumbHeight);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.DrawImage(baseImg, 0, 0, ThumbWidth, ThumbHeight);
 
+                // 右下に半透明の丸い下地 + 星
+                const int box = 24;
+                int x = ThumbWidth - box - 3;
+                int y = ThumbHeight - box - 3;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var bg = new SolidBrush(Color.FromArgb(130, 0, 0, 0)))
+                    g.FillEllipse(bg, x, y, box, box);
+
+                var glyph = isFavorite ? "★" : "☆";
+                var color = isFavorite ? Color.FromArgb(245, 255, 205, 60) : Color.FromArgb(235, 255, 255, 255);
+                using var f = new Font("Segoe UI Symbol", 14f, FontStyle.Regular, GraphicsUnit.Pixel);
+                using var br = new SolidBrush(color);
+                using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(glyph, f, br, new RectangleF(x, y, box, box), sf);
+            }
+            return bmp;
+        }
+
+        /// <summary>
+        /// LargeIcon の Icon 領域内で実サムネ画像が占める矩形を求める。
+        /// Icon 領域は画像より一回り大きく (実測 176x94 vs 160x90)、画像は水平センタリング・上寄せされるため、
+        /// その分を補正しないと星のクリック判定が右へズレる。
+        /// </summary>
+        private static Rectangle GetThumbImageRect(Rectangle iconBounds)
+        {
+            int x = iconBounds.X + Math.Max(0, (iconBounds.Width - ThumbWidth) / 2);
+            int y = iconBounds.Y; // LargeIcon は上寄せ
+            return new Rectangle(x, y, ThumbWidth, ThumbHeight);
+        }
+
+        /// <summary>サムネ上のお気に入り星のクリック判定領域 (画像の右下角、広めに取る)。</summary>
+        private static Rectangle GetThumbStarHotspot(Rectangle imageRect)
+        {
+            const int box = 34; // 描画星(24px)より広めにしてクリックしやすく
+            return new Rectangle(imageRect.Right - box, imageRect.Bottom - box, box, box);
+        }
+
+        /// <summary>
+        /// 詳細検索行の開閉トグル
+        /// </summary>
+        private void btnAdvancedSearch_Click(object sender, EventArgs e)
+        {
+            panelAdvancedFilter.Visible = !panelAdvancedFilter.Visible;
+            btnAdvancedSearch.Text = panelAdvancedFilter.Visible ? "詳細検索 ▴" : "詳細検索 ▾";
+        }
+
+        private void chkFavOnly_CheckedChanged(object sender, EventArgs e) => ApplyVideoFilter();
+
+        private void txtTagFilter_TextChanged(object sender, EventArgs e) => ApplyVideoFilter();
+
+        // NSFW フィルタ ComboBox → SetNsfwFilter (再入防止フラグ付き)
+        private bool _suppressNsfwEvent = false;
+        private void cmbNsfwFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressNsfwEvent) return;
+            SetNsfwFilter(cmbNsfwFilter.SelectedIndex);
+        }
+
+        /// <summary>
+        /// NSFW フィルタ設定 (0=全部 / 1=SFW / 2=NSFW)。詳細検索行の ComboBox と同期する。
+        /// </summary>
         private void SetNsfwFilter(int mode)
         {
+            if (mode < 0) mode = 0;
             var settings = SettingsManager.Instance.Settings;
             settings.NsfwFilterMode = mode;
             SettingsManager.Instance.Save();
-            btnNsfwFilter.Text = mode switch
+            if (cmbNsfwFilter != null && cmbNsfwFilter.SelectedIndex != mode
+                && mode >= 0 && mode < cmbNsfwFilter.Items.Count)
             {
-                1 => "🔞SFW",
-                2 => "🔞NSFW",
-                _ => "🔞全部"
-            };
-            menuNsfwAll.Checked = mode == 0;
-            menuNsfwSfw.Checked = mode == 1;
-            menuNsfwNsfw.Checked = mode == 2;
+                _suppressNsfwEvent = true;
+                try { cmbNsfwFilter.SelectedIndex = mode; }
+                finally { _suppressNsfwEvent = false; }
+            }
             RefreshVideoList();
         }
 
