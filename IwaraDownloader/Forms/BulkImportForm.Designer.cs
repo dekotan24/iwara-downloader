@@ -36,7 +36,7 @@ namespace IwaraDownloader.Forms
             this.lblDescription.Location = new Point(12, 12);
             this.lblDescription.Name = "lblDescription";
             this.lblDescription.Size = new Size(350, 15);
-            this.lblDescription.Text = "iwara.tv の動画URLを入力してください(1行に1URL、または連続入力可)";
+            this.lblDescription.Text = "iwara.tv / iwara.ai の動画・チャンネルURLを入力してください(1行に1URL)";
 
             // 
             // txtUrls
@@ -50,7 +50,7 @@ namespace IwaraDownloader.Forms
             this.txtUrls.Size = new Size(460, 280);
             this.txtUrls.TabIndex = 0;
             this.txtUrls.WordWrap = false;
-            this.txtUrls.PlaceholderText = "https://www.iwara.tv/video/xxxxxx\nhttps://www.iwara.tv/video/yyyyyy\n\n# コメント行は無視されます\n# VideoIdのみでもOK: abcd1234";
+            this.txtUrls.PlaceholderText = "https://www.iwara.tv/video/xxxxxx\nhttps://www.iwara.ai/video/yyyyyy\nhttps://www.iwara.tv/profile/username\nhttps://www.iwara.ai/profile/username\n\n# コメント行は無視されます\n# VideoIdのみでもOK: abcd1234";
             this.txtUrls.TextChanged += new EventHandler(this.txtUrls_TextChanged);
 
             // 
@@ -109,7 +109,7 @@ namespace IwaraDownloader.Forms
             this.lblHelp.Location = new Point(12, 360);
             this.lblHelp.Name = "lblHelp";
             this.lblHelp.Size = new Size(400, 30);
-            this.lblHelp.Text = "※ 対応形式: https://www.iwara.tv/video/xxxxx または VideoIdのみ\n※ 重複URLは自動でスキップされます";
+            this.lblHelp.Text = "※ 対応形式: 動画URL / チャンネル(プロフィール)URL / VideoIdのみ (iwara.tv・iwara.ai 両対応)\n※ 重複URLは自動でスキップされます";
 
             // 
             // progressBar

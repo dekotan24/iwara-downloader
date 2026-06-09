@@ -220,9 +220,12 @@ namespace IwaraDownloader.Services
         /// Pythonスクリプトを実行 (site 指定可)
         /// </summary>
         private Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
-            => RunPythonAsync(action, null, args);
+            => RunPythonAsync(action, null, CancellationToken.None, args);
 
-        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, params string[] args)
+        private Task<JsonDocument?> RunPythonAsync(string action, string? site, params string[] args)
+            => RunPythonAsync(action, site, CancellationToken.None, args);
+
+        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, params string[] args)
         {
             if (!IsPythonConfigured)
             {
@@ -322,7 +325,35 @@ namespace IwaraDownloader.Services
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            await process.WaitForExitAsync();
+            try
+            {
+                await process.WaitForExitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // タイムアウト/アプリ終了: プロセスツリーごと Kill (RunPythonWithProgressAsync と同じ対応)
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+
+                    // Kill は非同期完了なので、ゾンビ化防止のため終了確定まで短時間待機
+                    using var killWaitCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        await process.WaitForExitAsync(killWaitCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.WriteLine("Python process did not exit within 5s after Kill");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Python process Kill failed: {ex.Message}");
+                }
+                throw;
+            }
 
             var outputStr = output.ToString().Trim();
             Debug.WriteLine($"Python output: {outputStr}");
@@ -436,7 +467,7 @@ namespace IwaraDownloader.Services
         /// <summary>
         /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)
         /// </summary>
-        public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null)
+        public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default)
         {
             if (!IsLoggedIn)
             {
@@ -446,7 +477,7 @@ namespace IwaraDownloader.Services
 
             progress?.Report($"{username}の動画一覧を取得中...");
 
-            var result = await RunPythonAsync("get_videos", site, username);
+            var result = await RunPythonAsync("get_videos", site, ct, username);
             
             if (result == null)
             {

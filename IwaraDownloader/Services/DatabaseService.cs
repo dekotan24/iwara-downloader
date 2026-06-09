@@ -77,7 +77,8 @@ namespace IwaraDownloader.Services
                     TotalVideoCount INTEGER DEFAULT 0,
                     IsEnabled INTEGER DEFAULT 1,
                     CustomSavePath TEXT DEFAULT '',
-                    DownloadExternalVideosOverride INTEGER NULL
+                    DownloadExternalVideosOverride INTEGER NULL,
+                    VideosLoaded INTEGER DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS Videos (
@@ -173,6 +174,7 @@ namespace IwaraDownloader.Services
             bool hasCustomSavePath = false;
             bool hasDownloadExternalOverride = false;
             bool hasSubSite = false;
+            bool hasVideosLoaded = false;
 
             var checkCmd = connection.CreateCommand();
             checkCmd.CommandText = "PRAGMA table_info(SubscribedUsers)";
@@ -184,6 +186,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "CustomSavePath") hasCustomSavePath = true;
                     if (columnName == "DownloadExternalVideosOverride") hasDownloadExternalOverride = true;
                     if (columnName == "Site") hasSubSite = true;
+                    if (columnName == "VideosLoaded") hasVideosLoaded = true;
                 }
             }
 
@@ -193,6 +196,9 @@ namespace IwaraDownloader.Services
                 "ALTER TABLE SubscribedUsers ADD COLUMN DownloadExternalVideosOverride INTEGER NULL", "DownloadExternalVideosOverride");
             AddColumnIfMissing(connection, hasSubSite,
                 "ALTER TABLE SubscribedUsers ADD COLUMN Site TEXT DEFAULT ''", "SubscribedUsers.Site");
+            // 既存ユーザーは動画取得済みとみなす (DEFAULT 1)
+            AddColumnIfMissing(connection, hasVideosLoaded,
+                "ALTER TABLE SubscribedUsers ADD COLUMN VideosLoaded INTEGER DEFAULT 1", "VideosLoaded");
 
             // VideosテーブルのTags/Memo/FileUuid/EmbedUrl/Rating/Site カラムマイグレーション
             MigrateVideosTable(connection);
@@ -210,6 +216,7 @@ namespace IwaraDownloader.Services
             bool hasRating = false;
             bool hasSite = false;
             bool hasIsFavorite = false;
+            bool hasThumbnailStatus = false;
 
             try
             {
@@ -226,6 +233,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "Rating") hasRating = true;
                     if (columnName == "Site") hasSite = true;
                     if (columnName == "IsFavorite") hasIsFavorite = true;
+                    if (columnName == "ThumbnailStatus") hasThumbnailStatus = true;
                 }
             }
             catch (Exception ex)
@@ -287,6 +295,10 @@ namespace IwaraDownloader.Services
                     LoggingService.Instance.Error($"IsFavorite インデックスの作成に失敗しました: {ex.Message}");
                 }
             }
+
+            // ThumbnailStatus カラム (0=未試行, 1=キャッシュ済, 2=失敗)
+            AddColumnIfMissing(connection, hasThumbnailStatus,
+                "ALTER TABLE Videos ADD COLUMN ThumbnailStatus INTEGER DEFAULT 0", "ThumbnailStatus");
         }
 
         private static void AddColumnIfMissing(SqliteConnection connection, bool exists, string alterSql, string columnName)
@@ -322,8 +334,8 @@ namespace IwaraDownloader.Services
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site)
-                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site);
+                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site, VideosLoaded)
+                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site, @VideosLoaded);
                 SELECT last_insert_rowid();
             ";
             command.Parameters.AddWithValue("@UserId", user.UserId);
@@ -337,6 +349,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@DownloadExternalVideosOverride",
                 user.DownloadExternalVideosOverride.HasValue ? (object)(user.DownloadExternalVideosOverride.Value ? 1 : 0) : DBNull.Value);
             command.Parameters.AddWithValue("@Site", user.Site ?? "");
+            command.Parameters.AddWithValue("@VideosLoaded", user.VideosLoaded ? 1 : 0);
 
             return Convert.ToInt32(command.ExecuteScalar());
         }
@@ -362,7 +375,8 @@ namespace IwaraDownloader.Services
                     IsEnabled = @IsEnabled,
                     CustomSavePath = @CustomSavePath,
                     DownloadExternalVideosOverride = @DownloadExternalVideosOverride,
-                    Site = @Site
+                    Site = @Site,
+                    VideosLoaded = @VideosLoaded
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", user.Id);
@@ -378,6 +392,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@DownloadExternalVideosOverride",
                 user.DownloadExternalVideosOverride.HasValue ? (object)(user.DownloadExternalVideosOverride.Value ? 1 : 0) : DBNull.Value);
             command.Parameters.AddWithValue("@Site", user.Site ?? "");
+            command.Parameters.AddWithValue("@VideosLoaded", user.VideosLoaded ? 1 : 0);
 
             command.ExecuteNonQuery();
         }
@@ -519,7 +534,31 @@ namespace IwaraDownloader.Services
             }
             catch { user.Site = ""; }
 
+            // VideosLoaded カラム (仮登録フラグ)
+            try
+            {
+                var ordinal = reader.GetOrdinal("VideosLoaded");
+                user.VideosLoaded = !reader.IsDBNull(ordinal) && reader.GetInt32(ordinal) == 1;
+            }
+            catch { user.VideosLoaded = true; } // 旧DBは取得済みとみなす
+
             return user;
+        }
+
+        /// <summary>
+        /// 動画一覧が未取得のユーザーを取得 (起動時の再キュー用)
+        /// </summary>
+        public List<SubscribedUser> GetUsersWithVideosNotLoaded()
+        {
+            var users = new List<SubscribedUser>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM SubscribedUsers WHERE VideosLoaded = 0 AND IsEnabled = 1 ORDER BY CreatedAt ASC";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                users.Add(ReadSubscribedUser(reader));
+            return users;
         }
 
         #endregion
@@ -582,12 +621,41 @@ namespace IwaraDownloader.Services
                     EmbedUrl = @EmbedUrl,
                     Rating = @Rating,
                     Site = @Site,
-                    IsFavorite = @IsFavorite
+                    IsFavorite = @IsFavorite,
+                    ThumbnailStatus = @ThumbnailStatus
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", video.Id);
             AddVideoParameters(command, video);
 
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// サムネイル取得ステータスだけを高速に更新する。
+        /// </summary>
+        public void UpdateThumbnailStatus(int videoId, int status)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET ThumbnailStatus = @Status WHERE Id = @Id";
+            command.Parameters.AddWithValue("@Status", status);
+            command.Parameters.AddWithValue("@Id", videoId);
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// VideoId でサムネイル取得ステータスを更新する。
+        /// </summary>
+        public void UpdateThumbnailStatusByVideoId(string videoId, int status)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET ThumbnailStatus = @Status WHERE VideoId = @VideoId";
+            command.Parameters.AddWithValue("@Status", status);
+            command.Parameters.AddWithValue("@VideoId", videoId);
             command.ExecuteNonQuery();
         }
 
@@ -823,6 +891,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@Rating", video.Rating ?? "");
             command.Parameters.AddWithValue("@Site", video.Site ?? "");
             command.Parameters.AddWithValue("@IsFavorite", video.IsFavorite ? 1 : 0);
+            command.Parameters.AddWithValue("@ThumbnailStatus", video.ThumbnailStatus);
         }
 
         private static VideoInfo ReadVideo(SqliteDataReader reader)
@@ -853,7 +922,8 @@ namespace IwaraDownloader.Services
                 EmbedUrl = TryGetString(reader, "EmbedUrl"),
                 Rating = TryGetString(reader, "Rating"),
                 Site = TryGetString(reader, "Site"),
-                IsFavorite = TryGetInt(reader, "IsFavorite") == 1
+                IsFavorite = TryGetInt(reader, "IsFavorite") == 1,
+                ThumbnailStatus = TryGetInt(reader, "ThumbnailStatus")
             };
         }
 

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IwaraDownloader - Media Server</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen hidden">
+        <div class="login-card">
+            <h1>IwaraDownloader</h1>
+            <p>Media Server</p>
+            <form id="loginForm">
+                <input type="text" id="loginUser" placeholder="Username" autocomplete="username" required>
+                <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" required>
+                <button type="submit">Login</button>
+                <div id="loginError" class="error-msg hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app hidden">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>IwaraDownloader</h2>
+                <button class="btn-icon" id="btnToggleSidebar" title="Toggle sidebar">&#9776;</button>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="nav-item active" data-view="all">
+                    <span class="nav-icon">&#128247;</span> All Videos
+                </div>
+                <div class="nav-item" data-view="downloaded">
+                    <span class="nav-icon">&#10003;</span> Downloaded
+                </div>
+                <div class="nav-item" data-view="errors">
+                    <span class="nav-icon">&#9888;</span> Errors
+                    <span class="badge" id="errorBadge"></span>
+                </div>
+                <div class="nav-item" data-view="stats">
+                    <span class="nav-icon">&#128202;</span> Statistics
+                </div>
+                <div class="nav-item" data-view="downloads">
+                    <span class="nav-icon">&#8595;</span> Active Downloads
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-title">Channels</div>
+                <div id="channelList" class="channel-list"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="btn-text" id="btnLogout">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Mobile sidebar overlay -->
+        <div class="sidebar-overlay hidden" id="sidebarOverlay"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <button class="btn-icon mobile-menu" id="btnMobileMenu">&#9776;</button>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search videos...">
+                </div>
+                <div class="top-actions">
+                    <select id="sortSelect">
+                        <option value="added-desc">Newest Added</option>
+                        <option value="added-asc">Oldest Added</option>
+                        <option value="date-desc">Latest Posted</option>
+                        <option value="date-asc">Oldest Posted</option>
+                        <option value="title-asc">Title A-Z</option>
+                        <option value="title-desc">Title Z-A</option>
+                        <option value="size-desc">Largest First</option>
+                        <option value="duration-desc">Longest First</option>
+                    </select>
+                    <button class="btn-icon" id="btnViewGrid" title="Grid view">&#9638;</button>
+                    <button class="btn-icon active" id="btnViewList" title="List view">&#9776;</button>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="filter-bar" id="filterBar">
+                <span class="filter-label" id="viewTitle">All Videos</span>
+                <span class="filter-count" id="videoCount"></span>
+                <div class="filter-actions" id="filterActions"></div>
+            </div>
+
+            <!-- Video Grid/List -->
+            <div id="videoContainer" class="video-list"></div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination"></div>
+
+            <!-- Stats View -->
+            <div id="statsView" class="stats-view hidden"></div>
+
+            <!-- Player Modal -->
+            <div id="playerModal" class="player-modal hidden">
+                <div class="player-wrapper">
+                    <div class="player-header">
+                        <h3 id="playerTitle"></h3>
+                        <button class="btn-icon" id="btnClosePlayer">&times;</button>
+                    </div>
+                    <div class="player-body">
+                        <video id="videoPlayer" controls preload="metadata"></video>
+                    </div>
+                    <div class="player-info">
+                        <div class="player-meta" id="playerMeta"></div>
+                    </div>
+                    <div class="playlist-panel" id="playlistPanel">
+                        <div class="playlist-header">
+                            <span>Playlist</span>
+                            <button class="btn-text" id="btnShuffle" title="Shuffle">&#128256; Shuffle</button>
+                        </div>
+                        <div class="playlist-items" id="playlistItems"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/player.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -90,6 +90,9 @@ namespace IwaraDownloader.Models
         /// <summary>お気に入りフラグ</summary>
         public bool IsFavorite { get; set; }
 
+        /// <summary>サムネイル取得ステータス (0=未試行, 1=キャッシュ済, 2=失敗)</summary>
+        public int ThumbnailStatus { get; set; }
+
         /// <summary>
         /// 動画の長さを表示用にフォーマット
         /// </summary>

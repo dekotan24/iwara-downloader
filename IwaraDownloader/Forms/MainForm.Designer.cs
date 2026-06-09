@@ -817,10 +817,12 @@ namespace IwaraDownloader.Forms
             // 
             // contextMenuChannel
             // 
+            this.menuChDeleteNotFound = new ToolStripMenuItem();
             this.contextMenuChannel.Items.AddRange(new ToolStripItem[] {
                 this.menuChOpen,
                 this.menuChCheckNow,
                 this.menuChDownloadAll,
+                this.menuChDeleteNotFound,
                 this.menuChCheckFiles,
                 this.menuChSeparator1,
                 this.menuChSetSavePath,
@@ -858,6 +860,14 @@ namespace IwaraDownloader.Forms
             this.menuChDownloadAll.Size = new Size(179, 22);
             this.menuChDownloadAll.Text = "全てダウンロード";
             this.menuChDownloadAll.Click += new EventHandler(this.menuChDownloadAll_Click);
+
+            //
+            // menuChDeleteNotFound
+            //
+            this.menuChDeleteNotFound.Name = "menuChDeleteNotFound";
+            this.menuChDeleteNotFound.Size = new Size(179, 22);
+            this.menuChDeleteNotFound.Text = "Not Found を除外";
+            this.menuChDeleteNotFound.Click += new EventHandler(this.menuChDeleteNotFound_Click);
 
             //
             // menuChCheckFiles (このチャンネルのDL済みファイルの存在チェック)
@@ -1139,6 +1149,7 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuChDisable;
         private ToolStripSeparator menuChSeparator3;
         private ToolStripMenuItem menuChDelete;
+        private ToolStripMenuItem menuChDeleteNotFound;
         private ContextMenuStrip contextMenuVideo;
         private ToolStripMenuItem menuVidDownload, menuVidCancel, menuVidRetryFailed, menuVidReDownload;
         private ToolStripMenuItem menuVidRefreshInfo, menuVidCheckFileExists;

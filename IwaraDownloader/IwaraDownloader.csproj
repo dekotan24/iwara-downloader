@@ -28,12 +28,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Services\BrowserService.cs.old" />
     <None Remove="Services\YtDlpService.cs.old" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Content Include="WebUI\**" CopyToOutputDirectory="PreserveNewest" LinkBase="WebUI" />
   </ItemGroup>
 
   <ItemGroup>

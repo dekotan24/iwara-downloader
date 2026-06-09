@@ -133,6 +133,28 @@ namespace IwaraDownloader.Models
         /// <summary>iwaraパスワード(暗号化済み)</summary>
         public string IwaraPasswordEncrypted { get; set; } = string.Empty;
 
+        #region Web Media Server Settings
+
+        /// <summary>Webメディアサーバーを有効にする</summary>
+        public bool WebServerEnabled { get; set; } = false;
+
+        /// <summary>Webサーバーのポート番号</summary>
+        public int WebServerPort { get; set; } = 7860;
+
+        /// <summary>LAN内の他デバイスからのアクセスを許可 (true=0.0.0.0, false=127.0.0.1)</summary>
+        public bool WebServerBindAll { get; set; } = true;
+
+        /// <summary>Webサーバーのログインユーザー名</summary>
+        public string WebServerUsername { get; set; } = "admin";
+
+        /// <summary>Webサーバーのログインパスワード(暗号化済み)</summary>
+        public string WebServerPasswordEncrypted { get; set; } = string.Empty;
+
+        /// <summary>アプリ起動時にWebサーバーを自動開始</summary>
+        public bool WebServerAutoStart { get; set; } = false;
+
+        #endregion
+
         /// <summary>設定ファイルのパス</summary>
         [JsonIgnore]
         public static string ConfigFilePath => Path.Combine(

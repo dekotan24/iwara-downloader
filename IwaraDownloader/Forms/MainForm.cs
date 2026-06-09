@@ -13,6 +13,7 @@ namespace IwaraDownloader.Forms
     {
         private readonly DownloadManager _downloadManager;
         private readonly DatabaseService _database;
+        private readonly WebServerService _webServer;
         private bool _isClosing = false;
         
         // 現在選択中のチャンネル
@@ -55,6 +56,9 @@ namespace IwaraDownloader.Forms
             InitializeComponent();
             _downloadManager = new DownloadManager();
             _database = DatabaseService.Instance;
+            _webServer = new WebServerService();
+            _webServer.SetDownloadManager(_downloadManager);
+            WebServerServiceHolder.Instance = _webServer;
         }
 
         #region Form Events
@@ -96,6 +100,8 @@ namespace IwaraDownloader.Forms
             _downloadManager.AutoCheckCompleted += OnAutoCheckCompleted;
             _downloadManager.BackgroundTaskProgress += OnBackgroundTaskProgress;
             _downloadManager.BackgroundTaskCompleted += OnBackgroundTaskCompleted;
+            _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => UpdateStatusBar(msg));
+            _downloadManager.UserAdded += (_, _) => PostToUi(() => RefreshChannelTree());
 
             // 環境チェック
             SplashForm.UpdateStatus("環境をチェック中...", 40);
@@ -133,6 +139,23 @@ namespace IwaraDownloader.Forms
 
             // 起動完了
             SplashForm.UpdateStatus("起動完了", 100);
+
+            // Webメディアサーバー自動開始
+            if (settings.WebServerAutoStart)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _webServer.StartAsync(settings.WebServerPort, settings.WebServerBindAll);
+                        LoggingService.Instance.Info($"Web media server auto-started on port {settings.WebServerPort}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Instance.Error("Web media server auto-start failed", ex);
+                    }
+                });
+            }
 
             // 起動時更新チェック
             if (settings.CheckUpdateOnStartup)
@@ -189,6 +212,9 @@ namespace IwaraDownloader.Forms
             }
 
             _downloadManager.Stop();
+            // Webサーバー停止
+            try { _webServer.StopAsync().Wait(5000); } catch { }
+            _webServer.Dispose();
             // mp4 タグ書き込み中の moov atom 破損を防ぐため、書き込み完了まで最大10秒待機
             // (進行中の書き込みが無ければ即座に戻る)
             Services.MetadataService.WaitForWritesToComplete(10000);
@@ -406,12 +432,11 @@ namespace IwaraDownloader.Forms
 
         #region Toolbar Buttons
 
-        private async void btnAddUser_Click(object sender, EventArgs e)
+        private void btnAddUser_Click(object sender, EventArgs e)
         {
             var input = ShowInputDialog("チャンネル追加", "ユーザー名またはプロフィールURLを入力:");
             if (string.IsNullOrEmpty(input)) return;
 
-            // URL形式の場合はiwaraのURLかチェック
             var isUrl = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                         input.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
@@ -429,7 +454,6 @@ namespace IwaraDownloader.Forms
             }
             else
             {
-                // ユーザー名のバリデーション
                 if (!Helpers.IsValidUsername(input))
                 {
                     MessageBox.Show(
@@ -441,7 +465,7 @@ namespace IwaraDownloader.Forms
                 }
             }
 
-            await AddUserAsync(input);
+            _downloadManager.EnqueueSubscribedUser(input);
         }
 
         private async void btnAddVideo_Click(object sender, EventArgs e)
@@ -462,27 +486,11 @@ namespace IwaraDownloader.Forms
             await AddVideoAsync(url);
         }
 
-        private async void btnCheckNow_Click(object sender, EventArgs e)
+        private void btnCheckNow_Click(object sender, EventArgs e)
         {
-            btnCheckNow.Enabled = false;
-            UpdateStatusBar("新着確認中...");
-
-            try
-            {
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                await _downloadManager.CheckForNewVideosAsync(progress);
-                RefreshChannelTree();
-                RefreshVideoList();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("新着確認中にエラー", ex);
-                UpdateStatusBar($"確認エラー: {ex.Message}");
-            }
-            finally
-            {
-                btnCheckNow.Enabled = true;
-            }
+            // 実際の取得は統合ワーカーが 1 件ずつ処理する (チャンネル追加との「被り」防止)。
+            // ここではキューに積むだけで即戻る。進捗はステータスバーに随時表示される。
+            _downloadManager.EnqueueAllUsersForCheck();
         }
 
         private void btnStartAll_Click(object sender, EventArgs e)
@@ -507,6 +515,7 @@ namespace IwaraDownloader.Forms
             if (form.ShowDialog(this) == DialogResult.OK)
             {
                 _downloadManager.UpdateAutoCheckTimer();
+                _downloadManager.NotifyConcurrentLimitChanged();
             }
         }
 
@@ -551,7 +560,7 @@ namespace IwaraDownloader.Forms
             else if (Helpers.IsUserProfileUrl(input))
             {
                 // iwaraのプロフィールURL
-                await AddUserAsync(input);
+                _downloadManager.EnqueueSubscribedUser(input);
             }
             else if (isUrl)
             {
@@ -574,34 +583,7 @@ namespace IwaraDownloader.Forms
             else
             {
                 // 有効なユーザー名
-                await AddUserAsync(input);
-            }
-        }
-
-        private async Task AddUserAsync(string input)
-        {
-            UpdateStatusBar("チャンネルを追加中...");
-
-            try
-            {
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                var user = await _downloadManager.AddSubscribedUserAsync(input, progress);
-
-                if (user != null)
-                {
-                    RefreshChannelTree();
-                    UpdateStatusBar($"チャンネル「{user.Username}」を追加しました");
-                }
-                else
-                {
-                    MessageBox.Show("チャンネルの追加に失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    UpdateStatusBar("チャンネル追加失敗");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"エラー: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                UpdateStatusBar("エラー");
+                _downloadManager.EnqueueSubscribedUser(input);
             }
         }
 
@@ -1574,9 +1556,12 @@ namespace IwaraDownloader.Forms
             }
 
             // 「全てダウンロード」はチャンネル・未 DL・エラー・単発動画ノードで表示
-            var showDownloadAll = isUserNode || 
+            var showDownloadAll = isUserNode ||
                 (isSpecialNode && (selectedNode?.Tag as string) is NODE_NOT_DOWNLOADED or NODE_FAILED_VIDEOS or NODE_SINGLE_VIDEOS);
             menuChDownloadAll.Visible = showDownloadAll;
+
+            // 「Not Found を除外」はエラーノードでのみ表示
+            menuChDeleteNotFound.Visible = isSpecialNode && (selectedNode?.Tag as string) == NODE_FAILED_VIDEOS;
 
             // メニュー項目がない場合はキャンセル
             if (!showDownloadAll && !isUserNode && !canCheckFiles)
@@ -1593,19 +1578,14 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        private async void menuChCheckNow_Click(object sender, EventArgs e)
+        private void menuChCheckNow_Click(object sender, EventArgs e)
         {
             if (treeViewChannels.SelectedNode?.Tag is SubscribedUser user)
             {
-                UpdateStatusBar($"{user.Username} の新着を確認中...");
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                
-                // 選択したチャンネルのみチェック
-                await _downloadManager.CheckForNewVideosAsync(user, progress);
-                
-                RefreshChannelTree();
-                RefreshVideoList();
-                UpdateStatusBar($"{user.Username} の確認完了");
+                // 手動の単一チェックは優先キューへ (通常の新着チェックより先に処理される)。
+                // 取得は統合ワーカーが処理し、進捗はステータスバーに表示される。
+                _downloadManager.EnqueueUserForCheck(user, priority: true);
+                UpdateStatusBar($"{user.Username} の新着確認をキューに登録しました");
             }
         }
 
@@ -1675,6 +1655,37 @@ namespace IwaraDownloader.Forms
             RefreshChannelTree();
             RefreshVideoList();
             UpdateStatusBar($"{videos.Count} 件のダウンロードをキューに追加しました");
+        }
+
+        private void menuChDeleteNotFound_Click(object sender, EventArgs e)
+        {
+            var errors = _database.GetVideosByStatus(DownloadStatus.Failed);
+            var notFound = errors.Where(v =>
+                v.LastErrorMessage != null &&
+                (v.LastErrorMessage.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+                 v.LastErrorMessage.Contains("404", StringComparison.OrdinalIgnoreCase) ||
+                 v.LastErrorMessage.Contains("deleted", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (notFound.Count == 0)
+            {
+                MessageBox.Show("Not Found の動画はありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Not Found (削除済み) の動画 {notFound.Count} 件をデータベースから削除しますか？\n\n※ローカルファイルは削除されません",
+                "Not Found を除外",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes) return;
+
+            var ids = notFound.Select(v => v.Id).ToList();
+            int deleted = _database.DeleteVideosBatch(ids);
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"Not Found の動画 {deleted} 件を削除しました");
         }
 
         private void menuChSetSavePath_Click(object sender, EventArgs e)
@@ -3259,8 +3270,7 @@ namespace IwaraDownloader.Forms
                 }
                 else
                 {
-                    UpdateStatusBar($"クリップボード検出: チャンネル追加中...");
-                    await AddUserAsync(text);
+                    _downloadManager.EnqueueSubscribedUser(text);
                 }
             }
             catch (Exception ex)

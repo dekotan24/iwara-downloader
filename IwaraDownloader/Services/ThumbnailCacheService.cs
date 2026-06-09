@@ -291,9 +291,17 @@ namespace IwaraDownloader.Services
             try
             {
                 var resp = await _http.GetAsync(url);
-                if (!resp.IsSuccessStatusCode) return;
+                if (!resp.IsSuccessStatusCode)
+                {
+                    try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
+                    return;
+                }
                 var bytes = await resp.Content.ReadAsByteArrayAsync();
-                if (bytes.Length == 0) return;
+                if (bytes.Length == 0)
+                {
+                    try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
+                    return;
+                }
                 var path = GetCachePath(videoId);
                 await File.WriteAllBytesAsync(path, bytes);
 
@@ -305,11 +313,14 @@ namespace IwaraDownloader.Services
                 }
                 PutMem(videoId, stored);
 
+                try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 1); } catch { }
+
                 if (!_disposed) ThumbnailReady?.Invoke(this, videoId);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Net thumb fetch fail {videoId}: {ex.Message}");
+                try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
             }
         }
 

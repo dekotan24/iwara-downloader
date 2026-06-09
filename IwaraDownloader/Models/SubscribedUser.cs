@@ -47,6 +47,9 @@ namespace IwaraDownloader.Models
         /// <summary>所属サイト ("www.iwara.tv" or "www.iwara.ai")。空文字なら iwara.tv 扱い</summary>
         public string Site { get; set; } = string.Empty;
 
+        /// <summary>動画一覧の取得が完了しているか。false = 仮登録済みでAPIから未取得</summary>
+        public bool VideosLoaded { get; set; } = false;
+
         /// <summary>
         /// グローバル設定を加味した実効値で「iwara外動画をDLするか」を返す
         /// </summary>

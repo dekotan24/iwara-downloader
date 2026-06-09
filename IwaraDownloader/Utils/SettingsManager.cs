@@ -105,6 +105,18 @@ namespace IwaraDownloader.Utils
             return CryptoHelper.Decrypt(Settings.IwaraPasswordEncrypted);
         }
 
+        public void SetWebServerPassword(string password)
+        {
+            Settings.WebServerPasswordEncrypted = string.IsNullOrEmpty(password)
+                ? string.Empty
+                : CryptoHelper.Encrypt(password);
+        }
+
+        public string GetWebServerPassword()
+        {
+            return CryptoHelper.Decrypt(Settings.WebServerPasswordEncrypted);
+        }
+
         /// <summary>
         /// 設定をJSON文字列としてエクスポート(パスワードは除外)
         /// </summary>
@@ -145,7 +157,12 @@ namespace IwaraDownloader.Utils
                 EnableCompletionSound = Settings.EnableCompletionSound,
                 CompletionSoundPath = Settings.CompletionSoundPath,
                 EnableErrorSound = Settings.EnableErrorSound,
-                ErrorSoundPath = Settings.ErrorSoundPath
+                ErrorSoundPath = Settings.ErrorSoundPath,
+                // Webメディアサーバー (パスワードは除外)
+                WebServerPort = Settings.WebServerPort,
+                WebServerBindAll = Settings.WebServerBindAll,
+                WebServerUsername = Settings.WebServerUsername,
+                WebServerAutoStart = Settings.WebServerAutoStart
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };
@@ -162,8 +179,10 @@ namespace IwaraDownloader.Utils
             {
                 // パスワードは維持
                 var currentPassword = Settings.IwaraPasswordEncrypted;
+                var currentWebPassword = Settings.WebServerPasswordEncrypted;
                 Settings = importedSettings;
                 Settings.IwaraPasswordEncrypted = currentPassword;
+                Settings.WebServerPasswordEncrypted = currentWebPassword;
                 Save();
             }
         }

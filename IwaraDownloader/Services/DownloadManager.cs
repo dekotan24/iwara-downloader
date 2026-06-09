@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 using IwaraDownloader.Models;
 using IwaraDownloader.Utils;
 
@@ -15,7 +16,8 @@ namespace IwaraDownloader.Services
         private readonly ConcurrentDictionary<string, DownloadTask> _activeTasks;
         private readonly ConcurrentDictionary<string, DownloadTask> _pendingTasks;
         private readonly ConcurrentQueue<DownloadTask> _pendingQueue;
-        private readonly SemaphoreSlim _downloadSemaphore;
+        private int _activeDownloadCount;
+        private readonly SemaphoreSlim _slotAvailableSignal = new SemaphoreSlim(0, int.MaxValue);
         private readonly System.Timers.Timer _autoCheckTimer;
         private CancellationTokenSource? _globalCts;
         private bool _isRunning;
@@ -59,21 +61,19 @@ namespace IwaraDownloader.Services
             _pendingTasks = new ConcurrentDictionary<string, DownloadTask>();
             _pendingQueue = new ConcurrentQueue<DownloadTask>();
 
-            var maxConcurrent = SettingsManager.Instance.Settings.MaxConcurrentDownloads;
-            _downloadSemaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
-
             // 自動チェックタイマー (重複起動防止 + 例外捕捉)
             _autoCheckTimer = new System.Timers.Timer();
-            _autoCheckTimer.Elapsed += async (s, e) =>
+            _autoCheckTimer.Elapsed += (s, e) =>
             {
                 if (Interlocked.CompareExchange(ref _isAutoChecking, 1, 0) != 0)
                 {
-                    _logger.Debug("AutoCheck: 前回実行中のためスキップ");
+                    _logger.Debug("AutoCheck: 前回キュー投入中のためスキップ");
                     return;
                 }
                 try
                 {
-                    await CheckForNewVideosAsync();
+                    // 実際の取得は統合ワーカーが 1 件ずつ処理する。ここではキューに積むだけ。
+                    EnqueueAllUsersForCheck();
                 }
                 catch (Exception ex)
                 {
@@ -87,6 +87,35 @@ namespace IwaraDownloader.Services
         }
 
         private int _isAutoChecking; // 0=idle, 1=running
+
+        // ---- 動画一覧取得キュー (チャンネル追加 + 新着チェックを統合) ----
+        // コピペ検出/追加/新着チェック → 即時重複チェック → キュー積み → 1件ずつ動画一覧取得。
+        // チャンネル追加と新着チェックが同じ get_videos を二重に叩く「被り」を構造的に防ぐため、
+        // 取得は必ずこの 1 本のワーカー (ProcessFetchQueueAsync) を通す。
+        // 手動「今すぐ確認」は _priorityFetchQueue 経由で通常キューより先に処理される。
+
+        /// <summary>取得理由。Add=チャンネル新規追加 (完了で VideosLoaded=true)、Check=新着チェック</summary>
+        private enum FetchReason { Add, Check }
+
+        /// <summary>取得キューの 1 項目。Attempt はタイムアウト時のリトライ回数 (エクスポネンシャル)</summary>
+        private sealed record FetchRequest(string UserId, FetchReason Reason, int Attempt = 0);
+
+        private readonly Channel<FetchRequest> _fetchQueue =
+            Channel.CreateUnbounded<FetchRequest>(new UnboundedChannelOptions { SingleReader = true });
+        private readonly Channel<FetchRequest> _priorityFetchQueue =
+            Channel.CreateUnbounded<FetchRequest>(new UnboundedChannelOptions { SingleReader = true });
+        private readonly HashSet<string> _pendingUserIds = new(StringComparer.OrdinalIgnoreCase);
+
+        // タイムアウト: min(90s * 2^Attempt, 10min)、最大 5 回で諦め (回線が遅い人を切り捨てない)
+        private static readonly TimeSpan FetchTimeoutBase = TimeSpan.FromSeconds(90);
+        private static readonly TimeSpan FetchTimeoutCap = TimeSpan.FromMinutes(10);
+        private const int FetchMaxAttempts = 5;
+
+        /// <summary>取得キューの状態変化通知 (スレッド安全ではないので UI スレッドで購読すること)</summary>
+        public event EventHandler<string>? UserAddStatusChanged;
+
+        /// <summary>取得完了通知 (UI ツリー更新用)</summary>
+        public event EventHandler<SubscribedUser>? UserAdded;
 
         /// <summary>
         /// ダウンロードマネージャーを開始
@@ -105,6 +134,22 @@ namespace IwaraDownloader.Services
 
             // 待機中のタスクを処理開始
             _ = ProcessQueueAsync();
+
+            // 前回アプリ終了時に仮登録のまま残ったユーザーを再キュー (Add 理由で取得し直す)
+            var notLoaded = _database.GetUsersWithVideosNotLoaded();
+            foreach (var u in notLoaded)
+            {
+                bool added;
+                lock (_pendingUserIds)
+                    added = _pendingUserIds.Add(u.UserId);
+                if (added)
+                    _fetchQueue.Writer.TryWrite(new FetchRequest(u.UserId, FetchReason.Add));
+            }
+            if (notLoaded.Count > 0)
+                _logger.Info($"起動時再キュー: {notLoaded.Count} チャンネルの動画一覧未取得を検出");
+
+            // 取得キューワーカー開始 (チャンネル追加 + 新着チェックを統合処理)
+            _ = ProcessFetchQueueAsync();
         }
 
         /// <summary>
@@ -345,12 +390,11 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 同時ダウンロード数を更新
+        /// 同時DL数の設定変更を通知 (ProcessQueueAsync を起こして再評価させる)
         /// </summary>
-        public void UpdateConcurrentLimit(int limit)
+        public void NotifyConcurrentLimitChanged()
         {
-            SettingsManager.Instance.Settings.MaxConcurrentDownloads = limit;
-            SettingsManager.Instance.Save();
+            _slotAvailableSignal.Release();
         }
 
         /// <summary>
@@ -457,17 +501,31 @@ namespace IwaraDownloader.Services
                     // _pendingTasks にも _activeTasks にも居ない死角ができ、UI 上で
                     // 「0DL中」と表示されてしまうため。
 
-                    await _downloadSemaphore.WaitAsync(token);
+                    // 同時DL数制限: 現在の設定値を都度参照し、動的変更に対応
+                    while (_activeDownloadCount >= SettingsManager.Instance.Settings.MaxConcurrentDownloads)
+                    {
+                        await _slotAvailableSignal.WaitAsync(token);
+                    }
+                    Interlocked.Increment(ref _activeDownloadCount);
 
-                    // レート制限：DL開始前に設定値分待機
-                    var settings = SettingsManager.Instance.Settings;
-                    var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
-                    System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
-                    await Task.Delay(delayMs, token);
+                    try
+                    {
+                        // レート制限：DL開始前に設定値分待機
+                        var settings = SettingsManager.Instance.Settings;
+                        var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
+                        System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
+                        await Task.Delay(delayMs, token);
 
-                    // スレッドプール上で起動 (呼び出し元が UI スレッドのため、await の continuation が
-                    // UI に戻って WriteIwaraTags 等の同期I/Oで詰まるのを防ぐ)
-                    _ = Task.Run(() => ExecuteDownloadAsync(task));
+                        // スレッドプール上で起動 (呼び出し元が UI スレッドのため、await の continuation が
+                        // UI に戻って WriteIwaraTags 等の同期I/Oで詰まるのを防ぐ)
+                        _ = Task.Run(() => ExecuteDownloadAsync(task));
+                    }
+                    catch
+                    {
+                        Interlocked.Decrement(ref _activeDownloadCount);
+                        _slotAvailableSignal.Release();
+                        throw;
+                    }
                 }
             }
             finally
@@ -669,6 +727,12 @@ namespace IwaraDownloader.Services
 
                     _logger.Info($"Download completed: {video.Title} ({video.FileSizeFormatted})");
 
+                    // サムネがまだキャッシュされていなければDL
+                    if (video.ThumbnailStatus != 1 && !string.IsNullOrEmpty(video.ThumbnailUrl) && !string.IsNullOrEmpty(video.VideoId))
+                    {
+                        ThumbnailCacheService.Instance.RequestAsync(video.VideoId, video.ThumbnailUrl);
+                    }
+
                     // 完了音を再生
                     SoundService.Instance.PlayCompletionSound();
 
@@ -790,7 +854,8 @@ namespace IwaraDownloader.Services
             finally
             {
                 _activeTasks.TryRemove(task.Video.VideoId, out _);
-                _downloadSemaphore.Release();
+                Interlocked.Decrement(ref _activeDownloadCount);
+                _slotAvailableSignal.Release();
                 TaskStatusChanged?.Invoke(this, task);
             }
         }
@@ -1054,96 +1119,9 @@ namespace IwaraDownloader.Services
             }
         }
 
-        /// <summary>
-        /// 新着動画をチェック(全チャンネル)
-        /// </summary>
-        public async Task CheckForNewVideosAsync(IProgress<string>? progress = null)
-        {
-            var users = _database.GetEnabledSubscribedUsers();
-            var settings = SettingsManager.Instance.Settings;
-            var isFirstUser = true;
-
-            foreach (var user in users)
-            {
-                // チャンネル間のディレイ(最初のユーザー以外)
-                if (!isFirstUser)
-                {
-                    var channelDelay = Math.Max(settings.ChannelCheckDelayMs, 1000);
-                    progress?.Report($"次のチャンネルまで{channelDelay / 1000.0:F1}秒待機中...");
-                    System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {channelDelay}ms before next channel...");
-                    await Task.Delay(channelDelay);
-                }
-                isFirstUser = false;
-
-                await CheckForNewVideosAsync(user, progress);
-            }
-
-            AutoCheckCompleted?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// 新着動画をチェック(単一チャンネル)
-        /// </summary>
-        public async Task CheckForNewVideosAsync(SubscribedUser user, IProgress<string>? progress = null)
-        {
-            try
-            {
-                progress?.Report($"{user.Username}の動画を確認中...");
-
-                // IwaraApiServiceで動画一覧を取得 (user.Site で iwara.tv / iwara.ai 振り分け)
-                var siteForApi = string.IsNullOrEmpty(user.Site) ? null : user.Site;
-                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteForApi);
-
-                var newVideos = new List<VideoInfo>();
-
-                foreach (var video in videos)
-                {
-                    if (!_database.VideoExists(video.VideoId))
-                    {
-                        video.AuthorUserId = user.UserId;
-                        video.AuthorUsername = user.Username;
-                        video.SubscribedUserId = user.Id;
-                        // user.Site を継承 (購読チャンネルが iwara.ai なら動画も iwara.ai)
-                        if (string.IsNullOrEmpty(video.Site))
-                            video.Site = user.Site;
-                        video.Status = DownloadStatus.Pending;
-                        video.Id = _database.AddVideo(video);
-                        newVideos.Add(video);
-                    }
-                }
-
-                // ユーザー情報更新
-                user.LastCheckedAt = DateTime.Now;
-                user.TotalVideoCount = videos.Count;
-                _database.UpdateSubscribedUser(user);
-
-                if (newVideos.Count > 0)
-                {
-                    NewVideosFound?.Invoke(this, (user, newVideos));
-
-                    // 自動DLオプションが有効な場合のみキューに追加
-                    if (SettingsManager.Instance.Settings.AutoDownloadOnCheck)
-                    {
-                        foreach (var video in newVideos)
-                        {
-                            EnqueueDownload(video, true, user);
-                        }
-                    }
-
-                    NotificationService.Instance.NotifyNewVideosFound(user.Username, newVideos.Count);
-                }
-
-                progress?.Report($"{user.Username}: {videos.Count}件の動画、{newVideos.Count}件の新着");
-
-                // orphan な Pending (前回の追加でエンキュー漏れた等) も拾い直す
-                EnqueuePendingVideosForUser(user);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"チェックエラー ({user.Username}): {ex.Message}");
-                progress?.Report($"エラー ({user.Username}): {ex.Message}");
-            }
-        }
+        // 旧 CheckForNewVideosAsync(全チャンネル/単一) は ProcessFetchRequestAsync に統合した。
+        // 新着チェックは EnqueueAllUsersForCheck / EnqueueUserForCheck からキュー投入し、
+        // 取得・保存はワーカー 1 本に集約 (チャンネル追加との get_videos 二重実行を防止)。
 
         /// <summary>
         /// 指定ユーザーの DB.Pending かつメモリキューに居ない動画を
@@ -1166,94 +1144,297 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 購読ユーザーを追加
+        /// チャンネル追加をキューに積む。
+        /// エンキュー時点で DB に仮登録 (VideosLoaded=false) するので、
+        /// アプリを終了しても起動時に自動再キューされる。
         /// </summary>
-        public async Task<SubscribedUser?> AddSubscribedUserAsync(string input, IProgress<string>? progress = null)
+        /// <returns>キューに追加できた場合 true</returns>
+        public bool EnqueueSubscribedUser(string input)
         {
-            string? username;
-            // URL から site (www.iwara.tv / www.iwara.ai) を判定
-            string siteHost = Helpers.ExtractSiteFromUrl(input);
+            var username = Helpers.IsUserProfileUrl(input)
+                ? Helpers.ExtractUsernameFromUrl(input)
+                : input.Trim();
+            if (string.IsNullOrEmpty(username)) return false;
 
-            if (Helpers.IsUserProfileUrl(input))
-            {
-                username = Helpers.ExtractUsernameFromUrl(input);
-            }
-            else
-            {
-                username = input.Trim();
-                // URL じゃない (ユーザー名直接入力) → デフォルト iwara.tv
-                siteHost = Helpers.SiteTv;
-            }
+            var siteHost = Helpers.IsUserProfileUrl(input)
+                ? Helpers.ExtractSiteFromUrl(input)
+                : Helpers.SiteTv;
 
-            if (string.IsNullOrEmpty(username))
-            {
-                return null;
-            }
-
-            // 既に存在するか確認
+            // DB 確認: 完全登録済み (VideosLoaded=true) なら重複
             var existing = _database.GetSubscribedUserByUserId(username);
-            if (existing != null)
+            if (existing != null && existing.VideosLoaded)
             {
-                progress?.Report($"{username}は既に登録済みです");
-                return existing;
+                UserAddStatusChanged?.Invoke(this, $"{username} は既に登録済みです");
+                return false;
             }
 
-            // IwaraApiServiceで動画一覧を取得
-            progress?.Report($"{username}のプロフィールを確認中... (site={siteHost})");
-            var videos = await _iwaraApi.GetUserVideosAsync(username, progress, siteHost);
-
-            if (videos.Count == 0)
+            // キュー内重複チェック (仮登録済みでキュー待ちの場合も弾く)
+            lock (_pendingUserIds)
             {
-                progress?.Report($"{username}: 動画が見つかりませんでした(ユーザーが存在しないか、動画が0件の可能性があります)");
-            }
-
-            var profileUrl = $"https://{siteHost}/profile/{username}/videos";
-
-            var user = new SubscribedUser
-            {
-                UserId = username,
-                Username = username,
-                ProfileUrl = profileUrl,
-                CreatedAt = DateTime.Now,
-                LastCheckedAt = DateTime.Now,
-                IsEnabled = true,
-                TotalVideoCount = videos.Count,
-                Site = siteHost,
-            };
-
-            user.Id = _database.AddSubscribedUser(user);
-
-            // 取得した動画をDBに保存
-            var addedCount = 0;
-            foreach (var video in videos)
-            {
-                if (!_database.VideoExists(video.VideoId))
+                if (!_pendingUserIds.Add(username))
                 {
-                    video.AuthorUserId = user.UserId;
-                    video.AuthorUsername = user.Username;
-                    video.SubscribedUserId = user.Id;
-                    if (string.IsNullOrEmpty(video.Site))
-                        video.Site = user.Site;
-                    video.Status = DownloadStatus.Pending;
-                    video.Id = _database.AddVideo(video);
-                    addedCount++;
+                    UserAddStatusChanged?.Invoke(this, $"{username} は追加処理待ちです");
+                    return false;
                 }
             }
 
-            progress?.Report($"{username}: {videos.Count}件の動画を登録しました");
-
-            // 新着動画があればイベント発火
-            if (addedCount > 0)
+            // ここから先で失敗したら _pendingUserIds に残骸が残らないよう必ず巻き戻す
+            // (残ると以後そのチャンネルが「追加処理待ち」で永久に弾かれてしまう)
+            try
             {
-                var addedVideos = _database.GetVideosBySubscribedUser(user.Id);
-                NewVideosFound?.Invoke(this, (user, addedVideos));
+                // 仮登録 (まだ DB にない場合のみ)
+                if (existing == null)
+                {
+                    var profileUrl = $"https://{siteHost}/profile/{username}/videos";
+                    var user = new SubscribedUser
+                    {
+                        UserId = username,
+                        Username = username,
+                        ProfileUrl = profileUrl,
+                        CreatedAt = DateTime.Now,
+                        IsEnabled = true,
+                        TotalVideoCount = 0,
+                        Site = siteHost,
+                        VideosLoaded = false,
+                    };
+                    user.Id = _database.AddSubscribedUser(user);
+                    UserAdded?.Invoke(this, user); // UIツリーに仮表示
+                }
+
+                // キューが既に閉じている (Dispose 後) 場合は仮登録だけ残し、巻き戻す
+                if (!_fetchQueue.Writer.TryWrite(new FetchRequest(username, FetchReason.Add)))
+                {
+                    lock (_pendingUserIds)
+                        _pendingUserIds.Remove(username);
+                    UserAddStatusChanged?.Invoke(this, $"チャンネル追加を受け付けられません: {username}");
+                    return false;
+                }
+
+                UserAddStatusChanged?.Invoke(this, $"チャンネル追加をキューに登録: {username}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"EnqueueSubscribedUser: {username} のキュー登録に失敗", ex);
+                lock (_pendingUserIds)
+                    _pendingUserIds.Remove(username);
+                UserAddStatusChanged?.Invoke(this, $"チャンネル追加失敗: {username}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 既存の有効チャンネルを全件、新着チェックとして取得キューに積む。
+        /// (自動チェックタイマー / 手動「今すぐ確認」から呼ばれる)
+        /// </summary>
+        public void EnqueueAllUsersForCheck()
+        {
+            var users = _database.GetEnabledSubscribedUsers();
+            var queued = 0;
+            foreach (var user in users)
+            {
+                if (string.IsNullOrEmpty(user.UserId)) continue;
+                lock (_pendingUserIds)
+                {
+                    if (!_pendingUserIds.Add(user.UserId)) continue; // 既にキュー/処理中
+                }
+                if (_fetchQueue.Writer.TryWrite(new FetchRequest(user.UserId, FetchReason.Check)))
+                    queued++;
+                else
+                    lock (_pendingUserIds) _pendingUserIds.Remove(user.UserId);
+            }
+            if (queued > 0)
+                UserAddStatusChanged?.Invoke(this, $"新着チェック: {queued} チャンネルをキューに登録");
+        }
+
+        /// <summary>
+        /// 単一チャンネルを新着チェックとして取得キューに積む。
+        /// priority=true なら手動「今すぐ確認」用の優先キューへ (通常キューより先に処理)。
+        /// </summary>
+        public void EnqueueUserForCheck(SubscribedUser user, bool priority)
+        {
+            if (user == null || string.IsNullOrEmpty(user.UserId)) return;
+            lock (_pendingUserIds)
+            {
+                if (!_pendingUserIds.Add(user.UserId)) return; // 既にキュー/処理中
+            }
+            var queue = priority ? _priorityFetchQueue : _fetchQueue;
+            if (!queue.Writer.TryWrite(new FetchRequest(user.UserId, FetchReason.Check)))
+                lock (_pendingUserIds) _pendingUserIds.Remove(user.UserId);
+        }
+
+        /// <summary>
+        /// 取得キューを 1 件ずつ処理する統合ワーカー。Start() から 1 本だけ起動。
+        /// 優先キュー (_priorityFetchQueue) を通常キュー (_fetchQueue) より先に捌く。
+        /// チャンネル追加・新着チェックの両方がここを通るので get_videos が二重に走らない。
+        /// </summary>
+        private async Task ProcessFetchQueueAsync()
+        {
+            var token = _globalCts?.Token ?? CancellationToken.None;
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    // 優先キューを先にドレイン。両方空ならどちらかにデータが来るまで待機。
+                    if (!_priorityFetchQueue.Reader.TryRead(out var req) &&
+                        !_fetchQueue.Reader.TryRead(out req))
+                    {
+                        var pWait = _priorityFetchQueue.Reader.WaitToReadAsync(token).AsTask();
+                        var nWait = _fetchQueue.Reader.WaitToReadAsync(token).AsTask();
+                        await Task.WhenAny(pWait, nWait);
+                        // canceled/faulted を観測 (UnobservedTaskException 抑制)。次ループ先頭で TryRead。
+                        _ = pWait.ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
+                        _ = nWait.ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
+                        continue;
+                    }
+
+                    await ProcessFetchRequestAsync(req, token);
+
+                    // レート制限: 1 件処理ごとに最低間隔を空ける (大量アクセス警告対策)
+                    var delayMs = Math.Max(SettingsManager.Instance.Settings.ChannelCheckDelayMs, 1000);
+                    await Task.Delay(delayMs, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // アプリ終了。正常脱出。
+            }
+        }
+
+        /// <summary>
+        /// 取得キューの 1 件を処理。Add/Check 共通の保存処理＋タイムアウト＋エクスポネンシャルなリトライ。
+        /// </summary>
+        private async Task ProcessFetchRequestAsync(FetchRequest req, CancellationToken outerToken)
+        {
+            var username = req.UserId;
+            var user = _database.GetSubscribedUserByUserId(username);
+            if (user == null)
+            {
+                _logger.Warn($"ProcessFetchQueue: {username} がDBに見つかりません");
+                lock (_pendingUserIds) _pendingUserIds.Remove(username);
+                return;
             }
 
-            // AutoDownloadOnCheck が ON なら追加直後にキューへ
-            EnqueuePendingVideosForUser(user);
+            // タイムアウト = min(90s * 2^Attempt, 10min)
+            var timeout = TimeSpan.FromTicks(Math.Min(
+                FetchTimeoutBase.Ticks * (1L << req.Attempt), FetchTimeoutCap.Ticks));
 
-            return user;
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(outerToken, timeoutCts.Token);
+
+            var reasonLabel = req.Reason == FetchReason.Add ? "追加" : "新着確認";
+            try
+            {
+                UserAddStatusChanged?.Invoke(this, $"{user.Username} の動画一覧を取得中... ({reasonLabel})");
+                var progress = new Progress<string>(msg => UserAddStatusChanged?.Invoke(this, msg));
+                var siteHost = string.IsNullOrEmpty(user.Site) ? Helpers.SiteTv : user.Site;
+                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
+
+                // --- Add/Check 共通: 動画を先に保存してから VideosLoaded=true にする ---
+                // (保存前に中断すると動画一覧が欠損するため。保存は VideoExists で重複スキップ)
+                var newVideos = new List<VideoInfo>();
+                foreach (var video in videos)
+                {
+                    if (!_database.VideoExists(video.VideoId))
+                    {
+                        video.AuthorUserId = user.UserId;
+                        video.AuthorUsername = user.Username;
+                        video.SubscribedUserId = user.Id;
+                        if (string.IsNullOrEmpty(video.Site))
+                            video.Site = user.Site;
+                        video.Status = DownloadStatus.Pending;
+                        video.Id = _database.AddVideo(video);
+                        newVideos.Add(video);
+                    }
+                }
+
+                user.TotalVideoCount = videos.Count;
+                user.LastCheckedAt = DateTime.Now;
+                // 取得成功 = 本登録扱い。Add はもちろん、5 回失敗で諦めた仮登録 (VideosLoaded=false) が
+                // 後の新着チェックで取れた場合もここで解除し、起動時の無駄な Add 再取得ループを防ぐ。
+                user.VideosLoaded = true;
+                _database.UpdateSubscribedUser(user);
+
+                if (req.Reason == FetchReason.Add)
+                    UserAddStatusChanged?.Invoke(this, $"チャンネル「{user.Username}」を追加しました ({videos.Count}件)");
+                else
+                    UserAddStatusChanged?.Invoke(this, $"{user.Username}: {videos.Count}件 / 新着 {newVideos.Count}件");
+
+                UserAdded?.Invoke(this, user);
+
+                if (newVideos.Count > 0)
+                {
+                    NewVideosFound?.Invoke(this, (user, newVideos));
+                    if (SettingsManager.Instance.Settings.AutoDownloadOnCheck)
+                        foreach (var v in newVideos)
+                            EnqueueDownload(v, true, user);
+                    // 通知は新着チェック時のみ (追加直後は全件が「新着」になり大量通知になるため抑制)
+                    if (req.Reason == FetchReason.Check)
+                        NotificationService.Instance.NotifyNewVideosFound(user.Username, newVideos.Count);
+                }
+
+                EnqueuePendingVideosForUser(user);
+
+                lock (_pendingUserIds) _pendingUserIds.Remove(username);
+            }
+            catch (OperationCanceledException) when (outerToken.IsCancellationRequested)
+            {
+                // アプリ終了によるキャンセル。pending は揮発させ、VideosLoaded=false なら次回起動で再キュー。
+                throw; // ワーカーループを終了させる
+            }
+            catch (OperationCanceledException)
+            {
+                // タイムアウト → スキップして他を進め、後でエクスポネンシャルに延ばした時間でリトライ
+                var nextAttempt = req.Attempt + 1;
+                if (nextAttempt < FetchMaxAttempts)
+                {
+                    var backoff = TimeSpan.FromTicks(Math.Min(
+                        FetchTimeoutBase.Ticks * (1L << nextAttempt), FetchTimeoutCap.Ticks));
+                    _logger.Warn($"ProcessFetchQueue: {username} 取得タイムアウト ({timeout.TotalSeconds:F0}s)。" +
+                                 $"{backoff.TotalSeconds:F0}s 後にリトライ ({nextAttempt}/{FetchMaxAttempts})");
+                    UserAddStatusChanged?.Invoke(this, $"{user.Username} 取得タイムアウト、後でリトライ ({nextAttempt}/{FetchMaxAttempts})");
+                    // pending は保持したまま (二重投入防止)、別タスクで backoff 後に末尾再投入
+                    RequeueAfterDelay(req with { Attempt = nextAttempt }, backoff);
+                }
+                else
+                {
+                    _logger.Error($"ProcessFetchQueue: {username} が {FetchMaxAttempts} 回タイムアウト。諦めます (仮登録は残す)");
+                    UserAddStatusChanged?.Invoke(this, $"{user.Username} の取得に失敗 (時間切れ)");
+                    lock (_pendingUserIds) _pendingUserIds.Remove(username);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"ProcessFetchQueue: {username} 取得失敗", ex);
+                UserAddStatusChanged?.Invoke(this, $"取得失敗: {user.Username}");
+                lock (_pendingUserIds) _pendingUserIds.Remove(username);
+            }
         }
+
+        /// <summary>
+        /// タイムアウトしたリクエストを delay 後に通常キュー末尾へ再投入する。
+        /// ワーカーをブロックしないよう別タスクで待機。pending は保持されたまま。
+        /// </summary>
+        private void RequeueAfterDelay(FetchRequest req, TimeSpan delay)
+        {
+            var token = _globalCts?.Token ?? CancellationToken.None;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(delay, token);
+                    if (!_fetchQueue.Writer.TryWrite(req))
+                        lock (_pendingUserIds) _pendingUserIds.Remove(req.UserId);
+                }
+                catch (OperationCanceledException)
+                {
+                    // アプリ終了。pending を解放 (DB の VideosLoaded=false なら次回起動で再キュー)
+                    lock (_pendingUserIds) _pendingUserIds.Remove(req.UserId);
+                }
+            });
+        }
+
+        // 旧 AddSubscribedUserAsync は EnqueueSubscribedUser (仮登録 → キュー → ProcessFetchRequestAsync) に置換した。
 
         /// <summary>
         /// 単一動画をダウンロードキューに追加
@@ -1387,15 +1568,17 @@ namespace IwaraDownloader.Services
         public void Dispose()
         {
             Stop();
+            _fetchQueue.Writer.TryComplete();
+            _priorityFetchQueue.Writer.TryComplete();
             _autoCheckTimer.Stop();
             // Elapsed のコールバックが ThreadPool に既に enqueue されていたら、
-            // _downloadSemaphore / _globalCts を触る経路があるため最大 5 秒だけ完了を待つ
+            // _slotAvailableSignal / _globalCts を触る経路があるため最大 5 秒だけ完了を待つ
             SpinWait.SpinUntil(
                 () => Interlocked.CompareExchange(ref _isAutoChecking, 0, 0) == 0
                       && Interlocked.CompareExchange(ref _isProcessingQueue, 0, 0) == 0,
                 5000);
             _autoCheckTimer.Dispose();
-            _downloadSemaphore.Dispose();
+            _slotAvailableSignal.Dispose();
             _globalCts?.Dispose();
         }
 

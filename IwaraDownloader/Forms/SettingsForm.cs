@@ -100,6 +100,14 @@ namespace IwaraDownloader.Forms
             chkCheckUpdate.Checked = settings.CheckUpdateOnStartup;
             chkResumeOnStartup.Checked = settings.ResumeDownloadsOnStartup;
             lblCurrentVersion.Text = $"現在: {UpdateService.CurrentVersionString}";
+
+            // メディアサーバー
+            chkWebServerAutoStart.Checked = settings.WebServerAutoStart;
+            numWebPort.Value = Math.Clamp(settings.WebServerPort, 1024, 65535);
+            chkWebBindAll.Checked = settings.WebServerBindAll;
+            txtWebUsername.Text = settings.WebServerUsername;
+            txtWebPassword.Text = _settingsManager.GetWebServerPassword();
+            UpdateWebServerStatusDisplay();
         }
 
         /// <summary>
@@ -159,6 +167,13 @@ namespace IwaraDownloader.Forms
             settings.SaveMetadata = chkSaveMetadata.Checked;
             settings.CheckUpdateOnStartup = chkCheckUpdate.Checked;
             settings.ResumeDownloadsOnStartup = chkResumeOnStartup.Checked;
+
+            // メディアサーバー
+            settings.WebServerAutoStart = chkWebServerAutoStart.Checked;
+            settings.WebServerPort = (int)numWebPort.Value;
+            settings.WebServerBindAll = chkWebBindAll.Checked;
+            settings.WebServerUsername = txtWebUsername.Text.Trim();
+            _settingsManager.SetWebServerPassword(txtWebPassword.Text);
 
             // 保存
             _settingsManager.Save();
@@ -832,5 +847,81 @@ namespace IwaraDownloader.Forms
         }
 
         #endregion
+
+        #region Web Media Server
+
+        private void UpdateWebServerStatusDisplay()
+        {
+            var webServer = WebServerServiceHolder.Instance;
+            if (webServer != null && webServer.IsRunning)
+            {
+                lblWebStatus.Text = "稼働中";
+                lblWebStatus.ForeColor = Color.Green;
+                lblWebUrl.Text = webServer.BaseUrl ?? "";
+                btnWebStartStop.Text = "停止";
+            }
+            else
+            {
+                lblWebStatus.Text = "停止中";
+                lblWebStatus.ForeColor = Color.Gray;
+                lblWebUrl.Text = "";
+                btnWebStartStop.Text = "開始";
+            }
+        }
+
+        private async void btnWebStartStop_Click(object sender, EventArgs e)
+        {
+            btnWebStartStop.Enabled = false;
+            try
+            {
+                var webServer = WebServerServiceHolder.Instance;
+                if (webServer == null) return;
+
+                if (webServer.IsRunning)
+                {
+                    await webServer.StopAsync();
+                }
+                else
+                {
+                    SaveSettings();
+                    var settings = _settingsManager.Settings;
+                    await webServer.StartAsync(settings.WebServerPort, settings.WebServerBindAll);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"サーバー操作に失敗しました:\n{ex.Message}", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnWebStartStop.Enabled = true;
+                UpdateWebServerStatusDisplay();
+            }
+        }
+
+        private void btnWebOpenBrowser_Click(object sender, EventArgs e)
+        {
+            var webServer = WebServerServiceHolder.Instance;
+            if (webServer == null || !webServer.IsRunning) return;
+
+            var port = (int)numWebPort.Value;
+            var url = $"http://localhost:{port}";
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch { }
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// WebServerService のグローバルホルダー（MainForm で初期化、SettingsForm から参照）
+    /// </summary>
+    public static class WebServerServiceHolder
+    {
+        public static WebServerService? Instance { get; set; }
     }
 }
