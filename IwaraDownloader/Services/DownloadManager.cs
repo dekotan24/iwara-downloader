@@ -630,6 +630,27 @@ namespace IwaraDownloader.Services
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
+                // 空き容量チェック: 閾値未満なら書き込み途中の破損ファイルを作らないよう開始前に失敗させる
+                var minFreeGb = settings.MinFreeSpaceGb;
+                if (minFreeGb > 0)
+                {
+                    long? freeBytes = null;
+                    try
+                    {
+                        var root = Path.GetPathRoot(Path.GetFullPath(outputPath));
+                        if (!string.IsNullOrEmpty(root))
+                            freeBytes = new DriveInfo(root).AvailableFreeSpace;
+                    }
+                    catch { /* ネットワークドライブ等で取得できない場合はチェックをスキップ */ }
+
+                    if (freeBytes.HasValue && freeBytes.Value < minFreeGb * 1024L * 1024 * 1024)
+                    {
+                        throw new IOException(
+                            $"空き容量不足: 保存先ドライブの空きが設定の下限 ({minFreeGb} GB) を下回っています " +
+                            $"(現在 {freeBytes.Value / 1024.0 / 1024 / 1024:F2} GB)");
+                    }
+                }
+
                 // --- リネーム追従: 保存先フォルダを FileUuid でスキャン ---
                 // 購読DL時のみ実行 (アーティストフォルダに限定されるため高速)
                 // IndexCacheService が .iwara_index.json に前回スキャン結果を保持しているため

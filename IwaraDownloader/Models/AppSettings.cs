@@ -22,6 +22,9 @@ namespace IwaraDownloader.Models
         /// <summary>リトライ回数</summary>
         public int MaxRetryCount { get; set; } = 3;
 
+        /// <summary>空き容量下限(GB)。DL先ドライブの空きがこれ未満ならDLを開始しない。0=チェック無効</summary>
+        public int MinFreeSpaceGb { get; set; } = 1;
+
         #region Rate Limiting Settings
 
         /// <summary>APIリクエスト間隔(ミリ秒)- 動画情報取得等</summary>

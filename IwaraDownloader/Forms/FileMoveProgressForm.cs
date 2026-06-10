@@ -89,6 +89,24 @@ namespace IwaraDownloader.Forms
 
                         File.Move(oldPath, actualNewPath);
 
+                        // メタデータ (.json) サイドカーも一緒に移動して置き去りを防ぐ
+                        var oldJsonPath = Path.ChangeExtension(oldPath, ".json");
+                        if (File.Exists(oldJsonPath))
+                        {
+                            try
+                            {
+                                var newJsonPath = Path.ChangeExtension(actualNewPath, ".json");
+                                if (File.Exists(newJsonPath))
+                                    File.Delete(newJsonPath);
+                                File.Move(oldJsonPath, newJsonPath);
+                            }
+                            catch (Exception jsonEx)
+                            {
+                                LoggingService.Instance.Warn(
+                                    $"メタデータ移動失敗 (動画本体は移動済): {oldJsonPath}: {jsonEx.Message}");
+                            }
+                        }
+
                         // DB 更新 (LocalFilePath)
                         video.LocalFilePath = actualNewPath;
                         _database.UpdateVideo(video);

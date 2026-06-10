@@ -157,6 +157,9 @@ namespace IwaraDownloader.Forms
                 });
             }
 
+            // DL先ドライブの空き容量監視
+            StartFreeSpaceMonitor();
+
             // 起動時更新チェック
             if (settings.CheckUpdateOnStartup)
             {
@@ -229,6 +232,9 @@ namespace IwaraDownloader.Forms
             _downloadCountTimer?.Stop();
             _downloadCountTimer?.Dispose();
             _downloadCountTimer = null;
+            _freeSpaceTimer?.Stop();
+            _freeSpaceTimer?.Dispose();
+            _freeSpaceTimer = null;
 
             _downloadManager.Stop();
             // Webサーバー停止
@@ -536,6 +542,9 @@ namespace IwaraDownloader.Forms
             {
                 _downloadManager.UpdateAutoCheckTimer();
                 _downloadManager.NotifyConcurrentLimitChanged();
+                // DL先や空き容量下限が変わった可能性があるため即時更新
+                ScheduleFreeSpaceUpdate();
+                RefreshVideoList();
             }
         }
 
@@ -1736,123 +1745,34 @@ namespace IwaraDownloader.Forms
 
             // 既存DLファイルを列挙 (oldSavePath 配下のもの)
             var allUserVideos = _database.GetVideosBySubscribedUser(user.Id);
-            var movableFiles = allUserVideos
-                .Where(v => !string.IsNullOrEmpty(v.LocalFilePath)
-                            && File.Exists(v.LocalFilePath)
-                            && IsPathUnder(v.LocalFilePath, oldSavePath))
-                .ToList();
+            var movableFiles = FileMoveHelper.GetMovableFiles(allUserVideos, oldSavePath);
 
-            bool doMove = false;
-            if (movableFiles.Count > 0)
-            {
-                long totalBytes = 0;
-                foreach (var v in movableFiles)
-                {
-                    try { totalBytes += new FileInfo(v.LocalFilePath).Length; } catch { }
-                }
-
-                // ドライブ判定 & 空き容量チェック
-                var driveOld = Path.GetPathRoot(Path.GetFullPath(oldSavePath))?.ToUpperInvariant();
-                var driveNew = Path.GetPathRoot(Path.GetFullPath(newSavePath))?.ToUpperInvariant();
-                bool sameDrive = string.Equals(driveOld, driveNew, StringComparison.OrdinalIgnoreCase);
-
-                string freeSpaceLine = "";
-                if (sameDrive)
-                {
-                    freeSpaceLine = "\n同ドライブのため瞬時に完了します。";
-                }
-                else if (!string.IsNullOrEmpty(driveNew))
-                {
-                    try
-                    {
-                        var di = new DriveInfo(driveNew);
-                        freeSpaceLine =
-                            $"\n移動先空き容量: {FormatSize(di.AvailableFreeSpace)}" +
-                            $" / 必要量: {FormatSize(totalBytes)}";
-                        if (di.AvailableFreeSpace < totalBytes)
-                        {
-                            MessageBox.Show(this,
-                                $"移動先ドライブ ({driveNew}) の空き容量が不足しています。\n\n" +
-                                $"必要: {FormatSize(totalBytes)}\n" +
-                                $"空き: {FormatSize(di.AvailableFreeSpace)}\n\n" +
-                                "保存先変更を中止します。",
-                                "容量不足", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        freeSpaceLine = $"\n(空き容量取得失敗: {ex.Message})";
-                    }
-                }
-
-                var confirm = MessageBox.Show(this,
-                    $"{user.Username} の保存先を変更します。\n\n" +
-                    $"既存DL済みファイル: {movableFiles.Count} 個 ({FormatSize(totalBytes)})\n" +
-                    $"移動元: {oldSavePath}\n" +
-                    $"移動先: {newSavePath}" + freeSpaceLine + "\n\n" +
-                    "これらのファイルを移動先に移しますか?\n\n" +
-                    "[はい]   ファイルを移動して保存先を変更\n" +
-                    "[いいえ] ファイルは移動せず保存先設定だけ変更\n" +
-                    "[キャンセル] 何もしない",
-                    "ファイル移動の確認",
-                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-
-                if (confirm == DialogResult.Cancel) return;
-                doMove = (confirm == DialogResult.Yes);
-            }
+            var decision = FileMoveHelper.ConfirmMove(
+                this, $"{user.Username} の保存先", movableFiles, oldSavePath, newSavePath);
+            if (decision == FileMoveHelper.MoveDecision.Cancel) return;
 
             // 設定変更
             user.CustomSavePath = newSavePath;
             _database.UpdateSubscribedUser(user);
             UpdateStatusBar($"保存先を変更しました: {newSavePath}");
 
-            if (doMove && movableFiles.Count > 0)
+            if (decision == FileMoveHelper.MoveDecision.Move && movableFiles.Count > 0)
             {
-                // 各ファイルの新パスを算出 (oldSavePath からの相対パスを保持)
-                var oldFull = Path.GetFullPath(oldSavePath).TrimEnd('\\');
-                var items = movableFiles.Select(v =>
-                {
-                    var full = Path.GetFullPath(v.LocalFilePath);
-                    var rel = full.Substring(oldFull.Length).TrimStart('\\', '/');
-                    var newPath = Path.Combine(newSavePath, rel);
-                    return (Video: v, NewPath: newPath);
-                }).ToList();
+                var items = FileMoveHelper.BuildMovePlan(movableFiles, oldSavePath, newSavePath);
 
                 using var progressForm = new FileMoveProgressForm(items, _database);
                 progressForm.ShowDialog(this);
 
-                // キャッシュ無効化 + UI 再描画
+                // キャッシュ無効化 + 空フォルダ掃除 + UI 再描画
                 Services.IndexCacheService.Invalidate(oldSavePath);
                 Services.IndexCacheService.Invalidate(newSavePath);
+                FileMoveHelper.CleanupEmptyDirectories(oldSavePath);
                 RefreshChannelTree();
                 RefreshVideoList();
 
                 UpdateStatusBar(
                     $"移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
             }
-        }
-
-        private static bool IsPathUnder(string filePath, string folderPath)
-        {
-            try
-            {
-                var fileFull = Path.GetFullPath(filePath);
-                var folderFull = Path.GetFullPath(folderPath).TrimEnd('\\') + '\\';
-                return fileFull.StartsWith(folderFull, StringComparison.OrdinalIgnoreCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string FormatSize(long bytes)
-        {
-            if (bytes < 1024) return $"{bytes} B";
-            if (bytes < 1024L * 1024) return $"{bytes / 1024.0:F1} KB";
-            if (bytes < 1024L * 1024 * 1024) return $"{bytes / 1024.0 / 1024:F1} MB";
-            return $"{bytes / 1024.0 / 1024 / 1024:F2} GB";
         }
 
         private void menuChEnable_Click(object sender, EventArgs e)
@@ -2584,6 +2504,53 @@ namespace IwaraDownloader.Forms
                 return;
             }
             lblStatus.Text = message;
+        }
+
+        private System.Windows.Forms.Timer? _freeSpaceTimer;
+
+        /// <summary>DL先ドライブの空き容量監視を開始 (1分間隔 + 即時1回)</summary>
+        private void StartFreeSpaceMonitor()
+        {
+            ScheduleFreeSpaceUpdate();
+            _freeSpaceTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
+            _freeSpaceTimer.Tick += (_, _) => ScheduleFreeSpaceUpdate();
+            _freeSpaceTimer.Start();
+        }
+
+        /// <summary>
+        /// DL先ドライブの空き容量をステータスバーに表示する。
+        /// DriveInfo はネットワークドライブで待たされる場合があるため非UIスレッドで取得。
+        /// 空き容量下限 (MinFreeSpaceGb) を下回ったら赤字で警告。
+        /// </summary>
+        private void ScheduleFreeSpaceUpdate()
+        {
+            _ = Task.Run(() =>
+            {
+                string text = "";
+                Color color = SystemColors.ControlText;
+                try
+                {
+                    var settings = SettingsManager.Instance.Settings;
+                    var root = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
+                    if (!string.IsNullOrEmpty(root))
+                    {
+                        var free = new DriveInfo(root).AvailableFreeSpace;
+                        text = $"空き: {FileMoveHelper.FormatSize(free)} ({root.TrimEnd('\\')})";
+                        if (settings.MinFreeSpaceGb > 0
+                            && free < settings.MinFreeSpaceGb * 1024L * 1024 * 1024)
+                        {
+                            color = Color.Red;
+                            text += " ⚠";
+                        }
+                    }
+                }
+                catch { /* フォルダ未作成・ドライブ情報取得不可の場合は非表示 */ }
+                PostToUi(() =>
+                {
+                    lblFreeSpace.Text = text;
+                    lblFreeSpace.ForeColor = color;
+                });
+            });
         }
 
         // DL イベント高頻度時 (毎チャンクごとに発火) の DB 全件スキャン抑制用 debounce

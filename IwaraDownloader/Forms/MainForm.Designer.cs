@@ -88,6 +88,7 @@ namespace IwaraDownloader.Forms
             this.statusStrip = new StatusStrip();
             this.lblStatus = new ToolStripStatusLabel();
             this.lblDownloadCount = new ToolStripStatusLabel();
+            this.lblFreeSpace = new ToolStripStatusLabel();
             this.progressBar = new ToolStripProgressBar();
 
             // タスクトレイアイコン
@@ -743,6 +744,7 @@ namespace IwaraDownloader.Forms
             this.statusStrip.Items.AddRange(new ToolStripItem[] {
                 this.lblStatus,
                 this.lblDownloadCount,
+                this.lblFreeSpace,
                 this.progressBar
             });
             this.statusStrip.Location = new Point(0, 600);
@@ -759,12 +761,20 @@ namespace IwaraDownloader.Forms
             this.lblStatus.Spring = true;
             this.lblStatus.TextAlign = ContentAlignment.MiddleLeft;
 
-            // 
+            //
             // lblDownloadCount
-            // 
+            //
             this.lblDownloadCount.Name = "lblDownloadCount";
             this.lblDownloadCount.Size = new Size(100, 17);
             this.lblDownloadCount.Text = "DL: 0 / 待機: 0";
+
+            //
+            // lblFreeSpace
+            //
+            this.lblFreeSpace.Name = "lblFreeSpace";
+            this.lblFreeSpace.Size = new Size(80, 17);
+            this.lblFreeSpace.Text = "";
+            this.lblFreeSpace.BorderSides = ToolStripStatusLabelBorderSides.Left;
 
             // 
             // progressBar
@@ -1127,6 +1137,7 @@ namespace IwaraDownloader.Forms
         private StatusStrip statusStrip;
         private ToolStripStatusLabel lblStatus;
         private ToolStripStatusLabel lblDownloadCount;
+        private ToolStripStatusLabel lblFreeSpace;
         private ToolStripProgressBar progressBar;
         private NotifyIcon notifyIcon;
         private ContextMenuStrip contextMenuTray;

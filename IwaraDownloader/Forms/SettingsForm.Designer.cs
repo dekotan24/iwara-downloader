@@ -53,6 +53,9 @@ namespace IwaraDownloader.Forms
             this.numRetry = new NumericUpDown();
             this.lblThumbLocation = new Label();
             this.cmbThumbLocation = new ComboBox();
+            this.lblMinFreeSpace = new Label();
+            this.numMinFreeSpace = new NumericUpDown();
+            this.lblMinFreeSpaceNote = new Label();
 
             this.grpAutoCheck = new GroupBox();
             this.chkAutoCheck = new CheckBox();
@@ -176,6 +179,7 @@ namespace IwaraDownloader.Forms
             this.grpImport.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMinFreeSpace)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).BeginInit();
@@ -228,9 +232,12 @@ namespace IwaraDownloader.Forms
             this.grpDownload.Controls.Add(this.numRetry);
             this.grpDownload.Controls.Add(this.lblThumbLocation);
             this.grpDownload.Controls.Add(this.cmbThumbLocation);
+            this.grpDownload.Controls.Add(this.lblMinFreeSpace);
+            this.grpDownload.Controls.Add(this.numMinFreeSpace);
+            this.grpDownload.Controls.Add(this.lblMinFreeSpaceNote);
             this.grpDownload.Location = new Point(6, 6);
             this.grpDownload.Name = "grpDownload";
-            this.grpDownload.Size = new Size(440, 175);
+            this.grpDownload.Size = new Size(440, 205);
             this.grpDownload.TabIndex = 0;
             this.grpDownload.TabStop = false;
             this.grpDownload.Text = "ダウンロード設定";
@@ -356,6 +363,37 @@ namespace IwaraDownloader.Forms
             this.cmbThumbLocation.TabIndex = 10;
 
             //
+            // lblMinFreeSpace
+            //
+            this.lblMinFreeSpace.AutoSize = true;
+            this.lblMinFreeSpace.Location = new Point(10, 175);
+            this.lblMinFreeSpace.Name = "lblMinFreeSpace";
+            this.lblMinFreeSpace.Size = new Size(80, 15);
+            this.lblMinFreeSpace.TabIndex = 11;
+            this.lblMinFreeSpace.Text = "空き容量下限:";
+
+            //
+            // numMinFreeSpace
+            //
+            this.numMinFreeSpace.Location = new Point(100, 172);
+            this.numMinFreeSpace.Maximum = new decimal(new int[] { 999, 0, 0, 0 });
+            this.numMinFreeSpace.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
+            this.numMinFreeSpace.Name = "numMinFreeSpace";
+            this.numMinFreeSpace.Size = new Size(60, 23);
+            this.numMinFreeSpace.TabIndex = 12;
+            this.numMinFreeSpace.Value = new decimal(new int[] { 1, 0, 0, 0 });
+
+            //
+            // lblMinFreeSpaceNote
+            //
+            this.lblMinFreeSpaceNote.AutoSize = true;
+            this.lblMinFreeSpaceNote.Location = new Point(165, 175);
+            this.lblMinFreeSpaceNote.Name = "lblMinFreeSpaceNote";
+            this.lblMinFreeSpaceNote.Size = new Size(200, 15);
+            this.lblMinFreeSpaceNote.TabIndex = 13;
+            this.lblMinFreeSpaceNote.Text = "GB 未満ならDLを開始しない (0=無効)";
+
+            //
             // grpAutoCheck
             //
             this.grpAutoCheck.Controls.Add(this.chkAutoCheck);
@@ -363,7 +401,7 @@ namespace IwaraDownloader.Forms
             this.grpAutoCheck.Controls.Add(this.cmbCheckInterval);
             this.grpAutoCheck.Controls.Add(this.chkAutoDownload);
             this.grpAutoCheck.Controls.Add(this.chkDownloadExternal);
-            this.grpAutoCheck.Location = new Point(6, 187);
+            this.grpAutoCheck.Location = new Point(6, 217);
             this.grpAutoCheck.Name = "grpAutoCheck";
             this.grpAutoCheck.Size = new Size(440, 110);
             this.grpAutoCheck.TabIndex = 1;
@@ -437,7 +475,7 @@ namespace IwaraDownloader.Forms
             this.grpNotification.Controls.Add(this.chkToast);
             this.grpNotification.Controls.Add(this.chkStartMinimized);
             this.grpNotification.Controls.Add(this.chkMinimizeToTray);
-            this.grpNotification.Location = new Point(6, 305);
+            this.grpNotification.Location = new Point(6, 335);
             this.grpNotification.Name = "grpNotification";
             this.grpNotification.Size = new Size(440, 100);
             this.grpNotification.TabIndex = 2;
@@ -1480,6 +1518,7 @@ namespace IwaraDownloader.Forms
             ((System.ComponentModel.ISupportInitialize)(this.numWebPort)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMinFreeSpace)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).EndInit();
@@ -1514,6 +1553,9 @@ namespace IwaraDownloader.Forms
         private NumericUpDown numRetry;
         private Label lblThumbLocation;
         private ComboBox cmbThumbLocation;
+        private Label lblMinFreeSpace;
+        private NumericUpDown numMinFreeSpace;
+        private Label lblMinFreeSpaceNote;
         private GroupBox grpAutoCheck;
         private CheckBox chkAutoCheck;
         private Label lblCheckInterval;

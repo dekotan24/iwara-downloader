@@ -61,6 +61,7 @@ namespace IwaraDownloader.Forms
             numConcurrent.Value = settings.MaxConcurrentDownloads;
             numRetry.Value = settings.MaxRetryCount;
             cmbThumbLocation.SelectedIndex = settings.ThumbnailCacheLocation == 1 ? 1 : 0;
+            numMinFreeSpace.Value = Math.Clamp(settings.MinFreeSpaceGb, 0, 999);
 
             // 自動チェック
             chkAutoCheck.Checked = settings.AutoCheckEnabled;
@@ -129,6 +130,7 @@ namespace IwaraDownloader.Forms
             }
             settings.MaxConcurrentDownloads = (int)numConcurrent.Value;
             settings.MaxRetryCount = (int)numRetry.Value;
+            settings.MinFreeSpaceGb = (int)numMinFreeSpace.Value;
 
             // サムネ保存先 (変更時は既存キャッシュを新フォルダへ移動)
             settings.ThumbnailCacheLocation = cmbThumbLocation.SelectedIndex == 1 ? 1 : 0;
@@ -319,15 +321,97 @@ namespace IwaraDownloader.Forms
 
         private void btnOk_Click(object sender, EventArgs e)
         {
-            SaveSettings();
+            if (!ApplySettings()) return; // 保存先変更がキャンセルされた場合は閉じない
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
 
         private void btnApply_Click(object sender, EventArgs e)
         {
-            SaveSettings();
+            if (!ApplySettings()) return;
             MessageBox.Show("設定を保存しました。", "設定", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// 設定を保存する。DL先フォルダが変更されている場合は既存ファイルの移動を提案し、
+        /// 容量チェック → 確認 → 移動 (進捗表示) まで行う。
+        /// </summary>
+        /// <returns>false = ユーザーがキャンセルした (設定は未保存)</returns>
+        private bool ApplySettings()
+        {
+            var settings = _settingsManager.Settings;
+            var oldFolder = settings.DownloadFolder;
+            var newFolder = txtDownloadFolder.Text.Trim();
+
+            List<(VideoInfo Video, string NewPath)>? movePlan = null;
+
+            bool folderChanged;
+            try
+            {
+                folderChanged =
+                    !string.IsNullOrWhiteSpace(oldFolder)
+                    && !string.IsNullOrWhiteSpace(newFolder)
+                    && !string.Equals(
+                        Path.GetFullPath(oldFolder).TrimEnd('\\'),
+                        Path.GetFullPath(newFolder).TrimEnd('\\'),
+                        StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(oldFolder);
+            }
+            catch
+            {
+                folderChanged = false; // 不正なパス文字列は移動なしで従来通り保存
+            }
+
+            if (folderChanged)
+            {
+                // DL 実行中の移動はファイルロック・DB不整合の元なのでブロック
+                if (_downloadManager != null
+                    && (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0))
+                {
+                    MessageBox.Show(this,
+                        "ダウンロード実行中は保存先フォルダを変更できません。\n" +
+                        "完了を待つか、キューを停止してから再度実行してください。",
+                        "保存先変更", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                // 個別保存先 (CustomSavePath) を設定したチャンネルのファイルは動かさない
+                var excludeBases = _database.GetAllSubscribedUsers()
+                    .Where(u => !string.IsNullOrWhiteSpace(u.CustomSavePath))
+                    .Select(u => u.CustomSavePath);
+
+                var movable = FileMoveHelper.GetMovableFiles(
+                    _database.GetAllVideos(), oldFolder, excludeBases);
+
+                var decision = FileMoveHelper.ConfirmMove(
+                    this, "ダウンロード保存先", movable, oldFolder, newFolder);
+                if (decision == FileMoveHelper.MoveDecision.Cancel) return false;
+                if (decision == FileMoveHelper.MoveDecision.Move)
+                {
+                    movePlan = FileMoveHelper.BuildMovePlan(movable, oldFolder, newFolder);
+                }
+            }
+
+            SaveSettings();
+
+            if (movePlan != null)
+            {
+                using var progressForm = new FileMoveProgressForm(movePlan, _database);
+                progressForm.ShowDialog(this);
+
+                // 旧フォルダのインデックスキャッシュ掃除 + 空フォルダ削除
+                FileMoveHelper.CleanupEmptyDirectories(oldFolder);
+
+                MessageBox.Show(this,
+                    $"ファイル移動が完了しました。\n\n" +
+                    $"成功: {progressForm.MovedCount} 件 / 失敗: {progressForm.FailedCount} 件\n" +
+                    (progressForm.FailedCount > 0
+                        ? "\n失敗したファイルは元の場所に残っています。詳細はログを確認してください。"
+                        : ""),
+                    "移動完了", MessageBoxButtons.OK,
+                    progressForm.FailedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            }
+            return true;
         }
 
         #region Export/Import
