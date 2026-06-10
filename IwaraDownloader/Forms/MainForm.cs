@@ -103,6 +103,13 @@ namespace IwaraDownloader.Forms
             _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => UpdateStatusBar(msg));
             _downloadManager.UserAdded += (_, _) => PostToUi(() => RefreshChannelTree());
 
+            // 前回プロセスがファイル移動中に強制終了されていた場合の整合性復旧
+            SplashForm.UpdateStatus("整合性をチェック中...", 35);
+            var recoveryMessage = Services.FileMoveJournal.RecoverIfNeeded(_database);
+
+            // サムネキャッシュ移行が中断されていた場合の残り移行 (バックグラウンド)
+            _ = Task.Run(Services.ThumbnailCacheService.SyncCacheDirIfMoved);
+
             // 環境チェック
             SplashForm.UpdateStatus("環境をチェック中...", 40);
             CheckEnvironment();
@@ -139,6 +146,10 @@ namespace IwaraDownloader.Forms
 
             // 起動完了
             SplashForm.UpdateStatus("起動完了", 100);
+
+            // 整合性復旧の結果をユーザーに通知 (CheckEnvironment のステータス表示の後に上書き)
+            if (recoveryMessage != null)
+                UpdateStatusBar(recoveryMessage);
 
             // Webメディアサーバー自動開始
             if (settings.WebServerAutoStart)

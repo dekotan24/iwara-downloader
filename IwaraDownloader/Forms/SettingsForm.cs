@@ -119,9 +119,6 @@ namespace IwaraDownloader.Forms
         {
             var settings = _settingsManager.Settings;
 
-            // サムネ保存先の移動元は DownloadFolder 更新前 (=現状の実フォルダ) で確定させる
-            var oldThumbDir = ThumbnailCacheService.ResolveCacheDir();
-
             // ダウンロード設定
             settings.DownloadFolder = txtDownloadFolder.Text;
             if (cmbQuality.SelectedIndex >= 0 && cmbQuality.SelectedIndex < _qualityOrder.Length)
@@ -132,15 +129,8 @@ namespace IwaraDownloader.Forms
             settings.MaxRetryCount = (int)numRetry.Value;
             settings.MinFreeSpaceGb = (int)numMinFreeSpace.Value;
 
-            // サムネ保存先 (変更時は既存キャッシュを新フォルダへ移動)
+            // サムネ保存先
             settings.ThumbnailCacheLocation = cmbThumbLocation.SelectedIndex == 1 ? 1 : 0;
-            var newThumbDir = ThumbnailCacheService.ResolveCacheDir();
-            if (!string.Equals(oldThumbDir, newThumbDir, StringComparison.OrdinalIgnoreCase))
-            {
-                // フォーム閉鎖後も完走するようバックグラウンドで移動。
-                // 移動が間に合わないファイルはキャッシュミス扱いで再DLされるだけなので安全。
-                _ = Task.Run(() => ThumbnailCacheService.MigrateCacheDir(oldThumbDir, newThumbDir));
-            }
 
             // 自動チェック
             settings.AutoCheckEnabled = chkAutoCheck.Checked;
@@ -193,6 +183,10 @@ namespace IwaraDownloader.Forms
 
             // 保存
             _settingsManager.Save();
+
+            // サムネ保存先が変わっていれば既存キャッシュを移行 (LastThumbnailCacheDir との差分で判断)。
+            // 中断されても次回起動時の SyncCacheDirIfMoved で残りが自動移行される。
+            _ = Task.Run(ThumbnailCacheService.SyncCacheDirIfMoved);
         }
 
         private void btnBrowseFolder_Click(object sender, EventArgs e)
@@ -804,11 +798,15 @@ namespace IwaraDownloader.Forms
             // Pending状態のファイルをリネーム
             await Task.Run(() =>
             {
+                // 強制終了対策: リネームと DB 更新の間で死んでも次回起動時に復旧できるようジャーナルに記録
+                using var journal = FileMoveJournal.Begin();
+
                 foreach (var item in items.Where(i => i.Status == RenameStatus.Pending))
                 {
                     try
                     {
                         // ファイルをリネーム
+                        journal.RecordStart(item.Video.Id, item.OriginalPath, item.NewPath);
                         File.Move(item.OriginalPath, item.NewPath);
 
                         // メタデータファイル(.json)もリネーム
@@ -824,6 +822,7 @@ namespace IwaraDownloader.Forms
                         // DB更新
                         item.Video.LocalFilePath = item.NewPath;
                         _database.UpdateVideo(item.Video);
+                        journal.RecordDone(item.Video.Id);
 
                         item.Status = RenameStatus.Success;
                     }

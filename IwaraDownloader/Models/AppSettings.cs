@@ -65,6 +65,13 @@ namespace IwaraDownloader.Models
         /// <summary>サムネイルキャッシュの保存先: 0=アプリ設定フォルダ(Roaming) / 1=ダウンロード先フォルダ配下のthumbs</summary>
         public int ThumbnailCacheLocation { get; set; } = 0;
 
+        /// <summary>
+        /// 前回実際に使用していたサムネイルキャッシュフォルダ。
+        /// 現在の解決結果と異なる場合、移行が中断された (または設定が外部で変更された)
+        /// とみなして起動時に残りを自動移行する。
+        /// </summary>
+        public string LastThumbnailCacheDir { get; set; } = string.Empty;
+
         /// <summary>起動時に最小化</summary>
         public bool StartMinimized { get; set; } = false;
 

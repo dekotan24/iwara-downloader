@@ -87,6 +87,52 @@ namespace IwaraDownloader.Services
             return Path.Combine(dir, videoId + ".jpg");
         }
 
+        private static readonly object _syncDirLock = new();
+
+        /// <summary>
+        /// 設定上のキャッシュフォルダと前回実際に使っていたフォルダ (LastThumbnailCacheDir) を
+        /// 突き合わせ、異なれば残存キャッシュを移行する。
+        /// 移行中にプロセスが強制終了されても LastThumbnailCacheDir は移行完了まで
+        /// 更新されないため、次回起動時のこの呼び出しで残りが自動的に移行される (自己修復)。
+        /// アプリ起動時と設定保存後に呼ぶ。
+        /// </summary>
+        public static void SyncCacheDirIfMoved()
+        {
+            lock (_syncDirLock)
+            {
+                try
+                {
+                    var sm = Utils.SettingsManager.Instance;
+                    var current = ResolveCacheDir();
+                    var last = sm.Settings.LastThumbnailCacheDir;
+
+                    if (string.IsNullOrWhiteSpace(last))
+                    {
+                        // 初回: 現在地を記録するだけ
+                        sm.Settings.LastThumbnailCacheDir = current;
+                        sm.Save();
+                        return;
+                    }
+
+                    if (string.Equals(
+                            Path.GetFullPath(last).TrimEnd('\\'),
+                            Path.GetFullPath(current).TrimEnd('\\'),
+                            StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    var moved = MigrateCacheDir(last, current);
+                    sm.Settings.LastThumbnailCacheDir = current;
+                    sm.Save();
+                    if (moved > 0)
+                        LoggingService.Instance.Info($"サムネイルキャッシュを移行: {moved} 件 ({last} → {current})");
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Warn($"サムネイルキャッシュの移行チェックに失敗: {ex.Message}");
+                }
+            }
+        }
+
         /// <summary>
         /// キャッシュフォルダ変更時に既存のサムネイルを新フォルダへ移動する (ベストエフォート)。
         /// 使用中などで移動できないファイルはスキップ (キャッシュミス扱いで再DLされる)。

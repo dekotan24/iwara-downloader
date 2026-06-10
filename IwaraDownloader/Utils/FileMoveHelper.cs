@@ -164,6 +164,40 @@ namespace IwaraDownloader.Utils
             }
         }
 
+        /// <summary>クロスドライブ移動時の一時ファイル拡張子</summary>
+        public const string PartSuffix = ".iwdlpart";
+
+        /// <summary>
+        /// 中断耐性のあるファイル移動。
+        /// 同一ドライブ: File.Move (アトミックな rename)。
+        /// 別ドライブ: File.Move 内部のコピー+削除は中断で移動先に不完全な本名ファイルを
+        /// 残すため、一時名 (.iwdlpart) にコピー → rename → 元を削除、の順で行う。
+        /// どの時点で強制終了されても「移動先の本名ファイルは常に完全」が保たれる。
+        /// </summary>
+        public static void MoveFileSafe(string oldPath, string newPath)
+        {
+            var rootOld = Path.GetPathRoot(Path.GetFullPath(oldPath));
+            var rootNew = Path.GetPathRoot(Path.GetFullPath(newPath));
+            if (string.Equals(rootOld, rootNew, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Move(oldPath, newPath);
+                return;
+            }
+
+            var partPath = newPath + PartSuffix;
+            try
+            {
+                File.Copy(oldPath, partPath, overwrite: true);
+                File.Move(partPath, newPath); // 同一ボリューム内 rename = アトミック
+            }
+            catch
+            {
+                try { if (File.Exists(partPath)) File.Delete(partPath); } catch { }
+                throw;
+            }
+            File.Delete(oldPath);
+        }
+
         public static bool IsPathUnder(string filePath, string folderPath)
         {
             try

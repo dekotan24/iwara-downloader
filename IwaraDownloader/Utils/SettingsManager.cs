@@ -63,29 +63,37 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// 設定を保存する
+        /// 設定を保存する。
+        /// 書き込み途中でプロセスが強制終了されても settings.json が破損しないよう、
+        /// 一時ファイルに書いてからアトミックに差し替える。
+        /// (バックグラウンドのキャッシュ移行などからも呼ばれるため lock で直列化)
         /// </summary>
         public void Save()
         {
-            try
+            lock (_lock)
             {
-                var directory = Path.GetDirectoryName(AppSettings.ConfigFilePath);
-                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                try
                 {
-                    Directory.CreateDirectory(directory);
-                }
+                    var directory = Path.GetDirectoryName(AppSettings.ConfigFilePath);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
 
-                var options = new JsonSerializerOptions
+                    var options = new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    };
+                    var json = JsonSerializer.Serialize(Settings, options);
+                    var tmpPath = AppSettings.ConfigFilePath + ".tmp";
+                    File.WriteAllText(tmpPath, json);
+                    File.Move(tmpPath, AppSettings.ConfigFilePath, overwrite: true);
+                }
+                catch (Exception ex)
                 {
-                    WriteIndented = true
-                };
-                var json = JsonSerializer.Serialize(Settings, options);
-                File.WriteAllText(AppSettings.ConfigFilePath, json);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"設定保存エラー: {ex.Message}");
-                throw;
+                    System.Diagnostics.Debug.WriteLine($"設定保存エラー: {ex.Message}");
+                    throw;
+                }
             }
         }
 

@@ -182,6 +182,9 @@ namespace IwaraDownloader.Forms
 
             if (result != DialogResult.Yes) return;
 
+            // 強制終了対策: リネームと DB 更新の間で死んでも次回起動時に復旧できるようジャーナルに記録
+            using var journal = FileMoveJournal.Begin();
+
             foreach (var item in conflictItems)
             {
                 try
@@ -193,6 +196,7 @@ namespace IwaraDownloader.Forms
                     }
 
                     // リネーム実行
+                    journal.RecordStart(item.Video.Id, item.OriginalPath, item.NewPath);
                     File.Move(item.OriginalPath, item.NewPath);
 
                     // メタデータファイルも処理
@@ -208,6 +212,7 @@ namespace IwaraDownloader.Forms
                     // DB更新
                     item.Video.LocalFilePath = item.NewPath;
                     _database.UpdateVideo(item.Video);
+                    journal.RecordDone(item.Video.Id);
 
                     item.Status = RenameStatus.Success;
                     item.ConflictingPath = null;
@@ -228,6 +233,9 @@ namespace IwaraDownloader.Forms
             var conflictItems = GetSelectedConflictItems();
             if (conflictItems.Count == 0) return;
 
+            // 強制終了対策: リネームと DB 更新の間で死んでも次回起動時に復旧できるようジャーナルに記録
+            using var journal = FileMoveJournal.Begin();
+
             foreach (var item in conflictItems)
             {
                 try
@@ -236,6 +244,7 @@ namespace IwaraDownloader.Forms
                     var uniquePath = Helpers.GetUniqueFilePath(item.NewPath);
 
                     // リネーム実行
+                    journal.RecordStart(item.Video.Id, item.OriginalPath, uniquePath);
                     File.Move(item.OriginalPath, uniquePath);
 
                     // メタデータファイルも処理
@@ -251,6 +260,7 @@ namespace IwaraDownloader.Forms
                     // DB更新
                     item.Video.LocalFilePath = uniquePath;
                     _database.UpdateVideo(item.Video);
+                    journal.RecordDone(item.Video.Id);
 
                     item.NewPath = uniquePath;
                     item.Status = RenameStatus.Success;
