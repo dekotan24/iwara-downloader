@@ -243,6 +243,8 @@ namespace IwaraDownloader.Forms
                     if (File.Exists(originalJsonPath))
                     {
                         var newJsonPath = Path.ChangeExtension(uniquePath, ".json");
+                        if (File.Exists(newJsonPath))
+                            File.Delete(newJsonPath);
                         File.Move(originalJsonPath, newJsonPath);
                     }
 

@@ -211,6 +211,25 @@ namespace IwaraDownloader.Forms
                 }
             }
 
+            // バックグラウンドスレッドからのイベントが破棄済みフォームへ届かないよう先に解除
+            _downloadManager.TaskProgressChanged -= OnTaskProgressChanged;
+            _downloadManager.TaskStatusChanged -= OnTaskStatusChanged;
+            _downloadManager.NewVideosFound -= OnNewVideosFound;
+            _downloadManager.AutoCheckCompleted -= OnAutoCheckCompleted;
+            _downloadManager.BackgroundTaskProgress -= OnBackgroundTaskProgress;
+            _downloadManager.BackgroundTaskCompleted -= OnBackgroundTaskCompleted;
+
+            // debounce タイマー停止 (Tick が閉鎖処理中に走らないように)
+            _channelTreeRefreshTimer?.Stop();
+            _channelTreeRefreshTimer?.Dispose();
+            _channelTreeRefreshTimer = null;
+            _videoListRefreshTimer?.Stop();
+            _videoListRefreshTimer?.Dispose();
+            _videoListRefreshTimer = null;
+            _downloadCountTimer?.Stop();
+            _downloadCountTimer?.Dispose();
+            _downloadCountTimer = null;
+
             _downloadManager.Stop();
             // Webサーバー停止
             try { _webServer.StopAsync().Wait(5000); } catch { }
@@ -227,9 +246,10 @@ namespace IwaraDownloader.Forms
                 try { RemoveClipboardFormatListener(this.Handle); } catch { }
                 _clipboardListenerRegistered = false;
             }
+            // 表示モード切替で _thumbImageList が null でも購読は残り得るため常に解除
+            try { Services.ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady; } catch { }
             if (_thumbImageList != null)
             {
-                try { Services.ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady; } catch { }
                 try { _thumbImageList.Dispose(); } catch { }
                 try { _placeholderThumb?.Dispose(); } catch { }
                 _thumbImageList = null;

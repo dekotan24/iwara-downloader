@@ -577,10 +577,10 @@ namespace IwaraDownloader.Services
             command.CommandText = @"
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite)
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus)
                 VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                     @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite);
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus);
                 SELECT last_insert_rowid();
             ";
             AddVideoParameters(command, video);
@@ -983,10 +983,10 @@ namespace IwaraDownloader.Services
                 command.CommandText = @"
                     INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                         DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site)
+                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus)
                     VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                         @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site)
+                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus)
                 ";
 
                 // パラメータを作成(再利用)
@@ -1013,6 +1013,8 @@ namespace IwaraDownloader.Services
                 var pEmbedUrl = command.Parameters.Add("@EmbedUrl", SqliteType.Text);
                 var pRating = command.Parameters.Add("@Rating", SqliteType.Text);
                 var pSite = command.Parameters.Add("@Site", SqliteType.Text);
+                var pIsFavorite = command.Parameters.Add("@IsFavorite", SqliteType.Integer);
+                var pThumbnailStatus = command.Parameters.Add("@ThumbnailStatus", SqliteType.Integer);
 
                 foreach (var video in videos)
                 {
@@ -1039,6 +1041,8 @@ namespace IwaraDownloader.Services
                     pEmbedUrl.Value = video.EmbedUrl ?? "";
                     pRating.Value = video.Rating ?? "";
                     pSite.Value = video.Site ?? "";
+                    pIsFavorite.Value = video.IsFavorite ? 1 : 0;
+                    pThumbnailStatus.Value = video.ThumbnailStatus;
 
                     addedCount += command.ExecuteNonQuery();
                 }
@@ -1093,7 +1097,9 @@ namespace IwaraDownloader.Services
                         FileUuid = @FileUuid,
                         EmbedUrl = @EmbedUrl,
                         Rating = @Rating,
-                        Site = @Site
+                        Site = @Site,
+                        IsFavorite = @IsFavorite,
+                        ThumbnailStatus = @ThumbnailStatus
                     WHERE Id = @Id
                 ";
 
@@ -1120,6 +1126,8 @@ namespace IwaraDownloader.Services
                 var pEmbedUrl = command.Parameters.Add("@EmbedUrl", SqliteType.Text);
                 var pRating = command.Parameters.Add("@Rating", SqliteType.Text);
                 var pSite = command.Parameters.Add("@Site", SqliteType.Text);
+                var pIsFavorite = command.Parameters.Add("@IsFavorite", SqliteType.Integer);
+                var pThumbnailStatus = command.Parameters.Add("@ThumbnailStatus", SqliteType.Integer);
 
                 foreach (var video in videos)
                 {
@@ -1145,6 +1153,8 @@ namespace IwaraDownloader.Services
                     pEmbedUrl.Value = video.EmbedUrl ?? "";
                     pRating.Value = video.Rating ?? "";
                     pSite.Value = video.Site ?? "";
+                    pIsFavorite.Value = video.IsFavorite ? 1 : 0;
+                    pThumbnailStatus.Value = video.ThumbnailStatus;
 
                     updatedCount += command.ExecuteNonQuery();
                 }

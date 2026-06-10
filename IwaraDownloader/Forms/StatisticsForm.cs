@@ -558,7 +558,10 @@ namespace IwaraDownloader.Forms
         {
             if (string.IsNullOrWhiteSpace(msg)) return "";
             var oneLine = msg.Replace("\r", " ").Replace("\n", " ").Trim();
-            return oneLine.Length > 80 ? oneLine.Substring(0, 80) + "…" : oneLine;
+            if (oneLine.Length <= 80) return oneLine;
+            // サロゲートペア (絵文字等) の途中で切ると文字化けするため境界を調整
+            var cut = char.IsHighSurrogate(oneLine[79]) ? 79 : 80;
+            return oneLine.Substring(0, cut) + "…";
         }
 
         private static string SizeBin(long bytes)

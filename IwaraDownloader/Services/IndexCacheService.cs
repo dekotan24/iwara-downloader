@@ -146,7 +146,14 @@ namespace IwaraDownloader.Services
             try
             {
                 var json = JsonSerializer.Serialize(cache, s_jsonOptions);
-                System.IO.File.WriteAllText(path, json);
+                // 既存キャッシュは隠し属性付きのため、直接 WriteAllText (FileMode.Create) すると
+                // Windows では UnauthorizedAccessException になる。一時ファイルへ書いてから
+                // 差し替えることで上書き失敗と書き込み途中の破損を両方防ぐ。
+                var tmpPath = path + ".tmp";
+                System.IO.File.WriteAllText(tmpPath, json);
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+                System.IO.File.Move(tmpPath, path);
                 // ユーザーから見えにくくするため隠しファイル属性を付与
                 try
                 {
