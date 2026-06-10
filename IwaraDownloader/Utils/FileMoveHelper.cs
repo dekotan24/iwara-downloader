@@ -189,6 +189,8 @@ namespace IwaraDownloader.Utils
             public int MissingCount { get; set; }
             /// <summary>同名ファイルは見つかったが検証 (サイズ/UUID) で一致しなかった件数</summary>
             public int UnverifiedCount { get; set; }
+            /// <summary>旧位置に実体が残っていて、移動先に候補が無い件数 (=まだ移動されていない)</summary>
+            public int NotMovedCount { get; set; }
         }
 
         /// <summary>
@@ -232,8 +234,10 @@ namespace IwaraDownloader.Utils
                     var fileName = Path.GetFileName(v.LocalFilePath);
                     if (!lookup.TryGetValue(fileName, out var candidates))
                     {
-                        if (!oldExists) result.MissingCount++;
-                        continue; // 旧位置に実体があり移動先に候補が無いだけなら「未移動」(一括移動の領分)
+                        // 旧位置に実体があり移動先に候補が無い = まだ移動されていない (一括移動の領分)
+                        if (oldExists) result.NotMovedCount++;
+                        else result.MissingCount++;
+                        continue;
                     }
 
                     string? match = null;

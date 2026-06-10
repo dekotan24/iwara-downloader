@@ -3193,6 +3193,17 @@ namespace IwaraDownloader.Forms
                 insufficient ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes) return;
 
+            // 確認ダイアログ表示中に自動新着チェックから DL が始まっている可能性があるため、
+            // 移動開始直前にもう一度ガードする
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "ダウンロードが開始されたため中止しました。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // 進捗フォーム内で video.LocalFilePath が更新されるため、移動前の場所を控えておく
             var oldDirs = plan
                 .Select(p => Path.GetDirectoryName(p.Video.LocalFilePath))
@@ -3275,8 +3286,12 @@ namespace IwaraDownloader.Forms
             }
 
             var notes = new List<string>();
+            if (result.NotMovedCount > 0)
+                notes.Add($"まだ移動されていない (移動先に同名ファイルなし): {result.NotMovedCount} 件\n" +
+                          "  → [未移動ファイルの一括移動] で移動するか、外部ツールで移動後に再実行してください");
             if (result.UnverifiedCount > 0)
-                notes.Add($"検証不一致 (同名だが別物の可能性): {result.UnverifiedCount} 件");
+                notes.Add($"検証不一致 (同名だがサイズ/UUID が合わない): {result.UnverifiedCount} 件\n" +
+                          "  → コピー途中・破損の可能性があります。再リンクしません");
             if (result.MissingCount > 0)
                 notes.Add($"移動先でも見つからない (リンク切れ): {result.MissingCount} 件");
             var notesText = notes.Count > 0 ? "\n\n" + string.Join("\n", notes) : "";
@@ -3284,8 +3299,12 @@ namespace IwaraDownloader.Forms
             if (result.Items.Count == 0)
             {
                 UpdateStatusBar("再リンク対象なし");
+                var hint = (result.NotMovedCount + result.MissingCount + result.UnverifiedCount) > 0
+                    ? "\n\nヒント: この機能は「保存先設定の変更 → 外部ツールでファイル移動」の後に実行するものです。\n" +
+                      "保存先設定がまだ変更されていない場合は、先に変更 (ファイルは移動せず設定だけ変更) してください。"
+                    : "";
                 MessageBox.Show(this,
-                    "再リンクが必要なファイルはありません。" + notesText,
+                    "再リンクできるファイルはありません。" + notesText + hint,
                     "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -3303,6 +3322,17 @@ namespace IwaraDownloader.Forms
                 "移動済みファイルの再リンク",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes) return;
+
+            // スキャン中 (UUID 読みで長引くことがある) に自動新着チェックから DL が
+            // 始まっている可能性があるため、書き換え直前にもう一度ガードする
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "スキャン中にダウンロードが開始されたため中止しました。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             int relinked = 0;
             await Task.Run(() =>
