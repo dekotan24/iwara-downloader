@@ -129,6 +129,104 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
+        /// 現在の保存先設定 (チャンネル個別 or 全体DL先) の配下に無いファイルを検出し、
+        /// あるべき場所への移動計画を作る。保存先変更時に容量不足などで移動に失敗した
+        /// ファイルを、後からまとめて再移動するために使う。
+        /// </summary>
+        public static List<(VideoInfo Video, string NewPath)> BuildRelocationPlan(
+            IEnumerable<VideoInfo> videos,
+            IEnumerable<SubscribedUser> users,
+            string downloadFolder)
+        {
+            var plan = new List<(VideoInfo Video, string NewPath)>();
+            if (string.IsNullOrWhiteSpace(downloadFolder)) return plan;
+
+            var userById = users.ToDictionary(u => u.Id);
+
+            foreach (var v in videos)
+            {
+                if (string.IsNullOrEmpty(v.LocalFilePath) || !File.Exists(v.LocalFilePath)) continue;
+
+                try
+                {
+                    string expectedBase;
+                    if (v.SubscribedUserId.HasValue
+                        && userById.TryGetValue(v.SubscribedUserId.Value, out var user))
+                    {
+                        expectedBase = user.GetSavePath(downloadFolder);
+                    }
+                    else
+                    {
+                        // 購読外の動画は全体DL先配下にあれば OK (サブフォルダ整理は崩さない)
+                        expectedBase = downloadFolder;
+                    }
+
+                    if (IsPathUnder(v.LocalFilePath, expectedBase)) continue;
+
+                    var destDir = expectedBase;
+                    if (!v.SubscribedUserId.HasValue && !string.IsNullOrEmpty(v.AuthorUsername))
+                    {
+                        // DL 時の規則と同じく、作者名フォルダに入っていたファイルはその構造を保つ
+                        var parentName = Path.GetFileName(Path.GetDirectoryName(v.LocalFilePath) ?? "");
+                        var author = Helpers.SanitizeFileName(v.AuthorUsername);
+                        if (string.Equals(parentName, author, StringComparison.OrdinalIgnoreCase))
+                            destDir = Path.Combine(downloadFolder, author);
+                    }
+
+                    plan.Add((v, Path.Combine(destDir, Path.GetFileName(v.LocalFilePath))));
+                }
+                catch { /* 不正パスはスキップ */ }
+            }
+            return plan;
+        }
+
+        /// <summary>
+        /// 移動計画のドライブ別必要量と空き容量のサマリ行を作る。
+        /// 同一ドライブ内の移動 (rename) は容量を消費しないため集計対象外。
+        /// </summary>
+        /// <param name="insufficient">いずれかのドライブで空き容量が不足している場合 true</param>
+        public static string BuildDriveSpaceSummary(
+            List<(VideoInfo Video, string NewPath)> plan, out bool insufficient)
+        {
+            insufficient = false;
+            var needed = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (video, newPath) in plan)
+            {
+                try
+                {
+                    var driveOld = Path.GetPathRoot(Path.GetFullPath(video.LocalFilePath));
+                    var driveNew = Path.GetPathRoot(Path.GetFullPath(newPath));
+                    if (string.IsNullOrEmpty(driveNew)
+                        || string.Equals(driveOld, driveNew, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    needed.TryGetValue(driveNew, out var sum);
+                    needed[driveNew] = sum + new FileInfo(video.LocalFilePath).Length;
+                }
+                catch { }
+            }
+
+            if (needed.Count == 0) return "";
+
+            var lines = new List<string>();
+            foreach (var pair in needed)
+            {
+                try
+                {
+                    var free = new DriveInfo(pair.Key).AvailableFreeSpace;
+                    bool ng = free < pair.Value;
+                    if (ng) insufficient = true;
+                    lines.Add($"{pair.Key.TrimEnd('\\')} 必要 {FormatSize(pair.Value)}" +
+                              $" / 空き {FormatSize(free)}{(ng ? " ⚠不足" : "")}");
+                }
+                catch
+                {
+                    lines.Add($"{pair.Key.TrimEnd('\\')} 必要 {FormatSize(pair.Value)} (空き容量取得失敗)");
+                }
+            }
+            return string.Join("\n", lines);
+        }
+
+        /// <summary>
         /// 移動後に空になったサブフォルダを削除する (ベストエフォート)。
         /// baseFolder 自体は削除しない。隠しインデックスファイルしか残っていないフォルダも空とみなす。
         /// </summary>
@@ -140,28 +238,36 @@ namespace IwaraDownloader.Utils
                 foreach (var dir in Directory.EnumerateDirectories(baseFolder, "*", SearchOption.AllDirectories)
                                              .OrderByDescending(d => d.Length)) // 深い階層から処理
                 {
-                    try
-                    {
-                        var files = Directory.GetFiles(dir);
-                        // インデックスキャッシュ (.iwara_index.json) だけが残っている場合も空とみなす
-                        if (Directory.GetDirectories(dir).Length == 0
-                            && files.All(f => Path.GetFileName(f).Equals(".iwara_index.json", StringComparison.OrdinalIgnoreCase)))
-                        {
-                            foreach (var f in files)
-                            {
-                                File.SetAttributes(f, FileAttributes.Normal);
-                                File.Delete(f);
-                            }
-                            Directory.Delete(dir);
-                        }
-                    }
-                    catch { /* 使用中などは残す */ }
+                    TryDeleteDirectoryIfEmpty(dir);
                 }
             }
             catch (Exception ex)
             {
                 LoggingService.Instance.Warn($"空フォルダ掃除に失敗: {baseFolder}: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// フォルダが空 (または隠しインデックスファイルのみ) なら削除する (ベストエフォート)。
+        /// </summary>
+        public static void TryDeleteDirectoryIfEmpty(string dir)
+        {
+            try
+            {
+                var files = Directory.GetFiles(dir);
+                // インデックスキャッシュ (.iwara_index.json) だけが残っている場合も空とみなす
+                if (Directory.GetDirectories(dir).Length == 0
+                    && files.All(f => Path.GetFileName(f).Equals(".iwara_index.json", StringComparison.OrdinalIgnoreCase)))
+                {
+                    foreach (var f in files)
+                    {
+                        File.SetAttributes(f, FileAttributes.Normal);
+                        File.Delete(f);
+                    }
+                    Directory.Delete(dir);
+                }
+            }
+            catch { /* 使用中などは残す */ }
         }
 
         /// <summary>クロスドライブ移動時の一時ファイル拡張子</summary>

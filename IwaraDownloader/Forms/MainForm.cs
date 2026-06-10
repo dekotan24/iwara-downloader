@@ -1783,6 +1783,15 @@ namespace IwaraDownloader.Forms
 
                 UpdateStatusBar(
                     $"移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
+
+                if (progressForm.FailedCount > 0)
+                {
+                    MessageBox.Show(this,
+                        $"移動に失敗したファイルが {progressForm.FailedCount} 件あります。\n" +
+                        "失敗したファイルは元の場所に残っています (詳細はログを確認してください)。\n\n" +
+                        "原因を解消後、[ツール] → [未移動ファイルの一括移動] で再移動できます。",
+                        "ファイル移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
@@ -3130,6 +3139,102 @@ namespace IwaraDownloader.Forms
             // ダイアログ閉じたらリスト更新
             RefreshChannelTree();
             RefreshVideoList();
+        }
+
+        /// <summary>
+        /// 未移動ファイルの一括移動。
+        /// 保存先変更時に容量不足などで移動に失敗したファイルは元の場所に残ったままになる。
+        /// 現在の保存先設定の配下に無いファイルを検出し、あるべき場所へまとめて再移動する。
+        /// </summary>
+        private void menuToolsRelocateFiles_Click(object sender, EventArgs e)
+        {
+            // DL 実行中の移動はファイルロック・DB 不整合の元なのでブロック (保存先変更時と同じガード)
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "ダウンロード実行中は実行できません。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var downloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var plan = FileMoveHelper.BuildRelocationPlan(
+                _database.GetAllVideos(), _database.GetAllSubscribedUsers(), downloadFolder);
+
+            if (plan.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "現在の保存先設定の外にあるファイルはありません。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            long totalBytes = 0;
+            foreach (var (video, _) in plan)
+            {
+                try { totalBytes += new FileInfo(video.LocalFilePath).Length; } catch { }
+            }
+
+            var spaceSummary = FileMoveHelper.BuildDriveSpaceSummary(plan, out bool insufficient);
+            var spaceLines = string.IsNullOrEmpty(spaceSummary) ? "" : "\n\n" + spaceSummary;
+            var warnLine = insufficient
+                ? "\n\n⚠ 空き容量が不足しているドライブがあります。\n" +
+                  "そのドライブへの移動は失敗し、ファイルは元の場所に残ります。"
+                : "";
+
+            var confirm = MessageBox.Show(this,
+                $"現在の保存先設定の外にあるファイルが {plan.Count} 個見つかりました" +
+                $" ({FileMoveHelper.FormatSize(totalBytes)})。\n" +
+                "これらを本来の保存先へ移動しますか?\n" +
+                "(メタデータ .json も一緒に移動します)" + spaceLines + warnLine,
+                "未移動ファイルの一括移動",
+                MessageBoxButtons.YesNo,
+                insufficient ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            // 進捗フォーム内で video.LocalFilePath が更新されるため、移動前の場所を控えておく
+            var oldDirs = plan
+                .Select(p => Path.GetDirectoryName(p.Video.LocalFilePath))
+                .Where(d => !string.IsNullOrEmpty(d))
+                .Select(d => d!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var newDirs = plan
+                .Select(p => Path.GetDirectoryName(p.NewPath))
+                .Where(d => !string.IsNullOrEmpty(d))
+                .Select(d => d!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            using var progressForm = new FileMoveProgressForm(plan, _database);
+            progressForm.ShowDialog(this);
+
+            // キャッシュ無効化 + 空になった移動元フォルダの掃除 + UI 再描画
+            foreach (var dir in oldDirs)
+            {
+                Services.IndexCacheService.Invalidate(dir);
+                FileMoveHelper.CleanupEmptyDirectories(dir);
+                FileMoveHelper.TryDeleteDirectoryIfEmpty(dir);
+            }
+            foreach (var dir in newDirs)
+            {
+                Services.IndexCacheService.Invalidate(dir);
+            }
+            RefreshChannelTree();
+            RefreshVideoList();
+
+            UpdateStatusBar(
+                $"未移動ファイルの移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
+
+            if (progressForm.FailedCount > 0)
+            {
+                MessageBox.Show(this,
+                    $"移動に失敗したファイルが {progressForm.FailedCount} 件あります。\n" +
+                    "失敗したファイルは元の場所に残っています (詳細はログを確認してください)。\n\n" +
+                    "原因を解消後、もう一度このメニューを実行すると残りを移動できます。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         /// <summary>

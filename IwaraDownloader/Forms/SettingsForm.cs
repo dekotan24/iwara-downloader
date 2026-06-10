@@ -400,7 +400,8 @@ namespace IwaraDownloader.Forms
                     $"ファイル移動が完了しました。\n\n" +
                     $"成功: {progressForm.MovedCount} 件 / 失敗: {progressForm.FailedCount} 件\n" +
                     (progressForm.FailedCount > 0
-                        ? "\n失敗したファイルは元の場所に残っています。詳細はログを確認してください。"
+                        ? "\n失敗したファイルは元の場所に残っています。詳細はログを確認してください。\n" +
+                          "原因を解消後、メイン画面の [ツール] → [未移動ファイルの一括移動] で再移動できます。"
                         : ""),
                     "移動完了", MessageBoxButtons.OK,
                     progressForm.FailedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);

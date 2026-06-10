@@ -52,6 +52,7 @@ namespace IwaraDownloader.Forms
             this.menuToolsSearchImport = new ToolStripMenuItem();
             this.menuToolsImportFolder = new ToolStripMenuItem();
             this.menuToolsDuplicateCheck = new ToolStripMenuItem();
+            this.menuToolsRelocateFiles = new ToolStripMenuItem();
             this.menuToolsStatistics = new ToolStripMenuItem();
 
             // URLテキストボックス
@@ -651,6 +652,7 @@ namespace IwaraDownloader.Forms
                 this.menuToolsSearchImport,
                 this.menuToolsImportFolder,
                 this.menuToolsDuplicateCheck,
+                this.menuToolsRelocateFiles,
                 this.menuToolsStatistics
             });
             this.btnTools.Name = "btnTools";
@@ -730,7 +732,15 @@ namespace IwaraDownloader.Forms
             this.menuToolsDuplicateCheck.Text = "重複チェック...";
             this.menuToolsDuplicateCheck.Click += new EventHandler(this.menuToolsDuplicateCheck_Click);
 
-            // 
+            //
+            // menuToolsRelocateFiles
+            //
+            this.menuToolsRelocateFiles.Name = "menuToolsRelocateFiles";
+            this.menuToolsRelocateFiles.Size = new Size(180, 22);
+            this.menuToolsRelocateFiles.Text = "未移動ファイルの一括移動...";
+            this.menuToolsRelocateFiles.Click += new EventHandler(this.menuToolsRelocateFiles_Click);
+
+            //
             // menuToolsStatistics
             // 
             this.menuToolsStatistics.Name = "menuToolsStatistics";
@@ -1121,6 +1131,7 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuToolsImportFolder;
         private ToolStripMenuItem menuToolsSearchImport;
         private ToolStripMenuItem menuToolsDuplicateCheck;
+        private ToolStripMenuItem menuToolsRelocateFiles;
         private ToolStripMenuItem menuToolsStatistics;
         private TreeView treeViewChannels;
         private Panel panelChannelHeader;
