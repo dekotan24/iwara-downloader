@@ -404,8 +404,8 @@ namespace IwaraDownloader.Services
                 return Results.File(video.LocalThumbnailPath, ct);
             }
 
-            // Fallback to cached thumbnail in AppData
-            var cached = Path.Combine(ThumbsCacheDir, $"{video.VideoId}.jpg");
+            // Fallback to cached thumbnail (保存先は設定により Roaming / DL先フォルダ)
+            var cached = ThumbnailCacheService.Instance.GetCachePath(video.VideoId);
             if (File.Exists(cached))
                 return Results.File(cached, "image/jpeg");
 
@@ -642,10 +642,6 @@ namespace IwaraDownloader.Services
 
         #region Helpers
 
-        private static readonly string ThumbsCacheDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IwaraDownloader", "thumbs");
-
         private static object MapVideoDto(VideoInfo v) => new
         {
             v.Id,
@@ -682,7 +678,7 @@ namespace IwaraDownloader.Services
             if (!string.IsNullOrEmpty(v.LocalThumbnailPath) && File.Exists(v.LocalThumbnailPath))
                 return true;
             if (!string.IsNullOrEmpty(v.VideoId))
-                return File.Exists(Path.Combine(ThumbsCacheDir, $"{v.VideoId}.jpg"));
+                return File.Exists(ThumbnailCacheService.Instance.GetCachePath(v.VideoId));
             return false;
         }
 

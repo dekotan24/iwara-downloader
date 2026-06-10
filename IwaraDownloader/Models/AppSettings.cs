@@ -59,6 +59,9 @@ namespace IwaraDownloader.Models
         /// <summary>動画リストの表示モード: 0=詳細(列表示) / 1=サムネ(タイル)</summary>
         public int VideoListViewMode { get; set; } = 0;
 
+        /// <summary>サムネイルキャッシュの保存先: 0=アプリ設定フォルダ(Roaming) / 1=ダウンロード先フォルダ配下のthumbs</summary>
+        public int ThumbnailCacheLocation { get; set; } = 0;
+
         /// <summary>起動時に最小化</summary>
         public bool StartMinimized { get; set; } = false;
 

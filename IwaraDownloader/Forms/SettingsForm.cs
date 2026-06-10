@@ -60,6 +60,7 @@ namespace IwaraDownloader.Forms
             cmbQuality.SelectedIndex = qIdx >= 0 ? qIdx : 0;
             numConcurrent.Value = settings.MaxConcurrentDownloads;
             numRetry.Value = settings.MaxRetryCount;
+            cmbThumbLocation.SelectedIndex = settings.ThumbnailCacheLocation == 1 ? 1 : 0;
 
             // 自動チェック
             chkAutoCheck.Checked = settings.AutoCheckEnabled;
@@ -117,6 +118,9 @@ namespace IwaraDownloader.Forms
         {
             var settings = _settingsManager.Settings;
 
+            // サムネ保存先の移動元は DownloadFolder 更新前 (=現状の実フォルダ) で確定させる
+            var oldThumbDir = ThumbnailCacheService.ResolveCacheDir();
+
             // ダウンロード設定
             settings.DownloadFolder = txtDownloadFolder.Text;
             if (cmbQuality.SelectedIndex >= 0 && cmbQuality.SelectedIndex < _qualityOrder.Length)
@@ -125,6 +129,16 @@ namespace IwaraDownloader.Forms
             }
             settings.MaxConcurrentDownloads = (int)numConcurrent.Value;
             settings.MaxRetryCount = (int)numRetry.Value;
+
+            // サムネ保存先 (変更時は既存キャッシュを新フォルダへ移動)
+            settings.ThumbnailCacheLocation = cmbThumbLocation.SelectedIndex == 1 ? 1 : 0;
+            var newThumbDir = ThumbnailCacheService.ResolveCacheDir();
+            if (!string.Equals(oldThumbDir, newThumbDir, StringComparison.OrdinalIgnoreCase))
+            {
+                // フォーム閉鎖後も完走するようバックグラウンドで移動。
+                // 移動が間に合わないファイルはキャッシュミス扱いで再DLされるだけなので安全。
+                _ = Task.Run(() => ThumbnailCacheService.MigrateCacheDir(oldThumbDir, newThumbDir));
+            }
 
             // 自動チェック
             settings.AutoCheckEnabled = chkAutoCheck.Checked;

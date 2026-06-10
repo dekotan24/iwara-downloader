@@ -51,6 +51,8 @@ namespace IwaraDownloader.Forms
             this.numConcurrent = new NumericUpDown();
             this.lblRetry = new Label();
             this.numRetry = new NumericUpDown();
+            this.lblThumbLocation = new Label();
+            this.cmbThumbLocation = new ComboBox();
 
             this.grpAutoCheck = new GroupBox();
             this.chkAutoCheck = new CheckBox();
@@ -224,9 +226,11 @@ namespace IwaraDownloader.Forms
             this.grpDownload.Controls.Add(this.numConcurrent);
             this.grpDownload.Controls.Add(this.lblRetry);
             this.grpDownload.Controls.Add(this.numRetry);
+            this.grpDownload.Controls.Add(this.lblThumbLocation);
+            this.grpDownload.Controls.Add(this.cmbThumbLocation);
             this.grpDownload.Location = new Point(6, 6);
             this.grpDownload.Name = "grpDownload";
-            this.grpDownload.Size = new Size(440, 145);
+            this.grpDownload.Size = new Size(440, 175);
             this.grpDownload.TabIndex = 0;
             this.grpDownload.TabStop = false;
             this.grpDownload.Text = "ダウンロード設定";
@@ -327,15 +331,39 @@ namespace IwaraDownloader.Forms
             this.numRetry.TabIndex = 8;
             this.numRetry.Value = new decimal(new int[] { 3, 0, 0, 0 });
 
-            // 
+            //
+            // lblThumbLocation
+            //
+            this.lblThumbLocation.AutoSize = true;
+            this.lblThumbLocation.Location = new Point(10, 145);
+            this.lblThumbLocation.Name = "lblThumbLocation";
+            this.lblThumbLocation.Size = new Size(80, 15);
+            this.lblThumbLocation.TabIndex = 9;
+            this.lblThumbLocation.Text = "サムネ保存先:";
+
+            //
+            // cmbThumbLocation
+            //
+            this.cmbThumbLocation.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbThumbLocation.FormattingEnabled = true;
+            this.cmbThumbLocation.Items.AddRange(new object[] {
+                "アプリ設定フォルダ (AppData\\Roaming)",
+                "動画保存先フォルダ (DL先\\thumbs)"
+            });
+            this.cmbThumbLocation.Location = new Point(100, 142);
+            this.cmbThumbLocation.Name = "cmbThumbLocation";
+            this.cmbThumbLocation.Size = new Size(240, 23);
+            this.cmbThumbLocation.TabIndex = 10;
+
+            //
             // grpAutoCheck
-            // 
+            //
             this.grpAutoCheck.Controls.Add(this.chkAutoCheck);
             this.grpAutoCheck.Controls.Add(this.lblCheckInterval);
             this.grpAutoCheck.Controls.Add(this.cmbCheckInterval);
             this.grpAutoCheck.Controls.Add(this.chkAutoDownload);
             this.grpAutoCheck.Controls.Add(this.chkDownloadExternal);
-            this.grpAutoCheck.Location = new Point(6, 157);
+            this.grpAutoCheck.Location = new Point(6, 187);
             this.grpAutoCheck.Name = "grpAutoCheck";
             this.grpAutoCheck.Size = new Size(440, 110);
             this.grpAutoCheck.TabIndex = 1;
@@ -409,7 +437,7 @@ namespace IwaraDownloader.Forms
             this.grpNotification.Controls.Add(this.chkToast);
             this.grpNotification.Controls.Add(this.chkStartMinimized);
             this.grpNotification.Controls.Add(this.chkMinimizeToTray);
-            this.grpNotification.Location = new Point(6, 275);
+            this.grpNotification.Location = new Point(6, 305);
             this.grpNotification.Name = "grpNotification";
             this.grpNotification.Size = new Size(440, 100);
             this.grpNotification.TabIndex = 2;
@@ -1484,6 +1512,8 @@ namespace IwaraDownloader.Forms
         private NumericUpDown numConcurrent;
         private Label lblRetry;
         private NumericUpDown numRetry;
+        private Label lblThumbLocation;
+        private ComboBox cmbThumbLocation;
         private GroupBox grpAutoCheck;
         private CheckBox chkAutoCheck;
         private Label lblCheckInterval;

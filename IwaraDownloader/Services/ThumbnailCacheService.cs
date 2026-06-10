@@ -35,7 +35,8 @@ namespace IwaraDownloader.Services
 
         public event EventHandler<string>? ThumbnailReady;
 
-        private readonly string _cacheDir;
+        // 保存先は設定で切替可能なため固定フィールドにせず GetCachePath で都度解決する
+        private string? _lastCacheDir;
         private readonly HttpClient _http;
         // メモリ LRU: 同一 lock 配下で操作。Image 所有権はキャッシュ側。
         // 外部に渡すのは必ず Bitmap clone (呼び出し側で Dispose 可能)。
@@ -51,17 +52,81 @@ namespace IwaraDownloader.Services
 
         private ThumbnailCacheService()
         {
-            _cacheDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "IwaraDownloader", "thumbs");
-            Directory.CreateDirectory(_cacheDir);
-
             _http = new HttpClient();
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("IwaraDownloader/thumb");
             _http.Timeout = TimeSpan.FromSeconds(20);
         }
 
-        public string GetCachePath(string videoId) => Path.Combine(_cacheDir, videoId + ".jpg");
+        /// <summary>Roaming 配下のデフォルトキャッシュフォルダ</summary>
+        public static string DefaultCacheDir => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "IwaraDownloader", "thumbs");
+
+        /// <summary>
+        /// 設定 (ThumbnailCacheLocation) に従って現在のキャッシュフォルダを解決する。
+        /// 1=ダウンロード先フォルダ配下の thumbs / それ以外=Roaming。
+        /// </summary>
+        public static string ResolveCacheDir()
+        {
+            var settings = Utils.SettingsManager.Instance.Settings;
+            if (settings.ThumbnailCacheLocation == 1 && !string.IsNullOrWhiteSpace(settings.DownloadFolder))
+                return Path.Combine(settings.DownloadFolder, "thumbs");
+            return DefaultCacheDir;
+        }
+
+        public string GetCachePath(string videoId)
+        {
+            var dir = ResolveCacheDir();
+            // 設定変更を即座に反映するため毎回解決するが、CreateDirectory はフォルダが
+            // 変わった時だけにする (競合しても CreateDirectory は冪等なので問題なし)
+            if (dir != _lastCacheDir)
+            {
+                try { Directory.CreateDirectory(dir); } catch { }
+                _lastCacheDir = dir;
+            }
+            return Path.Combine(dir, videoId + ".jpg");
+        }
+
+        /// <summary>
+        /// キャッシュフォルダ変更時に既存のサムネイルを新フォルダへ移動する (ベストエフォート)。
+        /// 使用中などで移動できないファイルはスキップ (キャッシュミス扱いで再DLされる)。
+        /// </summary>
+        /// <returns>移動したファイル数</returns>
+        public static int MigrateCacheDir(string oldDir, string newDir)
+        {
+            if (string.IsNullOrWhiteSpace(oldDir) || string.IsNullOrWhiteSpace(newDir)) return 0;
+            if (string.Equals(Path.GetFullPath(oldDir), Path.GetFullPath(newDir), StringComparison.OrdinalIgnoreCase)) return 0;
+            if (!Directory.Exists(oldDir)) return 0;
+
+            int moved = 0;
+            try
+            {
+                Directory.CreateDirectory(newDir);
+                foreach (var src in Directory.EnumerateFiles(oldDir, "*.jpg", SearchOption.TopDirectoryOnly))
+                {
+                    var dst = Path.Combine(newDir, Path.GetFileName(src));
+                    try
+                    {
+                        if (File.Exists(dst))
+                            File.Delete(src); // 移動先に既にあれば旧側を削除するだけでよい
+                        else
+                        {
+                            File.Move(src, dst);
+                            moved++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Thumb migrate skip {src}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Thumb migrate failed: {ex.Message}");
+            }
+            return moved;
+        }
 
         /// <summary>
         /// メモリキャッシュのみから取得 (I/O ゼロ、UI スレッド安全)。返り値はクローン。
