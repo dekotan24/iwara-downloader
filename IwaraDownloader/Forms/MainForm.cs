@@ -3238,6 +3238,104 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
+        /// 移動済みファイルの再リンク。
+        /// FastCopy などの外部ツールでファイルを移動した後に実行すると、
+        /// 移動先のファイルを検証 (サイズ → UUID タグ) した上で DB のパスだけを追従させる。
+        /// ファイルは一切動かさないため大量でも瞬時に終わる。
+        /// </summary>
+        private async void menuToolsRelinkFiles_Click(object sender, EventArgs e)
+        {
+            // DL 実行中はパス書き換えと DL 側の DB 更新が競合し得るのでブロック
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "ダウンロード実行中は実行できません。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var downloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var videos = _database.GetAllVideos();
+            var users = _database.GetAllSubscribedUsers();
+
+            menuToolsRelinkFiles.Enabled = false;
+            UseWaitCursor = true;
+            UpdateStatusBar("移動済みファイルをスキャン中...");
+            FileMoveHelper.RelinkResult result;
+            try
+            {
+                result = await Task.Run(
+                    () => FileMoveHelper.BuildRelinkPlan(videos, users, downloadFolder));
+            }
+            finally
+            {
+                UseWaitCursor = false;
+                menuToolsRelinkFiles.Enabled = true;
+            }
+
+            var notes = new List<string>();
+            if (result.UnverifiedCount > 0)
+                notes.Add($"検証不一致 (同名だが別物の可能性): {result.UnverifiedCount} 件");
+            if (result.MissingCount > 0)
+                notes.Add($"移動先でも見つからない (リンク切れ): {result.MissingCount} 件");
+            var notesText = notes.Count > 0 ? "\n\n" + string.Join("\n", notes) : "";
+
+            if (result.Items.Count == 0)
+            {
+                UpdateStatusBar("再リンク対象なし");
+                MessageBox.Show(this,
+                    "再リンクが必要なファイルはありません。" + notesText,
+                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int copiedCount = result.Items.Count(i => i.OldFileStillExists);
+            var copiedLine = copiedCount > 0
+                ? $"\n\nうち {copiedCount} 件は元の場所にもファイルが残っています (コピーされたもの)。\n" +
+                  "再リンク後も元のファイルは削除しません。不要なら手動で削除してください。"
+                : "";
+
+            var confirm = MessageBox.Show(this,
+                $"移動先で検証済みのファイルが {result.Items.Count} 件見つかりました。\n" +
+                "データベースのパスを移動先に書き換えますか?\n" +
+                "(ファイルは移動しません)" + copiedLine + notesText,
+                "移動済みファイルの再リンク",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            int relinked = 0;
+            await Task.Run(() =>
+            {
+                foreach (var (video, newPath, _) in result.Items)
+                {
+                    var oldPath = video.LocalFilePath;
+                    video.LocalFilePath = newPath;
+                    _database.UpdateVideo(video);
+                    relinked++;
+
+                    // メタデータ .json サイドカーが旧位置に置き去りなら追従させる
+                    try
+                    {
+                        var newJson = Path.ChangeExtension(newPath, ".json");
+                        var oldJson = Path.ChangeExtension(oldPath, ".json");
+                        if (!File.Exists(newJson) && File.Exists(oldJson))
+                            File.Move(oldJson, newJson);
+                    }
+                    catch { }
+                }
+            });
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"再リンク完了: {relinked} 件");
+
+            MessageBox.Show(this,
+                $"{relinked} 件のパスを移動先に書き換えました。" + copiedLine + notesText,
+                "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
         /// 統計ダッシュボード
         /// </summary>
         private void menuToolsStatistics_Click(object sender, EventArgs e)

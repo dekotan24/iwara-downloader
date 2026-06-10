@@ -180,6 +180,144 @@ namespace IwaraDownloader.Utils
             return plan;
         }
 
+        /// <summary>外部ツールで移動済みのファイルを DB に再リンクするための走査結果</summary>
+        public class RelinkResult
+        {
+            /// <summary>再リンク可能 (検証済み)。OldFileStillExists=true は移動でなくコピーだったケース</summary>
+            public List<(VideoInfo Video, string NewPath, bool OldFileStillExists)> Items { get; } = new();
+            /// <summary>旧パスに実体が無く、移動先でも見つからなかった件数</summary>
+            public int MissingCount { get; set; }
+            /// <summary>同名ファイルは見つかったが検証 (サイズ/UUID) で一致しなかった件数</summary>
+            public int UnverifiedCount { get; set; }
+        }
+
+        /// <summary>
+        /// FastCopy などの外部ツールでファイルを移動した後、DB のパスだけを追従させるための計画を作る。
+        /// 現在の保存先設定の配下に無い (またはリンク切れの) 動画について、保存先配下から
+        /// 同名ファイルを探し、サイズ → UUID タグの順で同一性を検証する。ファイルは一切動かさない。
+        /// </summary>
+        public static RelinkResult BuildRelinkPlan(
+            IEnumerable<VideoInfo> videos,
+            IEnumerable<SubscribedUser> users,
+            string downloadFolder)
+        {
+            var result = new RelinkResult();
+            if (string.IsNullOrWhiteSpace(downloadFolder)) return result;
+
+            var userById = users.ToDictionary(u => u.Id);
+            // 期待ベースごとの {ファイル名 → パス一覧}。再帰列挙は 1 ベースにつき 1 回で済ませる
+            var lookupCache = new Dictionary<string, Dictionary<string, List<string>>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var v in videos)
+            {
+                if (string.IsNullOrEmpty(v.LocalFilePath)) continue;
+
+                try
+                {
+                    string expectedBase;
+                    if (v.SubscribedUserId.HasValue
+                        && userById.TryGetValue(v.SubscribedUserId.Value, out var user))
+                    {
+                        expectedBase = user.GetSavePath(downloadFolder);
+                    }
+                    else
+                    {
+                        expectedBase = downloadFolder;
+                    }
+
+                    bool oldExists = File.Exists(v.LocalFilePath);
+                    if (oldExists && IsPathUnder(v.LocalFilePath, expectedBase)) continue; // 正常
+
+                    var lookup = GetFileLookup(lookupCache, expectedBase);
+                    var fileName = Path.GetFileName(v.LocalFilePath);
+                    if (!lookup.TryGetValue(fileName, out var candidates))
+                    {
+                        if (!oldExists) result.MissingCount++;
+                        continue; // 旧位置に実体があり移動先に候補が無いだけなら「未移動」(一括移動の領分)
+                    }
+
+                    string? match = null;
+                    foreach (var cand in candidates)
+                    {
+                        if (string.Equals(Path.GetFullPath(cand), Path.GetFullPath(v.LocalFilePath),
+                                StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        if (VerifyRelinkCandidate(v, cand))
+                        {
+                            match = cand;
+                            break;
+                        }
+                    }
+
+                    if (match == null)
+                    {
+                        result.UnverifiedCount++;
+                        continue;
+                    }
+                    result.Items.Add((v, match, oldExists));
+                }
+                catch { /* 不正パスはスキップ */ }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 候補ファイルが DB レコードと同一かを検証する。
+        /// 1. DB の FileSize と一致すれば OK (I/O ほぼゼロ)
+        /// 2. サイズで判定できない場合 (FileSize 未記録、またはタグ書き込みでサイズが変わった等) は
+        ///    mp4 埋め込みの FileUuid タグを読んで照合
+        /// どちらの材料も無いものは誤リンク防止のため不採用。
+        /// </summary>
+        private static bool VerifyRelinkCandidate(VideoInfo video, string candidatePath)
+        {
+            try
+            {
+                var candidateSize = new FileInfo(candidatePath).Length;
+                if (video.FileSize > 0 && candidateSize == video.FileSize) return true;
+
+                if (!string.IsNullOrEmpty(video.FileUuid))
+                {
+                    var (_, uuid) = Services.MetadataService.ReadIwaraTags(candidatePath);
+                    return string.Equals(uuid, video.FileUuid, StringComparison.OrdinalIgnoreCase);
+                }
+
+                // サイズも UUID も無い: 旧ファイルが実在するなら実サイズ同士で比較
+                if (File.Exists(video.LocalFilePath))
+                    return candidateSize == new FileInfo(video.LocalFilePath).Length;
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static Dictionary<string, List<string>> GetFileLookup(
+            Dictionary<string, Dictionary<string, List<string>>> cache, string baseDir)
+        {
+            var key = Path.GetFullPath(baseDir).TrimEnd('\\');
+            if (cache.TryGetValue(key, out var cached)) return cached;
+
+            var lookup = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (Directory.Exists(key))
+                {
+                    foreach (var f in Directory.EnumerateFiles(key, "*", SearchOption.AllDirectories))
+                    {
+                        var name = Path.GetFileName(f);
+                        if (!lookup.TryGetValue(name, out var list))
+                            lookup[name] = list = new List<string>();
+                        list.Add(f);
+                    }
+                }
+            }
+            catch { /* アクセス不能フォルダは空扱い */ }
+            cache[key] = lookup;
+            return lookup;
+        }
+
         /// <summary>
         /// 移動計画のドライブ別必要量と空き容量のサマリ行を作る。
         /// 同一ドライブ内の移動 (rename) は容量を消費しないため集計対象外。
