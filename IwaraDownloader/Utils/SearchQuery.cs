@@ -21,6 +21,14 @@ namespace IwaraDownloader.Utils
         private readonly List<Term> _terms = new();
         public bool IsEmpty => _terms.Count == 0;
 
+        /// <summary>
+        /// フリーテキスト (フィールド未指定) の語を AuthorUsername にもマッチさせるか。
+        /// アーティスト選択中は作者名が全動画で共通なため、作者名に部分一致する語で
+        /// 全件ヒットしてしまう。その場合は false にしてタイトル等のみで絞り込む。
+        /// 明示的な author: 指定はこのフラグの影響を受けない。
+        /// </summary>
+        public bool IncludeAuthorInFreeText { get; set; } = true;
+
         public static SearchQuery Parse(string input)
         {
             var q = new SearchQuery();
@@ -113,13 +121,13 @@ namespace IwaraDownloader.Utils
                 ["favorite"] = v => v.IsFavorite ? "true" : "false",
             };
 
-        private static bool MatchTerm(VideoInfo v, Term t)
+        private bool MatchTerm(VideoInfo v, Term t)
         {
             if (t.Field == "")
             {
                 // 全フィールド検索: title / author / tags / memo / status
                 return ContainsCI(v.Title, t.Value)
-                    || ContainsCI(v.AuthorUsername, t.Value)
+                    || (IncludeAuthorInFreeText && ContainsCI(v.AuthorUsername, t.Value))
                     || ContainsCI(v.Tags, t.Value)
                     || ContainsCI(v.Memo, t.Value)
                     || ContainsCI(StatusToText(v.Status), t.Value);

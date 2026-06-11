@@ -338,7 +338,21 @@ body {
     gap: 4px;
     flex-shrink: 0;
 }
-.fav-star { color: var(--text-muted); cursor: pointer; }
+.fav-star {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    border: none;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 15px;
+    line-height: 1.2;
+    color: #fff;
+    cursor: pointer;
+    opacity: 0.85;
+}
+.fav-star:hover { opacity: 1; color: var(--warning); }
 .fav-star.active { color: var(--warning); }
 
 /* Video Grid View */

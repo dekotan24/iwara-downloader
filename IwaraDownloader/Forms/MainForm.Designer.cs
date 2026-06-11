@@ -282,7 +282,7 @@ namespace IwaraDownloader.Forms
             this.txtVideoFilter.Font = new Font("Yu Gothic UI", 9F);
             this.txtVideoFilter.Location = new Point(3, 3);
             this.txtVideoFilter.Name = "txtVideoFilter";
-            this.txtVideoFilter.PlaceholderText = "🔍 フィルター(タイトルで絞り込み)...";
+            this.txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/アーティスト/タグ)...";
             this.txtVideoFilter.Size = new Size(540, 23);
             this.txtVideoFilter.TabIndex = 0;
             this.txtVideoFilter.TextChanged += new EventHandler(this.txtVideoFilter_TextChanged);

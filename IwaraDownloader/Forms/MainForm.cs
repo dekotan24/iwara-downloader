@@ -27,6 +27,7 @@ namespace IwaraDownloader.Forms
         private const string NODE_SKIPPED = "__SKIPPED__";
         private const string NODE_FAILED_VIDEOS = "__FAILED_VIDEOS__";
         private const string NODE_SINGLE_VIDEOS = "__SINGLE_VIDEOS__";
+        private const string NODE_FAVORITES = "__FAVORITES__";
         
         // フィルター用の全動画キャッシュ(フィルター前)
         private List<VideoInfo> _allVideoList = new();
@@ -885,6 +886,15 @@ namespace IwaraDownloader.Forms
             };
             treeViewChannels.Nodes.Add(allVideosNode);
 
+            // 「お気に入り」ノード (0件でも常時表示して機能を見つけやすくする)
+            var favoriteCount = allVideos.Count(v => v.IsFavorite);
+            var favoritesNode = new TreeNode($"⭐ お気に入り [{favoriteCount}]")
+            {
+                Tag = NODE_FAVORITES,
+                ForeColor = Color.Goldenrod
+            };
+            treeViewChannels.Nodes.Add(favoritesNode);
+
             // 「ダウンロードキュー」ノード
             var queueCount = downloadingCount + writingTagsCount + pendingCount;
             var allDownloadsNode = new TreeNode($"📥 ダウンロードキュー")
@@ -1007,10 +1017,12 @@ namespace IwaraDownloader.Forms
             {
                 _selectedChannel = user;
                 lblVideoHeader.Text = $"動画一覧 - {user.Username}";
+                txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/タグ)...";
             }
             else if (e.Node.Tag is string tag)
             {
                 _selectedChannel = null;
+                txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/アーティスト/タグ)...";
                 lblVideoHeader.Text = tag switch
                 {
                     NODE_ALL_VIDEOS => "全ての動画",
@@ -1020,6 +1032,7 @@ namespace IwaraDownloader.Forms
                     NODE_SKIPPED => "スキップ動画",
                     NODE_FAILED_VIDEOS => "エラー一覧",
                     NODE_SINGLE_VIDEOS => "単発動画",
+                    NODE_FAVORITES => "お気に入り",
                     _ => "動画一覧"
                 };
             }
@@ -1097,6 +1110,8 @@ namespace IwaraDownloader.Forms
                             NODE_FAILED_VIDEOS => _database.GetVideosByStatus(DownloadStatus.Failed),
                             NODE_SINGLE_VIDEOS => _database.GetAllVideos()
                                 .Where(v => !v.SubscribedUserId.HasValue).ToList(),
+                            NODE_FAVORITES => _database.GetAllVideos()
+                                .Where(v => v.IsFavorite).ToList(),
                             _ => new List<VideoInfo>(),
                         };
                     }
@@ -1152,8 +1167,10 @@ namespace IwaraDownloader.Forms
                     source = source.Where(v => tagTerms.All(tt => (v.Tags ?? "").ToLowerInvariant().Contains(tt)));
             }
 
-            // 検索クエリパース
+            // 検索クエリパース。アーティスト選択中は作者名が全件共通でノイズになるため、
+            // フリーテキストの作者名マッチを無効化 (ステータス系ビューでは混合検索)
             var query = SearchQuery.Parse(_currentFilterText);
+            query.IncludeAuthorInFreeText = _selectedChannel == null;
             if (query.IsEmpty)
             {
                 _displayVideoList = source.ToList();

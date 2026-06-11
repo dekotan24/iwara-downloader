@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -79,7 +80,8 @@ namespace IwaraDownloader.Services
             ConfigureApi(_app);
             ConfigureStaticFiles(_app);
 
-            BaseUrl = bindAll ? $"http://0.0.0.0:{port}" : $"http://127.0.0.1:{port}";
+            // 表示用 URL: 0.0.0.0 はアクセス先として使えないため、LAN バインド時は実際のローカル IP を出す
+            BaseUrl = bindAll ? $"http://{GetLanDisplayHost()}:{port}" : $"http://127.0.0.1:{port}";
             _logger.Info($"Web media server starting on {BaseUrl}");
 
             _runTask = _app.RunAsync();
@@ -120,6 +122,44 @@ namespace IwaraDownloader.Services
         public void Dispose()
         {
             StopAsync().Wait(5000);
+        }
+
+        /// <summary>
+        /// LAN 内アクセス用に表示するローカル IPv4 を返す。
+        /// プライベートアドレス (192.168 → 10 → 172.16-31 の優先順) を選び、無ければ最初の IPv4。
+        /// </summary>
+        private static string GetLanDisplayHost()
+        {
+            try
+            {
+                var candidates = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(ni => ni.OperationalStatus == OperationalStatus.Up
+                              && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                              && ni.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
+                    .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
+                    .Select(a => a.Address)
+                    .Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+                             && !IPAddress.IsLoopback(a))
+                    .Select(a => a.ToString())
+                    .ToList();
+
+                static bool Is172Private(string ip)
+                {
+                    var parts = ip.Split('.');
+                    return parts.Length == 4 && parts[0] == "172"
+                        && int.TryParse(parts[1], out var o) && o is >= 16 and <= 31;
+                }
+
+                return candidates.FirstOrDefault(ip => ip.StartsWith("192.168."))
+                    ?? candidates.FirstOrDefault(ip => ip.StartsWith("10."))
+                    ?? candidates.FirstOrDefault(Is172Private)
+                    ?? candidates.FirstOrDefault()
+                    ?? "127.0.0.1";
+            }
+            catch
+            {
+                return "127.0.0.1";
+            }
         }
 
         private void ConfigureStaticFiles(WebApplication app)
@@ -163,6 +203,7 @@ namespace IwaraDownloader.Services
             app.MapGet("/api/videos/{id:int}/stream", (Delegate)HandleStreamVideo);
             app.MapGet("/api/videos/{id:int}/thumbnail", (Delegate)HandleGetThumbnail);
             app.MapPost("/api/videos/{id:int}/thumbnail/retry", HandleRetryThumbnail);
+            app.MapPost("/api/videos/{id:int}/favorite", (Delegate)HandleSetFavorite);
 
             // --- Channels ---
             app.MapGet("/api/channels", HandleGetChannels);
@@ -297,13 +338,14 @@ namespace IwaraDownloader.Services
 
             if (!string.IsNullOrEmpty(search))
             {
-                var s = search.ToLowerInvariant();
-                videos = videos.Where(v =>
-                    (v.Title?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (v.AuthorUsername?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (v.Tags?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (v.VideoId?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false)
-                ).ToList();
+                // スペース区切りの AND 検索。各語がタイトル/アーティスト/タグ/VideoId のいずれかにマッチ
+                var terms = search.Split(new[] { ' ', '　' }, StringSplitOptions.RemoveEmptyEntries);
+                videos = videos.Where(v => terms.All(t =>
+                    (v.Title?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (v.AuthorUsername?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (v.Tags?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (v.VideoId?.Contains(t, StringComparison.OrdinalIgnoreCase) ?? false)
+                )).ToList();
             }
 
             if (!string.IsNullOrEmpty(rating))
@@ -356,6 +398,33 @@ namespace IwaraDownloader.Services
             if (video == null) return Results.NotFound(new { error = "Video not found" });
 
             return Results.Json(MapVideoDto(video), JsonOpts);
+        }
+
+        private async Task<IResult> HandleSetFavorite(int id, HttpContext ctx)
+        {
+            var authResult = RequireAuth(ctx);
+            if (authResult != null) return authResult;
+
+            var video = _database.GetVideoById(id);
+            if (video == null) return Results.NotFound(new { error = "Video not found" });
+
+            // body { "favorite": bool } で明示指定、省略時はトグル
+            bool? requested = null;
+            try
+            {
+                var body = await ctx.Request.ReadFromJsonAsync<FavoriteRequest>();
+                requested = body?.Favorite;
+            }
+            catch { /* body 無し・不正 JSON はトグル扱い */ }
+
+            bool fav = requested ?? !video.IsFavorite;
+            _database.SetVideoFavorite(id, fav);
+            return Results.Ok(new { id, favorite = fav });
+        }
+
+        private class FavoriteRequest
+        {
+            public bool? Favorite { get; set; }
         }
 
         private async Task<IResult> HandleStreamVideo(int id, HttpContext ctx)

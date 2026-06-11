@@ -187,13 +187,13 @@ const App = {
                 el.addEventListener('click', () => {
                     this.currentChannel = parseInt(el.dataset.channelId);
                     this.currentPage = 1;
-                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                    el.classList.add('active');
-                    this.currentView = 'channel';
                     const ch = this.channels.find(c => c.id === this.currentChannel);
                     document.getElementById('viewTitle').textContent = ch ? ch.username : 'Channel';
-                    this.loadVideos();
-                    this.closeSidebar();
+                    // setView 経由で統計/DLビューの表示状態をリセットする
+                    // (直接 loadVideos すると統計ビューの残骸が画面に残る)
+                    this.setView('channel');
+                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                    el.classList.add('active');
                 });
             });
         } catch (err) {
@@ -219,6 +219,9 @@ const App = {
         if (this.currentView === 'downloaded') {
             params.status = 'downloaded';
             viewTitle = 'Downloaded';
+        } else if (this.currentView === 'favorites') {
+            params.favorite = 1;
+            viewTitle = 'Favorites';
         } else if (this.currentView === 'errors') {
             params.status = 3; // Failed
             viewTitle = 'Errors';
@@ -264,6 +267,23 @@ const App = {
                     const playable = data.items.filter(v => v.hasFile);
                     Player.open(video, playable);
                 }
+            });
+        });
+
+        container.querySelectorAll('.fav-star').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                const item = data.items.find(v => v.id === id);
+                try {
+                    const r = await API.setFavorite(id, !(item && item.isFavorite));
+                    if (item) item.isFavorite = r.favorite;
+                    btn.classList.toggle('active', r.favorite);
+                    btn.innerHTML = r.favorite ? '&#9733;' : '&#9734;';
+                    btn.title = r.favorite ? 'Remove from favorites' : 'Add to favorites';
+                    // お気に入りビューで解除したらリストから消す
+                    if (this.currentView === 'favorites' && !r.favorite) this.loadVideos();
+                } catch {}
             });
         });
 
@@ -318,6 +338,8 @@ const App = {
                 <div class="video-thumb">
                     ${thumb}
                     ${v.durationFormatted ? `<span class="thumb-duration">${v.durationFormatted}</span>` : ''}
+                    <button class="fav-star ${v.isFavorite ? 'active' : ''}" data-id="${v.id}"
+                        title="${v.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">${v.isFavorite ? '&#9733;' : '&#9734;'}</button>
                 </div>
                 <div class="video-info">
                     <div class="video-title" title="${this.esc(v.title)}">${this.esc(v.title || 'Untitled')}</div>
@@ -444,7 +466,7 @@ const App = {
             const list = document.getElementById('recentDownloadsList');
             list.querySelectorAll('.video-item').forEach(el => {
                 el.addEventListener('click', (e) => {
-                    if (e.target.closest('.video-actions')) return;
+                    if (e.target.closest('.video-actions') || e.target.closest('.fav-star')) return;
                     const id = parseInt(el.dataset.id);
                     const video = s.recentDownloads.find(v => v.id === id);
                     if (video && video.hasFile) {

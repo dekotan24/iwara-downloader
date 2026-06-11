@@ -64,6 +64,8 @@ const API = {
 
     deleteNotFound() { return this.request('/errors/delete-not-found', { method: 'POST' }); },
 
+    setFavorite(id, favorite) { return this.request(`/videos/${id}/favorite`, { method: 'POST', body: { favorite } }); },
+
     queueDownload(id) { return this.request(`/downloads/${id}/queue`, { method: 'POST' }); },
 
     getActiveDownloads() { return this.request('/downloads/active'); },
