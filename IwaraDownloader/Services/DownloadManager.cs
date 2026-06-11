@@ -44,8 +44,14 @@ namespace IwaraDownloader.Services
         /// <summary>タグ書き込み中のタスク数</summary>
         public int WritingTagsCount => _activeTasks.Values.Count(t => t.Status == DownloadStatus.WritingTags);
 
-        /// <summary>待機中のタスク数</summary>
-        public int PendingTaskCount => _pendingQueue.Count + _pendingTasks.Count;
+        /// <summary>
+        /// 待機中のタスク数。
+        /// タスクはエンキュー時に _pendingQueue と _pendingTasks の両方へ登録されるため、
+        /// 足し算すると二重計上になる。_pendingTasks 単独が正しい待機数:
+        /// デキュー済みでスロット待ちのタスクを含み (実行開始まで残る)、
+        /// キャンセル済みタスク (_pendingQueue に残骸が残る) を含まない。
+        /// </summary>
+        public int PendingTaskCount => _pendingTasks.Count;
 
         /// <summary>実行中かどうか</summary>
         public bool IsRunning => _isRunning;
