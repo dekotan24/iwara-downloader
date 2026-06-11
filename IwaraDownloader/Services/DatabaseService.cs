@@ -421,7 +421,8 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM SubscribedUsers ORDER BY CreatedAt DESC";
+            // チャンネルツリー / Web のチャンネル一覧の表示順 (名前昇順)
+            command.CommandText = "SELECT * FROM SubscribedUsers ORDER BY Username COLLATE NOCASE ASC";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())

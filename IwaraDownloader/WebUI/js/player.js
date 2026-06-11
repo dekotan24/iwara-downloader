@@ -78,7 +78,7 @@ const Player = {
         if (!item) return;
 
         this.video.src = API.streamUrl(item.id);
-        document.getElementById('playerTitle').textContent = item.title || 'Untitled';
+        document.getElementById('playerTitle').textContent = item.title || '無題';
 
         const meta = document.getElementById('playerMeta');
         meta.innerHTML = [
@@ -124,7 +124,7 @@ const Player = {
         container.innerHTML = this.playlist.map((item, i) => `
             <div class="playlist-item ${i === this.currentIndex ? 'active' : ''}" data-index="${i}">
                 <span class="pl-idx">${i + 1}</span>
-                <span class="pl-title">${this.esc(item.title || 'Untitled')}</span>
+                <span class="pl-title">${this.esc(item.title || '無題')}</span>
                 <span class="pl-duration">${item.durationFormatted || ''}</span>
             </div>
         `).join('');

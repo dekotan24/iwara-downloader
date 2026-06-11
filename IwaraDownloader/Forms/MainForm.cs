@@ -248,6 +248,23 @@ namespace IwaraDownloader.Forms
             _freeSpaceTimer?.Dispose();
             _freeSpaceTimer = null;
 
+            // 終了処理に時間がかかる場合 (DL 中断・タグ書き込み完了待ち等) は
+            // 無応答に見えないようトレイバルーンで知らせる
+            try
+            {
+                bool slowClose = _downloadManager.DownloadingCount > 0
+                    || _downloadManager.WritingTagsCount > 0
+                    || _downloadManager.PendingTaskCount > 0
+                    || Services.MetadataService.WritesInProgress > 0;
+                if (slowClose)
+                {
+                    notifyIcon.ShowBalloonTip(10000, "IwaraDownloader",
+                        "終了処理中です。実行中のダウンロードの中断とタグ書き込みの完了を待っています...",
+                        ToolTipIcon.Info);
+                }
+            }
+            catch { }
+
             _downloadManager.Stop();
             // Webサーバー停止
             try { _webServer.StopAsync().Wait(5000); } catch { }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IwaraDownloader - Media Server</title>
+    <title>IwaraDownloader - メディアサーバー</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -11,11 +11,11 @@
     <div id="loginScreen" class="login-screen hidden">
         <div class="login-card">
             <h1>IwaraDownloader</h1>
-            <p>Media Server</p>
+            <p>メディアサーバー</p>
             <form id="loginForm">
-                <input type="text" id="loginUser" placeholder="Username" autocomplete="username" required>
-                <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" required>
-                <button type="submit">Login</button>
+                <input type="text" id="loginUser" placeholder="ユーザー名" autocomplete="username" required>
+                <input type="password" id="loginPass" placeholder="パスワード" autocomplete="current-password" required>
+                <button type="submit">ログイン</button>
                 <div id="loginError" class="error-msg hidden"></div>
             </form>
         </div>
@@ -27,38 +27,38 @@
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2>IwaraDownloader</h2>
-                <button class="btn-icon" id="btnToggleSidebar" title="Toggle sidebar">&#9776;</button>
+                <button class="btn-icon" id="btnToggleSidebar" title="サイドバー切替">&#9776;</button>
             </div>
 
             <div class="sidebar-section">
                 <div class="nav-item active" data-view="all">
-                    <span class="nav-icon">&#128247;</span> All Videos
+                    <span class="nav-icon">&#128247;</span> 全ての動画
                 </div>
                 <div class="nav-item" data-view="downloaded">
-                    <span class="nav-icon">&#10003;</span> Downloaded
+                    <span class="nav-icon">&#10003;</span> DL済み
                 </div>
                 <div class="nav-item" data-view="favorites">
-                    <span class="nav-icon">&#9733;</span> Favorites
+                    <span class="nav-icon">&#9733;</span> お気に入り
                 </div>
                 <div class="nav-item" data-view="errors">
-                    <span class="nav-icon">&#9888;</span> Errors
+                    <span class="nav-icon">&#9888;</span> エラー
                     <span class="badge" id="errorBadge"></span>
                 </div>
                 <div class="nav-item" data-view="stats">
-                    <span class="nav-icon">&#128202;</span> Statistics
+                    <span class="nav-icon">&#128202;</span> 統計
                 </div>
                 <div class="nav-item" data-view="downloads">
-                    <span class="nav-icon">&#8595;</span> Active Downloads
+                    <span class="nav-icon">&#8595;</span> ダウンロード状況
                 </div>
             </div>
 
             <div class="sidebar-section">
-                <div class="section-title">Channels</div>
+                <div class="section-title">チャンネル</div>
                 <div id="channelList" class="channel-list"></div>
             </div>
 
             <div class="sidebar-footer">
-                <button class="btn-text" id="btnLogout">Logout</button>
+                <button class="btn-text" id="btnLogout">ログアウト</button>
             </div>
         </nav>
 
@@ -71,27 +71,27 @@
             <div class="top-bar">
                 <button class="btn-icon mobile-menu" id="btnMobileMenu">&#9776;</button>
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search title, artist, tags...">
+                    <input type="text" id="searchInput" placeholder="タイトル・アーティスト・タグで検索...">
                 </div>
                 <div class="top-actions">
                     <select id="sortSelect">
-                        <option value="added-desc">Newest Added</option>
-                        <option value="added-asc">Oldest Added</option>
-                        <option value="date-desc">Latest Posted</option>
-                        <option value="date-asc">Oldest Posted</option>
-                        <option value="title-asc">Title A-Z</option>
-                        <option value="title-desc">Title Z-A</option>
-                        <option value="size-desc">Largest First</option>
-                        <option value="duration-desc">Longest First</option>
+                        <option value="added-desc">追加が新しい順</option>
+                        <option value="added-asc">追加が古い順</option>
+                        <option value="date-desc">投稿が新しい順</option>
+                        <option value="date-asc">投稿が古い順</option>
+                        <option value="title-asc">タイトル昇順</option>
+                        <option value="title-desc">タイトル降順</option>
+                        <option value="size-desc">サイズが大きい順</option>
+                        <option value="duration-desc">再生時間が長い順</option>
                     </select>
-                    <button class="btn-icon" id="btnViewGrid" title="Grid view">&#9638;</button>
-                    <button class="btn-icon active" id="btnViewList" title="List view">&#9776;</button>
+                    <button class="btn-icon" id="btnViewGrid" title="グリッド表示">&#9638;</button>
+                    <button class="btn-icon active" id="btnViewList" title="リスト表示">&#9776;</button>
                 </div>
             </div>
 
             <!-- Filter bar -->
             <div class="filter-bar" id="filterBar">
-                <span class="filter-label" id="viewTitle">All Videos</span>
+                <span class="filter-label" id="viewTitle">全ての動画</span>
                 <span class="filter-count" id="videoCount"></span>
                 <div class="filter-actions" id="filterActions"></div>
             </div>
@@ -120,8 +120,8 @@
                     </div>
                     <div class="playlist-panel" id="playlistPanel">
                         <div class="playlist-header">
-                            <span>Playlist</span>
-                            <button class="btn-text" id="btnShuffle" title="Shuffle">&#128256; Shuffle</button>
+                            <span>プレイリスト</span>
+                            <button class="btn-text" id="btnShuffle" title="シャッフル">&#128256; シャッフル</button>
                         </div>
                         <div class="playlist-items" id="playlistItems"></div>
                     </div>

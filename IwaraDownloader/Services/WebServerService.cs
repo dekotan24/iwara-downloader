@@ -95,14 +95,17 @@ namespace IwaraDownloader.Services
             try
             {
                 _cts?.Cancel();
+                // 先にホストを止める。_runTask (RunAsync) はホスト停止までは完了しないため、
+                // 先に _runTask を待つと必ず 5 秒タイムアウトまでブロックしていた
+                // (アプリ終了が常に約5秒遅くなる原因だった)
+                using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                await _app.StopAsync(stopCts.Token);
                 if (_runTask != null)
                 {
-                    try { await _runTask.WaitAsync(TimeSpan.FromSeconds(5)); }
+                    try { await _runTask.WaitAsync(TimeSpan.FromSeconds(2)); }
                     catch (OperationCanceledException) { }
                     catch (TimeoutException) { }
                 }
-                using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await _app.StopAsync(stopCts.Token);
             }
             catch (Exception ex)
             {
