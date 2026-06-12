@@ -63,29 +63,37 @@ namespace IwaraDownloader.Utils
         }
 
         /// <summary>
-        /// 設定を保存する
+        /// 設定を保存する。
+        /// 書き込み途中でプロセスが強制終了されても settings.json が破損しないよう、
+        /// 一時ファイルに書いてからアトミックに差し替える。
+        /// (バックグラウンドのキャッシュ移行などからも呼ばれるため lock で直列化)
         /// </summary>
         public void Save()
         {
-            try
+            lock (_lock)
             {
-                var directory = Path.GetDirectoryName(AppSettings.ConfigFilePath);
-                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                try
                 {
-                    Directory.CreateDirectory(directory);
-                }
+                    var directory = Path.GetDirectoryName(AppSettings.ConfigFilePath);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
 
-                var options = new JsonSerializerOptions
+                    var options = new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    };
+                    var json = JsonSerializer.Serialize(Settings, options);
+                    var tmpPath = AppSettings.ConfigFilePath + ".tmp";
+                    File.WriteAllText(tmpPath, json);
+                    File.Move(tmpPath, AppSettings.ConfigFilePath, overwrite: true);
+                }
+                catch (Exception ex)
                 {
-                    WriteIndented = true
-                };
-                var json = JsonSerializer.Serialize(Settings, options);
-                File.WriteAllText(AppSettings.ConfigFilePath, json);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"設定保存エラー: {ex.Message}");
-                throw;
+                    System.Diagnostics.Debug.WriteLine($"設定保存エラー: {ex.Message}");
+                    throw;
+                }
             }
         }
 
@@ -103,6 +111,18 @@ namespace IwaraDownloader.Utils
         public string GetIwaraPassword()
         {
             return CryptoHelper.Decrypt(Settings.IwaraPasswordEncrypted);
+        }
+
+        public void SetWebServerPassword(string password)
+        {
+            Settings.WebServerPasswordEncrypted = string.IsNullOrEmpty(password)
+                ? string.Empty
+                : CryptoHelper.Encrypt(password);
+        }
+
+        public string GetWebServerPassword()
+        {
+            return CryptoHelper.Decrypt(Settings.WebServerPasswordEncrypted);
         }
 
         /// <summary>
@@ -145,7 +165,12 @@ namespace IwaraDownloader.Utils
                 EnableCompletionSound = Settings.EnableCompletionSound,
                 CompletionSoundPath = Settings.CompletionSoundPath,
                 EnableErrorSound = Settings.EnableErrorSound,
-                ErrorSoundPath = Settings.ErrorSoundPath
+                ErrorSoundPath = Settings.ErrorSoundPath,
+                // Webメディアサーバー (パスワードは除外)
+                WebServerPort = Settings.WebServerPort,
+                WebServerBindAll = Settings.WebServerBindAll,
+                WebServerUsername = Settings.WebServerUsername,
+                WebServerAutoStart = Settings.WebServerAutoStart
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };
@@ -162,8 +187,10 @@ namespace IwaraDownloader.Utils
             {
                 // パスワードは維持
                 var currentPassword = Settings.IwaraPasswordEncrypted;
+                var currentWebPassword = Settings.WebServerPasswordEncrypted;
                 Settings = importedSettings;
                 Settings.IwaraPasswordEncrypted = currentPassword;
+                Settings.WebServerPasswordEncrypted = currentWebPassword;
                 Save();
             }
         }

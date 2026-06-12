@@ -52,6 +52,8 @@ namespace IwaraDownloader.Forms
             this.menuToolsSearchImport = new ToolStripMenuItem();
             this.menuToolsImportFolder = new ToolStripMenuItem();
             this.menuToolsDuplicateCheck = new ToolStripMenuItem();
+            this.menuToolsRelocateFiles = new ToolStripMenuItem();
+            this.menuToolsRelinkFiles = new ToolStripMenuItem();
             this.menuToolsStatistics = new ToolStripMenuItem();
 
             // URLテキストボックス
@@ -88,6 +90,7 @@ namespace IwaraDownloader.Forms
             this.statusStrip = new StatusStrip();
             this.lblStatus = new ToolStripStatusLabel();
             this.lblDownloadCount = new ToolStripStatusLabel();
+            this.lblFreeSpace = new ToolStripStatusLabel();
             this.progressBar = new ToolStripProgressBar();
 
             // タスクトレイアイコン
@@ -279,7 +282,7 @@ namespace IwaraDownloader.Forms
             this.txtVideoFilter.Font = new Font("Yu Gothic UI", 9F);
             this.txtVideoFilter.Location = new Point(3, 3);
             this.txtVideoFilter.Name = "txtVideoFilter";
-            this.txtVideoFilter.PlaceholderText = "🔍 フィルター(タイトルで絞り込み)...";
+            this.txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/アーティスト/タグ)...";
             this.txtVideoFilter.Size = new Size(540, 23);
             this.txtVideoFilter.TabIndex = 0;
             this.txtVideoFilter.TextChanged += new EventHandler(this.txtVideoFilter_TextChanged);
@@ -650,6 +653,8 @@ namespace IwaraDownloader.Forms
                 this.menuToolsSearchImport,
                 this.menuToolsImportFolder,
                 this.menuToolsDuplicateCheck,
+                this.menuToolsRelocateFiles,
+                this.menuToolsRelinkFiles,
                 this.menuToolsStatistics
             });
             this.btnTools.Name = "btnTools";
@@ -729,7 +734,23 @@ namespace IwaraDownloader.Forms
             this.menuToolsDuplicateCheck.Text = "重複チェック...";
             this.menuToolsDuplicateCheck.Click += new EventHandler(this.menuToolsDuplicateCheck_Click);
 
-            // 
+            //
+            // menuToolsRelocateFiles
+            //
+            this.menuToolsRelocateFiles.Name = "menuToolsRelocateFiles";
+            this.menuToolsRelocateFiles.Size = new Size(180, 22);
+            this.menuToolsRelocateFiles.Text = "未移動ファイルの一括移動...";
+            this.menuToolsRelocateFiles.Click += new EventHandler(this.menuToolsRelocateFiles_Click);
+
+            //
+            // menuToolsRelinkFiles
+            //
+            this.menuToolsRelinkFiles.Name = "menuToolsRelinkFiles";
+            this.menuToolsRelinkFiles.Size = new Size(180, 22);
+            this.menuToolsRelinkFiles.Text = "移動済みファイルの再リンク...";
+            this.menuToolsRelinkFiles.Click += new EventHandler(this.menuToolsRelinkFiles_Click);
+
+            //
             // menuToolsStatistics
             // 
             this.menuToolsStatistics.Name = "menuToolsStatistics";
@@ -743,6 +764,7 @@ namespace IwaraDownloader.Forms
             this.statusStrip.Items.AddRange(new ToolStripItem[] {
                 this.lblStatus,
                 this.lblDownloadCount,
+                this.lblFreeSpace,
                 this.progressBar
             });
             this.statusStrip.Location = new Point(0, 600);
@@ -759,12 +781,20 @@ namespace IwaraDownloader.Forms
             this.lblStatus.Spring = true;
             this.lblStatus.TextAlign = ContentAlignment.MiddleLeft;
 
-            // 
+            //
             // lblDownloadCount
-            // 
+            //
             this.lblDownloadCount.Name = "lblDownloadCount";
             this.lblDownloadCount.Size = new Size(100, 17);
             this.lblDownloadCount.Text = "DL: 0 / 待機: 0";
+
+            //
+            // lblFreeSpace
+            //
+            this.lblFreeSpace.Name = "lblFreeSpace";
+            this.lblFreeSpace.Size = new Size(80, 17);
+            this.lblFreeSpace.Text = "";
+            this.lblFreeSpace.BorderSides = ToolStripStatusLabelBorderSides.Left;
 
             // 
             // progressBar
@@ -817,10 +847,12 @@ namespace IwaraDownloader.Forms
             // 
             // contextMenuChannel
             // 
+            this.menuChDeleteNotFound = new ToolStripMenuItem();
             this.contextMenuChannel.Items.AddRange(new ToolStripItem[] {
                 this.menuChOpen,
                 this.menuChCheckNow,
                 this.menuChDownloadAll,
+                this.menuChDeleteNotFound,
                 this.menuChCheckFiles,
                 this.menuChSeparator1,
                 this.menuChSetSavePath,
@@ -858,6 +890,14 @@ namespace IwaraDownloader.Forms
             this.menuChDownloadAll.Size = new Size(179, 22);
             this.menuChDownloadAll.Text = "全てダウンロード";
             this.menuChDownloadAll.Click += new EventHandler(this.menuChDownloadAll_Click);
+
+            //
+            // menuChDeleteNotFound
+            //
+            this.menuChDeleteNotFound.Name = "menuChDeleteNotFound";
+            this.menuChDeleteNotFound.Size = new Size(179, 22);
+            this.menuChDeleteNotFound.Text = "Not Found を除外";
+            this.menuChDeleteNotFound.Click += new EventHandler(this.menuChDeleteNotFound_Click);
 
             //
             // menuChCheckFiles (このチャンネルのDL済みファイルの存在チェック)
@@ -1101,6 +1141,8 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuToolsImportFolder;
         private ToolStripMenuItem menuToolsSearchImport;
         private ToolStripMenuItem menuToolsDuplicateCheck;
+        private ToolStripMenuItem menuToolsRelocateFiles;
+        private ToolStripMenuItem menuToolsRelinkFiles;
         private ToolStripMenuItem menuToolsStatistics;
         private TreeView treeViewChannels;
         private Panel panelChannelHeader;
@@ -1117,6 +1159,7 @@ namespace IwaraDownloader.Forms
         private StatusStrip statusStrip;
         private ToolStripStatusLabel lblStatus;
         private ToolStripStatusLabel lblDownloadCount;
+        private ToolStripStatusLabel lblFreeSpace;
         private ToolStripProgressBar progressBar;
         private NotifyIcon notifyIcon;
         private ContextMenuStrip contextMenuTray;
@@ -1139,6 +1182,7 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuChDisable;
         private ToolStripSeparator menuChSeparator3;
         private ToolStripMenuItem menuChDelete;
+        private ToolStripMenuItem menuChDeleteNotFound;
         private ContextMenuStrip contextMenuVideo;
         private ToolStripMenuItem menuVidDownload, menuVidCancel, menuVidRetryFailed, menuVidReDownload;
         private ToolStripMenuItem menuVidRefreshInfo, menuVidCheckFileExists;

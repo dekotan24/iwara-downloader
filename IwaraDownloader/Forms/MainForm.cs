@@ -13,6 +13,7 @@ namespace IwaraDownloader.Forms
     {
         private readonly DownloadManager _downloadManager;
         private readonly DatabaseService _database;
+        private readonly WebServerService _webServer;
         private bool _isClosing = false;
         
         // 現在選択中のチャンネル
@@ -26,6 +27,7 @@ namespace IwaraDownloader.Forms
         private const string NODE_SKIPPED = "__SKIPPED__";
         private const string NODE_FAILED_VIDEOS = "__FAILED_VIDEOS__";
         private const string NODE_SINGLE_VIDEOS = "__SINGLE_VIDEOS__";
+        private const string NODE_FAVORITES = "__FAVORITES__";
         
         // フィルター用の全動画キャッシュ(フィルター前)
         private List<VideoInfo> _allVideoList = new();
@@ -55,6 +57,9 @@ namespace IwaraDownloader.Forms
             InitializeComponent();
             _downloadManager = new DownloadManager();
             _database = DatabaseService.Instance;
+            _webServer = new WebServerService();
+            _webServer.SetDownloadManager(_downloadManager);
+            WebServerServiceHolder.Instance = _webServer;
         }
 
         #region Form Events
@@ -96,6 +101,15 @@ namespace IwaraDownloader.Forms
             _downloadManager.AutoCheckCompleted += OnAutoCheckCompleted;
             _downloadManager.BackgroundTaskProgress += OnBackgroundTaskProgress;
             _downloadManager.BackgroundTaskCompleted += OnBackgroundTaskCompleted;
+            _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => UpdateStatusBar(msg));
+            _downloadManager.UserAdded += (_, _) => PostToUi(() => RefreshChannelTree());
+
+            // 前回プロセスがファイル移動中に強制終了されていた場合の整合性復旧
+            SplashForm.UpdateStatus("整合性をチェック中...", 35);
+            var recoveryMessage = Services.FileMoveJournal.RecoverIfNeeded(_database);
+
+            // サムネキャッシュ移行が中断されていた場合の残り移行 (バックグラウンド)
+            _ = Task.Run(Services.ThumbnailCacheService.SyncCacheDirIfMoved);
 
             // 環境チェック
             SplashForm.UpdateStatus("環境をチェック中...", 40);
@@ -133,6 +147,30 @@ namespace IwaraDownloader.Forms
 
             // 起動完了
             SplashForm.UpdateStatus("起動完了", 100);
+
+            // 整合性復旧の結果をユーザーに通知 (CheckEnvironment のステータス表示の後に上書き)
+            if (recoveryMessage != null)
+                UpdateStatusBar(recoveryMessage);
+
+            // Webメディアサーバー自動開始
+            if (settings.WebServerAutoStart)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _webServer.StartAsync(settings.WebServerPort, settings.WebServerBindAll);
+                        LoggingService.Instance.Info($"Web media server auto-started on port {settings.WebServerPort}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Instance.Error("Web media server auto-start failed", ex);
+                    }
+                });
+            }
+
+            // DL先ドライブの空き容量監視
+            StartFreeSpaceMonitor();
 
             // 起動時更新チェック
             if (settings.CheckUpdateOnStartup)
@@ -188,7 +226,49 @@ namespace IwaraDownloader.Forms
                 }
             }
 
+            // バックグラウンドスレッドからのイベントが破棄済みフォームへ届かないよう先に解除
+            _downloadManager.TaskProgressChanged -= OnTaskProgressChanged;
+            _downloadManager.TaskStatusChanged -= OnTaskStatusChanged;
+            _downloadManager.NewVideosFound -= OnNewVideosFound;
+            _downloadManager.AutoCheckCompleted -= OnAutoCheckCompleted;
+            _downloadManager.BackgroundTaskProgress -= OnBackgroundTaskProgress;
+            _downloadManager.BackgroundTaskCompleted -= OnBackgroundTaskCompleted;
+
+            // debounce タイマー停止 (Tick が閉鎖処理中に走らないように)
+            _channelTreeRefreshTimer?.Stop();
+            _channelTreeRefreshTimer?.Dispose();
+            _channelTreeRefreshTimer = null;
+            _videoListRefreshTimer?.Stop();
+            _videoListRefreshTimer?.Dispose();
+            _videoListRefreshTimer = null;
+            _downloadCountTimer?.Stop();
+            _downloadCountTimer?.Dispose();
+            _downloadCountTimer = null;
+            _freeSpaceTimer?.Stop();
+            _freeSpaceTimer?.Dispose();
+            _freeSpaceTimer = null;
+
+            // 終了処理に時間がかかる場合 (DL 中断・タグ書き込み完了待ち等) は
+            // 無応答に見えないようトレイバルーンで知らせる
+            try
+            {
+                bool slowClose = _downloadManager.DownloadingCount > 0
+                    || _downloadManager.WritingTagsCount > 0
+                    || _downloadManager.PendingTaskCount > 0
+                    || Services.MetadataService.WritesInProgress > 0;
+                if (slowClose)
+                {
+                    notifyIcon.ShowBalloonTip(10000, "IwaraDownloader",
+                        "終了処理中です。実行中のダウンロードの中断とタグ書き込みの完了を待っています...",
+                        ToolTipIcon.Info);
+                }
+            }
+            catch { }
+
             _downloadManager.Stop();
+            // Webサーバー停止
+            try { _webServer.StopAsync().Wait(5000); } catch { }
+            _webServer.Dispose();
             // mp4 タグ書き込み中の moov atom 破損を防ぐため、書き込み完了まで最大10秒待機
             // (進行中の書き込みが無ければ即座に戻る)
             Services.MetadataService.WaitForWritesToComplete(10000);
@@ -201,9 +281,10 @@ namespace IwaraDownloader.Forms
                 try { RemoveClipboardFormatListener(this.Handle); } catch { }
                 _clipboardListenerRegistered = false;
             }
+            // 表示モード切替で _thumbImageList が null でも購読は残り得るため常に解除
+            try { Services.ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady; } catch { }
             if (_thumbImageList != null)
             {
-                try { Services.ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady; } catch { }
                 try { _thumbImageList.Dispose(); } catch { }
                 try { _placeholderThumb?.Dispose(); } catch { }
                 _thumbImageList = null;
@@ -406,12 +487,11 @@ namespace IwaraDownloader.Forms
 
         #region Toolbar Buttons
 
-        private async void btnAddUser_Click(object sender, EventArgs e)
+        private void btnAddUser_Click(object sender, EventArgs e)
         {
             var input = ShowInputDialog("チャンネル追加", "ユーザー名またはプロフィールURLを入力:");
             if (string.IsNullOrEmpty(input)) return;
 
-            // URL形式の場合はiwaraのURLかチェック
             var isUrl = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                         input.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
@@ -429,7 +509,6 @@ namespace IwaraDownloader.Forms
             }
             else
             {
-                // ユーザー名のバリデーション
                 if (!Helpers.IsValidUsername(input))
                 {
                     MessageBox.Show(
@@ -441,7 +520,7 @@ namespace IwaraDownloader.Forms
                 }
             }
 
-            await AddUserAsync(input);
+            _downloadManager.EnqueueSubscribedUser(input);
         }
 
         private async void btnAddVideo_Click(object sender, EventArgs e)
@@ -462,27 +541,11 @@ namespace IwaraDownloader.Forms
             await AddVideoAsync(url);
         }
 
-        private async void btnCheckNow_Click(object sender, EventArgs e)
+        private void btnCheckNow_Click(object sender, EventArgs e)
         {
-            btnCheckNow.Enabled = false;
-            UpdateStatusBar("新着確認中...");
-
-            try
-            {
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                await _downloadManager.CheckForNewVideosAsync(progress);
-                RefreshChannelTree();
-                RefreshVideoList();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("新着確認中にエラー", ex);
-                UpdateStatusBar($"確認エラー: {ex.Message}");
-            }
-            finally
-            {
-                btnCheckNow.Enabled = true;
-            }
+            // 実際の取得は統合ワーカーが 1 件ずつ処理する (チャンネル追加との「被り」防止)。
+            // ここではキューに積むだけで即戻る。進捗はステータスバーに随時表示される。
+            _downloadManager.EnqueueAllUsersForCheck();
         }
 
         private void btnStartAll_Click(object sender, EventArgs e)
@@ -507,6 +570,10 @@ namespace IwaraDownloader.Forms
             if (form.ShowDialog(this) == DialogResult.OK)
             {
                 _downloadManager.UpdateAutoCheckTimer();
+                _downloadManager.NotifyConcurrentLimitChanged();
+                // DL先や空き容量下限が変わった可能性があるため即時更新
+                ScheduleFreeSpaceUpdate();
+                RefreshVideoList();
             }
         }
 
@@ -551,7 +618,7 @@ namespace IwaraDownloader.Forms
             else if (Helpers.IsUserProfileUrl(input))
             {
                 // iwaraのプロフィールURL
-                await AddUserAsync(input);
+                _downloadManager.EnqueueSubscribedUser(input);
             }
             else if (isUrl)
             {
@@ -574,34 +641,7 @@ namespace IwaraDownloader.Forms
             else
             {
                 // 有効なユーザー名
-                await AddUserAsync(input);
-            }
-        }
-
-        private async Task AddUserAsync(string input)
-        {
-            UpdateStatusBar("チャンネルを追加中...");
-
-            try
-            {
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                var user = await _downloadManager.AddSubscribedUserAsync(input, progress);
-
-                if (user != null)
-                {
-                    RefreshChannelTree();
-                    UpdateStatusBar($"チャンネル「{user.Username}」を追加しました");
-                }
-                else
-                {
-                    MessageBox.Show("チャンネルの追加に失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    UpdateStatusBar("チャンネル追加失敗");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"エラー: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                UpdateStatusBar("エラー");
+                _downloadManager.EnqueueSubscribedUser(input);
             }
         }
 
@@ -863,6 +903,15 @@ namespace IwaraDownloader.Forms
             };
             treeViewChannels.Nodes.Add(allVideosNode);
 
+            // 「お気に入り」ノード (0件でも常時表示して機能を見つけやすくする)
+            var favoriteCount = allVideos.Count(v => v.IsFavorite);
+            var favoritesNode = new TreeNode($"⭐ お気に入り [{favoriteCount}]")
+            {
+                Tag = NODE_FAVORITES,
+                ForeColor = Color.Goldenrod
+            };
+            treeViewChannels.Nodes.Add(favoritesNode);
+
             // 「ダウンロードキュー」ノード
             var queueCount = downloadingCount + writingTagsCount + pendingCount;
             var allDownloadsNode = new TreeNode($"📥 ダウンロードキュー")
@@ -985,10 +1034,12 @@ namespace IwaraDownloader.Forms
             {
                 _selectedChannel = user;
                 lblVideoHeader.Text = $"動画一覧 - {user.Username}";
+                txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/タグ)...";
             }
             else if (e.Node.Tag is string tag)
             {
                 _selectedChannel = null;
+                txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/アーティスト/タグ)...";
                 lblVideoHeader.Text = tag switch
                 {
                     NODE_ALL_VIDEOS => "全ての動画",
@@ -998,6 +1049,7 @@ namespace IwaraDownloader.Forms
                     NODE_SKIPPED => "スキップ動画",
                     NODE_FAILED_VIDEOS => "エラー一覧",
                     NODE_SINGLE_VIDEOS => "単発動画",
+                    NODE_FAVORITES => "お気に入り",
                     _ => "動画一覧"
                 };
             }
@@ -1075,6 +1127,8 @@ namespace IwaraDownloader.Forms
                             NODE_FAILED_VIDEOS => _database.GetVideosByStatus(DownloadStatus.Failed),
                             NODE_SINGLE_VIDEOS => _database.GetAllVideos()
                                 .Where(v => !v.SubscribedUserId.HasValue).ToList(),
+                            NODE_FAVORITES => _database.GetAllVideos()
+                                .Where(v => v.IsFavorite).ToList(),
                             _ => new List<VideoInfo>(),
                         };
                     }
@@ -1130,8 +1184,10 @@ namespace IwaraDownloader.Forms
                     source = source.Where(v => tagTerms.All(tt => (v.Tags ?? "").ToLowerInvariant().Contains(tt)));
             }
 
-            // 検索クエリパース
+            // 検索クエリパース。アーティスト選択中は作者名が全件共通でノイズになるため、
+            // フリーテキストの作者名マッチを無効化 (ステータス系ビューでは混合検索)
             var query = SearchQuery.Parse(_currentFilterText);
+            query.IncludeAuthorInFreeText = _selectedChannel == null;
             if (query.IsEmpty)
             {
                 _displayVideoList = source.ToList();
@@ -1574,9 +1630,12 @@ namespace IwaraDownloader.Forms
             }
 
             // 「全てダウンロード」はチャンネル・未 DL・エラー・単発動画ノードで表示
-            var showDownloadAll = isUserNode || 
+            var showDownloadAll = isUserNode ||
                 (isSpecialNode && (selectedNode?.Tag as string) is NODE_NOT_DOWNLOADED or NODE_FAILED_VIDEOS or NODE_SINGLE_VIDEOS);
             menuChDownloadAll.Visible = showDownloadAll;
+
+            // 「Not Found を除外」はエラーノードでのみ表示
+            menuChDeleteNotFound.Visible = isSpecialNode && (selectedNode?.Tag as string) == NODE_FAILED_VIDEOS;
 
             // メニュー項目がない場合はキャンセル
             if (!showDownloadAll && !isUserNode && !canCheckFiles)
@@ -1593,19 +1652,14 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        private async void menuChCheckNow_Click(object sender, EventArgs e)
+        private void menuChCheckNow_Click(object sender, EventArgs e)
         {
             if (treeViewChannels.SelectedNode?.Tag is SubscribedUser user)
             {
-                UpdateStatusBar($"{user.Username} の新着を確認中...");
-                var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                
-                // 選択したチャンネルのみチェック
-                await _downloadManager.CheckForNewVideosAsync(user, progress);
-                
-                RefreshChannelTree();
-                RefreshVideoList();
-                UpdateStatusBar($"{user.Username} の確認完了");
+                // 手動の単一チェックは優先キューへ (通常の新着チェックより先に処理される)。
+                // 取得は統合ワーカーが処理し、進捗はステータスバーに表示される。
+                _downloadManager.EnqueueUserForCheck(user, priority: true);
+                UpdateStatusBar($"{user.Username} の新着確認をキューに登録しました");
             }
         }
 
@@ -1677,6 +1731,37 @@ namespace IwaraDownloader.Forms
             UpdateStatusBar($"{videos.Count} 件のダウンロードをキューに追加しました");
         }
 
+        private void menuChDeleteNotFound_Click(object sender, EventArgs e)
+        {
+            var errors = _database.GetVideosByStatus(DownloadStatus.Failed);
+            var notFound = errors.Where(v =>
+                v.LastErrorMessage != null &&
+                (v.LastErrorMessage.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+                 v.LastErrorMessage.Contains("404", StringComparison.OrdinalIgnoreCase) ||
+                 v.LastErrorMessage.Contains("deleted", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (notFound.Count == 0)
+            {
+                MessageBox.Show("Not Found の動画はありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Not Found (削除済み) の動画 {notFound.Count} 件をデータベースから削除しますか？\n\n※ローカルファイルは削除されません",
+                "Not Found を除外",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes) return;
+
+            var ids = notFound.Select(v => v.Id).ToList();
+            int deleted = _database.DeleteVideosBatch(ids);
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"Not Found の動画 {deleted} 件を削除しました");
+        }
+
         private void menuChSetSavePath_Click(object sender, EventArgs e)
         {
             if (treeViewChannels.SelectedNode?.Tag is not SubscribedUser user) return;
@@ -1705,123 +1790,43 @@ namespace IwaraDownloader.Forms
 
             // 既存DLファイルを列挙 (oldSavePath 配下のもの)
             var allUserVideos = _database.GetVideosBySubscribedUser(user.Id);
-            var movableFiles = allUserVideos
-                .Where(v => !string.IsNullOrEmpty(v.LocalFilePath)
-                            && File.Exists(v.LocalFilePath)
-                            && IsPathUnder(v.LocalFilePath, oldSavePath))
-                .ToList();
+            var movableFiles = FileMoveHelper.GetMovableFiles(allUserVideos, oldSavePath);
 
-            bool doMove = false;
-            if (movableFiles.Count > 0)
-            {
-                long totalBytes = 0;
-                foreach (var v in movableFiles)
-                {
-                    try { totalBytes += new FileInfo(v.LocalFilePath).Length; } catch { }
-                }
-
-                // ドライブ判定 & 空き容量チェック
-                var driveOld = Path.GetPathRoot(Path.GetFullPath(oldSavePath))?.ToUpperInvariant();
-                var driveNew = Path.GetPathRoot(Path.GetFullPath(newSavePath))?.ToUpperInvariant();
-                bool sameDrive = string.Equals(driveOld, driveNew, StringComparison.OrdinalIgnoreCase);
-
-                string freeSpaceLine = "";
-                if (sameDrive)
-                {
-                    freeSpaceLine = "\n同ドライブのため瞬時に完了します。";
-                }
-                else if (!string.IsNullOrEmpty(driveNew))
-                {
-                    try
-                    {
-                        var di = new DriveInfo(driveNew);
-                        freeSpaceLine =
-                            $"\n移動先空き容量: {FormatSize(di.AvailableFreeSpace)}" +
-                            $" / 必要量: {FormatSize(totalBytes)}";
-                        if (di.AvailableFreeSpace < totalBytes)
-                        {
-                            MessageBox.Show(this,
-                                $"移動先ドライブ ({driveNew}) の空き容量が不足しています。\n\n" +
-                                $"必要: {FormatSize(totalBytes)}\n" +
-                                $"空き: {FormatSize(di.AvailableFreeSpace)}\n\n" +
-                                "保存先変更を中止します。",
-                                "容量不足", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        freeSpaceLine = $"\n(空き容量取得失敗: {ex.Message})";
-                    }
-                }
-
-                var confirm = MessageBox.Show(this,
-                    $"{user.Username} の保存先を変更します。\n\n" +
-                    $"既存DL済みファイル: {movableFiles.Count} 個 ({FormatSize(totalBytes)})\n" +
-                    $"移動元: {oldSavePath}\n" +
-                    $"移動先: {newSavePath}" + freeSpaceLine + "\n\n" +
-                    "これらのファイルを移動先に移しますか?\n\n" +
-                    "[はい]   ファイルを移動して保存先を変更\n" +
-                    "[いいえ] ファイルは移動せず保存先設定だけ変更\n" +
-                    "[キャンセル] 何もしない",
-                    "ファイル移動の確認",
-                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-
-                if (confirm == DialogResult.Cancel) return;
-                doMove = (confirm == DialogResult.Yes);
-            }
+            var decision = FileMoveHelper.ConfirmMove(
+                this, $"{user.Username} の保存先", movableFiles, oldSavePath, newSavePath);
+            if (decision == FileMoveHelper.MoveDecision.Cancel) return;
 
             // 設定変更
             user.CustomSavePath = newSavePath;
             _database.UpdateSubscribedUser(user);
             UpdateStatusBar($"保存先を変更しました: {newSavePath}");
 
-            if (doMove && movableFiles.Count > 0)
+            if (decision == FileMoveHelper.MoveDecision.Move && movableFiles.Count > 0)
             {
-                // 各ファイルの新パスを算出 (oldSavePath からの相対パスを保持)
-                var oldFull = Path.GetFullPath(oldSavePath).TrimEnd('\\');
-                var items = movableFiles.Select(v =>
-                {
-                    var full = Path.GetFullPath(v.LocalFilePath);
-                    var rel = full.Substring(oldFull.Length).TrimStart('\\', '/');
-                    var newPath = Path.Combine(newSavePath, rel);
-                    return (Video: v, NewPath: newPath);
-                }).ToList();
+                var items = FileMoveHelper.BuildMovePlan(movableFiles, oldSavePath, newSavePath);
 
                 using var progressForm = new FileMoveProgressForm(items, _database);
                 progressForm.ShowDialog(this);
 
-                // キャッシュ無効化 + UI 再描画
+                // キャッシュ無効化 + 空フォルダ掃除 + UI 再描画
                 Services.IndexCacheService.Invalidate(oldSavePath);
                 Services.IndexCacheService.Invalidate(newSavePath);
+                FileMoveHelper.CleanupEmptyDirectories(oldSavePath);
                 RefreshChannelTree();
                 RefreshVideoList();
 
                 UpdateStatusBar(
                     $"移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
-            }
-        }
 
-        private static bool IsPathUnder(string filePath, string folderPath)
-        {
-            try
-            {
-                var fileFull = Path.GetFullPath(filePath);
-                var folderFull = Path.GetFullPath(folderPath).TrimEnd('\\') + '\\';
-                return fileFull.StartsWith(folderFull, StringComparison.OrdinalIgnoreCase);
+                if (progressForm.FailedCount > 0)
+                {
+                    MessageBox.Show(this,
+                        $"移動に失敗したファイルが {progressForm.FailedCount} 件あります。\n" +
+                        "失敗したファイルは元の場所に残っています (詳細はログを確認してください)。\n\n" +
+                        "原因を解消後、[ツール] → [未移動ファイルの一括移動] で再移動できます。",
+                        "ファイル移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string FormatSize(long bytes)
-        {
-            if (bytes < 1024) return $"{bytes} B";
-            if (bytes < 1024L * 1024) return $"{bytes / 1024.0:F1} KB";
-            if (bytes < 1024L * 1024 * 1024) return $"{bytes / 1024.0 / 1024:F1} MB";
-            return $"{bytes / 1024.0 / 1024 / 1024:F2} GB";
         }
 
         private void menuChEnable_Click(object sender, EventArgs e)
@@ -2555,6 +2560,53 @@ namespace IwaraDownloader.Forms
             lblStatus.Text = message;
         }
 
+        private System.Windows.Forms.Timer? _freeSpaceTimer;
+
+        /// <summary>DL先ドライブの空き容量監視を開始 (1分間隔 + 即時1回)</summary>
+        private void StartFreeSpaceMonitor()
+        {
+            ScheduleFreeSpaceUpdate();
+            _freeSpaceTimer = new System.Windows.Forms.Timer { Interval = 60_000 };
+            _freeSpaceTimer.Tick += (_, _) => ScheduleFreeSpaceUpdate();
+            _freeSpaceTimer.Start();
+        }
+
+        /// <summary>
+        /// DL先ドライブの空き容量をステータスバーに表示する。
+        /// DriveInfo はネットワークドライブで待たされる場合があるため非UIスレッドで取得。
+        /// 空き容量下限 (MinFreeSpaceGb) を下回ったら赤字で警告。
+        /// </summary>
+        private void ScheduleFreeSpaceUpdate()
+        {
+            _ = Task.Run(() =>
+            {
+                string text = "";
+                Color color = SystemColors.ControlText;
+                try
+                {
+                    var settings = SettingsManager.Instance.Settings;
+                    var root = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
+                    if (!string.IsNullOrEmpty(root))
+                    {
+                        var free = new DriveInfo(root).AvailableFreeSpace;
+                        text = $"空き: {FileMoveHelper.FormatSize(free)} ({root.TrimEnd('\\')})";
+                        if (settings.MinFreeSpaceGb > 0
+                            && free < settings.MinFreeSpaceGb * 1024L * 1024 * 1024)
+                        {
+                            color = Color.Red;
+                            text += " ⚠";
+                        }
+                    }
+                }
+                catch { /* フォルダ未作成・ドライブ情報取得不可の場合は非表示 */ }
+                PostToUi(() =>
+                {
+                    lblFreeSpace.Text = text;
+                    lblFreeSpace.ForeColor = color;
+                });
+            });
+        }
+
         // DL イベント高頻度時 (毎チャンクごとに発火) の DB 全件スキャン抑制用 debounce
         private System.Windows.Forms.Timer? _downloadCountTimer;
         private const int DownloadCountDebounceMs = 500;
@@ -3124,6 +3176,230 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
+        /// 未移動ファイルの一括移動。
+        /// 保存先変更時に容量不足などで移動に失敗したファイルは元の場所に残ったままになる。
+        /// 現在の保存先設定の配下に無いファイルを検出し、あるべき場所へまとめて再移動する。
+        /// </summary>
+        private void menuToolsRelocateFiles_Click(object sender, EventArgs e)
+        {
+            // DL 実行中の移動はファイルロック・DB 不整合の元なのでブロック (保存先変更時と同じガード)
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "ダウンロード実行中は実行できません。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var downloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var plan = FileMoveHelper.BuildRelocationPlan(
+                _database.GetAllVideos(), _database.GetAllSubscribedUsers(), downloadFolder);
+
+            if (plan.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "現在の保存先設定の外にあるファイルはありません。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            long totalBytes = 0;
+            foreach (var (video, _) in plan)
+            {
+                try { totalBytes += new FileInfo(video.LocalFilePath).Length; } catch { }
+            }
+
+            var spaceSummary = FileMoveHelper.BuildDriveSpaceSummary(plan, out bool insufficient);
+            var spaceLines = string.IsNullOrEmpty(spaceSummary) ? "" : "\n\n" + spaceSummary;
+            var warnLine = insufficient
+                ? "\n\n⚠ 空き容量が不足しているドライブがあります。\n" +
+                  "そのドライブへの移動は失敗し、ファイルは元の場所に残ります。"
+                : "";
+
+            var confirm = MessageBox.Show(this,
+                $"現在の保存先設定の外にあるファイルが {plan.Count} 個見つかりました" +
+                $" ({FileMoveHelper.FormatSize(totalBytes)})。\n" +
+                "これらを本来の保存先へ移動しますか?\n" +
+                "(メタデータ .json も一緒に移動します)" + spaceLines + warnLine,
+                "未移動ファイルの一括移動",
+                MessageBoxButtons.YesNo,
+                insufficient ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            // 確認ダイアログ表示中に自動新着チェックから DL が始まっている可能性があるため、
+            // 移動開始直前にもう一度ガードする
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "ダウンロードが開始されたため中止しました。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 進捗フォーム内で video.LocalFilePath が更新されるため、移動前の場所を控えておく
+            var oldDirs = plan
+                .Select(p => Path.GetDirectoryName(p.Video.LocalFilePath))
+                .Where(d => !string.IsNullOrEmpty(d))
+                .Select(d => d!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var newDirs = plan
+                .Select(p => Path.GetDirectoryName(p.NewPath))
+                .Where(d => !string.IsNullOrEmpty(d))
+                .Select(d => d!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            using var progressForm = new FileMoveProgressForm(plan, _database);
+            progressForm.ShowDialog(this);
+
+            // キャッシュ無効化 + 空になった移動元フォルダの掃除 + UI 再描画
+            foreach (var dir in oldDirs)
+            {
+                Services.IndexCacheService.Invalidate(dir);
+                FileMoveHelper.CleanupEmptyDirectories(dir);
+                FileMoveHelper.TryDeleteDirectoryIfEmpty(dir);
+            }
+            foreach (var dir in newDirs)
+            {
+                Services.IndexCacheService.Invalidate(dir);
+            }
+            RefreshChannelTree();
+            RefreshVideoList();
+
+            UpdateStatusBar(
+                $"未移動ファイルの移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
+
+            if (progressForm.FailedCount > 0)
+            {
+                MessageBox.Show(this,
+                    $"移動に失敗したファイルが {progressForm.FailedCount} 件あります。\n" +
+                    "失敗したファイルは元の場所に残っています (詳細はログを確認してください)。\n\n" +
+                    "原因を解消後、もう一度このメニューを実行すると残りを移動できます。",
+                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// 移動済みファイルの再リンク。
+        /// FastCopy などの外部ツールでファイルを移動した後に実行すると、
+        /// 移動先のファイルを検証 (サイズ → UUID タグ) した上で DB のパスだけを追従させる。
+        /// ファイルは一切動かさないため大量でも瞬時に終わる。
+        /// </summary>
+        private async void menuToolsRelinkFiles_Click(object sender, EventArgs e)
+        {
+            // DL 実行中はパス書き換えと DL 側の DB 更新が競合し得るのでブロック
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "ダウンロード実行中は実行できません。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var downloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var videos = _database.GetAllVideos();
+            var users = _database.GetAllSubscribedUsers();
+
+            menuToolsRelinkFiles.Enabled = false;
+            UseWaitCursor = true;
+            UpdateStatusBar("移動済みファイルをスキャン中...");
+            FileMoveHelper.RelinkResult result;
+            try
+            {
+                result = await Task.Run(
+                    () => FileMoveHelper.BuildRelinkPlan(videos, users, downloadFolder));
+            }
+            finally
+            {
+                UseWaitCursor = false;
+                menuToolsRelinkFiles.Enabled = true;
+            }
+
+            var notes = new List<string>();
+            if (result.NotMovedCount > 0)
+                notes.Add($"まだ移動されていない (移動先に同名ファイルなし): {result.NotMovedCount} 件\n" +
+                          "  → [未移動ファイルの一括移動] で移動するか、外部ツールで移動後に再実行してください");
+            if (result.UnverifiedCount > 0)
+                notes.Add($"検証不一致 (同名だがサイズ/UUID が合わない): {result.UnverifiedCount} 件\n" +
+                          "  → コピー途中・破損の可能性があります。再リンクしません");
+            if (result.MissingCount > 0)
+                notes.Add($"移動先でも見つからない (リンク切れ): {result.MissingCount} 件");
+            var notesText = notes.Count > 0 ? "\n\n" + string.Join("\n", notes) : "";
+
+            if (result.Items.Count == 0)
+            {
+                UpdateStatusBar("再リンク対象なし");
+                var hint = (result.NotMovedCount + result.MissingCount + result.UnverifiedCount) > 0
+                    ? "\n\nヒント: この機能は「保存先設定の変更 → 外部ツールでファイル移動」の後に実行するものです。\n" +
+                      "保存先設定がまだ変更されていない場合は、先に変更 (ファイルは移動せず設定だけ変更) してください。"
+                    : "";
+                MessageBox.Show(this,
+                    "再リンクできるファイルはありません。" + notesText + hint,
+                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int copiedCount = result.Items.Count(i => i.OldFileStillExists);
+            var copiedLine = copiedCount > 0
+                ? $"\n\nうち {copiedCount} 件は元の場所にもファイルが残っています (コピーされたもの)。\n" +
+                  "再リンク後も元のファイルは削除しません。不要なら手動で削除してください。"
+                : "";
+
+            var confirm = MessageBox.Show(this,
+                $"移動先で検証済みのファイルが {result.Items.Count} 件見つかりました。\n" +
+                "データベースのパスを移動先に書き換えますか?\n" +
+                "(ファイルは移動しません)" + copiedLine + notesText,
+                "移動済みファイルの再リンク",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            // スキャン中 (UUID 読みで長引くことがある) に自動新着チェックから DL が
+            // 始まっている可能性があるため、書き換え直前にもう一度ガードする
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                MessageBox.Show(this,
+                    "スキャン中にダウンロードが開始されたため中止しました。\n" +
+                    "完了を待つか、キューを停止してから再度実行してください。",
+                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int relinked = 0;
+            await Task.Run(() =>
+            {
+                foreach (var (video, newPath, _) in result.Items)
+                {
+                    var oldPath = video.LocalFilePath;
+                    video.LocalFilePath = newPath;
+                    _database.UpdateVideo(video);
+                    relinked++;
+
+                    // メタデータ .json サイドカーが旧位置に置き去りなら追従させる
+                    try
+                    {
+                        var newJson = Path.ChangeExtension(newPath, ".json");
+                        var oldJson = Path.ChangeExtension(oldPath, ".json");
+                        if (!File.Exists(newJson) && File.Exists(oldJson))
+                            File.Move(oldJson, newJson);
+                    }
+                    catch { }
+                }
+            });
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar($"再リンク完了: {relinked} 件");
+
+            MessageBox.Show(this,
+                $"{relinked} 件のパスを移動先に書き換えました。" + copiedLine + notesText,
+                "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
         /// 統計ダッシュボード
         /// </summary>
         private void menuToolsStatistics_Click(object sender, EventArgs e)
@@ -3259,8 +3535,7 @@ namespace IwaraDownloader.Forms
                 }
                 else
                 {
-                    UpdateStatusBar($"クリップボード検出: チャンネル追加中...");
-                    await AddUserAsync(text);
+                    _downloadManager.EnqueueSubscribedUser(text);
                 }
             }
             catch (Exception ex)

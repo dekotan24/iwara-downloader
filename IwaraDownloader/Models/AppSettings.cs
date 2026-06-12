@@ -22,6 +22,9 @@ namespace IwaraDownloader.Models
         /// <summary>リトライ回数</summary>
         public int MaxRetryCount { get; set; } = 3;
 
+        /// <summary>空き容量下限(GB)。DL先ドライブの空きがこれ未満ならDLを開始しない。0=チェック無効</summary>
+        public int MinFreeSpaceGb { get; set; } = 1;
+
         #region Rate Limiting Settings
 
         /// <summary>APIリクエスト間隔(ミリ秒)- 動画情報取得等</summary>
@@ -58,6 +61,16 @@ namespace IwaraDownloader.Models
 
         /// <summary>動画リストの表示モード: 0=詳細(列表示) / 1=サムネ(タイル)</summary>
         public int VideoListViewMode { get; set; } = 0;
+
+        /// <summary>サムネイルキャッシュの保存先: 0=アプリ設定フォルダ(Roaming) / 1=ダウンロード先フォルダ配下のthumbs</summary>
+        public int ThumbnailCacheLocation { get; set; } = 0;
+
+        /// <summary>
+        /// 前回実際に使用していたサムネイルキャッシュフォルダ。
+        /// 現在の解決結果と異なる場合、移行が中断された (または設定が外部で変更された)
+        /// とみなして起動時に残りを自動移行する。
+        /// </summary>
+        public string LastThumbnailCacheDir { get; set; } = string.Empty;
 
         /// <summary>起動時に最小化</summary>
         public bool StartMinimized { get; set; } = false;
@@ -132,6 +145,28 @@ namespace IwaraDownloader.Models
 
         /// <summary>iwaraパスワード(暗号化済み)</summary>
         public string IwaraPasswordEncrypted { get; set; } = string.Empty;
+
+        #region Web Media Server Settings
+
+        /// <summary>Webメディアサーバーを有効にする</summary>
+        public bool WebServerEnabled { get; set; } = false;
+
+        /// <summary>Webサーバーのポート番号</summary>
+        public int WebServerPort { get; set; } = 7860;
+
+        /// <summary>LAN内の他デバイスからのアクセスを許可 (true=0.0.0.0, false=127.0.0.1)</summary>
+        public bool WebServerBindAll { get; set; } = true;
+
+        /// <summary>Webサーバーのログインユーザー名</summary>
+        public string WebServerUsername { get; set; } = "admin";
+
+        /// <summary>Webサーバーのログインパスワード(暗号化済み)</summary>
+        public string WebServerPasswordEncrypted { get; set; } = string.Empty;
+
+        /// <summary>アプリ起動時にWebサーバーを自動開始</summary>
+        public bool WebServerAutoStart { get; set; } = false;
+
+        #endregion
 
         /// <summary>設定ファイルのパス</summary>
         [JsonIgnore]

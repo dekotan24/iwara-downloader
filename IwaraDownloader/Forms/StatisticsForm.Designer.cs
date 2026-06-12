@@ -43,6 +43,36 @@ namespace IwaraDownloader.Forms
             this.dgvChannelStats = new DataGridView();
             this.dgvDailyStats = new DataGridView();
 
+            // 追加タブ: 失敗分析
+            this.tabFailure = new TabPage();
+            this.tlpFailure = new TableLayoutPanel();
+            this.lblErrorTitle = new Label();
+            this.dgvErrorStats = new DataGridView();
+            this.lblRetryTitle = new Label();
+            this.dgvRetryStats = new DataGridView();
+            // 追加タブ: 月別推移
+            this.tabMonthly = new TabPage();
+            this.dgvMonthlyStats = new DataGridView();
+            // 追加タブ: サイズ・長さ
+            this.tabDistribution = new TabPage();
+            this.tlpDistribution = new TableLayoutPanel();
+            this.lblSizeTitle = new Label();
+            this.dgvSizeStats = new DataGridView();
+            this.lblDurationTitle = new Label();
+            this.dgvDurationStats = new DataGridView();
+            // 追加タブ: 内容
+            this.tabContent = new TabPage();
+            this.tlpContent = new TableLayoutPanel();
+            this.lblTagTitle = new Label();
+            this.dgvTagStats = new DataGridView();
+            this.lblRatingTitle = new Label();
+            this.dgvRatingStats = new DataGridView();
+            this.lblSiteTitle = new Label();
+            this.dgvSiteStats = new DataGridView();
+            // 追加タブ: 投稿者
+            this.tabAuthors = new TabPage();
+            this.dgvAuthorStats = new DataGridView();
+
             this.btnRefresh = new Button();
             this.btnExportCsv = new Button();
             this.btnClose = new Button();
@@ -52,8 +82,25 @@ namespace IwaraDownloader.Forms
             this.tabControl.SuspendLayout();
             this.tabChannels.SuspendLayout();
             this.tabDaily.SuspendLayout();
+            this.tabFailure.SuspendLayout();
+            this.tlpFailure.SuspendLayout();
+            this.tabMonthly.SuspendLayout();
+            this.tabDistribution.SuspendLayout();
+            this.tlpDistribution.SuspendLayout();
+            this.tabContent.SuspendLayout();
+            this.tlpContent.SuspendLayout();
+            this.tabAuthors.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvChannelStats)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvDailyStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvErrorStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvRetryStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvMonthlyStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSizeStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvDurationStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvTagStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvRatingStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSiteStats)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvAuthorStats)).BeginInit();
             this.SuspendLayout();
 
             // 
@@ -222,7 +269,13 @@ namespace IwaraDownloader.Forms
             this.tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.tabControl.Controls.Add(this.tabChannels);
             this.tabControl.Controls.Add(this.tabDaily);
+            this.tabControl.Controls.Add(this.tabFailure);
+            this.tabControl.Controls.Add(this.tabMonthly);
+            this.tabControl.Controls.Add(this.tabDistribution);
+            this.tabControl.Controls.Add(this.tabContent);
+            this.tabControl.Controls.Add(this.tabAuthors);
             this.tabControl.Location = new Point(12, 178);
+            this.tabControl.Multiline = true;
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
             this.tabControl.Size = new Size(560, 270);
@@ -290,9 +343,178 @@ namespace IwaraDownloader.Forms
             this.dgvDailyStats.Size = new Size(546, 236);
             this.dgvDailyStats.TabIndex = 0;
 
-            // 
+            // ============================================================
+            // tabFailure (失敗分析) : エラー別 + リトライ別
+            // ============================================================
+            this.tabFailure.Controls.Add(this.tlpFailure);
+            this.tabFailure.Location = new Point(4, 24);
+            this.tabFailure.Name = "tabFailure";
+            this.tabFailure.Padding = new Padding(3);
+            this.tabFailure.Size = new Size(552, 242);
+            this.tabFailure.TabIndex = 2;
+            this.tabFailure.Text = "失敗分析";
+            this.tabFailure.UseVisualStyleBackColor = true;
+
+            this.tlpFailure.ColumnCount = 1;
+            this.tlpFailure.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.tlpFailure.Controls.Add(this.lblErrorTitle, 0, 0);
+            this.tlpFailure.Controls.Add(this.dgvErrorStats, 0, 1);
+            this.tlpFailure.Controls.Add(this.lblRetryTitle, 0, 2);
+            this.tlpFailure.Controls.Add(this.dgvRetryStats, 0, 3);
+            this.tlpFailure.Dock = DockStyle.Fill;
+            this.tlpFailure.Location = new Point(3, 3);
+            this.tlpFailure.Name = "tlpFailure";
+            this.tlpFailure.RowCount = 4;
+            this.tlpFailure.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpFailure.RowStyles.Add(new RowStyle(SizeType.Percent, 55F));
+            this.tlpFailure.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpFailure.RowStyles.Add(new RowStyle(SizeType.Percent, 45F));
+            this.tlpFailure.Size = new Size(546, 236);
+            this.tlpFailure.TabIndex = 0;
+
+            this.lblErrorTitle.AutoSize = false;
+            this.lblErrorTitle.Dock = DockStyle.Fill;
+            this.lblErrorTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblErrorTitle.Text = "エラー種別ごとの失敗数";
+            this.lblErrorTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.lblRetryTitle.AutoSize = false;
+            this.lblRetryTitle.Dock = DockStyle.Fill;
+            this.lblRetryTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblRetryTitle.Text = "リトライ回数別の失敗数";
+            this.lblRetryTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.ConfigureStatGrid(this.dgvErrorStats, "dgvErrorStats");
+            this.ConfigureStatGrid(this.dgvRetryStats, "dgvRetryStats");
+
+            // ============================================================
+            // tabMonthly (月別推移)
+            // ============================================================
+            this.tabMonthly.Controls.Add(this.dgvMonthlyStats);
+            this.tabMonthly.Location = new Point(4, 24);
+            this.tabMonthly.Name = "tabMonthly";
+            this.tabMonthly.Padding = new Padding(3);
+            this.tabMonthly.Size = new Size(552, 242);
+            this.tabMonthly.TabIndex = 3;
+            this.tabMonthly.Text = "月別推移";
+            this.tabMonthly.UseVisualStyleBackColor = true;
+            this.ConfigureStatGrid(this.dgvMonthlyStats, "dgvMonthlyStats");
+
+            // ============================================================
+            // tabDistribution (サイズ・長さ) : サイズ分布 + 動画長分布
+            // ============================================================
+            this.tabDistribution.Controls.Add(this.tlpDistribution);
+            this.tabDistribution.Location = new Point(4, 24);
+            this.tabDistribution.Name = "tabDistribution";
+            this.tabDistribution.Padding = new Padding(3);
+            this.tabDistribution.Size = new Size(552, 242);
+            this.tabDistribution.TabIndex = 4;
+            this.tabDistribution.Text = "サイズ・長さ";
+            this.tabDistribution.UseVisualStyleBackColor = true;
+
+            this.tlpDistribution.ColumnCount = 1;
+            this.tlpDistribution.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.tlpDistribution.Controls.Add(this.lblSizeTitle, 0, 0);
+            this.tlpDistribution.Controls.Add(this.dgvSizeStats, 0, 1);
+            this.tlpDistribution.Controls.Add(this.lblDurationTitle, 0, 2);
+            this.tlpDistribution.Controls.Add(this.dgvDurationStats, 0, 3);
+            this.tlpDistribution.Dock = DockStyle.Fill;
+            this.tlpDistribution.Location = new Point(3, 3);
+            this.tlpDistribution.Name = "tlpDistribution";
+            this.tlpDistribution.RowCount = 4;
+            this.tlpDistribution.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpDistribution.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            this.tlpDistribution.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpDistribution.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            this.tlpDistribution.Size = new Size(546, 236);
+            this.tlpDistribution.TabIndex = 0;
+
+            this.lblSizeTitle.AutoSize = false;
+            this.lblSizeTitle.Dock = DockStyle.Fill;
+            this.lblSizeTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblSizeTitle.Text = "ファイルサイズ分布";
+            this.lblSizeTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.lblDurationTitle.AutoSize = false;
+            this.lblDurationTitle.Dock = DockStyle.Fill;
+            this.lblDurationTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblDurationTitle.Text = "再生時間分布";
+            this.lblDurationTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.ConfigureStatGrid(this.dgvSizeStats, "dgvSizeStats");
+            this.ConfigureStatGrid(this.dgvDurationStats, "dgvDurationStats");
+
+            // ============================================================
+            // tabContent (内容) : タグランキング + Rating + サイト
+            // ============================================================
+            this.tabContent.Controls.Add(this.tlpContent);
+            this.tabContent.Location = new Point(4, 24);
+            this.tabContent.Name = "tabContent";
+            this.tabContent.Padding = new Padding(3);
+            this.tabContent.Size = new Size(552, 242);
+            this.tabContent.TabIndex = 5;
+            this.tabContent.Text = "内容";
+            this.tabContent.UseVisualStyleBackColor = true;
+
+            this.tlpContent.ColumnCount = 1;
+            this.tlpContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.tlpContent.Controls.Add(this.lblTagTitle, 0, 0);
+            this.tlpContent.Controls.Add(this.dgvTagStats, 0, 1);
+            this.tlpContent.Controls.Add(this.lblRatingTitle, 0, 2);
+            this.tlpContent.Controls.Add(this.dgvRatingStats, 0, 3);
+            this.tlpContent.Controls.Add(this.lblSiteTitle, 0, 4);
+            this.tlpContent.Controls.Add(this.dgvSiteStats, 0, 5);
+            this.tlpContent.Dock = DockStyle.Fill;
+            this.tlpContent.Location = new Point(3, 3);
+            this.tlpContent.Name = "tlpContent";
+            this.tlpContent.RowCount = 6;
+            this.tlpContent.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpContent.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            this.tlpContent.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpContent.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            this.tlpContent.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
+            this.tlpContent.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            this.tlpContent.Size = new Size(546, 236);
+            this.tlpContent.TabIndex = 0;
+
+            this.lblTagTitle.AutoSize = false;
+            this.lblTagTitle.Dock = DockStyle.Fill;
+            this.lblTagTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblTagTitle.Text = "タグ別ランキング(上位50)";
+            this.lblTagTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.lblRatingTitle.AutoSize = false;
+            this.lblRatingTitle.Dock = DockStyle.Fill;
+            this.lblRatingTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblRatingTitle.Text = "Rating別";
+            this.lblRatingTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.lblSiteTitle.AutoSize = false;
+            this.lblSiteTitle.Dock = DockStyle.Fill;
+            this.lblSiteTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblSiteTitle.Text = "サイト別";
+            this.lblSiteTitle.TextAlign = ContentAlignment.MiddleLeft;
+
+            this.ConfigureStatGrid(this.dgvTagStats, "dgvTagStats");
+            this.ConfigureStatGrid(this.dgvRatingStats, "dgvRatingStats");
+            this.ConfigureStatGrid(this.dgvSiteStats, "dgvSiteStats");
+
+            // ============================================================
+            // tabAuthors (投稿者ランキング)
+            // ============================================================
+            this.tabAuthors.Controls.Add(this.dgvAuthorStats);
+            this.tabAuthors.Location = new Point(4, 24);
+            this.tabAuthors.Name = "tabAuthors";
+            this.tabAuthors.Padding = new Padding(3);
+            this.tabAuthors.Size = new Size(552, 242);
+            this.tabAuthors.TabIndex = 6;
+            this.tabAuthors.Text = "投稿者";
+            this.tabAuthors.UseVisualStyleBackColor = true;
+            this.ConfigureStatGrid(this.dgvAuthorStats, "dgvAuthorStats");
+
+            //
             // btnRefresh
-            // 
+            //
             this.btnRefresh.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             this.btnRefresh.Location = new Point(12, 458);
             this.btnRefresh.Name = "btnRefresh";
@@ -352,9 +574,46 @@ namespace IwaraDownloader.Forms
             this.tabControl.ResumeLayout(false);
             this.tabChannels.ResumeLayout(false);
             this.tabDaily.ResumeLayout(false);
+            this.tabFailure.ResumeLayout(false);
+            this.tlpFailure.ResumeLayout(false);
+            this.tabMonthly.ResumeLayout(false);
+            this.tabDistribution.ResumeLayout(false);
+            this.tlpDistribution.ResumeLayout(false);
+            this.tabContent.ResumeLayout(false);
+            this.tlpContent.ResumeLayout(false);
+            this.tabAuthors.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvChannelStats)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvDailyStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvErrorStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvRetryStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvMonthlyStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSizeStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvDurationStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvTagStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvRatingStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSiteStats)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvAuthorStats)).EndInit();
             this.ResumeLayout(false);
+        }
+
+        /// <summary>
+        /// 統計用 DataGridView の共通プロパティを設定する
+        /// </summary>
+        private void ConfigureStatGrid(DataGridView dgv, string name)
+        {
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+            dgv.AllowUserToResizeRows = false;
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgv.BackgroundColor = SystemColors.Window;
+            dgv.BorderStyle = BorderStyle.None;
+            dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgv.Dock = DockStyle.Fill;
+            dgv.Name = name;
+            dgv.ReadOnly = true;
+            dgv.RowHeadersVisible = false;
+            dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgv.TabIndex = 0;
         }
 
         #endregion
@@ -383,6 +642,30 @@ namespace IwaraDownloader.Forms
         private TabPage tabDaily;
         private DataGridView dgvChannelStats;
         private DataGridView dgvDailyStats;
+        private TabPage tabFailure;
+        private TableLayoutPanel tlpFailure;
+        private Label lblErrorTitle;
+        private DataGridView dgvErrorStats;
+        private Label lblRetryTitle;
+        private DataGridView dgvRetryStats;
+        private TabPage tabMonthly;
+        private DataGridView dgvMonthlyStats;
+        private TabPage tabDistribution;
+        private TableLayoutPanel tlpDistribution;
+        private Label lblSizeTitle;
+        private DataGridView dgvSizeStats;
+        private Label lblDurationTitle;
+        private DataGridView dgvDurationStats;
+        private TabPage tabContent;
+        private TableLayoutPanel tlpContent;
+        private Label lblTagTitle;
+        private DataGridView dgvTagStats;
+        private Label lblRatingTitle;
+        private DataGridView dgvRatingStats;
+        private Label lblSiteTitle;
+        private DataGridView dgvSiteStats;
+        private TabPage tabAuthors;
+        private DataGridView dgvAuthorStats;
         private Button btnRefresh;
         private Button btnExportCsv;
         private Button btnClose;

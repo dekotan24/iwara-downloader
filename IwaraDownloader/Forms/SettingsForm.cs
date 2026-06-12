@@ -60,6 +60,8 @@ namespace IwaraDownloader.Forms
             cmbQuality.SelectedIndex = qIdx >= 0 ? qIdx : 0;
             numConcurrent.Value = settings.MaxConcurrentDownloads;
             numRetry.Value = settings.MaxRetryCount;
+            cmbThumbLocation.SelectedIndex = settings.ThumbnailCacheLocation == 1 ? 1 : 0;
+            numMinFreeSpace.Value = Math.Clamp(settings.MinFreeSpaceGb, 0, 999);
 
             // 自動チェック
             chkAutoCheck.Checked = settings.AutoCheckEnabled;
@@ -100,6 +102,14 @@ namespace IwaraDownloader.Forms
             chkCheckUpdate.Checked = settings.CheckUpdateOnStartup;
             chkResumeOnStartup.Checked = settings.ResumeDownloadsOnStartup;
             lblCurrentVersion.Text = $"現在: {UpdateService.CurrentVersionString}";
+
+            // メディアサーバー
+            chkWebServerAutoStart.Checked = settings.WebServerAutoStart;
+            numWebPort.Value = Math.Clamp(settings.WebServerPort, 1024, 65535);
+            chkWebBindAll.Checked = settings.WebServerBindAll;
+            txtWebUsername.Text = settings.WebServerUsername;
+            txtWebPassword.Text = _settingsManager.GetWebServerPassword();
+            UpdateWebServerStatusDisplay();
         }
 
         /// <summary>
@@ -117,6 +127,10 @@ namespace IwaraDownloader.Forms
             }
             settings.MaxConcurrentDownloads = (int)numConcurrent.Value;
             settings.MaxRetryCount = (int)numRetry.Value;
+            settings.MinFreeSpaceGb = (int)numMinFreeSpace.Value;
+
+            // サムネ保存先
+            settings.ThumbnailCacheLocation = cmbThumbLocation.SelectedIndex == 1 ? 1 : 0;
 
             // 自動チェック
             settings.AutoCheckEnabled = chkAutoCheck.Checked;
@@ -160,8 +174,19 @@ namespace IwaraDownloader.Forms
             settings.CheckUpdateOnStartup = chkCheckUpdate.Checked;
             settings.ResumeDownloadsOnStartup = chkResumeOnStartup.Checked;
 
+            // メディアサーバー
+            settings.WebServerAutoStart = chkWebServerAutoStart.Checked;
+            settings.WebServerPort = (int)numWebPort.Value;
+            settings.WebServerBindAll = chkWebBindAll.Checked;
+            settings.WebServerUsername = txtWebUsername.Text.Trim();
+            _settingsManager.SetWebServerPassword(txtWebPassword.Text);
+
             // 保存
             _settingsManager.Save();
+
+            // サムネ保存先が変わっていれば既存キャッシュを移行 (LastThumbnailCacheDir との差分で判断)。
+            // 中断されても次回起動時の SyncCacheDirIfMoved で残りが自動移行される。
+            _ = Task.Run(ThumbnailCacheService.SyncCacheDirIfMoved);
         }
 
         private void btnBrowseFolder_Click(object sender, EventArgs e)
@@ -290,15 +315,98 @@ namespace IwaraDownloader.Forms
 
         private void btnOk_Click(object sender, EventArgs e)
         {
-            SaveSettings();
+            if (!ApplySettings()) return; // 保存先変更がキャンセルされた場合は閉じない
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
 
         private void btnApply_Click(object sender, EventArgs e)
         {
-            SaveSettings();
+            if (!ApplySettings()) return;
             MessageBox.Show("設定を保存しました。", "設定", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// 設定を保存する。DL先フォルダが変更されている場合は既存ファイルの移動を提案し、
+        /// 容量チェック → 確認 → 移動 (進捗表示) まで行う。
+        /// </summary>
+        /// <returns>false = ユーザーがキャンセルした (設定は未保存)</returns>
+        private bool ApplySettings()
+        {
+            var settings = _settingsManager.Settings;
+            var oldFolder = settings.DownloadFolder;
+            var newFolder = txtDownloadFolder.Text.Trim();
+
+            List<(VideoInfo Video, string NewPath)>? movePlan = null;
+
+            bool folderChanged;
+            try
+            {
+                folderChanged =
+                    !string.IsNullOrWhiteSpace(oldFolder)
+                    && !string.IsNullOrWhiteSpace(newFolder)
+                    && !string.Equals(
+                        Path.GetFullPath(oldFolder).TrimEnd('\\'),
+                        Path.GetFullPath(newFolder).TrimEnd('\\'),
+                        StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(oldFolder);
+            }
+            catch
+            {
+                folderChanged = false; // 不正なパス文字列は移動なしで従来通り保存
+            }
+
+            if (folderChanged)
+            {
+                // DL 実行中の移動はファイルロック・DB不整合の元なのでブロック
+                if (_downloadManager != null
+                    && (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0))
+                {
+                    MessageBox.Show(this,
+                        "ダウンロード実行中は保存先フォルダを変更できません。\n" +
+                        "完了を待つか、キューを停止してから再度実行してください。",
+                        "保存先変更", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                // 個別保存先 (CustomSavePath) を設定したチャンネルのファイルは動かさない
+                var excludeBases = _database.GetAllSubscribedUsers()
+                    .Where(u => !string.IsNullOrWhiteSpace(u.CustomSavePath))
+                    .Select(u => u.CustomSavePath);
+
+                var movable = FileMoveHelper.GetMovableFiles(
+                    _database.GetAllVideos(), oldFolder, excludeBases);
+
+                var decision = FileMoveHelper.ConfirmMove(
+                    this, "ダウンロード保存先", movable, oldFolder, newFolder);
+                if (decision == FileMoveHelper.MoveDecision.Cancel) return false;
+                if (decision == FileMoveHelper.MoveDecision.Move)
+                {
+                    movePlan = FileMoveHelper.BuildMovePlan(movable, oldFolder, newFolder);
+                }
+            }
+
+            SaveSettings();
+
+            if (movePlan != null)
+            {
+                using var progressForm = new FileMoveProgressForm(movePlan, _database);
+                progressForm.ShowDialog(this);
+
+                // 旧フォルダのインデックスキャッシュ掃除 + 空フォルダ削除
+                FileMoveHelper.CleanupEmptyDirectories(oldFolder);
+
+                MessageBox.Show(this,
+                    $"ファイル移動が完了しました。\n\n" +
+                    $"成功: {progressForm.MovedCount} 件 / 失敗: {progressForm.FailedCount} 件\n" +
+                    (progressForm.FailedCount > 0
+                        ? "\n失敗したファイルは元の場所に残っています。詳細はログを確認してください。\n" +
+                          "原因を解消後、メイン画面の [ツール] → [未移動ファイルの一括移動] で再移動できます。"
+                        : ""),
+                    "移動完了", MessageBoxButtons.OK,
+                    progressForm.FailedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            }
+            return true;
         }
 
         #region Export/Import
@@ -691,11 +799,15 @@ namespace IwaraDownloader.Forms
             // Pending状態のファイルをリネーム
             await Task.Run(() =>
             {
+                // 強制終了対策: リネームと DB 更新の間で死んでも次回起動時に復旧できるようジャーナルに記録
+                using var journal = FileMoveJournal.Begin();
+
                 foreach (var item in items.Where(i => i.Status == RenameStatus.Pending))
                 {
                     try
                     {
                         // ファイルをリネーム
+                        journal.RecordStart(item.Video.Id, item.OriginalPath, item.NewPath);
                         File.Move(item.OriginalPath, item.NewPath);
 
                         // メタデータファイル(.json)もリネーム
@@ -703,12 +815,15 @@ namespace IwaraDownloader.Forms
                         if (File.Exists(originalJsonPath))
                         {
                             var newJsonPath = Path.ChangeExtension(item.NewPath, ".json");
+                            if (File.Exists(newJsonPath))
+                                File.Delete(newJsonPath);
                             File.Move(originalJsonPath, newJsonPath);
                         }
 
                         // DB更新
                         item.Video.LocalFilePath = item.NewPath;
                         _database.UpdateVideo(item.Video);
+                        journal.RecordDone(item.Video.Id);
 
                         item.Status = RenameStatus.Success;
                     }
@@ -832,5 +947,81 @@ namespace IwaraDownloader.Forms
         }
 
         #endregion
+
+        #region Web Media Server
+
+        private void UpdateWebServerStatusDisplay()
+        {
+            var webServer = WebServerServiceHolder.Instance;
+            if (webServer != null && webServer.IsRunning)
+            {
+                lblWebStatus.Text = "稼働中";
+                lblWebStatus.ForeColor = Color.Green;
+                lblWebUrl.Text = webServer.BaseUrl ?? "";
+                btnWebStartStop.Text = "停止";
+            }
+            else
+            {
+                lblWebStatus.Text = "停止中";
+                lblWebStatus.ForeColor = Color.Gray;
+                lblWebUrl.Text = "";
+                btnWebStartStop.Text = "開始";
+            }
+        }
+
+        private async void btnWebStartStop_Click(object sender, EventArgs e)
+        {
+            btnWebStartStop.Enabled = false;
+            try
+            {
+                var webServer = WebServerServiceHolder.Instance;
+                if (webServer == null) return;
+
+                if (webServer.IsRunning)
+                {
+                    await webServer.StopAsync();
+                }
+                else
+                {
+                    SaveSettings();
+                    var settings = _settingsManager.Settings;
+                    await webServer.StartAsync(settings.WebServerPort, settings.WebServerBindAll);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"サーバー操作に失敗しました:\n{ex.Message}", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnWebStartStop.Enabled = true;
+                UpdateWebServerStatusDisplay();
+            }
+        }
+
+        private void btnWebOpenBrowser_Click(object sender, EventArgs e)
+        {
+            var webServer = WebServerServiceHolder.Instance;
+            if (webServer == null || !webServer.IsRunning) return;
+
+            var port = (int)numWebPort.Value;
+            var url = $"http://localhost:{port}";
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch { }
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// WebServerService のグローバルホルダー（MainForm で初期化、SettingsForm から参照）
+    /// </summary>
+    public static class WebServerServiceHolder
+    {
+        public static WebServerService? Instance { get; set; }
     }
 }

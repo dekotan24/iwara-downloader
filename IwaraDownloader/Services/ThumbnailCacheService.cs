@@ -35,7 +35,8 @@ namespace IwaraDownloader.Services
 
         public event EventHandler<string>? ThumbnailReady;
 
-        private readonly string _cacheDir;
+        // 保存先は設定で切替可能なため固定フィールドにせず GetCachePath で都度解決する
+        private string? _lastCacheDir;
         private readonly HttpClient _http;
         // メモリ LRU: 同一 lock 配下で操作。Image 所有権はキャッシュ側。
         // 外部に渡すのは必ず Bitmap clone (呼び出し側で Dispose 可能)。
@@ -51,17 +52,127 @@ namespace IwaraDownloader.Services
 
         private ThumbnailCacheService()
         {
-            _cacheDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "IwaraDownloader", "thumbs");
-            Directory.CreateDirectory(_cacheDir);
-
             _http = new HttpClient();
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("IwaraDownloader/thumb");
             _http.Timeout = TimeSpan.FromSeconds(20);
         }
 
-        public string GetCachePath(string videoId) => Path.Combine(_cacheDir, videoId + ".jpg");
+        /// <summary>Roaming 配下のデフォルトキャッシュフォルダ</summary>
+        public static string DefaultCacheDir => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "IwaraDownloader", "thumbs");
+
+        /// <summary>
+        /// 設定 (ThumbnailCacheLocation) に従って現在のキャッシュフォルダを解決する。
+        /// 1=ダウンロード先フォルダ配下の thumbs / それ以外=Roaming。
+        /// </summary>
+        public static string ResolveCacheDir()
+        {
+            var settings = Utils.SettingsManager.Instance.Settings;
+            if (settings.ThumbnailCacheLocation == 1 && !string.IsNullOrWhiteSpace(settings.DownloadFolder))
+                return Path.Combine(settings.DownloadFolder, "thumbs");
+            return DefaultCacheDir;
+        }
+
+        public string GetCachePath(string videoId)
+        {
+            var dir = ResolveCacheDir();
+            // 設定変更を即座に反映するため毎回解決するが、CreateDirectory はフォルダが
+            // 変わった時だけにする (競合しても CreateDirectory は冪等なので問題なし)
+            if (dir != _lastCacheDir)
+            {
+                try { Directory.CreateDirectory(dir); } catch { }
+                _lastCacheDir = dir;
+            }
+            return Path.Combine(dir, videoId + ".jpg");
+        }
+
+        private static readonly object _syncDirLock = new();
+
+        /// <summary>
+        /// 設定上のキャッシュフォルダと前回実際に使っていたフォルダ (LastThumbnailCacheDir) を
+        /// 突き合わせ、異なれば残存キャッシュを移行する。
+        /// 移行中にプロセスが強制終了されても LastThumbnailCacheDir は移行完了まで
+        /// 更新されないため、次回起動時のこの呼び出しで残りが自動的に移行される (自己修復)。
+        /// アプリ起動時と設定保存後に呼ぶ。
+        /// </summary>
+        public static void SyncCacheDirIfMoved()
+        {
+            lock (_syncDirLock)
+            {
+                try
+                {
+                    var sm = Utils.SettingsManager.Instance;
+                    var current = ResolveCacheDir();
+                    var last = sm.Settings.LastThumbnailCacheDir;
+
+                    if (string.IsNullOrWhiteSpace(last))
+                    {
+                        // 初回: 現在地を記録するだけ
+                        sm.Settings.LastThumbnailCacheDir = current;
+                        sm.Save();
+                        return;
+                    }
+
+                    if (string.Equals(
+                            Path.GetFullPath(last).TrimEnd('\\'),
+                            Path.GetFullPath(current).TrimEnd('\\'),
+                            StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    var moved = MigrateCacheDir(last, current);
+                    sm.Settings.LastThumbnailCacheDir = current;
+                    sm.Save();
+                    if (moved > 0)
+                        LoggingService.Instance.Info($"サムネイルキャッシュを移行: {moved} 件 ({last} → {current})");
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Warn($"サムネイルキャッシュの移行チェックに失敗: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// キャッシュフォルダ変更時に既存のサムネイルを新フォルダへ移動する (ベストエフォート)。
+        /// 使用中などで移動できないファイルはスキップ (キャッシュミス扱いで再DLされる)。
+        /// </summary>
+        /// <returns>移動したファイル数</returns>
+        public static int MigrateCacheDir(string oldDir, string newDir)
+        {
+            if (string.IsNullOrWhiteSpace(oldDir) || string.IsNullOrWhiteSpace(newDir)) return 0;
+            if (string.Equals(Path.GetFullPath(oldDir), Path.GetFullPath(newDir), StringComparison.OrdinalIgnoreCase)) return 0;
+            if (!Directory.Exists(oldDir)) return 0;
+
+            int moved = 0;
+            try
+            {
+                Directory.CreateDirectory(newDir);
+                foreach (var src in Directory.EnumerateFiles(oldDir, "*.jpg", SearchOption.TopDirectoryOnly))
+                {
+                    var dst = Path.Combine(newDir, Path.GetFileName(src));
+                    try
+                    {
+                        if (File.Exists(dst))
+                            File.Delete(src); // 移動先に既にあれば旧側を削除するだけでよい
+                        else
+                        {
+                            File.Move(src, dst);
+                            moved++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Thumb migrate skip {src}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Thumb migrate failed: {ex.Message}");
+            }
+            return moved;
+        }
 
         /// <summary>
         /// メモリキャッシュのみから取得 (I/O ゼロ、UI スレッド安全)。返り値はクローン。
@@ -291,9 +402,17 @@ namespace IwaraDownloader.Services
             try
             {
                 var resp = await _http.GetAsync(url);
-                if (!resp.IsSuccessStatusCode) return;
+                if (!resp.IsSuccessStatusCode)
+                {
+                    try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
+                    return;
+                }
                 var bytes = await resp.Content.ReadAsByteArrayAsync();
-                if (bytes.Length == 0) return;
+                if (bytes.Length == 0)
+                {
+                    try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
+                    return;
+                }
                 var path = GetCachePath(videoId);
                 await File.WriteAllBytesAsync(path, bytes);
 
@@ -305,11 +424,14 @@ namespace IwaraDownloader.Services
                 }
                 PutMem(videoId, stored);
 
+                try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 1); } catch { }
+
                 if (!_disposed) ThumbnailReady?.Invoke(this, videoId);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Net thumb fetch fail {videoId}: {ex.Message}");
+                try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
             }
         }
 

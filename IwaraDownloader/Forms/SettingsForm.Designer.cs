@@ -23,6 +23,22 @@ namespace IwaraDownloader.Forms
             this.tabAdvanced = new TabPage();
             this.tabOther = new TabPage();
             this.tabBackup = new TabPage();
+            this.tabMediaServer = new TabPage();
+            this.grpWebServer = new GroupBox();
+            this.chkWebServerAutoStart = new CheckBox();
+            this.lblWebPort = new Label();
+            this.numWebPort = new NumericUpDown();
+            this.chkWebBindAll = new CheckBox();
+            this.grpWebAuth = new GroupBox();
+            this.lblWebUsername = new Label();
+            this.txtWebUsername = new TextBox();
+            this.lblWebPassword = new Label();
+            this.txtWebPassword = new TextBox();
+            this.grpWebStatus = new GroupBox();
+            this.lblWebStatus = new Label();
+            this.btnWebStartStop = new Button();
+            this.btnWebOpenBrowser = new Button();
+            this.lblWebUrl = new Label();
 
             // 一般設定
             this.grpDownload = new GroupBox();
@@ -35,6 +51,11 @@ namespace IwaraDownloader.Forms
             this.numConcurrent = new NumericUpDown();
             this.lblRetry = new Label();
             this.numRetry = new NumericUpDown();
+            this.lblThumbLocation = new Label();
+            this.cmbThumbLocation = new ComboBox();
+            this.lblMinFreeSpace = new Label();
+            this.numMinFreeSpace = new NumericUpDown();
+            this.lblMinFreeSpaceNote = new Label();
 
             this.grpAutoCheck = new GroupBox();
             this.chkAutoCheck = new CheckBox();
@@ -138,6 +159,11 @@ namespace IwaraDownloader.Forms
             this.tabAdvanced.SuspendLayout();
             this.tabOther.SuspendLayout();
             this.tabBackup.SuspendLayout();
+            this.tabMediaServer.SuspendLayout();
+            this.grpWebServer.SuspendLayout();
+            this.grpWebAuth.SuspendLayout();
+            this.grpWebStatus.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numWebPort)).BeginInit();
             this.grpDownload.SuspendLayout();
             this.grpAutoCheck.SuspendLayout();
             this.grpNotification.SuspendLayout();
@@ -153,6 +179,7 @@ namespace IwaraDownloader.Forms
             this.grpImport.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMinFreeSpace)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).BeginInit();
@@ -169,6 +196,7 @@ namespace IwaraDownloader.Forms
             this.tabControl.Controls.Add(this.tabAdvanced);
             this.tabControl.Controls.Add(this.tabOther);
             this.tabControl.Controls.Add(this.tabBackup);
+            this.tabControl.Controls.Add(this.tabMediaServer);
             this.tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.tabControl.Location = new Point(12, 12);
             this.tabControl.Name = "tabControl";
@@ -202,9 +230,14 @@ namespace IwaraDownloader.Forms
             this.grpDownload.Controls.Add(this.numConcurrent);
             this.grpDownload.Controls.Add(this.lblRetry);
             this.grpDownload.Controls.Add(this.numRetry);
+            this.grpDownload.Controls.Add(this.lblThumbLocation);
+            this.grpDownload.Controls.Add(this.cmbThumbLocation);
+            this.grpDownload.Controls.Add(this.lblMinFreeSpace);
+            this.grpDownload.Controls.Add(this.numMinFreeSpace);
+            this.grpDownload.Controls.Add(this.lblMinFreeSpaceNote);
             this.grpDownload.Location = new Point(6, 6);
             this.grpDownload.Name = "grpDownload";
-            this.grpDownload.Size = new Size(440, 145);
+            this.grpDownload.Size = new Size(440, 205);
             this.grpDownload.TabIndex = 0;
             this.grpDownload.TabStop = false;
             this.grpDownload.Text = "ダウンロード設定";
@@ -305,15 +338,70 @@ namespace IwaraDownloader.Forms
             this.numRetry.TabIndex = 8;
             this.numRetry.Value = new decimal(new int[] { 3, 0, 0, 0 });
 
-            // 
+            //
+            // lblThumbLocation
+            //
+            this.lblThumbLocation.AutoSize = true;
+            this.lblThumbLocation.Location = new Point(10, 145);
+            this.lblThumbLocation.Name = "lblThumbLocation";
+            this.lblThumbLocation.Size = new Size(80, 15);
+            this.lblThumbLocation.TabIndex = 9;
+            this.lblThumbLocation.Text = "サムネ保存先:";
+
+            //
+            // cmbThumbLocation
+            //
+            this.cmbThumbLocation.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbThumbLocation.FormattingEnabled = true;
+            this.cmbThumbLocation.Items.AddRange(new object[] {
+                "アプリ設定フォルダ (AppData\\Roaming)",
+                "動画保存先フォルダ (DL先\\thumbs)"
+            });
+            this.cmbThumbLocation.Location = new Point(100, 142);
+            this.cmbThumbLocation.Name = "cmbThumbLocation";
+            this.cmbThumbLocation.Size = new Size(240, 23);
+            this.cmbThumbLocation.TabIndex = 10;
+
+            //
+            // lblMinFreeSpace
+            //
+            this.lblMinFreeSpace.AutoSize = true;
+            this.lblMinFreeSpace.Location = new Point(10, 175);
+            this.lblMinFreeSpace.Name = "lblMinFreeSpace";
+            this.lblMinFreeSpace.Size = new Size(80, 15);
+            this.lblMinFreeSpace.TabIndex = 11;
+            this.lblMinFreeSpace.Text = "空き容量下限:";
+
+            //
+            // numMinFreeSpace
+            //
+            this.numMinFreeSpace.Location = new Point(100, 172);
+            this.numMinFreeSpace.Maximum = new decimal(new int[] { 999, 0, 0, 0 });
+            this.numMinFreeSpace.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
+            this.numMinFreeSpace.Name = "numMinFreeSpace";
+            this.numMinFreeSpace.Size = new Size(60, 23);
+            this.numMinFreeSpace.TabIndex = 12;
+            this.numMinFreeSpace.Value = new decimal(new int[] { 1, 0, 0, 0 });
+
+            //
+            // lblMinFreeSpaceNote
+            //
+            this.lblMinFreeSpaceNote.AutoSize = true;
+            this.lblMinFreeSpaceNote.Location = new Point(165, 175);
+            this.lblMinFreeSpaceNote.Name = "lblMinFreeSpaceNote";
+            this.lblMinFreeSpaceNote.Size = new Size(200, 15);
+            this.lblMinFreeSpaceNote.TabIndex = 13;
+            this.lblMinFreeSpaceNote.Text = "GB 未満ならDLを開始しない (0=無効)";
+
+            //
             // grpAutoCheck
-            // 
+            //
             this.grpAutoCheck.Controls.Add(this.chkAutoCheck);
             this.grpAutoCheck.Controls.Add(this.lblCheckInterval);
             this.grpAutoCheck.Controls.Add(this.cmbCheckInterval);
             this.grpAutoCheck.Controls.Add(this.chkAutoDownload);
             this.grpAutoCheck.Controls.Add(this.chkDownloadExternal);
-            this.grpAutoCheck.Location = new Point(6, 157);
+            this.grpAutoCheck.Location = new Point(6, 217);
             this.grpAutoCheck.Name = "grpAutoCheck";
             this.grpAutoCheck.Size = new Size(440, 110);
             this.grpAutoCheck.TabIndex = 1;
@@ -387,7 +475,7 @@ namespace IwaraDownloader.Forms
             this.grpNotification.Controls.Add(this.chkToast);
             this.grpNotification.Controls.Add(this.chkStartMinimized);
             this.grpNotification.Controls.Add(this.chkMinimizeToTray);
-            this.grpNotification.Location = new Point(6, 275);
+            this.grpNotification.Location = new Point(6, 335);
             this.grpNotification.Name = "grpNotification";
             this.grpNotification.Size = new Size(440, 100);
             this.grpNotification.TabIndex = 2;
@@ -1214,9 +1302,150 @@ namespace IwaraDownloader.Forms
             this.btnCancel.Text = "キャンセル";
             this.btnCancel.UseVisualStyleBackColor = true;
 
-            // 
+            //
+            // tabMediaServer
+            //
+            this.tabMediaServer.Controls.Add(this.grpWebServer);
+            this.tabMediaServer.Controls.Add(this.grpWebAuth);
+            this.tabMediaServer.Controls.Add(this.grpWebStatus);
+            this.tabMediaServer.Location = new Point(4, 24);
+            this.tabMediaServer.Name = "tabMediaServer";
+            this.tabMediaServer.Padding = new Padding(3);
+            this.tabMediaServer.Size = new Size(452, 472);
+            this.tabMediaServer.TabIndex = 5;
+            this.tabMediaServer.Text = "メディアサーバー";
+            this.tabMediaServer.UseVisualStyleBackColor = true;
+
+            //
+            // grpWebServer
+            //
+            this.grpWebServer.Controls.Add(this.chkWebServerAutoStart);
+            this.grpWebServer.Controls.Add(this.lblWebPort);
+            this.grpWebServer.Controls.Add(this.numWebPort);
+            this.grpWebServer.Controls.Add(this.chkWebBindAll);
+            this.grpWebServer.Location = new Point(6, 6);
+            this.grpWebServer.Name = "grpWebServer";
+            this.grpWebServer.Size = new Size(440, 120);
+            this.grpWebServer.TabIndex = 0;
+            this.grpWebServer.TabStop = false;
+            this.grpWebServer.Text = "Webサーバー設定";
+
+            this.chkWebServerAutoStart.AutoSize = true;
+            this.chkWebServerAutoStart.Location = new Point(10, 25);
+            this.chkWebServerAutoStart.Name = "chkWebServerAutoStart";
+            this.chkWebServerAutoStart.Size = new Size(150, 19);
+            this.chkWebServerAutoStart.TabIndex = 1;
+            this.chkWebServerAutoStart.Text = "起動時に自動開始";
+
+            this.lblWebPort.AutoSize = true;
+            this.lblWebPort.Location = new Point(10, 55);
+            this.lblWebPort.Name = "lblWebPort";
+            this.lblWebPort.Size = new Size(50, 15);
+            this.lblWebPort.TabIndex = 2;
+            this.lblWebPort.Text = "ポート:";
+
+            this.numWebPort.Location = new Point(100, 52);
+            this.numWebPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
+            this.numWebPort.Minimum = new decimal(new int[] { 1024, 0, 0, 0 });
+            this.numWebPort.Name = "numWebPort";
+            this.numWebPort.Size = new Size(80, 23);
+            this.numWebPort.TabIndex = 3;
+            this.numWebPort.Value = new decimal(new int[] { 7860, 0, 0, 0 });
+
+            this.chkWebBindAll.AutoSize = true;
+            this.chkWebBindAll.Location = new Point(10, 85);
+            this.chkWebBindAll.Name = "chkWebBindAll";
+            this.chkWebBindAll.Size = new Size(250, 19);
+            this.chkWebBindAll.TabIndex = 4;
+            this.chkWebBindAll.Text = "LAN内の他デバイスからのアクセスを許可";
+
+            //
+            // grpWebAuth
+            //
+            this.grpWebAuth.Controls.Add(this.lblWebUsername);
+            this.grpWebAuth.Controls.Add(this.txtWebUsername);
+            this.grpWebAuth.Controls.Add(this.lblWebPassword);
+            this.grpWebAuth.Controls.Add(this.txtWebPassword);
+            this.grpWebAuth.Location = new Point(6, 132);
+            this.grpWebAuth.Name = "grpWebAuth";
+            this.grpWebAuth.Size = new Size(440, 100);
+            this.grpWebAuth.TabIndex = 1;
+            this.grpWebAuth.TabStop = false;
+            this.grpWebAuth.Text = "認証設定";
+
+            this.lblWebUsername.AutoSize = true;
+            this.lblWebUsername.Location = new Point(10, 28);
+            this.lblWebUsername.Name = "lblWebUsername";
+            this.lblWebUsername.Size = new Size(70, 15);
+            this.lblWebUsername.TabIndex = 0;
+            this.lblWebUsername.Text = "ユーザー名:";
+
+            this.txtWebUsername.Location = new Point(100, 25);
+            this.txtWebUsername.Name = "txtWebUsername";
+            this.txtWebUsername.Size = new Size(200, 23);
+            this.txtWebUsername.TabIndex = 1;
+
+            this.lblWebPassword.AutoSize = true;
+            this.lblWebPassword.Location = new Point(10, 60);
+            this.lblWebPassword.Name = "lblWebPassword";
+            this.lblWebPassword.Size = new Size(60, 15);
+            this.lblWebPassword.TabIndex = 2;
+            this.lblWebPassword.Text = "パスワード:";
+
+            this.txtWebPassword.Location = new Point(100, 57);
+            this.txtWebPassword.Name = "txtWebPassword";
+            this.txtWebPassword.Size = new Size(200, 23);
+            this.txtWebPassword.TabIndex = 3;
+            this.txtWebPassword.UseSystemPasswordChar = true;
+
+            //
+            // grpWebStatus
+            //
+            this.grpWebStatus.Controls.Add(this.lblWebStatus);
+            this.grpWebStatus.Controls.Add(this.btnWebStartStop);
+            this.grpWebStatus.Controls.Add(this.btnWebOpenBrowser);
+            this.grpWebStatus.Controls.Add(this.lblWebUrl);
+            this.grpWebStatus.Location = new Point(6, 238);
+            this.grpWebStatus.Name = "grpWebStatus";
+            this.grpWebStatus.Size = new Size(440, 110);
+            this.grpWebStatus.TabIndex = 2;
+            this.grpWebStatus.TabStop = false;
+            this.grpWebStatus.Text = "サーバー状態";
+
+            this.lblWebStatus.AutoSize = true;
+            this.lblWebStatus.Location = new Point(10, 28);
+            this.lblWebStatus.Name = "lblWebStatus";
+            this.lblWebStatus.Size = new Size(80, 15);
+            this.lblWebStatus.TabIndex = 0;
+            this.lblWebStatus.Text = "停止中";
+
+            this.lblWebUrl.AutoSize = true;
+            this.lblWebUrl.Location = new Point(10, 50);
+            this.lblWebUrl.Name = "lblWebUrl";
+            this.lblWebUrl.Size = new Size(50, 15);
+            this.lblWebUrl.TabIndex = 1;
+            this.lblWebUrl.Text = "";
+            this.lblWebUrl.ForeColor = System.Drawing.SystemColors.HotTrack;
+
+            this.btnWebStartStop.Location = new Point(10, 75);
+            this.btnWebStartStop.Name = "btnWebStartStop";
+            this.btnWebStartStop.Size = new Size(100, 27);
+            this.btnWebStartStop.TabIndex = 2;
+            this.btnWebStartStop.Text = "開始";
+            this.btnWebStartStop.UseVisualStyleBackColor = true;
+            this.btnWebStartStop.Click += new EventHandler(this.btnWebStartStop_Click);
+
+            this.btnWebOpenBrowser.Location = new Point(120, 75);
+            this.btnWebOpenBrowser.Name = "btnWebOpenBrowser";
+            this.btnWebOpenBrowser.Size = new Size(130, 27);
+            this.btnWebOpenBrowser.TabIndex = 3;
+            this.btnWebOpenBrowser.Text = "ブラウザで開く";
+            this.btnWebOpenBrowser.UseVisualStyleBackColor = true;
+            this.btnWebOpenBrowser.Click += new EventHandler(this.btnWebOpenBrowser_Click);
+
+            //
             // btnApply
-            // 
+            //
             this.btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             this.btnApply.Location = new Point(398, 520);
             this.btnApply.Name = "btnApply";
@@ -1279,8 +1508,17 @@ namespace IwaraDownloader.Forms
             this.grpUpdate.PerformLayout();
             this.grpExport.ResumeLayout(false);
             this.grpImport.ResumeLayout(false);
+            this.tabMediaServer.ResumeLayout(false);
+            this.grpWebServer.ResumeLayout(false);
+            this.grpWebServer.PerformLayout();
+            this.grpWebAuth.ResumeLayout(false);
+            this.grpWebAuth.PerformLayout();
+            this.grpWebStatus.ResumeLayout(false);
+            this.grpWebStatus.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numWebPort)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numConcurrent)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numRetry)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMinFreeSpace)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numApiDelay)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDownloadDelay)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numChannelDelay)).EndInit();
@@ -1313,6 +1551,11 @@ namespace IwaraDownloader.Forms
         private NumericUpDown numConcurrent;
         private Label lblRetry;
         private NumericUpDown numRetry;
+        private Label lblThumbLocation;
+        private ComboBox cmbThumbLocation;
+        private Label lblMinFreeSpace;
+        private NumericUpDown numMinFreeSpace;
+        private Label lblMinFreeSpaceNote;
         private GroupBox grpAutoCheck;
         private CheckBox chkAutoCheck;
         private Label lblCheckInterval;
@@ -1402,5 +1645,23 @@ namespace IwaraDownloader.Forms
         private CheckBox chkResumeOnStartup;
         private Button btnCheckUpdateNow;
         private Label lblCurrentVersion;
+
+        // メディアサーバー設定
+        private TabPage tabMediaServer;
+        private GroupBox grpWebServer;
+        private CheckBox chkWebServerAutoStart;
+        private Label lblWebPort;
+        private NumericUpDown numWebPort;
+        private CheckBox chkWebBindAll;
+        private GroupBox grpWebAuth;
+        private Label lblWebUsername;
+        private TextBox txtWebUsername;
+        private Label lblWebPassword;
+        private TextBox txtWebPassword;
+        private GroupBox grpWebStatus;
+        private Label lblWebStatus;
+        private Button btnWebStartStop;
+        private Button btnWebOpenBrowser;
+        private Label lblWebUrl;
     }
 }

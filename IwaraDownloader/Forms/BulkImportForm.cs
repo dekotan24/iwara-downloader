@@ -191,7 +191,7 @@ namespace IwaraDownloader.Forms
 
             ImportedVideos.Clear();
             DuplicateCount = 0;
-            int addedChannels = 0, channelVideoTotal = 0, channelFailed = 0;
+            int addedChannels = 0, channelFailed = 0;
 
             try
             {
@@ -230,38 +230,26 @@ namespace IwaraDownloader.Forms
                 }
 
                 // --- チャンネル (profile) の処理 ---
+                // 動画一覧取得は共通キューで 1 件ずつ処理されるのでここではエンキューのみ
                 if (profiles.Count > 0 && _downloadManager != null)
                 {
-                    var progress = new Progress<string>(msg =>
-                    {
-                        if (!IsDisposed) btnImport.Text = "チャンネル取得中...";
-                    });
                     foreach (var profileUrl in profiles)
                     {
-                        try
-                        {
-                            var user = await _downloadManager.AddSubscribedUserAsync(profileUrl, progress);
-                            if (user != null)
-                            {
-                                addedChannels++;
-                                channelVideoTotal += user.TotalVideoCount;
-                            }
-                            else channelFailed++;
-                        }
-                        catch (Exception ex)
-                        {
+                        if (_downloadManager.EnqueueSubscribedUser(profileUrl))
+                            addedChannels++;
+                        else
                             channelFailed++;
-                            LoggingService.Instance.Warn($"Bulk profile import failed ({profileUrl}): {ex.Message}");
-                        }
                         progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
                     }
                 }
 
                 // 結果表示
+                var channelMsg = addedChannels > 0
+                    ? $"・チャンネル キュー登録: {addedChannels}件{(channelFailed > 0 ? $" / スキップ {channelFailed}件" : "")}\n  (動画一覧取得はバックグラウンドで順次実行されます)"
+                    : channelFailed > 0 ? $"・チャンネル: {channelFailed}件スキップ (登録済みまたは処理待ち)" : "";
                 var message = "処理完了\n\n" +
                     $"・動画 追加: {ImportedVideos.Count}件 (重複スキップ {DuplicateCount}件)\n" +
-                    $"・チャンネル 追加: {addedChannels}件 (動画 {channelVideoTotal}件" +
-                    (channelFailed > 0 ? $" / 失敗 {channelFailed}件" : "") + ")";
+                    (channelMsg.Length > 0 ? channelMsg : "");
 
                 MessageBox.Show(message, "インポート結果", MessageBoxButtons.OK, MessageBoxIcon.Information);
 

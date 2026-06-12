@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
     <RootNamespace>IwaraDownloader</RootNamespace>
-    <Version>2.1.0</Version>
+    <Version>2.2.0</Version>
     <Authors>deko</Authors>
     <Description>Iwara video downloader</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -28,12 +28,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Services\BrowserService.cs.old" />
     <None Remove="Services\YtDlpService.cs.old" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Content Include="WebUI\**" CopyToOutputDirectory="PreserveNewest" LinkBase="WebUI" />
   </ItemGroup>
 
   <ItemGroup>

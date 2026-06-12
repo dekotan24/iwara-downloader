@@ -61,6 +61,10 @@ namespace IwaraDownloader.Forms
         {
             await Task.Run(() =>
             {
+                // 強制終了・シャットダウンで中断されても次回起動時に復旧できるよう
+                // 1 ファイルごとに start/done をジャーナルへ記録する
+                using var journal = FileMoveJournal.Begin();
+
                 int processed = 0;
                 foreach (var (video, newPath) in _items)
                 {
@@ -87,17 +91,39 @@ namespace IwaraDownloader.Forms
                             actualNewPath = Utils.Helpers.GetUniqueFilePath(newPath);
                         }
 
-                        File.Move(oldPath, actualNewPath);
+                        journal.RecordStart(video.Id, oldPath, actualNewPath);
+                        Utils.FileMoveHelper.MoveFileSafe(oldPath, actualNewPath);
+
+                        // メタデータ (.json) サイドカーも一緒に移動して置き去りを防ぐ
+                        var oldJsonPath = Path.ChangeExtension(oldPath, ".json");
+                        if (File.Exists(oldJsonPath))
+                        {
+                            try
+                            {
+                                var newJsonPath = Path.ChangeExtension(actualNewPath, ".json");
+                                if (File.Exists(newJsonPath))
+                                    File.Delete(newJsonPath);
+                                File.Move(oldJsonPath, newJsonPath);
+                            }
+                            catch (Exception jsonEx)
+                            {
+                                LoggingService.Instance.Warn(
+                                    $"メタデータ移動失敗 (動画本体は移動済): {oldJsonPath}: {jsonEx.Message}");
+                            }
+                        }
 
                         // DB 更新 (LocalFilePath)
                         video.LocalFilePath = actualNewPath;
                         _database.UpdateVideo(video);
 
+                        journal.RecordDone(video.Id);
                         MovedCount++;
                         MovedBytes += fileSize;
                     }
                     catch (Exception ex)
                     {
+                        // RecordDone は書かない: 移動済みなのに DB 更新で失敗したケースを
+                        // 次回起動時のジャーナル復旧で拾えるようにするため
                         FailedCount++;
                         AppendCurrent($"[失敗] {Path.GetFileName(oldPath)}: {ex.Message}");
                         LoggingService.Instance.Warn($"ファイル移動失敗: {oldPath} -> {newPath}: {ex.Message}");
@@ -165,18 +191,26 @@ namespace IwaraDownloader.Forms
 
         private void FileMoveProgressForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_running)
+            if (!_running) return;
+
+            // OS シャットダウン / タスクマネージャ終了時はダイアログでブロックせず即中止する。
+            // 移動中に死んでもジャーナルにより次回起動時に整合性が復旧される。
+            if (e.CloseReason == CloseReason.WindowsShutDown
+                || e.CloseReason == CloseReason.TaskManagerClosing)
             {
-                var r = MessageBox.Show(this,
-                    "移動処理中です。本当に中止しますか?",
-                    "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                if (r != DialogResult.Yes)
-                {
-                    e.Cancel = true;
-                    return;
-                }
                 _cts?.Cancel();
+                return;
             }
+
+            var r = MessageBox.Show(this,
+                "移動処理中です。本当に中止しますか?",
+                "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (r != DialogResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+            _cts?.Cancel();
         }
     }
 }
