@@ -77,14 +77,16 @@ Start the built-in web server and **watch / manage your library from any browser
 |------|-------------|
 | OS | Windows 10 / 11 (64-bit) |
 | Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.10+ (used for Cloudflare bypass; Embeddable Package works) |
+| Python | Not required (the first-run setup wizard fetches it automatically). An existing Python 3.10+ can also be used |
 
 ## 🚀 Installation
 
 1. **Download** — grab the latest release from [Releases](https://github.com/dekotan24/iwara-downloader/releases) and extract it anywhere
-2. **Launch** — run `IwaraDownloader.exe`
-3. **Environment setup** — click "環境セットアップ" (Setup) and point it at your Python executable (required packages are installed automatically)
-4. **Login** — sign in with your iwara.tv email and password
+2. **Launch** — run `IwaraDownloader.exe`; the setup wizard opens automatically on first run
+3. **Follow the wizard** — it fetches Python and installs the required packages automatically (you can also point it at an existing Python installation)
+4. **Login** — sign in with your iwara.tv email and password, and you're done
+
+> 💡 No need to install Python beforehand — the wizard takes care of it.
 
 > 🔒 Credentials and tokens are stored locally only. The token is passed to Python via an environment variable to avoid leaking through the process list.
 
@@ -193,8 +195,8 @@ A hidden `.iwara_index.json` is created in each download folder to speed up UUID
 <details>
 <summary><b>Setup / login fails</b></summary>
 
-- Verify the Python path (full path to `python.exe`)
-- Check your internet connection (needed to install cloudscraper)
+- Check your internet connection (needed to fetch Python and install cloudscraper)
+- If you pointed the wizard at an existing Python, verify the path (full path to `python.exe`)
 - Confirm you can log in to iwara.tv directly
 - Make sure your antivirus is not blocking the app
 

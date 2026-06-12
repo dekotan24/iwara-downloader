@@ -77,14 +77,16 @@
 |------|------|
 | OS | Windows 10 / 11 (64bit) |
 | ランタイム | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 3.10 以上（Cloudflare 回避に使用。Embeddable Package 可） |
+| Python | 不要（初回セットアップウィザードが自動で取得）。既存の Python 3.10 以上を使うことも可 |
 
 ## 🚀 インストール
 
 1. **ダウンロード** — [Releases](https://github.com/dekotan24/iwara-downloader/releases) から最新版を取得して任意のフォルダに展開
-2. **起動** — `IwaraDownloader.exe` を実行
-3. **環境セットアップ** — 「環境セットアップ」ボタンから Python のパスを指定（必要パッケージは自動インストール）
-4. **ログイン** — iwara.tv のメールアドレスとパスワードでログイン
+2. **起動** — `IwaraDownloader.exe` を実行すると、初回はセットアップウィザードが自動で開きます
+3. **ウィザードに従う** — 案内どおりに進めるだけで、Python の取得から必要パッケージのインストールまで自動で完了します（インストール済みの Python を指定することも可能）
+4. **ログイン** — iwara.tv のメールアドレスとパスワードでログインすればセットアップ完了
+
+> 💡 Python を事前にインストールしておく必要はありません。ウィザードが自動で用意します。
 
 > 🔒 資格情報・トークンはローカルにのみ保存されます。トークンは環境変数経由で Python に渡され、プロセスリストからの漏洩を防ぎます。
 
@@ -193,8 +195,8 @@ URL 入力欄にユーザー名またはプロフィール URL（`https://www.iw
 <details>
 <summary><b>セットアップ / ログインに失敗する</b></summary>
 
-- Python のパスが正しいか確認（`python.exe` のフルパス）
-- インターネット接続を確認（cloudscraper のインストールに必要）
+- インターネット接続を確認（Python の取得と cloudscraper のインストールに必要）
+- 既存の Python を指定した場合はパスが正しいか確認（`python.exe` のフルパス）
 - iwara.tv に直接ログインできるか確認
 - ウイルス対策ソフトがブロックしていないか確認
 
