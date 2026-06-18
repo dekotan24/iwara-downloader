@@ -4,7 +4,7 @@
 
 **iwara.tv / iwara.ai 対応の高機能動画ダウンローダー & メディアサーバー for Windows**
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -23,7 +23,7 @@
 ## ✨ ハイライト
 
 - 📺 **チャンネル購読** — お気に入りユーザーを登録するだけで、新着を自動検出して自動ダウンロード
-- 🔄 **堅牢なダウンロード** — レジューム（HTTP Range + 整合性検証）、自動リトライ、起動時の自動再開
+- 🔄 **堅牢なダウンロード** — レジューム（HTTP Range + 整合性検証）、自動リトライ、起動時の自動再開、ログイン切れ時のキュー自動停止・再開
 - 🌐 **Web メディアサーバー内蔵** — スマホやタブレットのブラウザから LAN 内で視聴・管理（日本語 UI）
 - ⭐ **お気に入り・強力な検索** — アプリと Web の両方からお気に入り管理、タイトル/アーティスト/タグの混合検索
 - 🧰 **コレクション管理** — UUID ベースの重複検出、保存先移動（クラッシュ復旧付き）、統計ダッシュボード
@@ -185,6 +185,7 @@ URL 入力欄にユーザー名またはプロフィール URL（`https://www.iw
 ├── data.db              # 購読・動画情報 (SQLite)
 ├── token.txt            # ログイントークン
 ├── thumbs/              # サムネイルキャッシュ
+├── backups/             # DB 自動バックアップ (日次・最大 7 世代)
 └── logs/                # ログ
 ```
 
