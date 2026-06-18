@@ -385,7 +385,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public async Task<(bool Success, string? Error)> LoginAsync(string email, string password)
         {
-            var result = await RunPythonAsync("login", email, password);
+            var result = await RunPythonAsync("login", new[] { email, password });
             
             if (result == null)
                 return (false, "Pythonスクリプトの実行に失敗しました。環境セットアップを確認してください。");

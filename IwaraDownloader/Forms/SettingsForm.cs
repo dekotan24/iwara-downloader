@@ -277,6 +277,7 @@ namespace IwaraDownloader.Forms
 
                 if (success)
                 {
+                    _downloadManager?.ResumeAfterLogin();
                     MessageBox.Show("ログインに成功しました！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else

@@ -35,6 +35,9 @@ namespace IwaraDownloader.Services
         /// <summary>自動チェック完了イベント</summary>
         public event EventHandler? AutoCheckCompleted;
 
+        /// <summary>ログイン必要エラーでキューが停止した時のイベント (int = 停止したタスク数)</summary>
+        public event EventHandler<int>? DownloadQueueSuspended;
+
         /// <summary>アクティブなタスク数</summary>
         public int ActiveTaskCount => _activeTasks.Count;
 
@@ -806,6 +809,9 @@ namespace IwaraDownloader.Services
                 var maxRetry = SettingsManager.Instance.Settings.MaxRetryCount;
                 _logger.Debug($"Download error: {task.Video.Title} - RetryCount={task.Video.RetryCount}, MaxRetry={maxRetry}");
 
+                // ログイン必要: 全タスクが同じ理由で失敗するのでリトライ無駄 → 即失敗 + キュー停止
+                bool isLoginRequired = ex.Message.Contains("ログインが必要です");
+
                 // CDN_UNAVAILABLE / All CDN candidates failed: iwara 側の CDN 振り分けが壊れていて
                 // Python ヘルパーが既に内部で 6 回 CDN ガチャを引いてる。
                 // ここから更にリトライしても無駄なので即時諦める (CPU・帯域節約)。
@@ -822,9 +828,16 @@ namespace IwaraDownloader.Services
                                     || ex.Message.Contains("errors.notFound")
                                     || ex.Message.Contains("Video not found");
 
-                bool isUnrecoverable = isCdnUnavailable || isPrivateVideo || isVideoNotFound;
+                bool isUnrecoverable = isLoginRequired || isCdnUnavailable || isPrivateVideo || isVideoNotFound;
 
-                if (task.Video.RetryCount < maxRetry && !isUnrecoverable)
+                if (isLoginRequired)
+                {
+                    _logger.Warn($"Login required — suspending download queue. Log in and retry.");
+                    task.Video.RetryCount = Math.Max(task.Video.RetryCount, maxRetry);
+                    _database.UpdateVideo(task.Video);
+                    SuspendQueueForLogin();
+                }
+                else if (task.Video.RetryCount < maxRetry && !isUnrecoverable)
                 {
                     _logger.Info($"Retrying download: {task.Video.Title} (attempt {task.Video.RetryCount + 1}/{maxRetry})");
                     // finally で _activeTasks から削除された後にエンキューする必要があるため
@@ -1076,6 +1089,52 @@ namespace IwaraDownloader.Services
                 _database.UpdateVideo(pendingTask.Video);
                 TaskStatusChanged?.Invoke(this, pendingTask);
             }
+        }
+
+        /// <summary>
+        /// ログイン必要エラーによるキュー一時停止。
+        /// 実行中タスクをキャンセルし、待機中タスクを Pending に戻す。
+        /// ログイン後に ResumeAfterLogin() で再開。
+        /// </summary>
+        private void SuspendQueueForLogin()
+        {
+            // 実行中タスクをキャンセル (全部同じ理由で失敗するため)
+            foreach (var task in _activeTasks.Values)
+            {
+                task.Cancel();
+            }
+
+            // 待機キューを Pending に戻す (Failed にしない — ログイン後に自動で再DLできるように)
+            var suspendedCount = 0;
+            while (_pendingQueue.TryDequeue(out var task))
+            {
+                _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                task.Video.Status = DownloadStatus.Pending;
+                _database.UpdateVideo(task.Video);
+                suspendedCount++;
+            }
+
+            _logger.Info($"Download queue suspended: {suspendedCount} tasks returned to Pending");
+            DownloadQueueSuspended?.Invoke(this, suspendedCount);
+        }
+
+        /// <summary>
+        /// ログイン後にキューを再開。Pending 状態の動画をすべて再エンキューする。
+        /// </summary>
+        public void ResumeAfterLogin()
+        {
+            if (!_iwaraApi.IsLoggedIn) return;
+
+            var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
+            var count = 0;
+            foreach (var video in pendingVideos)
+            {
+                EnqueueDownload(video);
+                count++;
+            }
+
+            if (count > 0)
+                _logger.Info($"Resumed {count} downloads after login");
         }
 
         /// <summary>
