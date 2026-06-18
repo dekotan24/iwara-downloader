@@ -9,6 +9,7 @@ namespace IwaraDownloader.Services
     public class DatabaseService : IDisposable
     {
         private readonly string _connectionString;
+        private readonly string _dbPath;
         private static DatabaseService? _instance;
         private static readonly object _lock = new();
 
@@ -30,20 +31,68 @@ namespace IwaraDownloader.Services
 
         private DatabaseService()
         {
-            var dbPath = Path.Combine(
+            _dbPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "IwaraDownloader",
                 "data.db");
 
-            var directory = Path.GetDirectoryName(dbPath);
+            var directory = Path.GetDirectoryName(_dbPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
             // Pooling=true で接続再利用、Cache=Shared で WAL の効果を最大化
-            _connectionString = $"Data Source={dbPath};Pooling=True;Cache=Shared";
+            _connectionString = $"Data Source={_dbPath};Pooling=True;Cache=Shared";
             InitializeDatabase();
+            BackupDatabaseIfNeeded();
+        }
+
+        private const int MaxBackupCount = 7;
+
+        private void BackupDatabaseIfNeeded()
+        {
+            try
+            {
+                if (!File.Exists(_dbPath)) return;
+
+                var backupDir = Path.Combine(Path.GetDirectoryName(_dbPath)!, "backups");
+                Directory.CreateDirectory(backupDir);
+
+                var existing = Directory.GetFiles(backupDir, "data_backup_*.db")
+                    .OrderByDescending(f => f)
+                    .ToArray();
+
+                if (existing.Length > 0)
+                {
+                    var latestWriteTime = File.GetLastWriteTime(existing[0]);
+                    if ((DateTime.Now - latestWriteTime).TotalHours < 24)
+                        return;
+                }
+
+                var backupPath = Path.Combine(backupDir, $"data_backup_{DateTime.Now:yyyyMMdd_HHmmss}.db");
+
+                using (var connection = new SqliteConnection(_connectionString))
+                {
+                    connection.Open();
+                    using var cmd = connection.CreateCommand();
+                    cmd.CommandText = $"VACUUM INTO '{backupPath.Replace("'", "''")}'";
+                    cmd.ExecuteNonQuery();
+                }
+
+                LoggingService.Instance.Info($"データベースバックアップ作成: {Path.GetFileName(backupPath)}");
+
+                // 古いバックアップを削除
+                foreach (var old in existing.Skip(MaxBackupCount - 1))
+                {
+                    try { File.Delete(old); }
+                    catch { /* 削除失敗は無視 */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Warn($"データベースバックアップ失敗: {ex.Message}", ex);
+            }
         }
 
         /// <summary>

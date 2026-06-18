@@ -103,6 +103,8 @@ namespace IwaraDownloader.Forms
             _downloadManager.BackgroundTaskCompleted += OnBackgroundTaskCompleted;
             _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => UpdateStatusBar(msg));
             _downloadManager.UserAdded += (_, _) => PostToUi(() => RefreshChannelTree());
+            _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() =>
+                UpdateStatusBar($"ログインが必要です — DLキューを停止しました ({count}件待機中)。ログイン後に自動再開します。"));
 
             // 前回プロセスがファイル移動中に強制終了されていた場合の整合性復旧
             SplashForm.UpdateStatus("整合性をチェック中...", 35);
@@ -463,6 +465,7 @@ namespace IwaraDownloader.Forms
                     SettingsManager.Instance.Save();
                     
                     UpdateStatusBar("ログイン完了！");
+                    _downloadManager.ResumeAfterLogin();
                     MessageBox.Show("ログインに成功しました！", "ログイン成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
