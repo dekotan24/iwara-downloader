@@ -20,6 +20,7 @@ namespace IwaraDownloader.Forms
         public SetupWizardForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _appDir = AppDomain.CurrentDomain.BaseDirectory;
             // Designer の Anchor=Top|Right + 絶対 Location だと AutoScaleMode=Font の
             // スケーリングや InitializeComponent 時の Panel サイズで Next ボタンが

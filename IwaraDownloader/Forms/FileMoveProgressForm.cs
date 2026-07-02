@@ -22,6 +22,7 @@ namespace IwaraDownloader.Forms
             DatabaseService database)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _items = items;
             _database = database;
             lblCount.Text = $"0 / {_items.Count}";

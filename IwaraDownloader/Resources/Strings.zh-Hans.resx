@@ -1,0 +1,965 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AboutForm_Title" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="AboutForm_btnCheckUpdate" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="AboutForm_lblDescription" xml:space="preserve">
+    <value>用于从 iwara.tv 下载视频的桌面应用程序。</value>
+  </data>
+  <data name="BulkImportForm_Title" xml:space="preserve">
+    <value>批量URL导入</value>
+  </data>
+  <data name="BulkImportForm_btnCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="BulkImportForm_btnClear" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="BulkImportForm_btnImport" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="BulkImportForm_btnLoadFile" xml:space="preserve">
+    <value>从文件</value>
+  </data>
+  <data name="BulkImportForm_btnPaste" xml:space="preserve">
+    <value>从剪贴板</value>
+  </data>
+  <data name="BulkImportForm_lblDescription" xml:space="preserve">
+    <value>请输入 iwara.tv / iwara.ai 的视频或频道URL（每行一个URL）</value>
+  </data>
+  <data name="BulkImportForm_lblHelp" xml:space="preserve">
+    <value>* 支持格式：视频URL / 频道（个人资料）URL / 纯VideoId（iwara.tv 和 iwara.ai 均支持）
+* 重复的URL会自动跳过</value>
+  </data>
+  <data name="BulkImportForm_lblStats" xml:space="preserve">
+    <value>检测到的URL：0个</value>
+  </data>
+  <data name="Common_Error" xml:space="preserve">
+    <value>错误</value>
+  </data>
+  <data name="DuplicateCheckForm_Title" xml:space="preserve">
+    <value>重复检查</value>
+  </data>
+  <data name="DuplicateCheckForm_btnClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="DuplicateCheckForm_btnRemoveDuplicates" xml:space="preserve">
+    <value>自动清理重复项</value>
+  </data>
+  <data name="DuplicateCheckForm_btnRemoveSelected" xml:space="preserve">
+    <value>删除所选项</value>
+  </data>
+  <data name="DuplicateCheckForm_btnScan" xml:space="preserve">
+    <value>重新扫描</value>
+  </data>
+  <data name="DuplicateCheckForm_lblDescription" xml:space="preserve">
+    <value>检测存在于多个频道中的相同视频（相同VideoId）。</value>
+  </data>
+  <data name="DuplicateCheckForm_lblDetails" xml:space="preserve">
+    <value>所选重复项的详情：</value>
+  </data>
+  <data name="DuplicateCheckForm_lblStatus" xml:space="preserve">
+    <value>扫描中...</value>
+  </data>
+  <data name="FileMoveProgressForm_Title" xml:space="preserve">
+    <value>移动文件</value>
+  </data>
+  <data name="FileMoveProgressForm_btnCancel" xml:space="preserve">
+    <value>中止</value>
+  </data>
+  <data name="FileMoveProgressForm_lblCurrent" xml:space="preserve">
+    <value>准备中...</value>
+  </data>
+  <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
+    <value>正在移动文件...</value>
+  </data>
+  <data name="ImportFromFolderWizard_Title" xml:space="preserve">
+    <value>从文件夹导入</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
+    <value>&lt; 上一步</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnBrowse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnHide" xml:space="preserve">
+    <value>后台运行</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnNext" xml:space="preserve">
+    <value>下一步 &gt;</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnSelectAll" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnSelectNone" xml:space="preserve">
+    <value>全部取消</value>
+  </data>
+  <data name="ImportFromFolderWizard_chkRecursive" xml:space="preserve">
+    <value>递归扫描子文件夹</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblImportStatus" xml:space="preserve">
+    <value>准备中...</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblScanStatus" xml:space="preserve">
+    <value>准备中...</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep" xml:space="preserve">
+    <value>步骤 1/5</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep1Desc" xml:space="preserve">
+    <value>扫描所选文件夹中的 mp4/m4v 文件，并通过 iwara 的自定义标签
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep1Title" xml:space="preserve">
+    <value>选择导入源文件夹</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep2Title" xml:space="preserve">
+    <value>扫描中</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
+    <value>勾选的作者将被添加为订阅频道。
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">
+    <value>选择要注册为频道的作者</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep4Title" xml:space="preserve">
+    <value>正在导入</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep5Title" xml:space="preserve">
+    <value>导入完成！</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
+    <value>从文件夹导入</value>
+  </data>
+  <data name="MainForm_btnAddUser" xml:space="preserve">
+    <value>＋频道</value>
+  </data>
+  <data name="MainForm_btnAddUser_Tip" xml:space="preserve">
+    <value>添加订阅频道（用户名 / 个人资料URL）</value>
+  </data>
+  <data name="MainForm_btnAddVideo" xml:space="preserve">
+    <value>＋视频</value>
+  </data>
+  <data name="MainForm_btnAddVideo_Tip" xml:space="preserve">
+    <value>将单个视频URL添加到队列</value>
+  </data>
+  <data name="MainForm_btnAdvancedSearch" xml:space="preserve">
+    <value>高级搜索 ▾</value>
+  </data>
+  <data name="MainForm_btnCheckNow" xml:space="preserve">
+    <value>立即检查 (F5)</value>
+  </data>
+  <data name="MainForm_btnCheckNow_Tip" xml:space="preserve">
+    <value>立即检查订阅频道的新视频 (F5)</value>
+  </data>
+  <data name="MainForm_btnClearFilter" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="MainForm_btnClipMonitor" xml:space="preserve">
+    <value>📋监视: OFF</value>
+  </data>
+  <data name="MainForm_btnClipMonitor_Tip" xml:space="preserve">
+    <value>剪贴板监视：自动将 iwara URL 加入队列</value>
+  </data>
+  <data name="MainForm_btnHelp" xml:space="preserve">
+    <value>帮助</value>
+  </data>
+  <data name="MainForm_btnLogin" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="MainForm_btnLogin_Tip" xml:space="preserve">
+    <value>使用 iwara 账号登录（搜索和下载需要）</value>
+  </data>
+  <data name="MainForm_btnPasteAndAdd" xml:space="preserve">
+    <value>粘贴并添加</value>
+  </data>
+  <data name="MainForm_btnSettings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="MainForm_btnSettings_Tip" xml:space="preserve">
+    <value>保存位置、画质、通知、速率限制等设置</value>
+  </data>
+  <data name="MainForm_btnSetup" xml:space="preserve">
+    <value>环境设置</value>
+  </data>
+  <data name="MainForm_btnSetup_Tip" xml:space="preserve">
+    <value>Python / 依赖库设置向导</value>
+  </data>
+  <data name="MainForm_btnStartAll" xml:space="preserve">
+    <value>▶ 开始下载</value>
+  </data>
+  <data name="MainForm_btnStartAll_Tip" xml:space="preserve">
+    <value>开始下载等待中的视频</value>
+  </data>
+  <data name="MainForm_btnStopAll" xml:space="preserve">
+    <value>■ 停止</value>
+  </data>
+  <data name="MainForm_btnStopAll_Tip" xml:space="preserve">
+    <value>停止所有进行中的下载</value>
+  </data>
+  <data name="MainForm_btnTools" xml:space="preserve">
+    <value>工具</value>
+  </data>
+  <data name="MainForm_btnViewMode" xml:space="preserve">
+    <value>📋详细</value>
+  </data>
+  <data name="MainForm_btnViewMode_Tip" xml:space="preserve">
+    <value>切换显示模式（详细 / 缩略图）</value>
+  </data>
+  <data name="MainForm_chkFavOnly" xml:space="preserve">
+    <value>★ 仅收藏</value>
+  </data>
+  <data name="MainForm_colVideoDate" xml:space="preserve">
+    <value>添加时间</value>
+  </data>
+  <data name="MainForm_colVideoProgress" xml:space="preserve">
+    <value>进度</value>
+  </data>
+  <data name="MainForm_colVideoSize" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="MainForm_colVideoSource" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="MainForm_colVideoStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="MainForm_colVideoTitle" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="MainForm_lblChannelHeader" xml:space="preserve">
+    <value>订阅频道</value>
+  </data>
+  <data name="MainForm_lblDownloadCount" xml:space="preserve">
+    <value>下载: 0 / 等待: 0</value>
+  </data>
+  <data name="MainForm_lblLoginStatus" xml:space="preserve">
+    <value>（未登录）</value>
+  </data>
+  <data name="MainForm_lblStatus" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="MainForm_lblTagFilter" xml:space="preserve">
+    <value>标签：</value>
+  </data>
+  <data name="MainForm_lblVideoHeader" xml:space="preserve">
+    <value>视频列表</value>
+  </data>
+  <data name="MainForm_menuChCheckFiles" xml:space="preserve">
+    <value>检查文件是否存在</value>
+  </data>
+  <data name="MainForm_menuChCheckNow" xml:space="preserve">
+    <value>立即检查</value>
+  </data>
+  <data name="MainForm_menuChDelete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="MainForm_menuChDeleteNotFound" xml:space="preserve">
+    <value>排除 Not Found</value>
+  </data>
+  <data name="MainForm_menuChDisable" xml:space="preserve">
+    <value>禁用</value>
+  </data>
+  <data name="MainForm_menuChDownloadAll" xml:space="preserve">
+    <value>全部下载</value>
+  </data>
+  <data name="MainForm_menuChEnable" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="MainForm_menuChExternalDL" xml:space="preserve">
+    <value>下载 iwara 外部视频</value>
+  </data>
+  <data name="MainForm_menuChExternalDLInherit" xml:space="preserve">
+    <value>跟随默认设置</value>
+  </data>
+  <data name="MainForm_menuChExternalDLOff" xml:space="preserve">
+    <value>不下载</value>
+  </data>
+  <data name="MainForm_menuChExternalDLOn" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="MainForm_menuChOpen" xml:space="preserve">
+    <value>打开页面</value>
+  </data>
+  <data name="MainForm_menuChSetSavePath" xml:space="preserve">
+    <value>更改保存位置...</value>
+  </data>
+  <data name="MainForm_menuExit" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="MainForm_menuHelpAbout" xml:space="preserve">
+    <value>关于...</value>
+  </data>
+  <data name="MainForm_menuHelpGitHub" xml:space="preserve">
+    <value>GitHub 页面</value>
+  </data>
+  <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
+    <value>打开日志文件夹</value>
+  </data>
+  <data name="MainForm_menuShow" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
+    <value>批量URL导入...</value>
+  </data>
+  <data name="MainForm_menuToolsDuplicateCheck" xml:space="preserve">
+    <value>重复检查...</value>
+  </data>
+  <data name="MainForm_menuToolsImportFolder" xml:space="preserve">
+    <value>从文件夹导入...</value>
+  </data>
+  <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
+    <value>重新链接已移动文件...</value>
+  </data>
+  <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
+    <value>批量移动未迁移文件...</value>
+  </data>
+  <data name="MainForm_menuToolsSearchImport" xml:space="preserve">
+    <value>iwara 搜索导入...</value>
+  </data>
+  <data name="MainForm_menuToolsStatistics" xml:space="preserve">
+    <value>统计仪表板...</value>
+  </data>
+  <data name="MainForm_menuVidCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
+    <value>检查文件是否存在</value>
+  </data>
+  <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
+    <value>复制标题</value>
+  </data>
+  <data name="MainForm_menuVidCopyUrl" xml:space="preserve">
+    <value>复制URL</value>
+  </data>
+  <data name="MainForm_menuVidDelete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="MainForm_menuVidDetails" xml:space="preserve">
+    <value>详细信息...</value>
+  </data>
+  <data name="MainForm_menuVidDownload" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="MainForm_menuVidFavorite" xml:space="preserve">
+    <value>★ 添加到收藏</value>
+  </data>
+  <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
+    <value>打开作者页面</value>
+  </data>
+  <data name="MainForm_menuVidOpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="MainForm_menuVidOpenPage" xml:space="preserve">
+    <value>打开页面</value>
+  </data>
+  <data name="MainForm_menuVidPlay" xml:space="preserve">
+    <value>播放</value>
+  </data>
+  <data name="MainForm_menuVidReDownload" xml:space="preserve">
+    <value>重新下载...</value>
+  </data>
+  <data name="MainForm_menuVidRefreshInfo" xml:space="preserve">
+    <value>重新获取信息</value>
+  </data>
+  <data name="MainForm_menuVidRetryFailed" xml:space="preserve">
+    <value>重试失败项</value>
+  </data>
+  <data name="Msg_AlreadyRunning" xml:space="preserve">
+    <value>IwaraDownloader 已在运行。</value>
+  </data>
+  <data name="Msg_LanguageRestart" xml:space="preserve">
+    <value>语言更改将在重启应用后生效。</value>
+  </data>
+  <data name="Msg_UnexpectedError" xml:space="preserve">
+    <value>发生了意外错误。
+
+{0}</value>
+  </data>
+  <data name="RenameResultForm_Title" xml:space="preserve">
+    <value>重命名结果</value>
+  </data>
+  <data name="RenameResultForm_btnAddNumber" xml:space="preserve">
+    <value>加编号</value>
+  </data>
+  <data name="RenameResultForm_btnClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="RenameResultForm_btnCompare" xml:space="preserve">
+    <value>同时打开对比</value>
+  </data>
+  <data name="RenameResultForm_btnOverwrite" xml:space="preserve">
+    <value>覆盖</value>
+  </data>
+  <data name="RenameResultForm_btnPlayConflict" xml:space="preserve">
+    <value>播放冲突文件</value>
+  </data>
+  <data name="RenameResultForm_btnPlayOriginal" xml:space="preserve">
+    <value>播放原文件</value>
+  </data>
+  <data name="RenameResultForm_btnSelectAllConflicts" xml:space="preserve">
+    <value>全选冲突项</value>
+  </data>
+  <data name="RenameResultForm_btnSkip" xml:space="preserve">
+    <value>跳过</value>
+  </data>
+  <data name="RenameResultForm_colNewName" xml:space="preserve">
+    <value>新文件名</value>
+  </data>
+  <data name="RenameResultForm_colOriginalName" xml:space="preserve">
+    <value>原文件名</value>
+  </data>
+  <data name="RenameResultForm_colStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="RenameResultForm_colTitle" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="RenameResultForm_grpConflictActions" xml:space="preserve">
+    <value>冲突文件的处理（所选项）</value>
+  </data>
+  <data name="RenameResultForm_grpPlayback" xml:space="preserve">
+    <value>播放·对比</value>
+  </data>
+  <data name="RenameResultForm_lblStatus" xml:space="preserve">
+    <value>成功: 0  跳过: 0  冲突: 0  文件缺失: 0  错误: 0</value>
+  </data>
+  <data name="RenameResultForm_menuAddNumber" xml:space="preserve">
+    <value>编号重命名</value>
+  </data>
+  <data name="RenameResultForm_menuCompare" xml:space="preserve">
+    <value>同时打开对比</value>
+  </data>
+  <data name="RenameResultForm_menuOpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="RenameResultForm_menuOverwrite" xml:space="preserve">
+    <value>覆盖</value>
+  </data>
+  <data name="RenameResultForm_menuPlayConflict" xml:space="preserve">
+    <value>播放冲突文件</value>
+  </data>
+  <data name="RenameResultForm_menuPlayOriginal" xml:space="preserve">
+    <value>播放原文件</value>
+  </data>
+  <data name="RenameResultForm_menuSkip" xml:space="preserve">
+    <value>跳过</value>
+  </data>
+  <data name="SearchImportForm_Title" xml:space="preserve">
+    <value>iwara 搜索导入</value>
+  </data>
+  <data name="SearchImportForm_btnClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="SearchImportForm_btnImport" xml:space="preserve">
+    <value>导入所选</value>
+  </data>
+  <data name="SearchImportForm_btnNextPage" xml:space="preserve">
+    <value>下一页 ▶</value>
+  </data>
+  <data name="SearchImportForm_btnPrevPage" xml:space="preserve">
+    <value>◀ 上一页</value>
+  </data>
+  <data name="SearchImportForm_btnSearch" xml:space="preserve">
+    <value>搜索</value>
+  </data>
+  <data name="SearchImportForm_btnSelectAll" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="SearchImportForm_btnSelectNew" xml:space="preserve">
+    <value>全选未下载项</value>
+  </data>
+  <data name="SearchImportForm_btnSelectNone" xml:space="preserve">
+    <value>取消选择</value>
+  </data>
+  <data name="SearchImportForm_lblStatus" xml:space="preserve">
+    <value>输入关键词后点击「搜索」</value>
+  </data>
+  <data name="SettingsForm_Title" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="SettingsForm_btnApply" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="SettingsForm_btnBackfillThumbnails" xml:space="preserve">
+    <value>批量补全缩略图URL</value>
+  </data>
+  <data name="SettingsForm_btnBrowseErrorSound" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SettingsForm_btnBrowseFolder" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SettingsForm_btnBrowsePython" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SettingsForm_btnBrowseSound" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SettingsForm_btnBrowseYtDlp" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SettingsForm_btnCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="SettingsForm_btnCheckUpdateNow" xml:space="preserve">
+    <value>立即检查</value>
+  </data>
+  <data name="SettingsForm_btnExportSettings" xml:space="preserve">
+    <value>导出设置</value>
+  </data>
+  <data name="SettingsForm_btnExportSubscriptions" xml:space="preserve">
+    <value>导出订阅列表</value>
+  </data>
+  <data name="SettingsForm_btnImportSettings" xml:space="preserve">
+    <value>导入设置</value>
+  </data>
+  <data name="SettingsForm_btnImportSubscriptions" xml:space="preserve">
+    <value>导入订阅列表</value>
+  </data>
+  <data name="SettingsForm_btnMigrateExistingFiles" xml:space="preserve">
+    <value>向现有文件写入标签</value>
+  </data>
+  <data name="SettingsForm_btnPresetAggressive" xml:space="preserve">
+    <value>积极</value>
+  </data>
+  <data name="SettingsForm_btnPresetConservative" xml:space="preserve">
+    <value>保守</value>
+  </data>
+  <data name="SettingsForm_btnPresetStandard" xml:space="preserve">
+    <value>标准</value>
+  </data>
+  <data name="SettingsForm_btnReLogin" xml:space="preserve">
+    <value>重新登录</value>
+  </data>
+  <data name="SettingsForm_btnRenameFiles" xml:space="preserve">
+    <value>批量重命名已下载文件</value>
+  </data>
+  <data name="SettingsForm_btnTestErrorSound" xml:space="preserve">
+    <value>测试</value>
+  </data>
+  <data name="SettingsForm_btnTestSound" xml:space="preserve">
+    <value>测试</value>
+  </data>
+  <data name="SettingsForm_btnWebOpenBrowser" xml:space="preserve">
+    <value>在浏览器中打开</value>
+  </data>
+  <data name="SettingsForm_btnWebStartStop" xml:space="preserve">
+    <value>开始</value>
+  </data>
+  <data name="SettingsForm_chkAutoCheck" xml:space="preserve">
+    <value>自动检查新视频</value>
+  </data>
+  <data name="SettingsForm_chkAutoDownload" xml:space="preserve">
+    <value>检测到新视频时自动开始下载</value>
+  </data>
+  <data name="SettingsForm_chkCheckUpdate" xml:space="preserve">
+    <value>启动时检查更新</value>
+  </data>
+  <data name="SettingsForm_chkDownloadExternal" xml:space="preserve">
+    <value>同时下载 iwara 外部视频（YouTube 嵌入等）（默认值，可按频道覆盖）</value>
+  </data>
+  <data name="SettingsForm_chkEnableErrorSound" xml:space="preserve">
+    <value>下载失败时播放提示音</value>
+  </data>
+  <data name="SettingsForm_chkEnableSound" xml:space="preserve">
+    <value>下载完成时播放提示音</value>
+  </data>
+  <data name="SettingsForm_chkExponentialBackoff" xml:space="preserve">
+    <value>启用指数退避（连续出错时增加等待时间）</value>
+  </data>
+  <data name="SettingsForm_chkMinimizeToTray" xml:space="preserve">
+    <value>点击关闭按钮时最小化到托盘</value>
+  </data>
+  <data name="SettingsForm_chkResumeOnStartup" xml:space="preserve">
+    <value>恢复未完成的下载</value>
+  </data>
+  <data name="SettingsForm_chkSaveMetadata" xml:space="preserve">
+    <value>与视频一起保存元数据 (.json)</value>
+  </data>
+  <data name="SettingsForm_chkStartMinimized" xml:space="preserve">
+    <value>启动时最小化</value>
+  </data>
+  <data name="SettingsForm_chkToast" xml:space="preserve">
+    <value>启用弹出通知</value>
+  </data>
+  <data name="SettingsForm_chkWebBindAll" xml:space="preserve">
+    <value>允许局域网内其他设备访问</value>
+  </data>
+  <data name="SettingsForm_chkWebServerAutoStart" xml:space="preserve">
+    <value>启动时自动开启</value>
+  </data>
+  <data name="SettingsForm_grpAccount" xml:space="preserve">
+    <value>iwara 账号</value>
+  </data>
+  <data name="SettingsForm_grpAutoCheck" xml:space="preserve">
+    <value>自动检查</value>
+  </data>
+  <data name="SettingsForm_grpDownload" xml:space="preserve">
+    <value>下载设置</value>
+  </data>
+  <data name="SettingsForm_grpErrorHandling" xml:space="preserve">
+    <value>出错时的行为 (429/403)</value>
+  </data>
+  <data name="SettingsForm_grpExport" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="SettingsForm_grpFilename" xml:space="preserve">
+    <value>文件名模板</value>
+  </data>
+  <data name="SettingsForm_grpImport" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="SettingsForm_grpMetadata" xml:space="preserve">
+    <value>元数据</value>
+  </data>
+  <data name="SettingsForm_grpMigration" xml:space="preserve">
+    <value>现有文件的元数据迁移</value>
+  </data>
+  <data name="SettingsForm_grpNotification" xml:space="preserve">
+    <value>通知·启动</value>
+  </data>
+  <data name="SettingsForm_grpPython" xml:space="preserve">
+    <value>Python 环境</value>
+  </data>
+  <data name="SettingsForm_grpRateLimit" xml:space="preserve">
+    <value>速率限制设置</value>
+  </data>
+  <data name="SettingsForm_grpSound" xml:space="preserve">
+    <value>提示音</value>
+  </data>
+  <data name="SettingsForm_grpUpdate" xml:space="preserve">
+    <value>启动时的行为</value>
+  </data>
+  <data name="SettingsForm_grpWebAuth" xml:space="preserve">
+    <value>认证设置</value>
+  </data>
+  <data name="SettingsForm_grpWebServer" xml:space="preserve">
+    <value>Web 服务器设置</value>
+  </data>
+  <data name="SettingsForm_grpWebStatus" xml:space="preserve">
+    <value>服务器状态</value>
+  </data>
+  <data name="SettingsForm_lblAccountNote" xml:space="preserve">
+    <value>* 下载 R-18 内容或私密视频需要
+   使用 iwara 账号登录。
+* 更改邮箱/密码后请点击「重新登录」。</value>
+  </data>
+  <data name="SettingsForm_lblAdvancedNote" xml:space="preserve">
+    <value>* 速率限制设置可减轻服务器负担，防止 403/429 错误。
+* 值太小可能导致访问受限。
+* 值太大会使下载耗时更长。</value>
+  </data>
+  <data name="SettingsForm_lblApiDelay" xml:space="preserve">
+    <value>API 请求间隔：</value>
+  </data>
+  <data name="SettingsForm_lblApiDelayUnit" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="SettingsForm_lblChannelDelay" xml:space="preserve">
+    <value>频道巡回间隔：</value>
+  </data>
+  <data name="SettingsForm_lblChannelDelayUnit" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="SettingsForm_lblCheckInterval" xml:space="preserve">
+    <value>间隔：</value>
+  </data>
+  <data name="SettingsForm_lblConcurrent" xml:space="preserve">
+    <value>同时下载数：</value>
+  </data>
+  <data name="SettingsForm_lblCurrentVersion" xml:space="preserve">
+    <value>当前: v1.0.0</value>
+  </data>
+  <data name="SettingsForm_lblDownloadDelay" xml:space="preserve">
+    <value>下载间隔：</value>
+  </data>
+  <data name="SettingsForm_lblDownloadDelayUnit" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="SettingsForm_lblDownloadFolder" xml:space="preserve">
+    <value>保存文件夹：</value>
+  </data>
+  <data name="SettingsForm_lblEmail" xml:space="preserve">
+    <value>邮箱地址：</value>
+  </data>
+  <data name="SettingsForm_lblErrorSoundFile" xml:space="preserve">
+    <value>音频文件：</value>
+  </data>
+  <data name="SettingsForm_lblFilenameHelp" xml:space="preserve">
+    <value>可用变量：{title}, {author}, {date}, {id}, {quality}
+示例：{author}_{title}_{date} → username_VideoTitle_20250101</value>
+  </data>
+  <data name="SettingsForm_lblFilenameTemplate" xml:space="preserve">
+    <value>模板：</value>
+  </data>
+  <data name="SettingsForm_lblLanguage" xml:space="preserve">
+    <value>语言 / Language:</value>
+  </data>
+  <data name="SettingsForm_lblLoginStatus" xml:space="preserve">
+    <value>（未登录）</value>
+  </data>
+  <data name="SettingsForm_lblMigrationNote" xml:space="preserve">
+    <value>向过去下载的视频文件写入 iwara UUID 标签。
+写入标签后，即使数据库丢失或文件被重命名也能重新识别。</value>
+  </data>
+  <data name="SettingsForm_lblMinFreeSpace" xml:space="preserve">
+    <value>剩余空间下限：</value>
+  </data>
+  <data name="SettingsForm_lblMinFreeSpaceNote" xml:space="preserve">
+    <value>GB 以下时不开始下载（0=禁用）</value>
+  </data>
+  <data name="SettingsForm_lblPageDelay" xml:space="preserve">
+    <value>页面获取间隔：</value>
+  </data>
+  <data name="SettingsForm_lblPageDelayUnit" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="SettingsForm_lblPassword" xml:space="preserve">
+    <value>密码：</value>
+  </data>
+  <data name="SettingsForm_lblPreset" xml:space="preserve">
+    <value>预设：</value>
+  </data>
+  <data name="SettingsForm_lblPythonNote" xml:space="preserve">
+    <value>* 若已完成初始设置，仅更改路径（无需重新安装库）</value>
+  </data>
+  <data name="SettingsForm_lblPythonPath" xml:space="preserve">
+    <value>Python 路径：</value>
+  </data>
+  <data name="SettingsForm_lblQuality" xml:space="preserve">
+    <value>默认画质：</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitBase" xml:space="preserve">
+    <value>基本等待时间：</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitBaseUnit" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitMax" xml:space="preserve">
+    <value>最大等待时间：</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitMaxUnit" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="SettingsForm_lblRetry" xml:space="preserve">
+    <value>重试次数：</value>
+  </data>
+  <data name="SettingsForm_lblSoundFile" xml:space="preserve">
+    <value>音频文件：</value>
+  </data>
+  <data name="SettingsForm_lblThumbLocation" xml:space="preserve">
+    <value>缩略图保存位置：</value>
+  </data>
+  <data name="SettingsForm_lblWebPassword" xml:space="preserve">
+    <value>密码：</value>
+  </data>
+  <data name="SettingsForm_lblWebPort" xml:space="preserve">
+    <value>端口：</value>
+  </data>
+  <data name="SettingsForm_lblWebStatus" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="SettingsForm_lblWebUsername" xml:space="preserve">
+    <value>用户名：</value>
+  </data>
+  <data name="SettingsForm_lblYtDlpNote" xml:space="preserve">
+    <value>* "yt-dlp"（PATH 引用）即可。未安装时会自动尝试 pip install</value>
+  </data>
+  <data name="SettingsForm_lblYtDlpPath" xml:space="preserve">
+    <value>yt-dlp 路径：</value>
+  </data>
+  <data name="SettingsForm_tabAccount" xml:space="preserve">
+    <value>账号</value>
+  </data>
+  <data name="SettingsForm_tabAdvanced" xml:space="preserve">
+    <value>高级设置</value>
+  </data>
+  <data name="SettingsForm_tabBackup" xml:space="preserve">
+    <value>备份</value>
+  </data>
+  <data name="SettingsForm_tabGeneral" xml:space="preserve">
+    <value>常规</value>
+  </data>
+  <data name="SettingsForm_tabMediaServer" xml:space="preserve">
+    <value>媒体服务器</value>
+  </data>
+  <data name="SettingsForm_tabOther" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="Settings_LanguageAuto" xml:space="preserve">
+    <value>自动（跟随系统）</value>
+  </data>
+  <data name="SetupWizardForm_Title" xml:space="preserve">
+    <value>IwaraDownloader 设置向导</value>
+  </data>
+  <data name="SetupWizardForm_btnBack" xml:space="preserve">
+    <value>&lt; 上一步</value>
+  </data>
+  <data name="SetupWizardForm_btnBrowse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SetupWizardForm_btnCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="SetupWizardForm_btnNext" xml:space="preserve">
+    <value>下一步 &gt;</value>
+  </data>
+  <data name="SetupWizardForm_lblAutoDesc" xml:space="preserve">
+    <value>从 python.org 自动下载 Python 3.10.11 (Embeddable amd64)，
+</value>
+  </data>
+  <data name="SetupWizardForm_lblComplete" xml:space="preserve">
+    <value>设置完成！</value>
+  </data>
+  <data name="SetupWizardForm_lblCompleteDesc" xml:space="preserve">
+    <value>IwaraDownloader 已准备就绪。
+</value>
+  </data>
+  <data name="SetupWizardForm_lblExistingDesc" xml:space="preserve">
+    <value>请指定 python.exe 的路径。</value>
+  </data>
+  <data name="SetupWizardForm_lblProgressMsg" xml:space="preserve">
+    <value>准备中...</value>
+  </data>
+  <data name="SetupWizardForm_lblStep" xml:space="preserve">
+    <value>步骤 1/4：欢迎</value>
+  </data>
+  <data name="SetupWizardForm_lblStep2Title" xml:space="preserve">
+    <value>选择获取 Python 的方式</value>
+  </data>
+  <data name="SetupWizardForm_lblStep3Title" xml:space="preserve">
+    <value>正在执行设置</value>
+  </data>
+  <data name="SetupWizardForm_lblTitle" xml:space="preserve">
+    <value>IwaraDownloader 设置向导</value>
+  </data>
+  <data name="SetupWizardForm_lblWelcome" xml:space="preserve">
+    <value>感谢您使用 IwaraDownloader。</value>
+  </data>
+  <data name="SetupWizardForm_lblWelcomeDesc" xml:space="preserve">
+    <value>此向导将自动设置运行所需的以下内容：
+</value>
+  </data>
+  <data name="SetupWizardForm_rbAutoDownload" xml:space="preserve">
+    <value>自动下载（推荐）</value>
+  </data>
+  <data name="SetupWizardForm_rbExistingPython" xml:space="preserve">
+    <value>使用现有 Python</value>
+  </data>
+  <data name="SplashForm_lblStatus" xml:space="preserve">
+    <value>正在启动...</value>
+  </data>
+  <data name="StatisticsForm_Title" xml:space="preserve">
+    <value>统计仪表板</value>
+  </data>
+  <data name="StatisticsForm_btnClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="StatisticsForm_btnExportCsv" xml:space="preserve">
+    <value>导出CSV</value>
+  </data>
+  <data name="StatisticsForm_btnRefresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="StatisticsForm_grpOverview" xml:space="preserve">
+    <value>概览</value>
+  </data>
+  <data name="StatisticsForm_lblActiveChannelsLabel" xml:space="preserve">
+    <value>已启用频道</value>
+  </data>
+  <data name="StatisticsForm_lblChannelsLabel" xml:space="preserve">
+    <value>频道数</value>
+  </data>
+  <data name="StatisticsForm_lblCompletedLabel" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="StatisticsForm_lblDurationTitle" xml:space="preserve">
+    <value>播放时长分布</value>
+  </data>
+  <data name="StatisticsForm_lblErrorTitle" xml:space="preserve">
+    <value>按错误类型的失败数</value>
+  </data>
+  <data name="StatisticsForm_lblFailedLabel" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="StatisticsForm_lblPendingLabel" xml:space="preserve">
+    <value>等待中</value>
+  </data>
+  <data name="StatisticsForm_lblRatingTitle" xml:space="preserve">
+    <value>按 Rating</value>
+  </data>
+  <data name="StatisticsForm_lblRetryTitle" xml:space="preserve">
+    <value>按重试次数的失败数</value>
+  </data>
+  <data name="StatisticsForm_lblSiteTitle" xml:space="preserve">
+    <value>按站点</value>
+  </data>
+  <data name="StatisticsForm_lblSizeTitle" xml:space="preserve">
+    <value>文件大小分布</value>
+  </data>
+  <data name="StatisticsForm_lblSuccessRateLabel" xml:space="preserve">
+    <value>成功率</value>
+  </data>
+  <data name="StatisticsForm_lblTagTitle" xml:space="preserve">
+    <value>标签排行（前50）</value>
+  </data>
+  <data name="StatisticsForm_lblTotalSizeLabel" xml:space="preserve">
+    <value>总大小</value>
+  </data>
+  <data name="StatisticsForm_lblTotalVideosLabel" xml:space="preserve">
+    <value>视频总数</value>
+  </data>
+  <data name="StatisticsForm_tabAuthors" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="StatisticsForm_tabChannels" xml:space="preserve">
+    <value>按频道</value>
+  </data>
+  <data name="StatisticsForm_tabContent" xml:space="preserve">
+    <value>内容</value>
+  </data>
+  <data name="StatisticsForm_tabDaily" xml:space="preserve">
+    <value>按日推移</value>
+  </data>
+  <data name="StatisticsForm_tabDistribution" xml:space="preserve">
+    <value>大小·时长</value>
+  </data>
+  <data name="StatisticsForm_tabFailure" xml:space="preserve">
+    <value>失败分析</value>
+  </data>
+  <data name="StatisticsForm_tabMonthly" xml:space="preserve">
+    <value>按月推移</value>
+  </data>
+  <data name="VideoDetailsForm_Title" xml:space="preserve">
+    <value>视频详情</value>
+  </data>
+  <data name="VideoDetailsForm_btnCancel" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="VideoDetailsForm_btnSave" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
+    <value>★ 添加到收藏</value>
+  </data>
+</root>

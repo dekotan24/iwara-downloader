@@ -16,6 +16,7 @@ namespace IwaraDownloader.Forms
         public RenameResultForm(List<RenameItem> items, string template)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
             _items = items;
             _template = template;

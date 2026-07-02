@@ -19,6 +19,7 @@ namespace IwaraDownloader.Forms
             _video = video;
             _database = database;
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             PopulateFields();
         }
 

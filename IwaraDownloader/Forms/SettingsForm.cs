@@ -30,6 +30,7 @@ namespace IwaraDownloader.Forms
         public SettingsForm(DownloadManager? downloadManager)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _settingsManager = SettingsManager.Instance;
             _database = DatabaseService.Instance;
             // DownloadManager と同じ IwaraApiService インスタンスを共有する。
@@ -74,6 +75,19 @@ namespace IwaraDownloader.Forms
             chkToast.Checked = settings.EnableToastNotification;
             chkStartMinimized.Checked = settings.StartMinimized;
             chkMinimizeToTray.Checked = settings.MinimizeToTray;
+
+            // 言語 (Tagに設定値を持たせ、表示名は各言語のネイティブ表記で固定)
+            cmbLanguage.Items.Clear();
+            cmbLanguage.Items.Add(new LanguageItem("auto", Utils.L.T("Settings_LanguageAuto")));
+            cmbLanguage.Items.Add(new LanguageItem("ja", "日本語"));
+            cmbLanguage.Items.Add(new LanguageItem("en", "English"));
+            cmbLanguage.Items.Add(new LanguageItem("zh-Hans", "简体中文"));
+            var langIndex = 0;
+            for (var i = 0; i < cmbLanguage.Items.Count; i++)
+            {
+                if (((LanguageItem)cmbLanguage.Items[i]!).Code == settings.Language) { langIndex = i; break; }
+            }
+            cmbLanguage.SelectedIndex = langIndex;
 
             // Python環境
             txtPythonPath.Text = settings.PythonPath;
@@ -145,6 +159,14 @@ namespace IwaraDownloader.Forms
             settings.EnableToastNotification = chkToast.Checked;
             settings.StartMinimized = chkStartMinimized.Checked;
             settings.MinimizeToTray = chkMinimizeToTray.Checked;
+
+            // 言語 (変更時は再起動後に反映される旨を案内)
+            if (cmbLanguage.SelectedItem is LanguageItem langItem && langItem.Code != settings.Language)
+            {
+                settings.Language = langItem.Code;
+                MessageBox.Show(Utils.L.T("Msg_LanguageRestart"), "IwaraDownloader",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
 
             // Python環境
             settings.PythonPath = txtPythonPath.Text.Trim();
@@ -1024,5 +1046,11 @@ namespace IwaraDownloader.Forms
     public static class WebServerServiceHolder
     {
         public static WebServerService? Instance { get; set; }
+    }
+
+    /// <summary>言語ComboBoxの項目 (Code=設定値, Display=ネイティブ表記)</summary>
+    public sealed record LanguageItem(string Code, string Display)
+    {
+        public override string ToString() => Display;
     }
 }

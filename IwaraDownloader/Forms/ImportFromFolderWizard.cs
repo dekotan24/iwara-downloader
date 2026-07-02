@@ -105,6 +105,7 @@ namespace IwaraDownloader.Forms
         public ImportFromFolderWizard(DownloadManager downloadManager)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _downloadManager = downloadManager;
             _database = DatabaseService.Instance;
             UpdateStepUi();

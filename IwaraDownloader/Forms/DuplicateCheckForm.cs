@@ -14,6 +14,7 @@ namespace IwaraDownloader.Forms
         public DuplicateCheckForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
         }
 

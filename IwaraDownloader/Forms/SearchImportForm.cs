@@ -25,6 +25,7 @@ namespace IwaraDownloader.Forms
             _downloadManager = downloadManager;
             _search = new IwaraSearch(downloadManager.IwaraApi);
             InitializeComponent();
+            Utils.Localizer.Apply(this);
         }
 
         private void txtQuery_KeyDown(object? sender, KeyEventArgs e)

@@ -17,6 +17,8 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/dekotan24/iwara-downloader</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <!-- 多言語対応: ニュートラルリソース(Strings.resx)は日本語。en/zh-Hansはサテライトアセンブリ -->
+    <NeutralResourcesLanguage>ja</NeutralResourcesLanguage>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

@@ -23,6 +23,7 @@ namespace IwaraDownloader.Forms
         public BulkImportForm(DownloadManager? downloadManager = null)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
             _downloadManager = downloadManager;
         }

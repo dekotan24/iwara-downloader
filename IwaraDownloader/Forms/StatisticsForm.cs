@@ -13,6 +13,7 @@ namespace IwaraDownloader.Forms
         public StatisticsForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
         }
 

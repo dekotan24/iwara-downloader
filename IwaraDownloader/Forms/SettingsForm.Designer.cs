@@ -65,6 +65,8 @@ namespace IwaraDownloader.Forms
             this.chkDownloadExternal = new CheckBox();
 
             this.grpNotification = new GroupBox();
+            this.lblLanguage = new Label();
+            this.cmbLanguage = new ComboBox();
             this.chkToast = new CheckBox();
             this.chkStartMinimized = new CheckBox();
 
@@ -210,6 +212,8 @@ namespace IwaraDownloader.Forms
             this.tabGeneral.Controls.Add(this.grpDownload);
             this.tabGeneral.Controls.Add(this.grpAutoCheck);
             this.tabGeneral.Controls.Add(this.grpNotification);
+            this.tabGeneral.Controls.Add(this.lblLanguage);
+            this.tabGeneral.Controls.Add(this.cmbLanguage);
             this.tabGeneral.Location = new Point(4, 24);
             this.tabGeneral.Name = "tabGeneral";
             this.tabGeneral.Padding = new Padding(3);
@@ -217,6 +221,18 @@ namespace IwaraDownloader.Forms
             this.tabGeneral.TabIndex = 0;
             this.tabGeneral.Text = "一般";
             this.tabGeneral.UseVisualStyleBackColor = true;
+
+            // 
+            // lblLanguage / cmbLanguage (言語選択)
+            // 
+            this.lblLanguage.AutoSize = true;
+            this.lblLanguage.Location = new Point(12, 445);
+            this.lblLanguage.Name = "lblLanguage";
+            this.lblLanguage.Text = "言語 / Language:";
+            this.cmbLanguage.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbLanguage.Location = new Point(130, 441);
+            this.cmbLanguage.Name = "cmbLanguage";
+            this.cmbLanguage.Size = new Size(180, 23);
 
             // 
             // grpDownload
@@ -1563,6 +1579,8 @@ namespace IwaraDownloader.Forms
         private CheckBox chkAutoDownload;
         private CheckBox chkDownloadExternal;
         private GroupBox grpNotification;
+        private Label lblLanguage;
+        private ComboBox cmbLanguage;
         private CheckBox chkToast;
         private CheckBox chkStartMinimized;
         private CheckBox chkMinimizeToTray;

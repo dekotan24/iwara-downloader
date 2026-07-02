@@ -55,6 +55,7 @@ namespace IwaraDownloader.Forms
         public MainForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _downloadManager = new DownloadManager();
             _database = DatabaseService.Instance;
             _webServer = new WebServerService();

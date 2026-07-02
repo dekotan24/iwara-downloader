@@ -195,6 +195,9 @@ namespace IwaraDownloader.Services
 
         private void ConfigureApi(WebApplication app)
         {
+            // --- Config (認証不要: ログイン画面自体の翻訳に言語設定が必要) ---
+            app.MapGet("/api/config", HandleGetConfig);
+
             // --- Auth ---
             app.MapPost("/api/auth/login", (Delegate)HandleLogin);
             app.MapPost("/api/auth/logout", HandleLogout);
@@ -227,6 +230,30 @@ namespace IwaraDownloader.Services
             // --- Batch ---
             app.MapPost("/api/videos/delete-batch", (Delegate)HandleDeleteBatch);
         }
+
+        #region Config
+
+        /// <summary>
+        /// WebUI向けの公開設定。language はアプリの言語設定("auto"はOS言語から解決済みの実効値)を返す。
+        /// </summary>
+        private IResult HandleGetConfig()
+        {
+            var setting = SettingsManager.Instance.Settings.Language;
+            string language;
+            if (setting is "ja" or "en" or "zh-Hans")
+            {
+                language = setting;
+            }
+            else
+            {
+                // "auto": デスクトップ側と同じ規則で解決 (ja→ja / zh系→zh-Hans / その他→en)
+                var osLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                language = osLang switch { "ja" => "ja", "zh" => "zh-Hans", _ => "en" };
+            }
+            return Results.Ok(new { language });
+        }
+
+        #endregion
 
         #region Auth
 

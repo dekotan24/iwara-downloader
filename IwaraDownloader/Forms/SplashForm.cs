@@ -18,6 +18,7 @@ namespace IwaraDownloader.Forms
         public SplashForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             
             // ダブルバッファリングを有効化(ちらつき防止)
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | 

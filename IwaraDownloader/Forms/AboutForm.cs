@@ -13,6 +13,7 @@ namespace IwaraDownloader.Forms
         public AboutForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
         }
 
         private void AboutForm_Load(object sender, EventArgs e)

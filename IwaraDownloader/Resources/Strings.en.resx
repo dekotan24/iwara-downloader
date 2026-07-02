@@ -1,0 +1,965 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AboutForm_Title" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="AboutForm_btnCheckUpdate" xml:space="preserve">
+    <value>Check for Updates</value>
+  </data>
+  <data name="AboutForm_lblDescription" xml:space="preserve">
+    <value>A desktop application for downloading videos from iwara.tv.</value>
+  </data>
+  <data name="BulkImportForm_Title" xml:space="preserve">
+    <value>Bulk URL Import</value>
+  </data>
+  <data name="BulkImportForm_btnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="BulkImportForm_btnClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="BulkImportForm_btnImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="BulkImportForm_btnLoadFile" xml:space="preserve">
+    <value>From File</value>
+  </data>
+  <data name="BulkImportForm_btnPaste" xml:space="preserve">
+    <value>From Clipboard</value>
+  </data>
+  <data name="BulkImportForm_lblDescription" xml:space="preserve">
+    <value>Enter iwara.tv / iwara.ai video or channel URLs (one URL per line)</value>
+  </data>
+  <data name="BulkImportForm_lblHelp" xml:space="preserve">
+    <value>* Supported: video URLs / channel (profile) URLs / bare VideoIds (both iwara.tv and iwara.ai)
+* Duplicate URLs are skipped automatically</value>
+  </data>
+  <data name="BulkImportForm_lblStats" xml:space="preserve">
+    <value>URLs detected: 0</value>
+  </data>
+  <data name="Common_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="DuplicateCheckForm_Title" xml:space="preserve">
+    <value>Duplicate Check</value>
+  </data>
+  <data name="DuplicateCheckForm_btnClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="DuplicateCheckForm_btnRemoveDuplicates" xml:space="preserve">
+    <value>Auto-resolve Duplicates</value>
+  </data>
+  <data name="DuplicateCheckForm_btnRemoveSelected" xml:space="preserve">
+    <value>Remove Selected</value>
+  </data>
+  <data name="DuplicateCheckForm_btnScan" xml:space="preserve">
+    <value>Rescan</value>
+  </data>
+  <data name="DuplicateCheckForm_lblDescription" xml:space="preserve">
+    <value>Detects identical videos (same VideoId) that exist in multiple channels.</value>
+  </data>
+  <data name="DuplicateCheckForm_lblDetails" xml:space="preserve">
+    <value>Details of selected duplicate:</value>
+  </data>
+  <data name="DuplicateCheckForm_lblStatus" xml:space="preserve">
+    <value>Scanning...</value>
+  </data>
+  <data name="FileMoveProgressForm_Title" xml:space="preserve">
+    <value>Moving Files</value>
+  </data>
+  <data name="FileMoveProgressForm_btnCancel" xml:space="preserve">
+    <value>Abort</value>
+  </data>
+  <data name="FileMoveProgressForm_lblCurrent" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
+    <value>Moving files...</value>
+  </data>
+  <data name="ImportFromFolderWizard_Title" xml:space="preserve">
+    <value>Import from Folder</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
+    <value>&lt; Back</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnBrowse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnHide" xml:space="preserve">
+    <value>Run in Background</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnNext" xml:space="preserve">
+    <value>Next &gt;</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnSelectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="ImportFromFolderWizard_btnSelectNone" xml:space="preserve">
+    <value>Deselect All</value>
+  </data>
+  <data name="ImportFromFolderWizard_chkRecursive" xml:space="preserve">
+    <value>Scan subfolders recursively</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblImportStatus" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblScanStatus" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep" xml:space="preserve">
+    <value>Step 1/5</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep1Desc" xml:space="preserve">
+    <value>Scans mp4/m4v files in the selected folder and identifies videos
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep1Title" xml:space="preserve">
+    <value>Select source folder</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep2Title" xml:space="preserve">
+    <value>Scanning</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
+    <value>Checked authors will be added as subscribed channels.
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">
+    <value>Select authors to register as channels</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep4Title" xml:space="preserve">
+    <value>Importing</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblStep5Title" xml:space="preserve">
+    <value>Import complete!</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
+    <value>Import from Folder</value>
+  </data>
+  <data name="MainForm_btnAddUser" xml:space="preserve">
+    <value>+ Channel</value>
+  </data>
+  <data name="MainForm_btnAddUser_Tip" xml:space="preserve">
+    <value>Add a subscribed channel (username / profile URL)</value>
+  </data>
+  <data name="MainForm_btnAddVideo" xml:space="preserve">
+    <value>+ Video</value>
+  </data>
+  <data name="MainForm_btnAddVideo_Tip" xml:space="preserve">
+    <value>Add a single video URL to the queue</value>
+  </data>
+  <data name="MainForm_btnAdvancedSearch" xml:space="preserve">
+    <value>Advanced ▾</value>
+  </data>
+  <data name="MainForm_btnCheckNow" xml:space="preserve">
+    <value>Check Now (F5)</value>
+  </data>
+  <data name="MainForm_btnCheckNow_Tip" xml:space="preserve">
+    <value>Check subscribed channels for new videos now (F5)</value>
+  </data>
+  <data name="MainForm_btnClearFilter" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="MainForm_btnClipMonitor" xml:space="preserve">
+    <value>📋Monitor: OFF</value>
+  </data>
+  <data name="MainForm_btnClipMonitor_Tip" xml:space="preserve">
+    <value>Clipboard monitor: automatically queue iwara URLs</value>
+  </data>
+  <data name="MainForm_btnHelp" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="MainForm_btnLogin" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="MainForm_btnLogin_Tip" xml:space="preserve">
+    <value>Log in with your iwara account (required for search and DL)</value>
+  </data>
+  <data name="MainForm_btnPasteAndAdd" xml:space="preserve">
+    <value>Paste &amp;&amp; Add</value>
+  </data>
+  <data name="MainForm_btnSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="MainForm_btnSettings_Tip" xml:space="preserve">
+    <value>Save folder, quality, notifications, rate limits and more</value>
+  </data>
+  <data name="MainForm_btnSetup" xml:space="preserve">
+    <value>Environment Setup</value>
+  </data>
+  <data name="MainForm_btnSetup_Tip" xml:space="preserve">
+    <value>Setup wizard for Python and dependencies</value>
+  </data>
+  <data name="MainForm_btnStartAll" xml:space="preserve">
+    <value>▶ Start DL</value>
+  </data>
+  <data name="MainForm_btnStartAll_Tip" xml:space="preserve">
+    <value>Start downloading pending videos</value>
+  </data>
+  <data name="MainForm_btnStopAll" xml:space="preserve">
+    <value>■ Stop</value>
+  </data>
+  <data name="MainForm_btnStopAll_Tip" xml:space="preserve">
+    <value>Stop all downloads in progress</value>
+  </data>
+  <data name="MainForm_btnTools" xml:space="preserve">
+    <value>Tools</value>
+  </data>
+  <data name="MainForm_btnViewMode" xml:space="preserve">
+    <value>📋Details</value>
+  </data>
+  <data name="MainForm_btnViewMode_Tip" xml:space="preserve">
+    <value>Toggle view mode (details / thumbnails)</value>
+  </data>
+  <data name="MainForm_chkFavOnly" xml:space="preserve">
+    <value>★ Favorites only</value>
+  </data>
+  <data name="MainForm_colVideoDate" xml:space="preserve">
+    <value>Added</value>
+  </data>
+  <data name="MainForm_colVideoProgress" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="MainForm_colVideoSize" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="MainForm_colVideoSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="MainForm_colVideoStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="MainForm_colVideoTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="MainForm_lblChannelHeader" xml:space="preserve">
+    <value>Subscribed Channels</value>
+  </data>
+  <data name="MainForm_lblDownloadCount" xml:space="preserve">
+    <value>DL: 0 / Queued: 0</value>
+  </data>
+  <data name="MainForm_lblLoginStatus" xml:space="preserve">
+    <value>(not logged in)</value>
+  </data>
+  <data name="MainForm_lblStatus" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="MainForm_lblTagFilter" xml:space="preserve">
+    <value>Tags:</value>
+  </data>
+  <data name="MainForm_lblVideoHeader" xml:space="preserve">
+    <value>Videos</value>
+  </data>
+  <data name="MainForm_menuChCheckFiles" xml:space="preserve">
+    <value>Check File Existence</value>
+  </data>
+  <data name="MainForm_menuChCheckNow" xml:space="preserve">
+    <value>Check Now</value>
+  </data>
+  <data name="MainForm_menuChDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="MainForm_menuChDeleteNotFound" xml:space="preserve">
+    <value>Remove Not Found</value>
+  </data>
+  <data name="MainForm_menuChDisable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="MainForm_menuChDownloadAll" xml:space="preserve">
+    <value>Download All</value>
+  </data>
+  <data name="MainForm_menuChEnable" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="MainForm_menuChExternalDL" xml:space="preserve">
+    <value>External video DL</value>
+  </data>
+  <data name="MainForm_menuChExternalDLInherit" xml:space="preserve">
+    <value>Follow default setting</value>
+  </data>
+  <data name="MainForm_menuChExternalDLOff" xml:space="preserve">
+    <value>Don't download</value>
+  </data>
+  <data name="MainForm_menuChExternalDLOn" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="MainForm_menuChOpen" xml:space="preserve">
+    <value>Open Page</value>
+  </data>
+  <data name="MainForm_menuChSetSavePath" xml:space="preserve">
+    <value>Change Save Folder...</value>
+  </data>
+  <data name="MainForm_menuExit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="MainForm_menuHelpAbout" xml:space="preserve">
+    <value>About...</value>
+  </data>
+  <data name="MainForm_menuHelpGitHub" xml:space="preserve">
+    <value>GitHub Page</value>
+  </data>
+  <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
+    <value>Open Log Folder</value>
+  </data>
+  <data name="MainForm_menuShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
+    <value>Bulk URL Import...</value>
+  </data>
+  <data name="MainForm_menuToolsDuplicateCheck" xml:space="preserve">
+    <value>Duplicate Check...</value>
+  </data>
+  <data name="MainForm_menuToolsImportFolder" xml:space="preserve">
+    <value>Import from Folder...</value>
+  </data>
+  <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
+    <value>Relink Moved Files...</value>
+  </data>
+  <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
+    <value>Move Unrelocated Files...</value>
+  </data>
+  <data name="MainForm_menuToolsSearchImport" xml:space="preserve">
+    <value>iwara Search Import...</value>
+  </data>
+  <data name="MainForm_menuToolsStatistics" xml:space="preserve">
+    <value>Statistics Dashboard...</value>
+  </data>
+  <data name="MainForm_menuVidCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
+    <value>Check File Existence</value>
+  </data>
+  <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
+    <value>Copy Title</value>
+  </data>
+  <data name="MainForm_menuVidCopyUrl" xml:space="preserve">
+    <value>Copy URL</value>
+  </data>
+  <data name="MainForm_menuVidDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="MainForm_menuVidDetails" xml:space="preserve">
+    <value>Details...</value>
+  </data>
+  <data name="MainForm_menuVidDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="MainForm_menuVidFavorite" xml:space="preserve">
+    <value>★ Add to Favorites</value>
+  </data>
+  <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
+    <value>Open Author's Page</value>
+  </data>
+  <data name="MainForm_menuVidOpenFolder" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="MainForm_menuVidOpenPage" xml:space="preserve">
+    <value>Open Page</value>
+  </data>
+  <data name="MainForm_menuVidPlay" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="MainForm_menuVidReDownload" xml:space="preserve">
+    <value>Re-download...</value>
+  </data>
+  <data name="MainForm_menuVidRefreshInfo" xml:space="preserve">
+    <value>Refresh Info</value>
+  </data>
+  <data name="MainForm_menuVidRetryFailed" xml:space="preserve">
+    <value>Retry Failed</value>
+  </data>
+  <data name="Msg_AlreadyRunning" xml:space="preserve">
+    <value>IwaraDownloader is already running.</value>
+  </data>
+  <data name="Msg_LanguageRestart" xml:space="preserve">
+    <value>The language change will take effect after restarting the app.</value>
+  </data>
+  <data name="Msg_UnexpectedError" xml:space="preserve">
+    <value>An unexpected error occurred.
+
+{0}</value>
+  </data>
+  <data name="RenameResultForm_Title" xml:space="preserve">
+    <value>Rename Results</value>
+  </data>
+  <data name="RenameResultForm_btnAddNumber" xml:space="preserve">
+    <value>Add Number</value>
+  </data>
+  <data name="RenameResultForm_btnClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="RenameResultForm_btnCompare" xml:space="preserve">
+    <value>Open Both</value>
+  </data>
+  <data name="RenameResultForm_btnOverwrite" xml:space="preserve">
+    <value>Overwrite</value>
+  </data>
+  <data name="RenameResultForm_btnPlayConflict" xml:space="preserve">
+    <value>Play Conflict</value>
+  </data>
+  <data name="RenameResultForm_btnPlayOriginal" xml:space="preserve">
+    <value>Play Original</value>
+  </data>
+  <data name="RenameResultForm_btnSelectAllConflicts" xml:space="preserve">
+    <value>Select All Conflicts</value>
+  </data>
+  <data name="RenameResultForm_btnSkip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="RenameResultForm_colNewName" xml:space="preserve">
+    <value>New Name</value>
+  </data>
+  <data name="RenameResultForm_colOriginalName" xml:space="preserve">
+    <value>Original Name</value>
+  </data>
+  <data name="RenameResultForm_colStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="RenameResultForm_colTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="RenameResultForm_grpConflictActions" xml:space="preserve">
+    <value>Conflicting files (selected items)</value>
+  </data>
+  <data name="RenameResultForm_grpPlayback" xml:space="preserve">
+    <value>Play &amp;&amp; Compare</value>
+  </data>
+  <data name="RenameResultForm_lblStatus" xml:space="preserve">
+    <value>Success: 0  Skipped: 0  Conflicts: 0  Missing: 0  Errors: 0</value>
+  </data>
+  <data name="RenameResultForm_menuAddNumber" xml:space="preserve">
+    <value>Rename with Number</value>
+  </data>
+  <data name="RenameResultForm_menuCompare" xml:space="preserve">
+    <value>Open Both to Compare</value>
+  </data>
+  <data name="RenameResultForm_menuOpenFolder" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="RenameResultForm_menuOverwrite" xml:space="preserve">
+    <value>Overwrite</value>
+  </data>
+  <data name="RenameResultForm_menuPlayConflict" xml:space="preserve">
+    <value>Play Conflicting File</value>
+  </data>
+  <data name="RenameResultForm_menuPlayOriginal" xml:space="preserve">
+    <value>Play Original</value>
+  </data>
+  <data name="RenameResultForm_menuSkip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="SearchImportForm_Title" xml:space="preserve">
+    <value>iwara Search Import</value>
+  </data>
+  <data name="SearchImportForm_btnClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="SearchImportForm_btnImport" xml:space="preserve">
+    <value>Import Selected</value>
+  </data>
+  <data name="SearchImportForm_btnNextPage" xml:space="preserve">
+    <value>Next ▶</value>
+  </data>
+  <data name="SearchImportForm_btnPrevPage" xml:space="preserve">
+    <value>◀ Previous</value>
+  </data>
+  <data name="SearchImportForm_btnSearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="SearchImportForm_btnSelectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="SearchImportForm_btnSelectNew" xml:space="preserve">
+    <value>Select All Except Downloaded</value>
+  </data>
+  <data name="SearchImportForm_btnSelectNone" xml:space="preserve">
+    <value>Deselect</value>
+  </data>
+  <data name="SearchImportForm_lblStatus" xml:space="preserve">
+    <value>Enter keywords and click "Search"</value>
+  </data>
+  <data name="SettingsForm_Title" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsForm_btnApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="SettingsForm_btnBackfillThumbnails" xml:space="preserve">
+    <value>Backfill Thumbnail URLs</value>
+  </data>
+  <data name="SettingsForm_btnBrowseErrorSound" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SettingsForm_btnBrowseFolder" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SettingsForm_btnBrowsePython" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SettingsForm_btnBrowseSound" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SettingsForm_btnBrowseYtDlp" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SettingsForm_btnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SettingsForm_btnCheckUpdateNow" xml:space="preserve">
+    <value>Check Now</value>
+  </data>
+  <data name="SettingsForm_btnExportSettings" xml:space="preserve">
+    <value>Export Settings</value>
+  </data>
+  <data name="SettingsForm_btnExportSubscriptions" xml:space="preserve">
+    <value>Export Subscriptions</value>
+  </data>
+  <data name="SettingsForm_btnImportSettings" xml:space="preserve">
+    <value>Import Settings</value>
+  </data>
+  <data name="SettingsForm_btnImportSubscriptions" xml:space="preserve">
+    <value>Import Subscriptions</value>
+  </data>
+  <data name="SettingsForm_btnMigrateExistingFiles" xml:space="preserve">
+    <value>Write Tags to Existing Files</value>
+  </data>
+  <data name="SettingsForm_btnPresetAggressive" xml:space="preserve">
+    <value>Aggressive</value>
+  </data>
+  <data name="SettingsForm_btnPresetConservative" xml:space="preserve">
+    <value>Conservative</value>
+  </data>
+  <data name="SettingsForm_btnPresetStandard" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="SettingsForm_btnReLogin" xml:space="preserve">
+    <value>Re-login</value>
+  </data>
+  <data name="SettingsForm_btnRenameFiles" xml:space="preserve">
+    <value>Batch-rename downloaded files</value>
+  </data>
+  <data name="SettingsForm_btnTestErrorSound" xml:space="preserve">
+    <value>Test</value>
+  </data>
+  <data name="SettingsForm_btnTestSound" xml:space="preserve">
+    <value>Test</value>
+  </data>
+  <data name="SettingsForm_btnWebOpenBrowser" xml:space="preserve">
+    <value>Open in Browser</value>
+  </data>
+  <data name="SettingsForm_btnWebStartStop" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="SettingsForm_chkAutoCheck" xml:space="preserve">
+    <value>Automatically check for new videos</value>
+  </data>
+  <data name="SettingsForm_chkAutoDownload" xml:space="preserve">
+    <value>Start downloading automatically when new videos are found</value>
+  </data>
+  <data name="SettingsForm_chkCheckUpdate" xml:space="preserve">
+    <value>Check for updates on startup</value>
+  </data>
+  <data name="SettingsForm_chkDownloadExternal" xml:space="preserve">
+    <value>Also download external videos (YouTube embeds etc.) — can be overridden per channel</value>
+  </data>
+  <data name="SettingsForm_chkEnableErrorSound" xml:space="preserve">
+    <value>Play a sound when a download fails</value>
+  </data>
+  <data name="SettingsForm_chkEnableSound" xml:space="preserve">
+    <value>Play a sound when a download completes</value>
+  </data>
+  <data name="SettingsForm_chkExponentialBackoff" xml:space="preserve">
+    <value>Enable exponential backoff (increase wait time on consecutive errors)</value>
+  </data>
+  <data name="SettingsForm_chkMinimizeToTray" xml:space="preserve">
+    <value>Minimize to tray on close</value>
+  </data>
+  <data name="SettingsForm_chkResumeOnStartup" xml:space="preserve">
+    <value>Resume unfinished downloads</value>
+  </data>
+  <data name="SettingsForm_chkSaveMetadata" xml:space="preserve">
+    <value>Save metadata (.json) alongside videos</value>
+  </data>
+  <data name="SettingsForm_chkStartMinimized" xml:space="preserve">
+    <value>Start minimized</value>
+  </data>
+  <data name="SettingsForm_chkToast" xml:space="preserve">
+    <value>Enable toast notifications</value>
+  </data>
+  <data name="SettingsForm_chkWebBindAll" xml:space="preserve">
+    <value>Allow access from other devices on the LAN</value>
+  </data>
+  <data name="SettingsForm_chkWebServerAutoStart" xml:space="preserve">
+    <value>Start automatically on launch</value>
+  </data>
+  <data name="SettingsForm_grpAccount" xml:space="preserve">
+    <value>iwara account</value>
+  </data>
+  <data name="SettingsForm_grpAutoCheck" xml:space="preserve">
+    <value>Auto check</value>
+  </data>
+  <data name="SettingsForm_grpDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="SettingsForm_grpErrorHandling" xml:space="preserve">
+    <value>Error handling (429/403)</value>
+  </data>
+  <data name="SettingsForm_grpExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="SettingsForm_grpFilename" xml:space="preserve">
+    <value>Filename template</value>
+  </data>
+  <data name="SettingsForm_grpImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="SettingsForm_grpMetadata" xml:space="preserve">
+    <value>Metadata</value>
+  </data>
+  <data name="SettingsForm_grpMigration" xml:space="preserve">
+    <value>Metadata migration for existing files</value>
+  </data>
+  <data name="SettingsForm_grpNotification" xml:space="preserve">
+    <value>Notifications &amp;&amp; startup</value>
+  </data>
+  <data name="SettingsForm_grpPython" xml:space="preserve">
+    <value>Python environment</value>
+  </data>
+  <data name="SettingsForm_grpRateLimit" xml:space="preserve">
+    <value>Rate limits</value>
+  </data>
+  <data name="SettingsForm_grpSound" xml:space="preserve">
+    <value>Sounds</value>
+  </data>
+  <data name="SettingsForm_grpUpdate" xml:space="preserve">
+    <value>On startup</value>
+  </data>
+  <data name="SettingsForm_grpWebAuth" xml:space="preserve">
+    <value>Authentication</value>
+  </data>
+  <data name="SettingsForm_grpWebServer" xml:space="preserve">
+    <value>Web server</value>
+  </data>
+  <data name="SettingsForm_grpWebStatus" xml:space="preserve">
+    <value>Server status</value>
+  </data>
+  <data name="SettingsForm_lblAccountNote" xml:space="preserve">
+    <value>* Logging in with an iwara account is required to download
+   R-18 content and private videos.
+* After changing email/password, click "Re-login".</value>
+  </data>
+  <data name="SettingsForm_lblAdvancedNote" xml:space="preserve">
+    <value>* Rate limit settings reduce server load and prevent 403/429 errors.
+* Values that are too small may get your access restricted.
+* Values that are too large slow down downloads.</value>
+  </data>
+  <data name="SettingsForm_lblApiDelay" xml:space="preserve">
+    <value>API request interval:</value>
+  </data>
+  <data name="SettingsForm_lblApiDelayUnit" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="SettingsForm_lblChannelDelay" xml:space="preserve">
+    <value>Channel crawl interval:</value>
+  </data>
+  <data name="SettingsForm_lblChannelDelayUnit" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="SettingsForm_lblCheckInterval" xml:space="preserve">
+    <value>Interval:</value>
+  </data>
+  <data name="SettingsForm_lblConcurrent" xml:space="preserve">
+    <value>Concurrent DLs:</value>
+  </data>
+  <data name="SettingsForm_lblCurrentVersion" xml:space="preserve">
+    <value>Current: v1.0.0</value>
+  </data>
+  <data name="SettingsForm_lblDownloadDelay" xml:space="preserve">
+    <value>Download interval:</value>
+  </data>
+  <data name="SettingsForm_lblDownloadDelayUnit" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="SettingsForm_lblDownloadFolder" xml:space="preserve">
+    <value>Save folder:</value>
+  </data>
+  <data name="SettingsForm_lblEmail" xml:space="preserve">
+    <value>Email:</value>
+  </data>
+  <data name="SettingsForm_lblErrorSoundFile" xml:space="preserve">
+    <value>Sound file:</value>
+  </data>
+  <data name="SettingsForm_lblFilenameHelp" xml:space="preserve">
+    <value>Available: {title}, {author}, {date}, {id}, {quality}
+Example: {author}_{title}_{date} → username_VideoTitle_20250101</value>
+  </data>
+  <data name="SettingsForm_lblFilenameTemplate" xml:space="preserve">
+    <value>Template:</value>
+  </data>
+  <data name="SettingsForm_lblLanguage" xml:space="preserve">
+    <value>Language:</value>
+  </data>
+  <data name="SettingsForm_lblLoginStatus" xml:space="preserve">
+    <value>(not logged in)</value>
+  </data>
+  <data name="SettingsForm_lblMigrationNote" xml:space="preserve">
+    <value>Writes iwara UUID tags into previously downloaded video files.
+Tagged files can be re-discovered even after DB loss or renaming.</value>
+  </data>
+  <data name="SettingsForm_lblMinFreeSpace" xml:space="preserve">
+    <value>Min. free space:</value>
+  </data>
+  <data name="SettingsForm_lblMinFreeSpaceNote" xml:space="preserve">
+    <value>GB — downloads won't start below this (0 = disabled)</value>
+  </data>
+  <data name="SettingsForm_lblPageDelay" xml:space="preserve">
+    <value>Page fetch interval:</value>
+  </data>
+  <data name="SettingsForm_lblPageDelayUnit" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="SettingsForm_lblPassword" xml:space="preserve">
+    <value>Password:</value>
+  </data>
+  <data name="SettingsForm_lblPreset" xml:space="preserve">
+    <value>Preset:</value>
+  </data>
+  <data name="SettingsForm_lblPythonNote" xml:space="preserve">
+    <value>* If setup has already been completed, only the path is changed (no library reinstall needed)</value>
+  </data>
+  <data name="SettingsForm_lblPythonPath" xml:space="preserve">
+    <value>Python path:</value>
+  </data>
+  <data name="SettingsForm_lblQuality" xml:space="preserve">
+    <value>Default quality:</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitBase" xml:space="preserve">
+    <value>Base wait time:</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitBaseUnit" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitMax" xml:space="preserve">
+    <value>Max wait time:</value>
+  </data>
+  <data name="SettingsForm_lblRateLimitMaxUnit" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="SettingsForm_lblRetry" xml:space="preserve">
+    <value>Retry count:</value>
+  </data>
+  <data name="SettingsForm_lblSoundFile" xml:space="preserve">
+    <value>Sound file:</value>
+  </data>
+  <data name="SettingsForm_lblThumbLocation" xml:space="preserve">
+    <value>Thumbnail folder:</value>
+  </data>
+  <data name="SettingsForm_lblWebPassword" xml:space="preserve">
+    <value>Password:</value>
+  </data>
+  <data name="SettingsForm_lblWebPort" xml:space="preserve">
+    <value>Port:</value>
+  </data>
+  <data name="SettingsForm_lblWebStatus" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="SettingsForm_lblWebUsername" xml:space="preserve">
+    <value>Username:</value>
+  </data>
+  <data name="SettingsForm_lblYtDlpNote" xml:space="preserve">
+    <value>* "yt-dlp" (from PATH) is fine. If not installed, pip install is attempted automatically</value>
+  </data>
+  <data name="SettingsForm_lblYtDlpPath" xml:space="preserve">
+    <value>yt-dlp path:</value>
+  </data>
+  <data name="SettingsForm_tabAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="SettingsForm_tabAdvanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="SettingsForm_tabBackup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="SettingsForm_tabGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="SettingsForm_tabMediaServer" xml:space="preserve">
+    <value>Media Server</value>
+  </data>
+  <data name="SettingsForm_tabOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Settings_LanguageAuto" xml:space="preserve">
+    <value>Auto (follow OS)</value>
+  </data>
+  <data name="SetupWizardForm_Title" xml:space="preserve">
+    <value>IwaraDownloader Setup</value>
+  </data>
+  <data name="SetupWizardForm_btnBack" xml:space="preserve">
+    <value>&lt; Back</value>
+  </data>
+  <data name="SetupWizardForm_btnBrowse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SetupWizardForm_btnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SetupWizardForm_btnNext" xml:space="preserve">
+    <value>Next &gt;</value>
+  </data>
+  <data name="SetupWizardForm_lblAutoDesc" xml:space="preserve">
+    <value>Downloads Python 3.10.11 (Embeddable amd64) from python.org
+</value>
+  </data>
+  <data name="SetupWizardForm_lblComplete" xml:space="preserve">
+    <value>Setup complete!</value>
+  </data>
+  <data name="SetupWizardForm_lblCompleteDesc" xml:space="preserve">
+    <value>IwaraDownloader is ready to use.
+</value>
+  </data>
+  <data name="SetupWizardForm_lblExistingDesc" xml:space="preserve">
+    <value>Specify the path to python.exe.</value>
+  </data>
+  <data name="SetupWizardForm_lblProgressMsg" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="SetupWizardForm_lblStep" xml:space="preserve">
+    <value>Step 1/4: Welcome</value>
+  </data>
+  <data name="SetupWizardForm_lblStep2Title" xml:space="preserve">
+    <value>Choose how to obtain Python</value>
+  </data>
+  <data name="SetupWizardForm_lblStep3Title" xml:space="preserve">
+    <value>Running setup</value>
+  </data>
+  <data name="SetupWizardForm_lblTitle" xml:space="preserve">
+    <value>IwaraDownloader Setup</value>
+  </data>
+  <data name="SetupWizardForm_lblWelcome" xml:space="preserve">
+    <value>Thank you for using IwaraDownloader.</value>
+  </data>
+  <data name="SetupWizardForm_lblWelcomeDesc" xml:space="preserve">
+    <value>This wizard will automatically set up the following requirements:
+</value>
+  </data>
+  <data name="SetupWizardForm_rbAutoDownload" xml:space="preserve">
+    <value>Automatic download (recommended)</value>
+  </data>
+  <data name="SetupWizardForm_rbExistingPython" xml:space="preserve">
+    <value>Use existing Python</value>
+  </data>
+  <data name="SplashForm_lblStatus" xml:space="preserve">
+    <value>Starting...</value>
+  </data>
+  <data name="StatisticsForm_Title" xml:space="preserve">
+    <value>Statistics Dashboard</value>
+  </data>
+  <data name="StatisticsForm_btnClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="StatisticsForm_btnExportCsv" xml:space="preserve">
+    <value>Export CSV</value>
+  </data>
+  <data name="StatisticsForm_btnRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="StatisticsForm_grpOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="StatisticsForm_lblActiveChannelsLabel" xml:space="preserve">
+    <value>Active channels</value>
+  </data>
+  <data name="StatisticsForm_lblChannelsLabel" xml:space="preserve">
+    <value>Channels</value>
+  </data>
+  <data name="StatisticsForm_lblCompletedLabel" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="StatisticsForm_lblDurationTitle" xml:space="preserve">
+    <value>Duration distribution</value>
+  </data>
+  <data name="StatisticsForm_lblErrorTitle" xml:space="preserve">
+    <value>Failures by error type</value>
+  </data>
+  <data name="StatisticsForm_lblFailedLabel" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="StatisticsForm_lblPendingLabel" xml:space="preserve">
+    <value>Pending</value>
+  </data>
+  <data name="StatisticsForm_lblRatingTitle" xml:space="preserve">
+    <value>By rating</value>
+  </data>
+  <data name="StatisticsForm_lblRetryTitle" xml:space="preserve">
+    <value>Failures by retry count</value>
+  </data>
+  <data name="StatisticsForm_lblSiteTitle" xml:space="preserve">
+    <value>By site</value>
+  </data>
+  <data name="StatisticsForm_lblSizeTitle" xml:space="preserve">
+    <value>File size distribution</value>
+  </data>
+  <data name="StatisticsForm_lblSuccessRateLabel" xml:space="preserve">
+    <value>Success rate</value>
+  </data>
+  <data name="StatisticsForm_lblTagTitle" xml:space="preserve">
+    <value>Tag ranking (top 50)</value>
+  </data>
+  <data name="StatisticsForm_lblTotalSizeLabel" xml:space="preserve">
+    <value>Total size</value>
+  </data>
+  <data name="StatisticsForm_lblTotalVideosLabel" xml:space="preserve">
+    <value>Total videos</value>
+  </data>
+  <data name="StatisticsForm_tabAuthors" xml:space="preserve">
+    <value>Authors</value>
+  </data>
+  <data name="StatisticsForm_tabChannels" xml:space="preserve">
+    <value>By Channel</value>
+  </data>
+  <data name="StatisticsForm_tabContent" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="StatisticsForm_tabDaily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="StatisticsForm_tabDistribution" xml:space="preserve">
+    <value>Size &amp;&amp; Duration</value>
+  </data>
+  <data name="StatisticsForm_tabFailure" xml:space="preserve">
+    <value>Failure Analysis</value>
+  </data>
+  <data name="StatisticsForm_tabMonthly" xml:space="preserve">
+    <value>Monthly</value>
+  </data>
+  <data name="VideoDetailsForm_Title" xml:space="preserve">
+    <value>Video Details</value>
+  </data>
+  <data name="VideoDetailsForm_btnCancel" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="VideoDetailsForm_btnSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
+    <value>★ Add to favorites</value>
+  </data>
+</root>

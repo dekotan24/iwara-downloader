@@ -168,6 +168,12 @@ namespace IwaraDownloader.Models
 
         #endregion
 
+        /// <summary>
+        /// UI言語: "auto"(OS言語に従う) / "ja" / "en" / "zh-Hans"。
+        /// 変更はアプリ再起動で反映される。WebUIにも同じ設定が適用される。
+        /// </summary>
+        public string Language { get; set; } = "auto";
+
         /// <summary>設定ファイルのパス</summary>
         [JsonIgnore]
         public static string ConfigFilePath => Path.Combine(
