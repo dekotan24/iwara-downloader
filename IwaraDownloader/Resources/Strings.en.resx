@@ -12,6 +12,35 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AboutForm_D001" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
+  <data name="AboutForm_D002" xml:space="preserve">
+    <value>New version available: {0}</value>
+  </data>
+  <data name="AboutForm_D003" xml:space="preserve">
+    <value>A new version is available!
+
+Latest: {0}
+
+Open the release page?</value>
+  </data>
+  <data name="AboutForm_D004" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="AboutForm_D005" xml:space="preserve">
+    <value>You are up to date</value>
+  </data>
+  <data name="AboutForm_D006" xml:space="preserve">
+    <value>Check failed</value>
+  </data>
+  <data name="AboutForm_D007" xml:space="preserve">
+    <value>Update check failed:
+{0}</value>
+  </data>
+  <data name="AboutForm_D008" xml:space="preserve">
+    <value>Error</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>About</value>
   </data>
@@ -20,6 +49,54 @@
   </data>
   <data name="AboutForm_lblDescription" xml:space="preserve">
     <value>A desktop application for downloading videos from iwara.tv.</value>
+  </data>
+  <data name="BulkImportForm_D001" xml:space="preserve">
+    <value>Text files (*.txt)|*.txt|All files (*.*)|*.*</value>
+  </data>
+  <data name="BulkImportForm_D002" xml:space="preserve">
+    <value>Failed to load the file:
+{0}</value>
+  </data>
+  <data name="BulkImportForm_D003" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="BulkImportForm_D004" xml:space="preserve">
+    <value>Detected: {0} videos / {1} channels</value>
+  </data>
+  <data name="BulkImportForm_D005" xml:space="preserve">
+    <value>No valid URLs found.
+
+Supported formats:
+- Video URL / video ID
+- Channel (profile) URL
+  e.g. https://www.iwara.tv/profile/xxxx/videos
+(both iwara.tv and iwara.ai)</value>
+  </data>
+  <data name="BulkImportForm_D006" xml:space="preserve">
+    <value>Importing channel (profile) URLs requires internal initialization. Only video URLs/IDs will be processed.</value>
+  </data>
+  <data name="BulkImportForm_D007" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="BulkImportForm_D008" xml:space="preserve">
+    <value>Importing channels requires an iwara login.
+Log in from the settings screen.</value>
+  </data>
+  <data name="BulkImportForm_D009" xml:space="preserve">
+    <value>Login required</value>
+  </data>
+  <data name="BulkImportForm_D010" xml:space="preserve">
+    <value>Processing...</value>
+  </data>
+  <data name="BulkImportForm_D011" xml:space="preserve">
+    <value>Import results</value>
+  </data>
+  <data name="BulkImportForm_D012" xml:space="preserve">
+    <value>An error occurred during import:
+{0}</value>
+  </data>
+  <data name="BulkImportForm_D013" xml:space="preserve">
+    <value>Import</value>
   </data>
   <data name="BulkImportForm_Title" xml:space="preserve">
     <value>Bulk URL Import</value>
@@ -52,6 +129,91 @@
   <data name="Common_Error" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="DuplicateCheckForm_D001" xml:space="preserve">
+    <value>Scanning...</value>
+  </data>
+  <data name="DuplicateCheckForm_D002" xml:space="preserve">
+    <value>Duplicates: {0} ({1} videos)</value>
+  </data>
+  <data name="DuplicateCheckForm_D003" xml:space="preserve">
+    <value>An error occurred during the scan:
+{0}</value>
+  </data>
+  <data name="DuplicateCheckForm_D004" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="DuplicateCheckForm_D005" xml:space="preserve">
+    <value>Rescan</value>
+  </data>
+  <data name="DuplicateCheckForm_D006" xml:space="preserve">
+    <value>No duplicates found.</value>
+  </data>
+  <data name="DuplicateCheckForm_D007" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="DuplicateCheckForm_D008" xml:space="preserve">
+    <value>Resolves duplicate videos.
+
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D009" xml:space="preserve">
+    <value>For each VideoId, one is kept by the following priority and the others are deleted:
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D010" xml:space="preserve">
+    <value>1. Completed (file exists)
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D011" xml:space="preserve">
+    <value>2. Completed (file missing)
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D012" xml:space="preserve">
+    <value>3. Pending
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D013" xml:space="preserve">
+    <value>4. Failed
+
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D014" xml:space="preserve">
+    <value>Continue?</value>
+  </data>
+  <data name="DuplicateCheckForm_D015" xml:space="preserve">
+    <value>Resolve duplicates</value>
+  </data>
+  <data name="DuplicateCheckForm_D016" xml:space="preserve">
+    <value>Deleted {0} duplicates.</value>
+  </data>
+  <data name="DuplicateCheckForm_D017" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="DuplicateCheckForm_D018" xml:space="preserve">
+    <value>Select the items to delete.</value>
+  </data>
+  <data name="DuplicateCheckForm_D019" xml:space="preserve">
+    <value>Delete the following item?
+
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D020" xml:space="preserve">
+    <value>Channel: {0}
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D021" xml:space="preserve">
+    <value>Title: {0}
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D022" xml:space="preserve">
+    <value>Status: {0}</value>
+  </data>
+  <data name="DuplicateCheckForm_D023" xml:space="preserve">
+    <value>Confirm deletion</value>
+  </data>
   <data name="DuplicateCheckForm_Title" xml:space="preserve">
     <value>Duplicate Check</value>
   </data>
@@ -76,6 +238,24 @@
   <data name="DuplicateCheckForm_lblStatus" xml:space="preserve">
     <value>Scanning...</value>
   </data>
+  <data name="FileMoveProgressForm_D001" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="FileMoveProgressForm_D002" xml:space="preserve">
+    <value>Done: moved {0} / failed {1}</value>
+  </data>
+  <data name="FileMoveProgressForm_D003" xml:space="preserve">
+    <value>  ({0} moved)</value>
+  </data>
+  <data name="FileMoveProgressForm_D004" xml:space="preserve">
+    <value>Aborting...</value>
+  </data>
+  <data name="FileMoveProgressForm_D005" xml:space="preserve">
+    <value>Files are being moved. Really abort?</value>
+  </data>
+  <data name="FileMoveProgressForm_D006" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
   <data name="FileMoveProgressForm_Title" xml:space="preserve">
     <value>Moving Files</value>
   </data>
@@ -87,6 +267,104 @@
   </data>
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>Moving files...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D001" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D002" xml:space="preserve">
+    <value>Step {0}/5</value>
+  </data>
+  <data name="ImportFromFolderWizard_D003" xml:space="preserve">
+    <value>Scanning...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D004" xml:space="preserve">
+    <value>Run import &gt;</value>
+  </data>
+  <data name="ImportFromFolderWizard_D005" xml:space="preserve">
+    <value>Importing...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D006" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="ImportFromFolderWizard_D007" xml:space="preserve">
+    <value>Next &gt;</value>
+  </data>
+  <data name="ImportFromFolderWizard_D008" xml:space="preserve">
+    <value>Abort</value>
+  </data>
+  <data name="ImportFromFolderWizard_D009" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ImportFromFolderWizard_D010" xml:space="preserve">
+    <value>Select a folder to scan</value>
+  </data>
+  <data name="ImportFromFolderWizard_D011" xml:space="preserve">
+    <value>Specify a valid folder.</value>
+  </data>
+  <data name="ImportFromFolderWizard_D012" xml:space="preserve">
+    <value>Input error</value>
+  </data>
+  <data name="ImportFromFolderWizard_D013" xml:space="preserve">
+    <value>Not logged in to iwara.
+Log in from the settings screen and try again.</value>
+  </data>
+  <data name="ImportFromFolderWizard_D014" xml:space="preserve">
+    <value>Login required</value>
+  </data>
+  <data name="ImportFromFolderWizard_D015" xml:space="preserve">
+    <value>Abort the process?</value>
+  </data>
+  <data name="ImportFromFolderWizard_D016" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="ImportFromFolderWizard_D017" xml:space="preserve">
+    <value>Enumerating files...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D018" xml:space="preserve">
+    <value>+ Standalone videos (no author info): {0} — imported automatically</value>
+  </data>
+  <data name="ImportFromFolderWizard_D019" xml:space="preserve">
+    <value>Error during scan:
+{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D020" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="ImportFromFolderWizard_D021" xml:space="preserve">
+    <value>Error during import:
+{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D022" xml:space="preserve">
+    <value>Newly imported:      {0}
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D023" xml:space="preserve">
+    <value>Merged (path update): {0}
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D024" xml:space="preserve">
+    <value>Skipped (existing):   {0}
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D025" xml:space="preserve">
+    <value>Skipped (untagged):   {0}
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D026" xml:space="preserve">
+    <value>API fetch failed:     {0}
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D027" xml:space="preserve">
+    <value>DB write failed:      {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D028" xml:space="preserve">
+    <value>
+
+Error log:
+{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D029" xml:space="preserve">
+    <value>Processing. Abort and close?</value>
   </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>Import from Folder</value>
@@ -149,6 +427,544 @@
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>Import from Folder</value>
+  </data>
+  <data name="MainForm_D001" xml:space="preserve">
+    <value>Loading settings...</value>
+  </data>
+  <data name="MainForm_D002" xml:space="preserve">
+    <value>Initializing system tray...</value>
+  </data>
+  <data name="MainForm_D003" xml:space="preserve">
+    <value>Registering events...</value>
+  </data>
+  <data name="MainForm_D004" xml:space="preserve">
+    <value>Login required — download queue suspended ({0} queued). Downloads will resume automatically after login.</value>
+  </data>
+  <data name="MainForm_D005" xml:space="preserve">
+    <value>Checking integrity...</value>
+  </data>
+  <data name="MainForm_D006" xml:space="preserve">
+    <value>Checking environment...</value>
+  </data>
+  <data name="MainForm_D007" xml:space="preserve">
+    <value>Checking login status...</value>
+  </data>
+  <data name="MainForm_D008" xml:space="preserve">
+    <value>Loading channel data...</value>
+  </data>
+  <data name="MainForm_D009" xml:space="preserve">
+    <value>Initializing UI...</value>
+  </data>
+  <data name="MainForm_D010" xml:space="preserve">
+    <value>Starting download manager...</value>
+  </data>
+  <data name="MainForm_D011" xml:space="preserve">
+    <value>Restoring unfinished tasks...</value>
+  </data>
+  <data name="MainForm_D012" xml:space="preserve">
+    <value>Startup complete</value>
+  </data>
+  <data name="MainForm_D013" xml:space="preserve">
+    <value>Setup completed!</value>
+  </data>
+  <data name="MainForm_D014" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="MainForm_D015" xml:space="preserve">
+    <value>Setup incomplete. You can rerun it from the "Environment Setup" button.</value>
+  </data>
+  <data name="MainForm_D016" xml:space="preserve">
+    <value>Shutting down. Waiting for downloads to abort and tag writing to finish...</value>
+  </data>
+  <data name="MainForm_D017" xml:space="preserve">
+    <value>Environment not set up. Click the "Environment Setup" button.</value>
+  </data>
+  <data name="MainForm_D018" xml:space="preserve">
+    <value>Login required. Click the "Log in" button.</value>
+  </data>
+  <data name="MainForm_D019" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="MainForm_D020" xml:space="preserve">
+    <value>Login session is invalid: {0}. Please log in again.</value>
+  </data>
+  <data name="MainForm_D022" xml:space="preserve">
+    <value>(logged in)</value>
+  </data>
+  <data name="MainForm_D023" xml:space="preserve">
+    <value>Log out</value>
+  </data>
+  <data name="MainForm_D024" xml:space="preserve">
+    <value>(not logged in)</value>
+  </data>
+  <data name="MainForm_D025" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="MainForm_D026" xml:space="preserve">
+    <value>Log out?</value>
+  </data>
+  <data name="MainForm_D027" xml:space="preserve">
+    <value>Logged out</value>
+  </data>
+  <data name="MainForm_D028" xml:space="preserve">
+    <value>Please run the environment setup first.</value>
+  </data>
+  <data name="MainForm_D029" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="MainForm_D030" xml:space="preserve">
+    <value>Logging in...</value>
+  </data>
+  <data name="MainForm_D031" xml:space="preserve">
+    <value>Login complete!</value>
+  </data>
+  <data name="MainForm_D032" xml:space="preserve">
+    <value>Logged in successfully!</value>
+  </data>
+  <data name="MainForm_D033" xml:space="preserve">
+    <value>Login successful</value>
+  </data>
+  <data name="MainForm_D034" xml:space="preserve">
+    <value>Login failed</value>
+  </data>
+  <data name="MainForm_D035" xml:space="preserve">
+    <value>Login failed:
+{0}</value>
+  </data>
+  <data name="MainForm_D036" xml:space="preserve">
+    <value>Login failed</value>
+  </data>
+  <data name="MainForm_D037" xml:space="preserve">
+    <value>Login error</value>
+  </data>
+  <data name="MainForm_D038" xml:space="preserve">
+    <value>An error occurred during login:
+{0}</value>
+  </data>
+  <data name="MainForm_D039" xml:space="preserve">
+    <value>Enter an iwara.tv profile URL.
+
+Supported format: https://www.iwara.tv/profile/username</value>
+  </data>
+  <data name="MainForm_D040" xml:space="preserve">
+    <value>Invalid URL</value>
+  </data>
+  <data name="MainForm_D041" xml:space="preserve">
+    <value>Invalid username.
+
+Only letters, digits, @, _ and - are allowed.</value>
+  </data>
+  <data name="MainForm_D042" xml:space="preserve">
+    <value>Invalid input</value>
+  </data>
+  <data name="MainForm_D043" xml:space="preserve">
+    <value>Enter an iwara.tv video URL.
+
+Supported format: https://www.iwara.tv/video/xxxxx</value>
+  </data>
+  <data name="MainForm_D044" xml:space="preserve">
+    <value>Downloads started</value>
+  </data>
+  <data name="MainForm_D045" xml:space="preserve">
+    <value>All downloads stopped</value>
+  </data>
+  <data name="MainForm_D046" xml:space="preserve">
+    <value>Enter an iwara.tv URL.
+
+Supported formats:
+- Video: https://www.iwara.tv/video/xxxxx
+- Channel: https://www.iwara.tv/profile/username</value>
+  </data>
+  <data name="MainForm_D047" xml:space="preserve">
+    <value>Adding video...</value>
+  </data>
+  <data name="MainForm_D048" xml:space="preserve">
+    <value>This video is already registered.
+
+</value>
+  </data>
+  <data name="MainForm_D049" xml:space="preserve">
+    <value>Title: {0}
+</value>
+  </data>
+  <data name="MainForm_D050" xml:space="preserve">
+    <value>Status: {0}
+
+</value>
+  </data>
+  <data name="MainForm_D051" xml:space="preserve">
+    <value>Add it to the download queue?</value>
+  </data>
+  <data name="MainForm_D052" xml:space="preserve">
+    <value>Duplicate found</value>
+  </data>
+  <data name="MainForm_D053" xml:space="preserve">
+    <value>Video "{0}" added to the queue</value>
+  </data>
+  <data name="MainForm_D054" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="MainForm_D055" xml:space="preserve">
+    <value>Video "{0}" added</value>
+  </data>
+  <data name="MainForm_D056" xml:space="preserve">
+    <value>Failed to add the video.</value>
+  </data>
+  <data name="MainForm_D057" xml:space="preserve">
+    <value>Add failed</value>
+  </data>
+  <data name="MainForm_D058" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="MainForm_D059" xml:space="preserve">
+    <value>Videos - {0}</value>
+  </data>
+  <data name="MainForm_D060" xml:space="preserve">
+    <value>All videos</value>
+  </data>
+  <data name="MainForm_D061" xml:space="preserve">
+    <value>Downloading/Pending</value>
+  </data>
+  <data name="MainForm_D062" xml:space="preserve">
+    <value>Not downloaded</value>
+  </data>
+  <data name="MainForm_D063" xml:space="preserve">
+    <value>Downloaded</value>
+  </data>
+  <data name="MainForm_D064" xml:space="preserve">
+    <value>Skipped</value>
+  </data>
+  <data name="MainForm_D065" xml:space="preserve">
+    <value>Errors</value>
+  </data>
+  <data name="MainForm_D066" xml:space="preserve">
+    <value>Standalone videos</value>
+  </data>
+  <data name="MainForm_D067" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="MainForm_D068" xml:space="preserve">
+    <value>Videos</value>
+  </data>
+  <data name="MainForm_D069" xml:space="preserve">
+    <value>Filter: {0}/{1}</value>
+  </data>
+  <data name="MainForm_D070" xml:space="preserve">
+    <value>Error: {0}
+Retries: {1}</value>
+  </data>
+  <data name="MainForm_D071" xml:space="preserve">
+    <value>Save folder: {0}</value>
+  </data>
+  <data name="MainForm_D072" xml:space="preserve">
+    <value>{0}
+Remaining: {1}</value>
+  </data>
+  <data name="MainForm_D073" xml:space="preserve">
+    <value>{0}
+Author: {1}</value>
+  </data>
+  <data name="MainForm_D074" xml:space="preserve">
+    <value>Pending</value>
+  </data>
+  <data name="MainForm_D075" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="MainForm_D076" xml:space="preserve">
+    <value>Writing tags</value>
+  </data>
+  <data name="MainForm_D077" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="MainForm_D078" xml:space="preserve">
+    <value>Skipped</value>
+  </data>
+  <data name="MainForm_D079" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="MainForm_D080" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="MainForm_D081" xml:space="preserve">
+    <value>{0} selected{1}</value>
+  </data>
+  <data name="MainForm_D082" xml:space="preserve">
+    <value>Check Now</value>
+  </data>
+  <data name="MainForm_D083" xml:space="preserve">
+    <value>Check Now (disabled)</value>
+  </data>
+  <data name="MainForm_D084" xml:space="preserve">
+    <value>Follow default setting ({0})</value>
+  </data>
+  <data name="MainForm_D085" xml:space="preserve">
+    <value>Change Save Folder...</value>
+  </data>
+  <data name="MainForm_D086" xml:space="preserve">
+    <value>Change Save Folder... (custom set)</value>
+  </data>
+  <data name="MainForm_D087" xml:space="preserve">
+    <value>Queued a check for new videos on {0}</value>
+  </data>
+  <data name="MainForm_D088" xml:space="preserve">
+    <value>Added {0} downloads to the queue</value>
+  </data>
+  <data name="MainForm_D089" xml:space="preserve">
+    <value>There are no Not Found videos.</value>
+  </data>
+  <data name="MainForm_D090" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="MainForm_D091" xml:space="preserve">
+    <value>Delete {0} Not Found (removed) videos from the database?
+
+* Local files will not be deleted</value>
+  </data>
+  <data name="MainForm_D092" xml:space="preserve">
+    <value>Remove Not Found</value>
+  </data>
+  <data name="MainForm_D093" xml:space="preserve">
+    <value>Deleted {0} Not Found videos</value>
+  </data>
+  <data name="MainForm_D094" xml:space="preserve">
+    <value>Select save folder for {0}</value>
+  </data>
+  <data name="MainForm_D095" xml:space="preserve">
+    <value>Save folder changed: {0}</value>
+  </data>
+  <data name="MainForm_D096" xml:space="preserve">
+    <value>Move complete: {0} succeeded / {1} failed</value>
+  </data>
+  <data name="MainForm_D097" xml:space="preserve">
+    <value>{0} files failed to move.
+</value>
+  </data>
+  <data name="MainForm_D098" xml:space="preserve">
+    <value>Failed files remain in their original location (see the log for details).
+
+</value>
+  </data>
+  <data name="MainForm_D099" xml:space="preserve">
+    <value>After resolving the cause, use [Tools] -&gt; [Move Unrelocated Files] to retry.</value>
+  </data>
+  <data name="MainForm_D100" xml:space="preserve">
+    <value>Move files</value>
+  </data>
+  <data name="MainForm_D101" xml:space="preserve">
+    <value>External video DL setting for {0} changed to "{1}"</value>
+  </data>
+  <data name="MainForm_D102" xml:space="preserve">
+    <value>Remove "{0}" from your subscriptions?</value>
+  </data>
+  <data name="MainForm_D103" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="MainForm_D104" xml:space="preserve">
+    <value>Download (including failed retries)</value>
+  </data>
+  <data name="MainForm_D105" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="MainForm_D106" xml:space="preserve">
+    <value>★ Remove from Favorites</value>
+  </data>
+  <data name="MainForm_D107" xml:space="preserve">
+    <value>★ Add to Favorites</value>
+  </data>
+  <data name="MainForm_D108" xml:space="preserve">
+    <value>Added {0} videos to the retry queue</value>
+  </data>
+  <data name="MainForm_D109" xml:space="preserve">
+    <value>No failed videos selected</value>
+  </data>
+  <data name="MainForm_D110" xml:space="preserve">
+    <value>Refreshed info for {0} videos</value>
+  </data>
+  <data name="MainForm_D111" xml:space="preserve">
+    <value>Copied {0} URLs</value>
+  </data>
+  <data name="MainForm_D112" xml:space="preserve">
+    <value>Copied {0} titles</value>
+  </data>
+  <data name="MainForm_D113" xml:space="preserve">
+    <value>File existence check is already running...</value>
+  </data>
+  <data name="MainForm_D114" xml:space="preserve">
+    <value>Checking file existence... ({0})</value>
+  </data>
+  <data name="MainForm_D115" xml:space="preserve">
+    <value>{0} checked: all files exist</value>
+  </data>
+  <data name="MainForm_D116" xml:space="preserve">
+    <value>{0} checked: {1} files missing and added to the queue</value>
+  </data>
+  <data name="MainForm_D117" xml:space="preserve">
+    <value>File existence check failed: {0}</value>
+  </data>
+  <data name="MainForm_D118" xml:space="preserve">
+    <value>"{0}" has no videos</value>
+  </data>
+  <data name="MainForm_D119" xml:space="preserve">
+    <value>No downloaded videos</value>
+  </data>
+  <data name="MainForm_D120" xml:space="preserve">
+    <value>
+
+* Downloaded files will not be deleted</value>
+  </data>
+  <data name="MainForm_D121" xml:space="preserve">
+    <value>Deleted {0} videos</value>
+  </data>
+  <data name="MainForm_D122" xml:space="preserve">
+    <value>Confirm re-download</value>
+  </data>
+  <data name="MainForm_D123" xml:space="preserve">
+    <value>Added {0} videos to the re-download queue</value>
+  </data>
+  <data name="MainForm_D124" xml:space="preserve">
+    <value>Updated "{0}"</value>
+  </data>
+  <data name="MainForm_D125" xml:space="preserve">
+    <value>Added {0} videos to favorites</value>
+  </data>
+  <data name="MainForm_D126" xml:space="preserve">
+    <value>Removed {0} videos from favorites</value>
+  </data>
+  <data name="MainForm_D127" xml:space="preserve">
+    <value>DL: {0} / Queued: {1} | Done: {2} ({3}){4}</value>
+  </data>
+  <data name="MainForm_D128" xml:space="preserve">
+    <value>A new version is available!
+
+</value>
+  </data>
+  <data name="MainForm_D129" xml:space="preserve">
+    <value>Current: {0}
+</value>
+  </data>
+  <data name="MainForm_D130" xml:space="preserve">
+    <value>Latest: {0}
+
+</value>
+  </data>
+  <data name="MainForm_D131" xml:space="preserve">
+    <value>Open the release page?</value>
+  </data>
+  <data name="MainForm_D132" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="MainForm_D133" xml:space="preserve">
+    <value>Log folder does not exist.</value>
+  </data>
+  <data name="MainForm_D134" xml:space="preserve">
+    <value>Cannot run while downloads are in progress.
+</value>
+  </data>
+  <data name="MainForm_D135" xml:space="preserve">
+    <value>Wait for them to finish or stop the queue, then try again.</value>
+  </data>
+  <data name="MainForm_D136" xml:space="preserve">
+    <value>Move Unrelocated Files</value>
+  </data>
+  <data name="MainForm_D137" xml:space="preserve">
+    <value>No files are outside the current save folder settings.</value>
+  </data>
+  <data name="MainForm_D138" xml:space="preserve">
+    <value>Found {0} files outside the current save folder settings</value>
+  </data>
+  <data name="MainForm_D139" xml:space="preserve">
+    <value>Move them to their proper save folders?
+</value>
+  </data>
+  <data name="MainForm_D140" xml:space="preserve">
+    <value>(metadata .json files move along with them)</value>
+  </data>
+  <data name="MainForm_D141" xml:space="preserve">
+    <value>Aborted because a download started.
+</value>
+  </data>
+  <data name="MainForm_D142" xml:space="preserve">
+    <value>Unrelocated file move complete: {0} succeeded / {1} failed</value>
+  </data>
+  <data name="MainForm_D143" xml:space="preserve">
+    <value>{0} files failed to move.
+</value>
+  </data>
+  <data name="MainForm_D144" xml:space="preserve">
+    <value>After resolving the cause, run this menu again to move the rest.</value>
+  </data>
+  <data name="MainForm_D145" xml:space="preserve">
+    <value>Relink Moved Files</value>
+  </data>
+  <data name="MainForm_D146" xml:space="preserve">
+    <value>Scanning for moved files...</value>
+  </data>
+  <data name="MainForm_D147" xml:space="preserve">
+    <value>Nothing to relink</value>
+  </data>
+  <data name="MainForm_D148" xml:space="preserve">
+    <value>No files can be relinked.</value>
+  </data>
+  <data name="MainForm_D149" xml:space="preserve">
+    <value>Found {0} verified files at the destination.
+</value>
+  </data>
+  <data name="MainForm_D150" xml:space="preserve">
+    <value>Rewrite database paths to the destination?
+</value>
+  </data>
+  <data name="MainForm_D151" xml:space="preserve">
+    <value>(files will not be moved)</value>
+  </data>
+  <data name="MainForm_D152" xml:space="preserve">
+    <value>Aborted because a download started during the scan.
+</value>
+  </data>
+  <data name="MainForm_D153" xml:space="preserve">
+    <value>Relink complete: {0}</value>
+  </data>
+  <data name="MainForm_D154" xml:space="preserve">
+    <value>Rewrote {0} paths to the destination.</value>
+  </data>
+  <data name="MainForm_D155" xml:space="preserve">
+    <value>📋Monitor: ON</value>
+  </data>
+  <data name="MainForm_D156" xml:space="preserve">
+    <value>📋Monitor: OFF</value>
+  </data>
+  <data name="MainForm_D157" xml:space="preserve">
+    <value>Clipboard monitoring started</value>
+  </data>
+  <data name="MainForm_D158" xml:space="preserve">
+    <value>Clipboard monitoring stopped</value>
+  </data>
+  <data name="MainForm_D159" xml:space="preserve">
+    <value>Clipboard: already registered ({0})</value>
+  </data>
+  <data name="MainForm_D160" xml:space="preserve">
+    <value>Clipboard detected: adding video...</value>
+  </data>
+  <data name="MainForm_D161" xml:space="preserve">
+    <value>🖼Thumbs</value>
+  </data>
+  <data name="MainForm_D162" xml:space="preserve">
+    <value>📋Details</value>
+  </data>
+  <data name="MainForm_D163" xml:space="preserve">
+    <value>Thumbnail mode: showing first {1} of {0} (narrow down with filters)</value>
+  </data>
+  <data name="MainForm_D164" xml:space="preserve">
+    <value>Thumbnail mode: {0}</value>
+  </data>
+  <data name="MainForm_D165" xml:space="preserve">
+    <value>Error while switching view mode:
+{0}: {1}</value>
+  </data>
+  <data name="MainForm_D166" xml:space="preserve">
+    <value>Advanced ▴</value>
+  </data>
+  <data name="MainForm_D167" xml:space="preserve">
+    <value>Advanced ▾</value>
   </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>+ Channel</value>
@@ -395,6 +1211,37 @@
 
 {0}</value>
   </data>
+  <data name="RenameResultForm_D001" xml:space="preserve">
+    <value>Success: {0}  Skipped: {1}  Conflicts: {2}  Missing: {3}  Errors: {4}</value>
+  </data>
+  <data name="RenameResultForm_D002" xml:space="preserve">
+    <value>{0} files will be overwritten.
+Existing files will be deleted. Continue?</value>
+  </data>
+  <data name="RenameResultForm_D003" xml:space="preserve">
+    <value>Confirm overwrite</value>
+  </data>
+  <data name="RenameResultForm_D004" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="RenameResultForm_D005" xml:space="preserve">
+    <value>Skipped (same name)</value>
+  </data>
+  <data name="RenameResultForm_D006" xml:space="preserve">
+    <value>Conflict: {0}</value>
+  </data>
+  <data name="RenameResultForm_D007" xml:space="preserve">
+    <value>File missing</value>
+  </data>
+  <data name="RenameResultForm_D008" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="RenameResultForm_D009" xml:space="preserve">
+    <value>Waiting</value>
+  </data>
+  <data name="RenameResultForm_D010" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
   <data name="RenameResultForm_Title" xml:space="preserve">
     <value>Rename Results</value>
   </data>
@@ -464,6 +1311,39 @@
   <data name="RenameResultForm_menuSkip" xml:space="preserve">
     <value>Skip</value>
   </data>
+  <data name="SearchImportForm_D001" xml:space="preserve">
+    <value>Search site switched to {0}. Search again.</value>
+  </data>
+  <data name="SearchImportForm_D002" xml:space="preserve">
+    <value>Enter search keywords.</value>
+  </data>
+  <data name="SearchImportForm_D003" xml:space="preserve">
+    <value>Input error</value>
+  </data>
+  <data name="SearchImportForm_D004" xml:space="preserve">
+    <value>Searching: "{0}" [{1}] (page {2})...</value>
+  </data>
+  <data name="SearchImportForm_D005" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="SearchImportForm_D006" xml:space="preserve">
+    <value>Results: showing {1} of {0} (page {2}/{3})</value>
+  </data>
+  <data name="SearchImportForm_D007" xml:space="preserve">
+    <value>Search failed: {0}</value>
+  </data>
+  <data name="SearchImportForm_D008" xml:space="preserve">
+    <value>Select videos to import.</value>
+  </data>
+  <data name="SearchImportForm_D009" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="SearchImportForm_D010" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="SearchImportForm_D011" xml:space="preserve">
+    <value>Import complete: {0} new / {1} re-queued</value>
+  </data>
   <data name="SearchImportForm_Title" xml:space="preserve">
     <value>iwara Search Import</value>
   </data>
@@ -493,6 +1373,313 @@
   </data>
   <data name="SearchImportForm_lblStatus" xml:space="preserve">
     <value>Enter keywords and click "Search"</value>
+  </data>
+  <data name="SettingsForm_D001" xml:space="preserve">
+    <value>Current: {0}</value>
+  </data>
+  <data name="SettingsForm_D002" xml:space="preserve">
+    <value>Select the download folder</value>
+  </data>
+  <data name="SettingsForm_D003" xml:space="preserve">
+    <value>Executable (*.exe)|*.exe|All files (*.*)|*.*</value>
+  </data>
+  <data name="SettingsForm_D004" xml:space="preserve">
+    <value>yt-dlp executable (yt-dlp.exe;yt-dlp)|yt-dlp.exe;yt-dlp|All files (*.*)|*.*</value>
+  </data>
+  <data name="SettingsForm_D005" xml:space="preserve">
+    <value>Enter your email address and password.</value>
+  </data>
+  <data name="SettingsForm_D006" xml:space="preserve">
+    <value>Input error</value>
+  </data>
+  <data name="SettingsForm_D007" xml:space="preserve">
+    <value>Logging in...</value>
+  </data>
+  <data name="SettingsForm_D008" xml:space="preserve">
+    <value>Logged in successfully!</value>
+  </data>
+  <data name="SettingsForm_D009" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="SettingsForm_D010" xml:space="preserve">
+    <value>Login failed:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D011" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="SettingsForm_D012" xml:space="preserve">
+    <value>An error occurred during login:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D013" xml:space="preserve">
+    <value>Re-login</value>
+  </data>
+  <data name="SettingsForm_D014" xml:space="preserve">
+    <value>(logged in)</value>
+  </data>
+  <data name="SettingsForm_D015" xml:space="preserve">
+    <value>(not logged in)</value>
+  </data>
+  <data name="SettingsForm_D016" xml:space="preserve">
+    <value>Settings saved.</value>
+  </data>
+  <data name="SettingsForm_D017" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsForm_D018" xml:space="preserve">
+    <value>The save folder cannot be changed while downloads are in progress.
+</value>
+  </data>
+  <data name="SettingsForm_D019" xml:space="preserve">
+    <value>Wait for them to finish or stop the queue, then try again.</value>
+  </data>
+  <data name="SettingsForm_D020" xml:space="preserve">
+    <value>Change save folder</value>
+  </data>
+  <data name="SettingsForm_D021" xml:space="preserve">
+    <value>File move complete.
+
+</value>
+  </data>
+  <data name="SettingsForm_D022" xml:space="preserve">
+    <value>Succeeded: {0} / Failed: {1}
+</value>
+  </data>
+  <data name="SettingsForm_D023" xml:space="preserve">
+    <value>
+Failed files remain in their original location. See the log for details.
+</value>
+  </data>
+  <data name="SettingsForm_D024" xml:space="preserve">
+    <value>After resolving the cause, use [Tools] -&gt; [Move Unrelocated Files] on the main screen to retry.</value>
+  </data>
+  <data name="SettingsForm_D025" xml:space="preserve">
+    <value>Move complete</value>
+  </data>
+  <data name="SettingsForm_D026" xml:space="preserve">
+    <value>JSON files (*.json)|*.json</value>
+  </data>
+  <data name="SettingsForm_D027" xml:space="preserve">
+    <value>Settings exported.</value>
+  </data>
+  <data name="SettingsForm_D028" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="SettingsForm_D029" xml:space="preserve">
+    <value>Export failed:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D030" xml:space="preserve">
+    <value>Subscriptions exported.</value>
+  </data>
+  <data name="SettingsForm_D031" xml:space="preserve">
+    <value>Export failed:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D032" xml:space="preserve">
+    <value>Settings imported.</value>
+  </data>
+  <data name="SettingsForm_D033" xml:space="preserve">
+    <value>Import failed:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D034" xml:space="preserve">
+    <value>Imported {0} subscriptions.</value>
+  </data>
+  <data name="SettingsForm_D035" xml:space="preserve">
+    <value>Import failed:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D036" xml:space="preserve">
+    <value>DownloadManager is not available.</value>
+  </data>
+  <data name="SettingsForm_D037" xml:space="preserve">
+    <value>Already running. Wait for it to finish before starting again.</value>
+  </data>
+  <data name="SettingsForm_D038" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="SettingsForm_D039" xml:space="preserve">
+    <value>Writes iwara UUID tags into downloaded mp4 files.
+</value>
+  </data>
+  <data name="SettingsForm_D040" xml:space="preserve">
+    <value>All videos registered in the DB that still exist locally are targeted.
+
+</value>
+  </data>
+  <data name="SettingsForm_D041" xml:space="preserve">
+    <value>* Runs in the background. Processing continues while the app is running, even if you close this screen.
+</value>
+  </data>
+  <data name="SettingsForm_D042" xml:space="preserve">
+    <value>  Progress is shown in the main window's status bar.
+
+</value>
+  </data>
+  <data name="SettingsForm_D043" xml:space="preserve">
+    <value>Continue?</value>
+  </data>
+  <data name="SettingsForm_D044" xml:space="preserve">
+    <value>Write tags to existing files</value>
+  </data>
+  <data name="SettingsForm_D045" xml:space="preserve">
+    <value>Started in the background.
+Processing continues even if you close this screen.</value>
+  </data>
+  <data name="SettingsForm_D046" xml:space="preserve">
+    <value>Started</value>
+  </data>
+  <data name="SettingsForm_D047" xml:space="preserve">
+    <value>Backfills videos in the DB whose thumbnail URL is unsaved or whose image is uncached.
+
+</value>
+  </data>
+  <data name="SettingsForm_D048" xml:space="preserve">
+    <value>- Videos with a FileUuid -&gt; assembled instantly (no API request)
+</value>
+  </data>
+  <data name="SettingsForm_D049" xml:space="preserve">
+    <value>- Videos without a FileUuid -&gt; fetched via the iwara API (login required, takes time)
+</value>
+  </data>
+  <data name="SettingsForm_D050" xml:space="preserve">
+    <value>- Once resolved, thumbnail images are also downloaded (rate limited)
+
+</value>
+  </data>
+  <data name="SettingsForm_D051" xml:space="preserve">
+    <value>Backfill thumbnail URLs</value>
+  </data>
+  <data name="SettingsForm_D052" xml:space="preserve">
+    <value>Audio files (*.wav;*.mp3;*.m4a)|*.wav;*.mp3;*.m4a|All files (*.*)|*.*</value>
+  </data>
+  <data name="SettingsForm_D053" xml:space="preserve">
+    <value>The specified file was not found.</value>
+  </data>
+  <data name="SettingsForm_D054" xml:space="preserve">
+    <value>Enter a template.</value>
+  </data>
+  <data name="SettingsForm_D055" xml:space="preserve">
+    <value>There are no files to rename.</value>
+  </data>
+  <data name="SettingsForm_D056" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="SettingsForm_D057" xml:space="preserve">
+    <value>Scanning...</value>
+  </data>
+  <data name="SettingsForm_D058" xml:space="preserve">
+    <value>Rename targets: {0}
+
+</value>
+  </data>
+  <data name="SettingsForm_D059" xml:space="preserve">
+    <value>- Processable: {0}
+</value>
+  </data>
+  <data name="SettingsForm_D060" xml:space="preserve">
+    <value>- Conflicts: {0}
+</value>
+  </data>
+  <data name="SettingsForm_D061" xml:space="preserve">
+    <value>- Missing files: {0}
+
+</value>
+  </data>
+  <data name="SettingsForm_D062" xml:space="preserve">
+    <value>Conflicting files can be handled individually on the results screen.
+</value>
+  </data>
+  <data name="SettingsForm_D063" xml:space="preserve">
+    <value>Continue?</value>
+  </data>
+  <data name="SettingsForm_D064" xml:space="preserve">
+    <value>Conflict warning</value>
+  </data>
+  <data name="SettingsForm_D065" xml:space="preserve">
+    <value>Batch-rename downloaded files</value>
+  </data>
+  <data name="SettingsForm_D066" xml:space="preserve">
+    <value>{0} files will be renamed.
+
+</value>
+  </data>
+  <data name="SettingsForm_D067" xml:space="preserve">
+    <value>Template: {0}
+
+</value>
+  </data>
+  <data name="SettingsForm_D068" xml:space="preserve">
+    <value>This operation cannot be undone. Continue?</value>
+  </data>
+  <data name="SettingsForm_D069" xml:space="preserve">
+    <value>Confirm batch rename</value>
+  </data>
+  <data name="SettingsForm_D070" xml:space="preserve">
+    <value>Renaming...</value>
+  </data>
+  <data name="SettingsForm_D071" xml:space="preserve">
+    <value>The aggressive preset is more likely to cause errors.
+</value>
+  </data>
+  <data name="SettingsForm_D072" xml:space="preserve">
+    <value>If you get frequent 403/429 errors, switch to Standard or Conservative.</value>
+  </data>
+  <data name="SettingsForm_D073" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="SettingsForm_D074" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
+  <data name="SettingsForm_D075" xml:space="preserve">
+    <value>Update check failed:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D076" xml:space="preserve">
+    <value>A new version is available!
+
+</value>
+  </data>
+  <data name="SettingsForm_D077" xml:space="preserve">
+    <value>Current: {0}
+</value>
+  </data>
+  <data name="SettingsForm_D078" xml:space="preserve">
+    <value>Latest: {0}
+
+</value>
+  </data>
+  <data name="SettingsForm_D079" xml:space="preserve">
+    <value>Open the download page?</value>
+  </data>
+  <data name="SettingsForm_D080" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="SettingsForm_D081" xml:space="preserve">
+    <value>You are up to date!
+
+Current: {0}</value>
+  </data>
+  <data name="SettingsForm_D082" xml:space="preserve">
+    <value>Update check</value>
+  </data>
+  <data name="SettingsForm_D083" xml:space="preserve">
+    <value>Check Now</value>
+  </data>
+  <data name="SettingsForm_D084" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="SettingsForm_D085" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="SettingsForm_D086" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="SettingsForm_D087" xml:space="preserve">
+    <value>Server operation failed:
+{0}</value>
   </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>Settings</value>
@@ -809,6 +1996,71 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="Settings_LanguageAuto" xml:space="preserve">
     <value>Auto (follow OS)</value>
   </data>
+  <data name="SetupWizardForm_D001" xml:space="preserve">
+    <value>Step {0}/4: </value>
+  </data>
+  <data name="SetupWizardForm_D002" xml:space="preserve">
+    <value>Welcome</value>
+  </data>
+  <data name="SetupWizardForm_D003" xml:space="preserve">
+    <value>How to obtain Python</value>
+  </data>
+  <data name="SetupWizardForm_D004" xml:space="preserve">
+    <value>Running setup</value>
+  </data>
+  <data name="SetupWizardForm_D005" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="SetupWizardForm_D006" xml:space="preserve">
+    <value>Running...</value>
+  </data>
+  <data name="SetupWizardForm_D007" xml:space="preserve">
+    <value>Next &gt;</value>
+  </data>
+  <data name="SetupWizardForm_D008" xml:space="preserve">
+    <value>Enter the Python path.</value>
+  </data>
+  <data name="SetupWizardForm_D009" xml:space="preserve">
+    <value>Input error</value>
+  </data>
+  <data name="SetupWizardForm_D010" xml:space="preserve">
+    <value>The specified path does not exist:
+{0}</value>
+  </data>
+  <data name="SetupWizardForm_D011" xml:space="preserve">
+    <value>Abort the setup?</value>
+  </data>
+  <data name="SetupWizardForm_D012" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="SetupWizardForm_D013" xml:space="preserve">
+    <value>Python executable|python.exe|All files|*.*</value>
+  </data>
+  <data name="SetupWizardForm_D014" xml:space="preserve">
+    <value>Starting setup...</value>
+  </data>
+  <data name="SetupWizardForm_D015" xml:space="preserve">
+    <value>Setup aborted.</value>
+  </data>
+  <data name="SetupWizardForm_D016" xml:space="preserve">
+    <value>Abort</value>
+  </data>
+  <data name="SetupWizardForm_D017" xml:space="preserve">
+    <value>Setup failed.
+
+{0}
+
+</value>
+  </data>
+  <data name="SetupWizardForm_D018" xml:space="preserve">
+    <value>Check your network connection, or try another Python with "Use existing Python".</value>
+  </data>
+  <data name="SetupWizardForm_D019" xml:space="preserve">
+    <value>Setup error</value>
+  </data>
+  <data name="SetupWizardForm_D020" xml:space="preserve">
+    <value>Setup is running. Closing will abort it. Continue?</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader Setup</value>
   </data>
@@ -868,6 +2120,35 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>Starting...</value>
+  </data>
+  <data name="StatisticsForm_D001" xml:space="preserve">
+    <value>Failed to load statistics:
+{0}</value>
+  </data>
+  <data name="StatisticsForm_D002" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="StatisticsForm_D003" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="StatisticsForm_D004" xml:space="preserve">
+    <value>CSV files (*.csv)|*.csv</value>
+  </data>
+  <data name="StatisticsForm_D005" xml:space="preserve">
+    <value>Exported.</value>
+  </data>
+  <data name="StatisticsForm_D006" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="StatisticsForm_D007" xml:space="preserve">
+    <value>Export failed:
+{0}</value>
+  </data>
+  <data name="StatisticsForm_D008" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="StatisticsForm_D009" xml:space="preserve">
+    <value>Disabled</value>
   </data>
   <data name="StatisticsForm_Title" xml:space="preserve">
     <value>Statistics Dashboard</value>
@@ -949,6 +2230,27 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>Monthly</value>
+  </data>
+  <data name="VideoDetailsForm_D001" xml:space="preserve">
+    <value>Pending</value>
+  </data>
+  <data name="VideoDetailsForm_D002" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="VideoDetailsForm_D003" xml:space="preserve">
+    <value>Writing tags</value>
+  </data>
+  <data name="VideoDetailsForm_D004" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="VideoDetailsForm_D005" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="VideoDetailsForm_D006" xml:space="preserve">
+    <value>Skipped</value>
+  </data>
+  <data name="VideoDetailsForm_D007" xml:space="preserve">
+    <value>Paused</value>
   </data>
   <data name="VideoDetailsForm_Title" xml:space="preserve">
     <value>Video Details</value>
