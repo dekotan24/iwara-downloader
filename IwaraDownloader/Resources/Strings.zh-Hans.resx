@@ -2720,16 +2720,64 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="VideoDetailsForm_D007" xml:space="preserve">
     <value>暂停</value>
   </data>
+  <data name="VideoDetailsForm_RowAuthor" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="VideoDetailsForm_RowCreatedAt" xml:space="preserve">
+    <value>注册时间</value>
+  </data>
+  <data name="VideoDetailsForm_RowDownloadedAt" xml:space="preserve">
+    <value>下载时间</value>
+  </data>
+  <data name="VideoDetailsForm_RowDuration" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="VideoDetailsForm_RowFileSize" xml:space="preserve">
+    <value>文件大小</value>
+  </data>
+  <data name="VideoDetailsForm_RowLastError" xml:space="preserve">
+    <value>最后错误</value>
+  </data>
+  <data name="VideoDetailsForm_RowMemo" xml:space="preserve">
+    <value>备注</value>
+  </data>
+  <data name="VideoDetailsForm_RowPostedAt" xml:space="preserve">
+    <value>发布时间</value>
+  </data>
+  <data name="VideoDetailsForm_RowRetry" xml:space="preserve">
+    <value>重试次数</value>
+  </data>
+  <data name="VideoDetailsForm_RowSource" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="VideoDetailsForm_RowStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="VideoDetailsForm_RowTags" xml:space="preserve">
+    <value>标签（逗号分隔）</value>
+  </data>
+  <data name="VideoDetailsForm_RowTitle" xml:space="preserve">
+    <value>标题</value>
+  </data>
   <data name="VideoDetailsForm_Title" xml:space="preserve">
     <value>视频详情</value>
   </data>
   <data name="VideoDetailsForm_btnCancel" xml:space="preserve">
     <value>关闭</value>
   </data>
+  <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
+    <value>打开</value>
+  </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ 添加到收藏</value>
+  </data>
+  <data name="VideoDetailsForm_lblFavorite" xml:space="preserve">
+    <value>收藏</value>
+  </data>
+  <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
+    <value>保存位置</value>
   </data>
 </root>

@@ -849,5 +849,21 @@
  "StatisticsForm_D033": "作者",
  "StatisticsForm_D034": "导出统计",
  "StatisticsForm_SiteLegacy": "www.iwara.tv（旧）",
- "StatisticsForm_MinutesSeconds": "{0}分{1}秒"
+ "StatisticsForm_MinutesSeconds": "{0}分{1}秒",
+ "VideoDetailsForm_RowTitle": "标题",
+ "VideoDetailsForm_RowSource": "来源",
+ "VideoDetailsForm_RowAuthor": "作者",
+ "VideoDetailsForm_RowStatus": "状态",
+ "VideoDetailsForm_RowDuration": "时长",
+ "VideoDetailsForm_RowFileSize": "文件大小",
+ "VideoDetailsForm_RowPostedAt": "发布时间",
+ "VideoDetailsForm_RowDownloadedAt": "下载时间",
+ "VideoDetailsForm_RowCreatedAt": "注册时间",
+ "VideoDetailsForm_RowRetry": "重试次数",
+ "VideoDetailsForm_RowLastError": "最后错误",
+ "VideoDetailsForm_RowTags": "标签（逗号分隔）",
+ "VideoDetailsForm_RowMemo": "备注",
+ "VideoDetailsForm_btnOpen": "打开",
+ "VideoDetailsForm_lblLocalFilePath": "保存位置",
+ "VideoDetailsForm_lblFavorite": "收藏"
 }

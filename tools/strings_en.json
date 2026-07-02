@@ -849,5 +849,21 @@
  "StatisticsForm_D033": "Author",
  "StatisticsForm_D034": "Export statistics",
  "StatisticsForm_SiteLegacy": "www.iwara.tv (legacy)",
- "StatisticsForm_MinutesSeconds": "{0}m {1}s"
+ "StatisticsForm_MinutesSeconds": "{0}m {1}s",
+ "VideoDetailsForm_RowTitle": "Title",
+ "VideoDetailsForm_RowSource": "Source",
+ "VideoDetailsForm_RowAuthor": "Author",
+ "VideoDetailsForm_RowStatus": "Status",
+ "VideoDetailsForm_RowDuration": "Duration",
+ "VideoDetailsForm_RowFileSize": "File size",
+ "VideoDetailsForm_RowPostedAt": "Posted",
+ "VideoDetailsForm_RowDownloadedAt": "Downloaded",
+ "VideoDetailsForm_RowCreatedAt": "Registered",
+ "VideoDetailsForm_RowRetry": "Retries",
+ "VideoDetailsForm_RowLastError": "Last error",
+ "VideoDetailsForm_RowTags": "Tags (comma separated)",
+ "VideoDetailsForm_RowMemo": "Memo",
+ "VideoDetailsForm_btnOpen": "Open",
+ "VideoDetailsForm_lblLocalFilePath": "Save location",
+ "VideoDetailsForm_lblFavorite": "Favorite"
 }

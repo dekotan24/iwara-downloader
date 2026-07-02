@@ -849,5 +849,21 @@
  "SettingsForm_cmbThumbLocation_Item0": "アプリ設定フォルダ (AppData\\Roaming)",
  "SettingsForm_cmbThumbLocation_Item1": "動画保存先フォルダ (DL先\\thumbs)",
  "StatisticsForm_SiteLegacy": "www.iwara.tv (旧)",
- "StatisticsForm_MinutesSeconds": "{0}分{1}秒"
+ "StatisticsForm_MinutesSeconds": "{0}分{1}秒",
+ "VideoDetailsForm_lblLocalFilePath": "保存先",
+ "VideoDetailsForm_lblFavorite": "お気に入り",
+ "VideoDetailsForm_RowTitle": "タイトル",
+ "VideoDetailsForm_RowSource": "ソース",
+ "VideoDetailsForm_RowAuthor": "投稿者",
+ "VideoDetailsForm_RowStatus": "ステータス",
+ "VideoDetailsForm_RowDuration": "長さ",
+ "VideoDetailsForm_RowFileSize": "ファイルサイズ",
+ "VideoDetailsForm_RowPostedAt": "投稿日時",
+ "VideoDetailsForm_RowDownloadedAt": "DL日時",
+ "VideoDetailsForm_RowCreatedAt": "登録日時",
+ "VideoDetailsForm_RowRetry": "リトライ回数",
+ "VideoDetailsForm_RowLastError": "最終エラー",
+ "VideoDetailsForm_RowTags": "タグ (カンマ区切り)",
+ "VideoDetailsForm_RowMemo": "メモ",
+ "VideoDetailsForm_btnOpen": "開く"
 }

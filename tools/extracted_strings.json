@@ -310,6 +310,10 @@
  "StatisticsForm_btnClose": "閉じる",
  "StatisticsForm_Title": "統計ダッシュボード",
  "VideoDetailsForm_Title": "動画の詳細",
+ "VideoDetailsForm_btnOpenUrl": "開く",
+ "VideoDetailsForm_lblLocalFilePath": "保存先",
+ "VideoDetailsForm_btnOpenFile": "開く",
+ "VideoDetailsForm_lblFavorite": "お気に入り",
  "VideoDetailsForm_chkFavorite": "★ お気に入りに登録",
  "VideoDetailsForm_btnSave": "保存",
  "VideoDetailsForm_btnCancel": "閉じる"

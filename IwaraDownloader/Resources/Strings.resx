@@ -2724,16 +2724,64 @@ https://www.iwara.ai/profile/username
   <data name="VideoDetailsForm_D007" xml:space="preserve">
     <value>一時停止</value>
   </data>
+  <data name="VideoDetailsForm_RowAuthor" xml:space="preserve">
+    <value>投稿者</value>
+  </data>
+  <data name="VideoDetailsForm_RowCreatedAt" xml:space="preserve">
+    <value>登録日時</value>
+  </data>
+  <data name="VideoDetailsForm_RowDownloadedAt" xml:space="preserve">
+    <value>DL日時</value>
+  </data>
+  <data name="VideoDetailsForm_RowDuration" xml:space="preserve">
+    <value>長さ</value>
+  </data>
+  <data name="VideoDetailsForm_RowFileSize" xml:space="preserve">
+    <value>ファイルサイズ</value>
+  </data>
+  <data name="VideoDetailsForm_RowLastError" xml:space="preserve">
+    <value>最終エラー</value>
+  </data>
+  <data name="VideoDetailsForm_RowMemo" xml:space="preserve">
+    <value>メモ</value>
+  </data>
+  <data name="VideoDetailsForm_RowPostedAt" xml:space="preserve">
+    <value>投稿日時</value>
+  </data>
+  <data name="VideoDetailsForm_RowRetry" xml:space="preserve">
+    <value>リトライ回数</value>
+  </data>
+  <data name="VideoDetailsForm_RowSource" xml:space="preserve">
+    <value>ソース</value>
+  </data>
+  <data name="VideoDetailsForm_RowStatus" xml:space="preserve">
+    <value>ステータス</value>
+  </data>
+  <data name="VideoDetailsForm_RowTags" xml:space="preserve">
+    <value>タグ (カンマ区切り)</value>
+  </data>
+  <data name="VideoDetailsForm_RowTitle" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
   <data name="VideoDetailsForm_Title" xml:space="preserve">
     <value>動画の詳細</value>
   </data>
   <data name="VideoDetailsForm_btnCancel" xml:space="preserve">
     <value>閉じる</value>
   </data>
+  <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
+    <value>開く</value>
+  </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ お気に入りに登録</value>
+  </data>
+  <data name="VideoDetailsForm_lblFavorite" xml:space="preserve">
+    <value>お気に入り</value>
+  </data>
+  <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
+    <value>保存先</value>
   </data>
 </root>

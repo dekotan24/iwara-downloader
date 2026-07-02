@@ -20,8 +20,9 @@ for path in sorted(glob.glob(os.path.join(FORMS_DIR, "*.Designer.cs"))):
     src = open(path, encoding="utf-8-sig").read()
 
     # this.<name>.Text = "..." / this.Text = "..." / ToolTipText / HeaderText
-    for m in re.finditer(r'this(?:\.(\w+))?\.(Text|ToolTipText|HeaderText|PlaceholderText)\s*=\s*"((?:[^"\\]|\\.)*)"', src):
-        name, prop, raw = m.group(1), m.group(2), m.group(3)
+    # "this.ctrl.Text" / "this.Text" / "ctrl.Text" (this.無しのローカル変数形式) すべてに対応
+    for m in re.finditer(r'(?:this\.(\w+)|this|(?<![\w.])([a-z]\w*))\.(Text|ToolTipText|HeaderText|PlaceholderText)\s*=\s*"((?:[^"\\]|\\.)*)"', src):
+        name, prop, raw = m.group(1) or m.group(2), m.group(3), m.group(4)
         text = unescape(raw)
         if not has_jp(text):
             continue  # 英数字のみ(アプリ名等)は翻訳不要
