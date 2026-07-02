@@ -2045,7 +2045,7 @@ Current: {0}</value>
     <value>Start</value>
   </data>
   <data name="SettingsForm_chkAutoCheck" xml:space="preserve">
-    <value>Automatically check for new videos</value>
+    <value>Auto-check for new videos</value>
   </data>
   <data name="SettingsForm_chkAutoDownload" xml:space="preserve">
     <value>Start downloading automatically when new videos are found</value>
@@ -2190,7 +2190,7 @@ Current: {0}</value>
     <value>Interval:</value>
   </data>
   <data name="SettingsForm_lblConcurrent" xml:space="preserve">
-    <value>Concurrent DLs:</value>
+    <value>Concurrent:</value>
   </data>
   <data name="SettingsForm_lblCurrentVersion" xml:space="preserve">
     <value>Current: v1.0.0</value>
@@ -2273,7 +2273,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Sound file:</value>
   </data>
   <data name="SettingsForm_lblThumbLocation" xml:space="preserve">
-    <value>Thumbnail folder:</value>
+    <value>Thumbnails:</value>
   </data>
   <data name="SettingsForm_lblWebPassword" xml:space="preserve">
     <value>Password:</value>

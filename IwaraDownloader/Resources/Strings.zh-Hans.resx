@@ -2228,7 +2228,7 @@ https://www.iwara.tv/profile/username/videos</value>
 写入标签后，即使数据库丢失或文件被重命名也能重新识别。</value>
   </data>
   <data name="SettingsForm_lblMinFreeSpace" xml:space="preserve">
-    <value>剩余空间下限：</value>
+    <value>空间下限：</value>
   </data>
   <data name="SettingsForm_lblMinFreeSpaceNote" xml:space="preserve">
     <value>GB 以下时不开始下载（0=禁用）</value>
@@ -2273,7 +2273,7 @@ https://www.iwara.tv/profile/username/videos</value>
     <value>音频文件：</value>
   </data>
   <data name="SettingsForm_lblThumbLocation" xml:space="preserve">
-    <value>缩略图保存位置：</value>
+    <value>缩略图位置：</value>
   </data>
   <data name="SettingsForm_lblWebPassword" xml:space="preserve">
     <value>密码：</value>
