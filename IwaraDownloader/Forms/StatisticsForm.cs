@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 
@@ -75,8 +76,8 @@ namespace IwaraDownloader.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"統計情報の読み込みに失敗しました:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("StatisticsForm_D001", ex.Message),
+                    L.T("StatisticsForm_D002"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -128,7 +129,7 @@ namespace IwaraDownloader.Forms
                 dgvChannelStats.Columns["FailedVideos"].FillWeight = 60;
                 dgvChannelStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
                 dgvChannelStats.Columns["TotalSizeFormatted"].FillWeight = 80;
-                dgvChannelStats.Columns["StatusText"].HeaderText = "状態";
+                dgvChannelStats.Columns["StatusText"].HeaderText = L.T("StatisticsForm_D003");
                 dgvChannelStats.Columns["StatusText"].FillWeight = 60;
 
                 // 非表示カラム
@@ -622,7 +623,7 @@ namespace IwaraDownloader.Forms
             using var dialog = new SaveFileDialog
             {
                 Title = "統計をエクスポート",
-                Filter = "CSVファイル (*.csv)|*.csv",
+                Filter = L.T("StatisticsForm_D004"),
                 FileName = $"iwara_stats_{DateTime.Now:yyyyMMdd}.csv"
             };
 
@@ -695,12 +696,12 @@ namespace IwaraDownloader.Forms
                         writer.WriteLine($"{rank++},{EscapeCsv(g.Key)},{g.Count()},{g.Sum(v => v.FileSize)}");
                     }
 
-                    MessageBox.Show("エクスポートしました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("StatisticsForm_D005"), L.T("StatisticsForm_D006"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}",
-                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("StatisticsForm_D007", ex.Message),
+                        L.T("StatisticsForm_D002"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -728,7 +729,7 @@ namespace IwaraDownloader.Forms
         public bool IsEnabled { get; set; }
 
         public string TotalSizeFormatted => StatisticsForm.FormatBytes(TotalSize);
-        public string StatusText => IsEnabled ? "有効" : "無効";
+        public string StatusText => IsEnabled ? L.T("StatisticsForm_D008") : L.T("StatisticsForm_D009");
     }
 
     /// <summary>

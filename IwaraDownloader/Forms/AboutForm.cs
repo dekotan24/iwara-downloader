@@ -36,7 +36,7 @@ namespace IwaraDownloader.Forms
         private async void btnCheckUpdate_Click(object sender, EventArgs e)
         {
             btnCheckUpdate.Enabled = false;
-            lblUpdateStatus.Text = "確認中...";
+            lblUpdateStatus.Text = L.T("AboutForm_D001");
 
             try
             {
@@ -44,10 +44,10 @@ namespace IwaraDownloader.Forms
 
                 if (result.HasUpdate)
                 {
-                    lblUpdateStatus.Text = $"新バージョンあり: {result.LatestVersion}";
+                    lblUpdateStatus.Text = L.T("AboutForm_D002", result.LatestVersion);
                     var dialogResult = MessageBox.Show(
-                        $"新しいバージョンがあります！\n\n最新: {result.LatestVersion}\n\nリリースページを開きますか？",
-                        "更新のお知らせ",
+                        L.T("AboutForm_D003", result.LatestVersion),
+                        L.T("AboutForm_D004"),
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Information);
 
@@ -58,13 +58,13 @@ namespace IwaraDownloader.Forms
                 }
                 else
                 {
-                    lblUpdateStatus.Text = "最新バージョンです";
+                    lblUpdateStatus.Text = L.T("AboutForm_D005");
                 }
             }
             catch (Exception ex)
             {
-                lblUpdateStatus.Text = "確認に失敗しました";
-                MessageBox.Show($"更新確認に失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                lblUpdateStatus.Text = L.T("AboutForm_D006");
+                MessageBox.Show(L.T("AboutForm_D007", ex.Message), L.T("AboutForm_D008"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             finally
             {

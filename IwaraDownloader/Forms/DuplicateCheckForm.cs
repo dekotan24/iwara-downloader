@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 
@@ -29,8 +30,8 @@ namespace IwaraDownloader.Forms
         private void ScanDuplicates()
         {
             btnScan.Enabled = false;
-            btnScan.Text = "スキャン中...";
-            lblStatus.Text = "スキャン中...";
+            btnScan.Text = L.T("DuplicateCheckForm_D001");
+            lblStatus.Text = L.T("DuplicateCheckForm_D001");
 
             try
             {
@@ -80,18 +81,18 @@ namespace IwaraDownloader.Forms
                     dgvDuplicates.Columns["StatusSummary"].Width = 100;
                 }
 
-                lblStatus.Text = $"重複: {duplicateGroups.Count}件({duplicateGroups.Sum(d => d.Videos.Count)}動画)";
+                lblStatus.Text = L.T("DuplicateCheckForm_D002", duplicateGroups.Count, duplicateGroups.Sum(d => d.Videos.Count));
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"スキャン中にエラーが発生しました:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "エラー";
+                MessageBox.Show(L.T("DuplicateCheckForm_D003", ex.Message),
+                    L.T("DuplicateCheckForm_D004"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = L.T("DuplicateCheckForm_D004");
             }
             finally
             {
                 btnScan.Enabled = true;
-                btnScan.Text = "再スキャン";
+                btnScan.Text = L.T("DuplicateCheckForm_D005");
             }
         }
 
@@ -149,20 +150,20 @@ namespace IwaraDownloader.Forms
         {
             if (_duplicates.Count == 0)
             {
-                MessageBox.Show("重複が見つかりませんでした。", "情報", 
+                MessageBox.Show(L.T("DuplicateCheckForm_D006"), L.T("DuplicateCheckForm_D007"), 
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var result = MessageBox.Show(
-                "重複動画を解消します。\n\n" +
-                "各VideoIdについて、以下の優先順位で1つを残し、他を削除します:\n" +
-                "1. 完了済み(ファイルが存在する)\n" +
-                "2. 完了済み(ファイルが存在しない)\n" +
-                "3. 待機中\n" +
-                "4. 失敗\n\n" +
-                "続行しますか？",
-                "重複解消",
+                L.T("DuplicateCheckForm_D008") +
+                L.T("DuplicateCheckForm_D009") +
+                L.T("DuplicateCheckForm_D010") +
+                L.T("DuplicateCheckForm_D011") +
+                L.T("DuplicateCheckForm_D012") +
+                L.T("DuplicateCheckForm_D013") +
+                L.T("DuplicateCheckForm_D014"),
+                L.T("DuplicateCheckForm_D015"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -194,7 +195,7 @@ namespace IwaraDownloader.Forms
                 removedCount = _database.DeleteVideosBatch(idsToRemove);
             }
 
-            MessageBox.Show($"{removedCount}件の重複を削除しました。", "完了",
+            MessageBox.Show(L.T("DuplicateCheckForm_D016", removedCount), L.T("DuplicateCheckForm_D017"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             // 再スキャン
@@ -208,7 +209,7 @@ namespace IwaraDownloader.Forms
         {
             if (lstDetails.SelectedIndex < 0)
             {
-                MessageBox.Show("削除する項目を選択してください。", "情報",
+                MessageBox.Show(L.T("DuplicateCheckForm_D018"), L.T("DuplicateCheckForm_D007"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -225,11 +226,11 @@ namespace IwaraDownloader.Forms
             var video = duplicate.Videos[lstDetails.SelectedIndex];
 
             var result = MessageBox.Show(
-                $"以下の項目を削除しますか？\n\n" +
-                $"チャンネル: {video.AuthorUsername}\n" +
-                $"タイトル: {video.Title}\n" +
-                $"状態: {video.Status}",
-                "削除確認",
+                L.T("DuplicateCheckForm_D019") +
+                L.T("DuplicateCheckForm_D020", video.AuthorUsername) +
+                L.T("DuplicateCheckForm_D021", video.Title) +
+                L.T("DuplicateCheckForm_D022", video.Status),
+                L.T("DuplicateCheckForm_D023"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 

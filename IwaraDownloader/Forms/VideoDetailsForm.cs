@@ -73,13 +73,13 @@ namespace IwaraDownloader.Forms
 
         private static string GetStatusText(DownloadStatus status) => status switch
         {
-            DownloadStatus.Pending => "待機中",
-            DownloadStatus.Downloading => "DL中",
-            DownloadStatus.WritingTags => "タグ書込中",
-            DownloadStatus.Completed => "完了",
-            DownloadStatus.Failed => "失敗",
-            DownloadStatus.Skipped => "スキップ",
-            DownloadStatus.Paused => "一時停止",
+            DownloadStatus.Pending => L.T("VideoDetailsForm_D001"),
+            DownloadStatus.Downloading => L.T("VideoDetailsForm_D002"),
+            DownloadStatus.WritingTags => L.T("VideoDetailsForm_D003"),
+            DownloadStatus.Completed => L.T("VideoDetailsForm_D004"),
+            DownloadStatus.Failed => L.T("VideoDetailsForm_D005"),
+            DownloadStatus.Skipped => L.T("VideoDetailsForm_D006"),
+            DownloadStatus.Paused => L.T("VideoDetailsForm_D007"),
             _ => status.ToString()
         };
 

@@ -12,6 +12,35 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="AboutForm_D001" xml:space="preserve">
+    <value>確認中...</value>
+  </data>
+  <data name="AboutForm_D002" xml:space="preserve">
+    <value>新バージョンあり: {0}</value>
+  </data>
+  <data name="AboutForm_D003" xml:space="preserve">
+    <value>新しいバージョンがあります！
+
+最新: {0}
+
+リリースページを開きますか？</value>
+  </data>
+  <data name="AboutForm_D004" xml:space="preserve">
+    <value>更新のお知らせ</value>
+  </data>
+  <data name="AboutForm_D005" xml:space="preserve">
+    <value>最新バージョンです</value>
+  </data>
+  <data name="AboutForm_D006" xml:space="preserve">
+    <value>確認に失敗しました</value>
+  </data>
+  <data name="AboutForm_D007" xml:space="preserve">
+    <value>更新確認に失敗しました:
+{0}</value>
+  </data>
+  <data name="AboutForm_D008" xml:space="preserve">
+    <value>エラー</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>バージョン情報</value>
   </data>
@@ -20,6 +49,54 @@
   </data>
   <data name="AboutForm_lblDescription" xml:space="preserve">
     <value>iwara.tv から動画をダウンロードするためのデスクトップアプリケーションです。</value>
+  </data>
+  <data name="BulkImportForm_D001" xml:space="preserve">
+    <value>テキストファイル (*.txt)|*.txt|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="BulkImportForm_D002" xml:space="preserve">
+    <value>ファイルの読み込みに失敗しました:
+{0}</value>
+  </data>
+  <data name="BulkImportForm_D003" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="BulkImportForm_D004" xml:space="preserve">
+    <value>検出: 動画 {0}件 / チャンネル {1}件</value>
+  </data>
+  <data name="BulkImportForm_D005" xml:space="preserve">
+    <value>有効な URL が見つかりませんでした。
+
+対応形式:
+・動画URL / 動画ID
+・チャンネル(プロフィール)URL
+  例: https://www.iwara.tv/profile/xxxx/videos
+(iwara.tv / iwara.ai 両対応)</value>
+  </data>
+  <data name="BulkImportForm_D006" xml:space="preserve">
+    <value>チャンネル(プロフィール)URL の取り込みには内部初期化が必要です。動画URL/IDのみ処理します。</value>
+  </data>
+  <data name="BulkImportForm_D007" xml:space="preserve">
+    <value>情報</value>
+  </data>
+  <data name="BulkImportForm_D008" xml:space="preserve">
+    <value>チャンネル取り込みには iwara ログインが必要です。
+設定画面からログインしてください。</value>
+  </data>
+  <data name="BulkImportForm_D009" xml:space="preserve">
+    <value>ログイン必要</value>
+  </data>
+  <data name="BulkImportForm_D010" xml:space="preserve">
+    <value>処理中...</value>
+  </data>
+  <data name="BulkImportForm_D011" xml:space="preserve">
+    <value>インポート結果</value>
+  </data>
+  <data name="BulkImportForm_D012" xml:space="preserve">
+    <value>インポート中にエラーが発生しました:
+{0}</value>
+  </data>
+  <data name="BulkImportForm_D013" xml:space="preserve">
+    <value>インポート</value>
   </data>
   <data name="BulkImportForm_Title" xml:space="preserve">
     <value>URL一括インポート</value>
@@ -52,6 +129,91 @@
   <data name="Common_Error" xml:space="preserve">
     <value>エラー</value>
   </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>不明</value>
+  </data>
+  <data name="DuplicateCheckForm_D001" xml:space="preserve">
+    <value>スキャン中...</value>
+  </data>
+  <data name="DuplicateCheckForm_D002" xml:space="preserve">
+    <value>重複: {0}件({1}動画)</value>
+  </data>
+  <data name="DuplicateCheckForm_D003" xml:space="preserve">
+    <value>スキャン中にエラーが発生しました:
+{0}</value>
+  </data>
+  <data name="DuplicateCheckForm_D004" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="DuplicateCheckForm_D005" xml:space="preserve">
+    <value>再スキャン</value>
+  </data>
+  <data name="DuplicateCheckForm_D006" xml:space="preserve">
+    <value>重複が見つかりませんでした。</value>
+  </data>
+  <data name="DuplicateCheckForm_D007" xml:space="preserve">
+    <value>情報</value>
+  </data>
+  <data name="DuplicateCheckForm_D008" xml:space="preserve">
+    <value>重複動画を解消します。
+
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D009" xml:space="preserve">
+    <value>各VideoIdについて、以下の優先順位で1つを残し、他を削除します:
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D010" xml:space="preserve">
+    <value>1. 完了済み(ファイルが存在する)
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D011" xml:space="preserve">
+    <value>2. 完了済み(ファイルが存在しない)
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D012" xml:space="preserve">
+    <value>3. 待機中
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D013" xml:space="preserve">
+    <value>4. 失敗
+
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D014" xml:space="preserve">
+    <value>続行しますか？</value>
+  </data>
+  <data name="DuplicateCheckForm_D015" xml:space="preserve">
+    <value>重複解消</value>
+  </data>
+  <data name="DuplicateCheckForm_D016" xml:space="preserve">
+    <value>{0}件の重複を削除しました。</value>
+  </data>
+  <data name="DuplicateCheckForm_D017" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="DuplicateCheckForm_D018" xml:space="preserve">
+    <value>削除する項目を選択してください。</value>
+  </data>
+  <data name="DuplicateCheckForm_D019" xml:space="preserve">
+    <value>以下の項目を削除しますか？
+
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D020" xml:space="preserve">
+    <value>チャンネル: {0}
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D021" xml:space="preserve">
+    <value>タイトル: {0}
+</value>
+  </data>
+  <data name="DuplicateCheckForm_D022" xml:space="preserve">
+    <value>状態: {0}</value>
+  </data>
+  <data name="DuplicateCheckForm_D023" xml:space="preserve">
+    <value>削除確認</value>
+  </data>
   <data name="DuplicateCheckForm_Title" xml:space="preserve">
     <value>重複チェック</value>
   </data>
@@ -76,6 +238,24 @@
   <data name="DuplicateCheckForm_lblStatus" xml:space="preserve">
     <value>スキャン中...</value>
   </data>
+  <data name="FileMoveProgressForm_D001" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="FileMoveProgressForm_D002" xml:space="preserve">
+    <value>完了: 移動 {0} / 失敗 {1}</value>
+  </data>
+  <data name="FileMoveProgressForm_D003" xml:space="preserve">
+    <value>  ({0} 移動済)</value>
+  </data>
+  <data name="FileMoveProgressForm_D004" xml:space="preserve">
+    <value>中止中...</value>
+  </data>
+  <data name="FileMoveProgressForm_D005" xml:space="preserve">
+    <value>移動処理中です。本当に中止しますか?</value>
+  </data>
+  <data name="FileMoveProgressForm_D006" xml:space="preserve">
+    <value>確認</value>
+  </data>
   <data name="FileMoveProgressForm_Title" xml:space="preserve">
     <value>ファイル移動</value>
   </data>
@@ -87,6 +267,104 @@
   </data>
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>ファイルを移動しています...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D001" xml:space="preserve">
+    <value>準備中...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D002" xml:space="preserve">
+    <value>ステップ {0}/5</value>
+  </data>
+  <data name="ImportFromFolderWizard_D003" xml:space="preserve">
+    <value>スキャン中...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D004" xml:space="preserve">
+    <value>取り込み実行 &gt;</value>
+  </data>
+  <data name="ImportFromFolderWizard_D005" xml:space="preserve">
+    <value>取り込み中...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D006" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="ImportFromFolderWizard_D007" xml:space="preserve">
+    <value>次へ &gt;</value>
+  </data>
+  <data name="ImportFromFolderWizard_D008" xml:space="preserve">
+    <value>中止</value>
+  </data>
+  <data name="ImportFromFolderWizard_D009" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="ImportFromFolderWizard_D010" xml:space="preserve">
+    <value>スキャンするフォルダを選択</value>
+  </data>
+  <data name="ImportFromFolderWizard_D011" xml:space="preserve">
+    <value>有効なフォルダを指定してください。</value>
+  </data>
+  <data name="ImportFromFolderWizard_D012" xml:space="preserve">
+    <value>入力エラー</value>
+  </data>
+  <data name="ImportFromFolderWizard_D013" xml:space="preserve">
+    <value>iwara にログインしていません。
+設定画面からログインしてから再度お試しください。</value>
+  </data>
+  <data name="ImportFromFolderWizard_D014" xml:space="preserve">
+    <value>ログイン必要</value>
+  </data>
+  <data name="ImportFromFolderWizard_D015" xml:space="preserve">
+    <value>処理を中止しますか?</value>
+  </data>
+  <data name="ImportFromFolderWizard_D016" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="ImportFromFolderWizard_D017" xml:space="preserve">
+    <value>ファイルを列挙中...</value>
+  </data>
+  <data name="ImportFromFolderWizard_D018" xml:space="preserve">
+    <value>+ 単発動画 (作者情報なし): {0} 件 — 自動的に取り込まれます</value>
+  </data>
+  <data name="ImportFromFolderWizard_D019" xml:space="preserve">
+    <value>スキャン中にエラー:
+{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D020" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="ImportFromFolderWizard_D021" xml:space="preserve">
+    <value>取り込み中にエラー:
+{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D022" xml:space="preserve">
+    <value>新規取り込み:       {0} 件
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D023" xml:space="preserve">
+    <value>マージ (パス更新):  {0} 件
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D024" xml:space="preserve">
+    <value>スキップ (既存):    {0} 件
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D025" xml:space="preserve">
+    <value>タグ無しスキップ:   {0} 件
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D026" xml:space="preserve">
+    <value>API 取得失敗:       {0} 件
+</value>
+  </data>
+  <data name="ImportFromFolderWizard_D027" xml:space="preserve">
+    <value>DB 書込失敗:        {0} 件</value>
+  </data>
+  <data name="ImportFromFolderWizard_D028" xml:space="preserve">
+    <value>
+
+エラー詳細ログ:
+{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_D029" xml:space="preserve">
+    <value>処理中です。中止して閉じますか?</value>
   </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>フォルダから取り込み</value>
@@ -149,6 +427,544 @@
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>フォルダから取り込み</value>
+  </data>
+  <data name="MainForm_D001" xml:space="preserve">
+    <value>設定を読み込み中...</value>
+  </data>
+  <data name="MainForm_D002" xml:space="preserve">
+    <value>システムトレイを初期化中...</value>
+  </data>
+  <data name="MainForm_D003" xml:space="preserve">
+    <value>イベントを登録中...</value>
+  </data>
+  <data name="MainForm_D004" xml:space="preserve">
+    <value>ログインが必要です — DLキューを停止しました ({0}件待機中)。ログイン後に自動再開します。</value>
+  </data>
+  <data name="MainForm_D005" xml:space="preserve">
+    <value>整合性をチェック中...</value>
+  </data>
+  <data name="MainForm_D006" xml:space="preserve">
+    <value>環境をチェック中...</value>
+  </data>
+  <data name="MainForm_D007" xml:space="preserve">
+    <value>ログイン状態を確認中...</value>
+  </data>
+  <data name="MainForm_D008" xml:space="preserve">
+    <value>チャンネルデータを読み込み中...</value>
+  </data>
+  <data name="MainForm_D009" xml:space="preserve">
+    <value>UIを初期化中...</value>
+  </data>
+  <data name="MainForm_D010" xml:space="preserve">
+    <value>ダウンロードマネージャーを開始中...</value>
+  </data>
+  <data name="MainForm_D011" xml:space="preserve">
+    <value>未完了タスクを復元中...</value>
+  </data>
+  <data name="MainForm_D012" xml:space="preserve">
+    <value>起動完了</value>
+  </data>
+  <data name="MainForm_D013" xml:space="preserve">
+    <value>セットアップが完了しました!</value>
+  </data>
+  <data name="MainForm_D014" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="MainForm_D015" xml:space="preserve">
+    <value>セットアップ未完了。「環境セットアップ」ボタンから再実行できます。</value>
+  </data>
+  <data name="MainForm_D016" xml:space="preserve">
+    <value>終了処理中です。実行中のダウンロードの中断とタグ書き込みの完了を待っています...</value>
+  </data>
+  <data name="MainForm_D017" xml:space="preserve">
+    <value>環境が未セットアップです。「環境セットアップ」ボタンをクリックしてください。</value>
+  </data>
+  <data name="MainForm_D018" xml:space="preserve">
+    <value>ログインが必要です。「ログイン」ボタンをクリックしてください。</value>
+  </data>
+  <data name="MainForm_D019" xml:space="preserve">
+    <value>準備完了</value>
+  </data>
+  <data name="MainForm_D020" xml:space="preserve">
+    <value>ログインセッションが無効です: {0}。再ログインしてください。</value>
+  </data>
+  <data name="MainForm_D022" xml:space="preserve">
+    <value>(ログイン済)</value>
+  </data>
+  <data name="MainForm_D023" xml:space="preserve">
+    <value>ログアウト</value>
+  </data>
+  <data name="MainForm_D024" xml:space="preserve">
+    <value>(未ログイン)</value>
+  </data>
+  <data name="MainForm_D025" xml:space="preserve">
+    <value>ログイン</value>
+  </data>
+  <data name="MainForm_D026" xml:space="preserve">
+    <value>ログアウトしますか？</value>
+  </data>
+  <data name="MainForm_D027" xml:space="preserve">
+    <value>ログアウトしました</value>
+  </data>
+  <data name="MainForm_D028" xml:space="preserve">
+    <value>先に環境セットアップを実行してください。</value>
+  </data>
+  <data name="MainForm_D029" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="MainForm_D030" xml:space="preserve">
+    <value>ログイン中...</value>
+  </data>
+  <data name="MainForm_D031" xml:space="preserve">
+    <value>ログイン完了！</value>
+  </data>
+  <data name="MainForm_D032" xml:space="preserve">
+    <value>ログインに成功しました！</value>
+  </data>
+  <data name="MainForm_D033" xml:space="preserve">
+    <value>ログイン成功</value>
+  </data>
+  <data name="MainForm_D034" xml:space="preserve">
+    <value>ログインに失敗しました</value>
+  </data>
+  <data name="MainForm_D035" xml:space="preserve">
+    <value>ログインに失敗しました:
+{0}</value>
+  </data>
+  <data name="MainForm_D036" xml:space="preserve">
+    <value>ログイン失敗</value>
+  </data>
+  <data name="MainForm_D037" xml:space="preserve">
+    <value>ログインエラー</value>
+  </data>
+  <data name="MainForm_D038" xml:space="preserve">
+    <value>ログイン中にエラーが発生しました:
+{0}</value>
+  </data>
+  <data name="MainForm_D039" xml:space="preserve">
+    <value>iwara.tvのプロフィールURLを入力してください。
+
+対応形式: https://www.iwara.tv/profile/username</value>
+  </data>
+  <data name="MainForm_D040" xml:space="preserve">
+    <value>無効なURL</value>
+  </data>
+  <data name="MainForm_D041" xml:space="preserve">
+    <value>無効なユーザー名です。
+
+ユーザー名には英数字、@、_、- のみ使用できます。</value>
+  </data>
+  <data name="MainForm_D042" xml:space="preserve">
+    <value>無効な入力</value>
+  </data>
+  <data name="MainForm_D043" xml:space="preserve">
+    <value>iwara.tvの動画URLを入力してください。
+
+対応形式: https://www.iwara.tv/video/xxxxx</value>
+  </data>
+  <data name="MainForm_D044" xml:space="preserve">
+    <value>ダウンロード開始</value>
+  </data>
+  <data name="MainForm_D045" xml:space="preserve">
+    <value>全てのダウンロードを停止しました</value>
+  </data>
+  <data name="MainForm_D046" xml:space="preserve">
+    <value>iwara.tvのURLを入力してください。
+
+対応形式:
+・動画: https://www.iwara.tv/video/xxxxx
+・チャンネル: https://www.iwara.tv/profile/username</value>
+  </data>
+  <data name="MainForm_D047" xml:space="preserve">
+    <value>動画を追加中...</value>
+  </data>
+  <data name="MainForm_D048" xml:space="preserve">
+    <value>この動画は既に登録されています。
+
+</value>
+  </data>
+  <data name="MainForm_D049" xml:space="preserve">
+    <value>タイトル: {0}
+</value>
+  </data>
+  <data name="MainForm_D050" xml:space="preserve">
+    <value>状態: {0}
+
+</value>
+  </data>
+  <data name="MainForm_D051" xml:space="preserve">
+    <value>ダウンロードキューに追加しますか？</value>
+  </data>
+  <data name="MainForm_D052" xml:space="preserve">
+    <value>重複確認</value>
+  </data>
+  <data name="MainForm_D053" xml:space="preserve">
+    <value>動画「{0}」をキューに追加しました</value>
+  </data>
+  <data name="MainForm_D054" xml:space="preserve">
+    <value>キャンセルされました</value>
+  </data>
+  <data name="MainForm_D055" xml:space="preserve">
+    <value>動画「{0}」を追加しました</value>
+  </data>
+  <data name="MainForm_D056" xml:space="preserve">
+    <value>動画の追加に失敗しました。</value>
+  </data>
+  <data name="MainForm_D057" xml:space="preserve">
+    <value>動画追加失敗</value>
+  </data>
+  <data name="MainForm_D058" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="MainForm_D059" xml:space="preserve">
+    <value>動画一覧 - {0}</value>
+  </data>
+  <data name="MainForm_D060" xml:space="preserve">
+    <value>全ての動画</value>
+  </data>
+  <data name="MainForm_D061" xml:space="preserve">
+    <value>ダウンロード中/待機中</value>
+  </data>
+  <data name="MainForm_D062" xml:space="preserve">
+    <value>未DL動画</value>
+  </data>
+  <data name="MainForm_D063" xml:space="preserve">
+    <value>DL済動画</value>
+  </data>
+  <data name="MainForm_D064" xml:space="preserve">
+    <value>スキップ動画</value>
+  </data>
+  <data name="MainForm_D065" xml:space="preserve">
+    <value>エラー一覧</value>
+  </data>
+  <data name="MainForm_D066" xml:space="preserve">
+    <value>単発動画</value>
+  </data>
+  <data name="MainForm_D067" xml:space="preserve">
+    <value>お気に入り</value>
+  </data>
+  <data name="MainForm_D068" xml:space="preserve">
+    <value>動画一覧</value>
+  </data>
+  <data name="MainForm_D069" xml:space="preserve">
+    <value>フィルター: {0}/{1}件</value>
+  </data>
+  <data name="MainForm_D070" xml:space="preserve">
+    <value>エラー: {0}
+リトライ: {1}回</value>
+  </data>
+  <data name="MainForm_D071" xml:space="preserve">
+    <value>保存先: {0}</value>
+  </data>
+  <data name="MainForm_D072" xml:space="preserve">
+    <value>{0}
+残り: {1}</value>
+  </data>
+  <data name="MainForm_D073" xml:space="preserve">
+    <value>{0}
+投稿者: {1}</value>
+  </data>
+  <data name="MainForm_D074" xml:space="preserve">
+    <value>待機中</value>
+  </data>
+  <data name="MainForm_D075" xml:space="preserve">
+    <value>DL中</value>
+  </data>
+  <data name="MainForm_D076" xml:space="preserve">
+    <value>タグ書込中</value>
+  </data>
+  <data name="MainForm_D077" xml:space="preserve">
+    <value>失敗</value>
+  </data>
+  <data name="MainForm_D078" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
+  <data name="MainForm_D079" xml:space="preserve">
+    <value>一時停止</value>
+  </data>
+  <data name="MainForm_D080" xml:space="preserve">
+    <value>不明</value>
+  </data>
+  <data name="MainForm_D081" xml:space="preserve">
+    <value>{0}件選択中{1}</value>
+  </data>
+  <data name="MainForm_D082" xml:space="preserve">
+    <value>今すぐ確認</value>
+  </data>
+  <data name="MainForm_D083" xml:space="preserve">
+    <value>今すぐ確認 (無効化中)</value>
+  </data>
+  <data name="MainForm_D084" xml:space="preserve">
+    <value>デフォルト設定に従う ({0})</value>
+  </data>
+  <data name="MainForm_D085" xml:space="preserve">
+    <value>保存先を変更...</value>
+  </data>
+  <data name="MainForm_D086" xml:space="preserve">
+    <value>保存先を変更... (カスタム設定済み)</value>
+  </data>
+  <data name="MainForm_D087" xml:space="preserve">
+    <value>{0} の新着確認をキューに登録しました</value>
+  </data>
+  <data name="MainForm_D088" xml:space="preserve">
+    <value>{0} 件のダウンロードをキューに追加しました</value>
+  </data>
+  <data name="MainForm_D089" xml:space="preserve">
+    <value>Not Found の動画はありません。</value>
+  </data>
+  <data name="MainForm_D090" xml:space="preserve">
+    <value>情報</value>
+  </data>
+  <data name="MainForm_D091" xml:space="preserve">
+    <value>Not Found (削除済み) の動画 {0} 件をデータベースから削除しますか？
+
+※ローカルファイルは削除されません</value>
+  </data>
+  <data name="MainForm_D092" xml:space="preserve">
+    <value>Not Found を除外</value>
+  </data>
+  <data name="MainForm_D093" xml:space="preserve">
+    <value>Not Found の動画 {0} 件を削除しました</value>
+  </data>
+  <data name="MainForm_D094" xml:space="preserve">
+    <value>{0} の保存先フォルダを選択</value>
+  </data>
+  <data name="MainForm_D095" xml:space="preserve">
+    <value>保存先を変更しました: {0}</value>
+  </data>
+  <data name="MainForm_D096" xml:space="preserve">
+    <value>移動完了: 成功 {0} / 失敗 {1}</value>
+  </data>
+  <data name="MainForm_D097" xml:space="preserve">
+    <value>移動に失敗したファイルが {0} 件あります。
+</value>
+  </data>
+  <data name="MainForm_D098" xml:space="preserve">
+    <value>失敗したファイルは元の場所に残っています (詳細はログを確認してください)。
+
+</value>
+  </data>
+  <data name="MainForm_D099" xml:space="preserve">
+    <value>原因を解消後、[ツール] → [未移動ファイルの一括移動] で再移動できます。</value>
+  </data>
+  <data name="MainForm_D100" xml:space="preserve">
+    <value>ファイル移動</value>
+  </data>
+  <data name="MainForm_D101" xml:space="preserve">
+    <value>{0} のiwara外動画DL設定を「{1}」に変更しました</value>
+  </data>
+  <data name="MainForm_D102" xml:space="preserve">
+    <value>「{0}」を購読リストから削除しますか？</value>
+  </data>
+  <data name="MainForm_D103" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="MainForm_D104" xml:space="preserve">
+    <value>ダウンロード (失敗をリトライ含む)</value>
+  </data>
+  <data name="MainForm_D105" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
+  <data name="MainForm_D106" xml:space="preserve">
+    <value>★ お気に入りから削除</value>
+  </data>
+  <data name="MainForm_D107" xml:space="preserve">
+    <value>★ お気に入りに追加</value>
+  </data>
+  <data name="MainForm_D108" xml:space="preserve">
+    <value>{0}件の動画を再試行キューに追加しました</value>
+  </data>
+  <data name="MainForm_D109" xml:space="preserve">
+    <value>失敗した動画が選択されていません</value>
+  </data>
+  <data name="MainForm_D110" xml:space="preserve">
+    <value>{0}件の情報を更新しました</value>
+  </data>
+  <data name="MainForm_D111" xml:space="preserve">
+    <value>{0}件のURLをコピーしました</value>
+  </data>
+  <data name="MainForm_D112" xml:space="preserve">
+    <value>{0}件のタイトルをコピーしました</value>
+  </data>
+  <data name="MainForm_D113" xml:space="preserve">
+    <value>ファイル存在チェックを実行中です…</value>
+  </data>
+  <data name="MainForm_D114" xml:space="preserve">
+    <value>ファイル存在チェック中… ({0}件)</value>
+  </data>
+  <data name="MainForm_D115" xml:space="preserve">
+    <value>{0}件チェック: 全てのファイルが存在します</value>
+  </data>
+  <data name="MainForm_D116" xml:space="preserve">
+    <value>{0}件チェック: {1}件のファイルが見つからず、キューに追加しました</value>
+  </data>
+  <data name="MainForm_D117" xml:space="preserve">
+    <value>ファイル存在チェック失敗: {0}</value>
+  </data>
+  <data name="MainForm_D118" xml:space="preserve">
+    <value>「{0}」には動画がありません</value>
+  </data>
+  <data name="MainForm_D119" xml:space="preserve">
+    <value>DL済みの動画がありません</value>
+  </data>
+  <data name="MainForm_D120" xml:space="preserve">
+    <value>
+
+※ダウンロード済みのファイルは削除されません</value>
+  </data>
+  <data name="MainForm_D121" xml:space="preserve">
+    <value>{0}件の動画を削除しました</value>
+  </data>
+  <data name="MainForm_D122" xml:space="preserve">
+    <value>再ダウンロード確認</value>
+  </data>
+  <data name="MainForm_D123" xml:space="preserve">
+    <value>{0}件を再ダウンロードキューに追加しました</value>
+  </data>
+  <data name="MainForm_D124" xml:space="preserve">
+    <value>「{0}」を更新しました</value>
+  </data>
+  <data name="MainForm_D125" xml:space="preserve">
+    <value>{0}件をお気に入りに追加しました</value>
+  </data>
+  <data name="MainForm_D126" xml:space="preserve">
+    <value>{0}件をお気に入りから削除しました</value>
+  </data>
+  <data name="MainForm_D127" xml:space="preserve">
+    <value>DL: {0} / 待機: {1} | 完了: {2}件 ({3}){4}</value>
+  </data>
+  <data name="MainForm_D128" xml:space="preserve">
+    <value>新しいバージョンがあります！
+
+</value>
+  </data>
+  <data name="MainForm_D129" xml:space="preserve">
+    <value>現在: {0}
+</value>
+  </data>
+  <data name="MainForm_D130" xml:space="preserve">
+    <value>最新: {0}
+
+</value>
+  </data>
+  <data name="MainForm_D131" xml:space="preserve">
+    <value>リリースページを開きますか？</value>
+  </data>
+  <data name="MainForm_D132" xml:space="preserve">
+    <value>更新のお知らせ</value>
+  </data>
+  <data name="MainForm_D133" xml:space="preserve">
+    <value>ログフォルダが存在しません。</value>
+  </data>
+  <data name="MainForm_D134" xml:space="preserve">
+    <value>ダウンロード実行中は実行できません。
+</value>
+  </data>
+  <data name="MainForm_D135" xml:space="preserve">
+    <value>完了を待つか、キューを停止してから再度実行してください。</value>
+  </data>
+  <data name="MainForm_D136" xml:space="preserve">
+    <value>未移動ファイルの一括移動</value>
+  </data>
+  <data name="MainForm_D137" xml:space="preserve">
+    <value>現在の保存先設定の外にあるファイルはありません。</value>
+  </data>
+  <data name="MainForm_D138" xml:space="preserve">
+    <value>現在の保存先設定の外にあるファイルが {0} 個見つかりました</value>
+  </data>
+  <data name="MainForm_D139" xml:space="preserve">
+    <value>これらを本来の保存先へ移動しますか?
+</value>
+  </data>
+  <data name="MainForm_D140" xml:space="preserve">
+    <value>(メタデータ .json も一緒に移動します)</value>
+  </data>
+  <data name="MainForm_D141" xml:space="preserve">
+    <value>ダウンロードが開始されたため中止しました。
+</value>
+  </data>
+  <data name="MainForm_D142" xml:space="preserve">
+    <value>未移動ファイルの移動完了: 成功 {0} / 失敗 {1}</value>
+  </data>
+  <data name="MainForm_D143" xml:space="preserve">
+    <value>移動に失敗したファイルが {0} 件あります。
+</value>
+  </data>
+  <data name="MainForm_D144" xml:space="preserve">
+    <value>原因を解消後、もう一度このメニューを実行すると残りを移動できます。</value>
+  </data>
+  <data name="MainForm_D145" xml:space="preserve">
+    <value>移動済みファイルの再リンク</value>
+  </data>
+  <data name="MainForm_D146" xml:space="preserve">
+    <value>移動済みファイルをスキャン中...</value>
+  </data>
+  <data name="MainForm_D147" xml:space="preserve">
+    <value>再リンク対象なし</value>
+  </data>
+  <data name="MainForm_D148" xml:space="preserve">
+    <value>再リンクできるファイルはありません。</value>
+  </data>
+  <data name="MainForm_D149" xml:space="preserve">
+    <value>移動先で検証済みのファイルが {0} 件見つかりました。
+</value>
+  </data>
+  <data name="MainForm_D150" xml:space="preserve">
+    <value>データベースのパスを移動先に書き換えますか?
+</value>
+  </data>
+  <data name="MainForm_D151" xml:space="preserve">
+    <value>(ファイルは移動しません)</value>
+  </data>
+  <data name="MainForm_D152" xml:space="preserve">
+    <value>スキャン中にダウンロードが開始されたため中止しました。
+</value>
+  </data>
+  <data name="MainForm_D153" xml:space="preserve">
+    <value>再リンク完了: {0} 件</value>
+  </data>
+  <data name="MainForm_D154" xml:space="preserve">
+    <value>{0} 件のパスを移動先に書き換えました。</value>
+  </data>
+  <data name="MainForm_D155" xml:space="preserve">
+    <value>📋監視: ON</value>
+  </data>
+  <data name="MainForm_D156" xml:space="preserve">
+    <value>📋監視: OFF</value>
+  </data>
+  <data name="MainForm_D157" xml:space="preserve">
+    <value>クリップボード監視を開始</value>
+  </data>
+  <data name="MainForm_D158" xml:space="preserve">
+    <value>クリップボード監視を停止</value>
+  </data>
+  <data name="MainForm_D159" xml:space="preserve">
+    <value>クリップボード: 既に登録済み ({0})</value>
+  </data>
+  <data name="MainForm_D160" xml:space="preserve">
+    <value>クリップボード検出: 動画追加中...</value>
+  </data>
+  <data name="MainForm_D161" xml:space="preserve">
+    <value>🖼サムネ</value>
+  </data>
+  <data name="MainForm_D162" xml:space="preserve">
+    <value>📋詳細</value>
+  </data>
+  <data name="MainForm_D163" xml:space="preserve">
+    <value>サムネモード: 全{0}件中先頭{1}件を表示中 (フィルタで絞ってください)</value>
+  </data>
+  <data name="MainForm_D164" xml:space="preserve">
+    <value>サムネモード: {0}件</value>
+  </data>
+  <data name="MainForm_D165" xml:space="preserve">
+    <value>表示モード切替でエラー:
+{0}: {1}</value>
+  </data>
+  <data name="MainForm_D166" xml:space="preserve">
+    <value>詳細検索 ▴</value>
+  </data>
+  <data name="MainForm_D167" xml:space="preserve">
+    <value>詳細検索 ▾</value>
   </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>＋チャンネル</value>
@@ -395,6 +1211,37 @@
 
 {0}</value>
   </data>
+  <data name="RenameResultForm_D001" xml:space="preserve">
+    <value>成功: {0}  スキップ: {1}  重複: {2}  ファイル不在: {3}  エラー: {4}</value>
+  </data>
+  <data name="RenameResultForm_D002" xml:space="preserve">
+    <value>{0}件のファイルを上書きします。
+既存のファイルは削除されます。続行しますか？</value>
+  </data>
+  <data name="RenameResultForm_D003" xml:space="preserve">
+    <value>上書き確認</value>
+  </data>
+  <data name="RenameResultForm_D004" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="RenameResultForm_D005" xml:space="preserve">
+    <value>スキップ(同名)</value>
+  </data>
+  <data name="RenameResultForm_D006" xml:space="preserve">
+    <value>重複: {0}</value>
+  </data>
+  <data name="RenameResultForm_D007" xml:space="preserve">
+    <value>ファイル不在</value>
+  </data>
+  <data name="RenameResultForm_D008" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="RenameResultForm_D009" xml:space="preserve">
+    <value>処理待ち</value>
+  </data>
+  <data name="RenameResultForm_D010" xml:space="preserve">
+    <value>不明</value>
+  </data>
   <data name="RenameResultForm_Title" xml:space="preserve">
     <value>リネーム結果</value>
   </data>
@@ -464,6 +1311,39 @@
   <data name="RenameResultForm_menuSkip" xml:space="preserve">
     <value>スキップ</value>
   </data>
+  <data name="SearchImportForm_D001" xml:space="preserve">
+    <value>検索 site を {0} に切り替えました。再検索してください。</value>
+  </data>
+  <data name="SearchImportForm_D002" xml:space="preserve">
+    <value>検索キーワードを入力してください。</value>
+  </data>
+  <data name="SearchImportForm_D003" xml:space="preserve">
+    <value>入力エラー</value>
+  </data>
+  <data name="SearchImportForm_D004" xml:space="preserve">
+    <value>検索中: "{0}" [{1}] (page {2})...</value>
+  </data>
+  <data name="SearchImportForm_D005" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="SearchImportForm_D006" xml:space="preserve">
+    <value>検索結果: 全{0}件中 {1}件表示 (page {2}/{3})</value>
+  </data>
+  <data name="SearchImportForm_D007" xml:space="preserve">
+    <value>検索失敗: {0}</value>
+  </data>
+  <data name="SearchImportForm_D008" xml:space="preserve">
+    <value>インポートする動画を選択してください。</value>
+  </data>
+  <data name="SearchImportForm_D009" xml:space="preserve">
+    <value>情報</value>
+  </data>
+  <data name="SearchImportForm_D010" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="SearchImportForm_D011" xml:space="preserve">
+    <value>インポート完了: 新規 {0}件 / 再キュー {1}件</value>
+  </data>
   <data name="SearchImportForm_Title" xml:space="preserve">
     <value>iwara 検索インポート</value>
   </data>
@@ -493,6 +1373,313 @@
   </data>
   <data name="SearchImportForm_lblStatus" xml:space="preserve">
     <value>キーワードを入力して「検索」</value>
+  </data>
+  <data name="SettingsForm_D001" xml:space="preserve">
+    <value>現在: {0}</value>
+  </data>
+  <data name="SettingsForm_D002" xml:space="preserve">
+    <value>ダウンロード先フォルダを選択してください</value>
+  </data>
+  <data name="SettingsForm_D003" xml:space="preserve">
+    <value>実行ファイル (*.exe)|*.exe|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="SettingsForm_D004" xml:space="preserve">
+    <value>yt-dlp実行ファイル (yt-dlp.exe;yt-dlp)|yt-dlp.exe;yt-dlp|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="SettingsForm_D005" xml:space="preserve">
+    <value>メールアドレスとパスワードを入力してください。</value>
+  </data>
+  <data name="SettingsForm_D006" xml:space="preserve">
+    <value>入力エラー</value>
+  </data>
+  <data name="SettingsForm_D007" xml:space="preserve">
+    <value>ログイン中...</value>
+  </data>
+  <data name="SettingsForm_D008" xml:space="preserve">
+    <value>ログインに成功しました！</value>
+  </data>
+  <data name="SettingsForm_D009" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="SettingsForm_D010" xml:space="preserve">
+    <value>ログインに失敗しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D011" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="SettingsForm_D012" xml:space="preserve">
+    <value>ログイン中にエラーが発生しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D013" xml:space="preserve">
+    <value>再ログイン</value>
+  </data>
+  <data name="SettingsForm_D014" xml:space="preserve">
+    <value>(ログイン済)</value>
+  </data>
+  <data name="SettingsForm_D015" xml:space="preserve">
+    <value>(未ログイン)</value>
+  </data>
+  <data name="SettingsForm_D016" xml:space="preserve">
+    <value>設定を保存しました。</value>
+  </data>
+  <data name="SettingsForm_D017" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="SettingsForm_D018" xml:space="preserve">
+    <value>ダウンロード実行中は保存先フォルダを変更できません。
+</value>
+  </data>
+  <data name="SettingsForm_D019" xml:space="preserve">
+    <value>完了を待つか、キューを停止してから再度実行してください。</value>
+  </data>
+  <data name="SettingsForm_D020" xml:space="preserve">
+    <value>保存先変更</value>
+  </data>
+  <data name="SettingsForm_D021" xml:space="preserve">
+    <value>ファイル移動が完了しました。
+
+</value>
+  </data>
+  <data name="SettingsForm_D022" xml:space="preserve">
+    <value>成功: {0} 件 / 失敗: {1} 件
+</value>
+  </data>
+  <data name="SettingsForm_D023" xml:space="preserve">
+    <value>
+失敗したファイルは元の場所に残っています。詳細はログを確認してください。
+</value>
+  </data>
+  <data name="SettingsForm_D024" xml:space="preserve">
+    <value>原因を解消後、メイン画面の [ツール] → [未移動ファイルの一括移動] で再移動できます。</value>
+  </data>
+  <data name="SettingsForm_D025" xml:space="preserve">
+    <value>移動完了</value>
+  </data>
+  <data name="SettingsForm_D026" xml:space="preserve">
+    <value>JSONファイル (*.json)|*.json</value>
+  </data>
+  <data name="SettingsForm_D027" xml:space="preserve">
+    <value>設定をエクスポートしました。</value>
+  </data>
+  <data name="SettingsForm_D028" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="SettingsForm_D029" xml:space="preserve">
+    <value>エクスポートに失敗しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D030" xml:space="preserve">
+    <value>購読リストをエクスポートしました。</value>
+  </data>
+  <data name="SettingsForm_D031" xml:space="preserve">
+    <value>エクスポートに失敗しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D032" xml:space="preserve">
+    <value>設定をインポートしました。</value>
+  </data>
+  <data name="SettingsForm_D033" xml:space="preserve">
+    <value>インポートに失敗しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D034" xml:space="preserve">
+    <value>{0}件の購読をインポートしました。</value>
+  </data>
+  <data name="SettingsForm_D035" xml:space="preserve">
+    <value>インポートに失敗しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D036" xml:space="preserve">
+    <value>DownloadManager が利用できません。</value>
+  </data>
+  <data name="SettingsForm_D037" xml:space="preserve">
+    <value>既に実行中です。完了まで待ってから再度開始してください。</value>
+  </data>
+  <data name="SettingsForm_D038" xml:space="preserve">
+    <value>実行中</value>
+  </data>
+  <data name="SettingsForm_D039" xml:space="preserve">
+    <value>ダウンロード済みの mp4 ファイルに iwara の UUID タグを書き込みます。
+</value>
+  </data>
+  <data name="SettingsForm_D040" xml:space="preserve">
+    <value>DB に登録されている動画のうち、ローカルにファイルが存在するもの全てが対象です。
+
+</value>
+  </data>
+  <data name="SettingsForm_D041" xml:space="preserve">
+    <value>★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。
+</value>
+  </data>
+  <data name="SettingsForm_D042" xml:space="preserve">
+    <value>  進捗はメイン画面のステータスバーに表示されます。
+
+</value>
+  </data>
+  <data name="SettingsForm_D043" xml:space="preserve">
+    <value>続行しますか？</value>
+  </data>
+  <data name="SettingsForm_D044" xml:space="preserve">
+    <value>既存ファイルにタグを書き込む</value>
+  </data>
+  <data name="SettingsForm_D045" xml:space="preserve">
+    <value>バックグラウンドで開始しました。
+この画面を閉じても処理は継続されます。</value>
+  </data>
+  <data name="SettingsForm_D046" xml:space="preserve">
+    <value>開始</value>
+  </data>
+  <data name="SettingsForm_D047" xml:space="preserve">
+    <value>DB 内の動画のうちサムネ URL が未保存 / 画像未キャッシュのものを補完します。
+
+</value>
+  </data>
+  <data name="SettingsForm_D048" xml:space="preserve">
+    <value>・FileUuid を既に持つ動画 → 即時組み立て (API リクエスト不要)
+</value>
+  </data>
+  <data name="SettingsForm_D049" xml:space="preserve">
+    <value>・FileUuid 無し動画 → iwara API で取得 (要ログイン・時間かかる)
+</value>
+  </data>
+  <data name="SettingsForm_D050" xml:space="preserve">
+    <value>・確定後、サムネ画像もネット DL (レート制限あり)
+
+</value>
+  </data>
+  <data name="SettingsForm_D051" xml:space="preserve">
+    <value>サムネ URL 一括補完</value>
+  </data>
+  <data name="SettingsForm_D052" xml:space="preserve">
+    <value>音声ファイル (*.wav;*.mp3;*.m4a)|*.wav;*.mp3;*.m4a|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="SettingsForm_D053" xml:space="preserve">
+    <value>指定されたファイルが見つかりません。</value>
+  </data>
+  <data name="SettingsForm_D054" xml:space="preserve">
+    <value>テンプレートを入力してください。</value>
+  </data>
+  <data name="SettingsForm_D055" xml:space="preserve">
+    <value>リネーム対象のファイルがありません。</value>
+  </data>
+  <data name="SettingsForm_D056" xml:space="preserve">
+    <value>情報</value>
+  </data>
+  <data name="SettingsForm_D057" xml:space="preserve">
+    <value>スキャン中...</value>
+  </data>
+  <data name="SettingsForm_D058" xml:space="preserve">
+    <value>リネーム対象: {0}件
+
+</value>
+  </data>
+  <data name="SettingsForm_D059" xml:space="preserve">
+    <value>・処理可能: {0}件
+</value>
+  </data>
+  <data name="SettingsForm_D060" xml:space="preserve">
+    <value>・重複あり: {0}件
+</value>
+  </data>
+  <data name="SettingsForm_D061" xml:space="preserve">
+    <value>・ファイル不在: {0}件
+
+</value>
+  </data>
+  <data name="SettingsForm_D062" xml:space="preserve">
+    <value>重複ファイルは結果画面で個別に処理できます。
+</value>
+  </data>
+  <data name="SettingsForm_D063" xml:space="preserve">
+    <value>続行しますか？</value>
+  </data>
+  <data name="SettingsForm_D064" xml:space="preserve">
+    <value>重複警告</value>
+  </data>
+  <data name="SettingsForm_D065" xml:space="preserve">
+    <value>DL済みファイルを一括リネーム</value>
+  </data>
+  <data name="SettingsForm_D066" xml:space="preserve">
+    <value>{0}件のファイルをリネームします。
+
+</value>
+  </data>
+  <data name="SettingsForm_D067" xml:space="preserve">
+    <value>テンプレート: {0}
+
+</value>
+  </data>
+  <data name="SettingsForm_D068" xml:space="preserve">
+    <value>この操作は取り消しできません。続行しますか？</value>
+  </data>
+  <data name="SettingsForm_D069" xml:space="preserve">
+    <value>一括リネーム確認</value>
+  </data>
+  <data name="SettingsForm_D070" xml:space="preserve">
+    <value>リネーム中...</value>
+  </data>
+  <data name="SettingsForm_D071" xml:space="preserve">
+    <value>積極的プリセットはエラーが発生しやすくなります。
+</value>
+  </data>
+  <data name="SettingsForm_D072" xml:space="preserve">
+    <value>403/429エラーが頻発する場合は、標準または控えめに変更してください。</value>
+  </data>
+  <data name="SettingsForm_D073" xml:space="preserve">
+    <value>注意</value>
+  </data>
+  <data name="SettingsForm_D074" xml:space="preserve">
+    <value>チェック中...</value>
+  </data>
+  <data name="SettingsForm_D075" xml:space="preserve">
+    <value>更新チェックに失敗しました:
+{0}</value>
+  </data>
+  <data name="SettingsForm_D076" xml:space="preserve">
+    <value>新しいバージョンがあります！
+
+</value>
+  </data>
+  <data name="SettingsForm_D077" xml:space="preserve">
+    <value>現在: {0}
+</value>
+  </data>
+  <data name="SettingsForm_D078" xml:space="preserve">
+    <value>最新: {0}
+
+</value>
+  </data>
+  <data name="SettingsForm_D079" xml:space="preserve">
+    <value>ダウンロードページを開きますか？</value>
+  </data>
+  <data name="SettingsForm_D080" xml:space="preserve">
+    <value>更新があります</value>
+  </data>
+  <data name="SettingsForm_D081" xml:space="preserve">
+    <value>最新バージョンです！
+
+現在: {0}</value>
+  </data>
+  <data name="SettingsForm_D082" xml:space="preserve">
+    <value>更新チェック</value>
+  </data>
+  <data name="SettingsForm_D083" xml:space="preserve">
+    <value>今すぐチェック</value>
+  </data>
+  <data name="SettingsForm_D084" xml:space="preserve">
+    <value>稼働中</value>
+  </data>
+  <data name="SettingsForm_D085" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="SettingsForm_D086" xml:space="preserve">
+    <value>停止中</value>
+  </data>
+  <data name="SettingsForm_D087" xml:space="preserve">
+    <value>サーバー操作に失敗しました:
+{0}</value>
   </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>設定</value>
@@ -809,6 +1996,71 @@
   <data name="Settings_LanguageAuto" xml:space="preserve">
     <value>自動 (OSに従う)</value>
   </data>
+  <data name="SetupWizardForm_D001" xml:space="preserve">
+    <value>ステップ {0}/4: </value>
+  </data>
+  <data name="SetupWizardForm_D002" xml:space="preserve">
+    <value>ようこそ</value>
+  </data>
+  <data name="SetupWizardForm_D003" xml:space="preserve">
+    <value>Python の取得方法</value>
+  </data>
+  <data name="SetupWizardForm_D004" xml:space="preserve">
+    <value>セットアップ実行中</value>
+  </data>
+  <data name="SetupWizardForm_D005" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="SetupWizardForm_D006" xml:space="preserve">
+    <value>実行中...</value>
+  </data>
+  <data name="SetupWizardForm_D007" xml:space="preserve">
+    <value>次へ &gt;</value>
+  </data>
+  <data name="SetupWizardForm_D008" xml:space="preserve">
+    <value>Python のパスを入力してください。</value>
+  </data>
+  <data name="SetupWizardForm_D009" xml:space="preserve">
+    <value>入力エラー</value>
+  </data>
+  <data name="SetupWizardForm_D010" xml:space="preserve">
+    <value>指定されたパスが存在しません:
+{0}</value>
+  </data>
+  <data name="SetupWizardForm_D011" xml:space="preserve">
+    <value>セットアップを中止しますか?</value>
+  </data>
+  <data name="SetupWizardForm_D012" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="SetupWizardForm_D013" xml:space="preserve">
+    <value>Python実行ファイル|python.exe|すべてのファイル|*.*</value>
+  </data>
+  <data name="SetupWizardForm_D014" xml:space="preserve">
+    <value>セットアップを開始しています...</value>
+  </data>
+  <data name="SetupWizardForm_D015" xml:space="preserve">
+    <value>セットアップを中止しました。</value>
+  </data>
+  <data name="SetupWizardForm_D016" xml:space="preserve">
+    <value>中止</value>
+  </data>
+  <data name="SetupWizardForm_D017" xml:space="preserve">
+    <value>セットアップに失敗しました。
+
+{0}
+
+</value>
+  </data>
+  <data name="SetupWizardForm_D018" xml:space="preserve">
+    <value>ネットワーク接続を確認するか、「既存のPythonを使用」で別のPythonを試してください。</value>
+  </data>
+  <data name="SetupWizardForm_D019" xml:space="preserve">
+    <value>セットアップエラー</value>
+  </data>
+  <data name="SetupWizardForm_D020" xml:space="preserve">
+    <value>セットアップ実行中です。閉じると中止されます。続行しますか?</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader セットアップ</value>
   </data>
@@ -868,6 +2120,35 @@
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>起動中...</value>
+  </data>
+  <data name="StatisticsForm_D001" xml:space="preserve">
+    <value>統計情報の読み込みに失敗しました:
+{0}</value>
+  </data>
+  <data name="StatisticsForm_D002" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="StatisticsForm_D003" xml:space="preserve">
+    <value>状態</value>
+  </data>
+  <data name="StatisticsForm_D004" xml:space="preserve">
+    <value>CSVファイル (*.csv)|*.csv</value>
+  </data>
+  <data name="StatisticsForm_D005" xml:space="preserve">
+    <value>エクスポートしました。</value>
+  </data>
+  <data name="StatisticsForm_D006" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="StatisticsForm_D007" xml:space="preserve">
+    <value>エクスポートに失敗しました:
+{0}</value>
+  </data>
+  <data name="StatisticsForm_D008" xml:space="preserve">
+    <value>有効</value>
+  </data>
+  <data name="StatisticsForm_D009" xml:space="preserve">
+    <value>無効</value>
   </data>
   <data name="StatisticsForm_Title" xml:space="preserve">
     <value>統計ダッシュボード</value>
@@ -949,6 +2230,27 @@
   </data>
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>月別推移</value>
+  </data>
+  <data name="VideoDetailsForm_D001" xml:space="preserve">
+    <value>待機中</value>
+  </data>
+  <data name="VideoDetailsForm_D002" xml:space="preserve">
+    <value>DL中</value>
+  </data>
+  <data name="VideoDetailsForm_D003" xml:space="preserve">
+    <value>タグ書込中</value>
+  </data>
+  <data name="VideoDetailsForm_D004" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="VideoDetailsForm_D005" xml:space="preserve">
+    <value>失敗</value>
+  </data>
+  <data name="VideoDetailsForm_D006" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
+  <data name="VideoDetailsForm_D007" xml:space="preserve">
+    <value>一時停止</value>
   </data>
   <data name="VideoDetailsForm_Title" xml:space="preserve">
     <value>動画の詳細</value>

@@ -47,7 +47,7 @@ namespace IwaraDownloader.Forms
         {
             if (listResults.Items.Count == 0) return;
             listResults.Items.Clear();
-            lblStatus.Text = $"検索 site を {cmbSite.SelectedItem} に切り替えました。再検索してください。";
+            lblStatus.Text = L.T("SearchImportForm_D001", cmbSite.SelectedItem);
             lblPage.Text = "Page -";
             btnPrevPage.Enabled = false;
             btnNextPage.Enabled = false;
@@ -66,7 +66,7 @@ namespace IwaraDownloader.Forms
             var q = (txtQuery.Text ?? "").Trim();
             if (string.IsNullOrEmpty(q))
             {
-                MessageBox.Show("検索キーワードを入力してください。", "入力エラー",
+                MessageBox.Show(L.T("SearchImportForm_D002"), L.T("SearchImportForm_D003"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -80,7 +80,7 @@ namespace IwaraDownloader.Forms
             btnImport.Enabled = false;
             btnPrevPage.Enabled = false;
             btnNextPage.Enabled = false;
-            lblStatus.Text = $"検索中: \"{q}\" [{siteHost}] (page {page + 1})...";
+            lblStatus.Text = L.T("SearchImportForm_D004", q, siteHost, page + 1);
 
             try
             {
@@ -90,7 +90,7 @@ namespace IwaraDownloader.Forms
                 if (!result.Success)
                 {
                     listResults.Items.Clear();
-                    lblStatus.Text = $"エラー: {result.Error}";
+                    lblStatus.Text = L.T("SearchImportForm_D005", result.Error);
                     return;
                 }
                 _totalCount = result.TotalCount;
@@ -100,11 +100,11 @@ namespace IwaraDownloader.Forms
                 lblPage.Text = $"Page {_currentPage + 1} / {totalPages}";
                 btnPrevPage.Enabled = _currentPage > 0;
                 btnNextPage.Enabled = (_currentPage + 1) < totalPages;
-                lblStatus.Text = $"検索結果: 全{_totalCount}件中 {result.Items.Count}件表示 (page {_currentPage + 1}/{totalPages})";
+                lblStatus.Text = L.T("SearchImportForm_D006", _totalCount, result.Items.Count, _currentPage + 1, totalPages);
             }
             catch (Exception ex)
             {
-                lblStatus.Text = $"検索失敗: {ex.Message}";
+                lblStatus.Text = L.T("SearchImportForm_D007", ex.Message);
             }
             finally
             {
@@ -188,13 +188,13 @@ namespace IwaraDownloader.Forms
             }
             if (checkedItems.Count == 0)
             {
-                MessageBox.Show("インポートする動画を選択してください。", "情報",
+                MessageBox.Show(L.T("SearchImportForm_D008"), L.T("SearchImportForm_D009"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var msg = $"{checkedItems.Count}件の動画をダウンロードキューに追加します。続行しますか？";
-            if (MessageBox.Show(msg, "確認",
+            if (MessageBox.Show(msg, L.T("SearchImportForm_D010"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             int addedNew = 0, skippedExisting = 0;
@@ -239,7 +239,7 @@ namespace IwaraDownloader.Forms
                 addedNew++;
             }
 
-            lblStatus.Text = $"インポート完了: 新規 {addedNew}件 / 再キュー {skippedExisting}件";
+            lblStatus.Text = L.T("SearchImportForm_D011", addedNew, skippedExisting);
             DialogResult = DialogResult.OK; // 親フォームに更新通知
         }
     }
