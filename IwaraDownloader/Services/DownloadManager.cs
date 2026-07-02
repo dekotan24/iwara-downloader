@@ -791,9 +791,20 @@ namespace IwaraDownloader.Services
             }
             catch (OperationCanceledException)
             {
-                _logger.Info($"Download cancelled: {task.Video.Title}");
-                task.Status = DownloadStatus.Paused;
-                task.Video.Status = DownloadStatus.Paused;
+                if (task.SuspendedForLogin)
+                {
+                    // ログイン必要による巻き添えキャンセル: Paused にすると ResumeAfterLogin
+                    // (Pending のみ再開) から漏れて取り残されるため、Pending として保存する
+                    _logger.Info($"Download suspended for login: {task.Video.Title}");
+                    task.Status = DownloadStatus.Pending;
+                    task.Video.Status = DownloadStatus.Pending;
+                }
+                else
+                {
+                    _logger.Info($"Download cancelled: {task.Video.Title}");
+                    task.Status = DownloadStatus.Paused;
+                    task.Video.Status = DownloadStatus.Paused;
+                }
                 _database.UpdateVideo(task.Video);
             }
             catch (Exception ex)
@@ -833,7 +844,12 @@ namespace IwaraDownloader.Services
                 if (isLoginRequired)
                 {
                     _logger.Warn($"Login required — suspending download queue. Log in and retry.");
-                    task.Video.RetryCount = Math.Max(task.Video.RetryCount, maxRetry);
+                    // このタスク自身もログイン後の ResumeAfterLogin (Pending のみ再開) の対象にする。
+                    // Failed + RetryCount=max のままだと「失敗動画を一括再試行」を手動でやらない限り
+                    // 二度と DL されない。catch 冒頭で加算された RetryCount も取り消す
+                    // (ログイン切れは動画側の問題ではないため)。
+                    task.Video.RetryCount = Math.Max(0, task.Video.RetryCount - 1);
+                    task.Video.Status = DownloadStatus.Pending;
                     _database.UpdateVideo(task.Video);
                     SuspendQueueForLogin();
                 }
@@ -1096,11 +1112,17 @@ namespace IwaraDownloader.Services
         /// 実行中タスクをキャンセルし、待機中タスクを Pending に戻す。
         /// ログイン後に ResumeAfterLogin() で再開。
         /// </summary>
+        /// <summary>ログイン必要によるキュー停止が既に通知済みかどうか (多重イベント発火の防止用)。</summary>
+        private int _suspendNotifiedForLogin;
+
         private void SuspendQueueForLogin()
         {
-            // 実行中タスクをキャンセル (全部同じ理由で失敗するため)
+            // 実行中タスクをキャンセル (全部同じ理由で失敗するため)。
+            // SuspendedForLogin を立てておくと、OperationCanceledException ハンドラで
+            // Paused ではなく Pending として保存され、ログイン後に自動再開される
             foreach (var task in _activeTasks.Values)
             {
+                task.SuspendedForLogin = true;
                 task.Cancel();
             }
 
@@ -1114,8 +1136,13 @@ namespace IwaraDownloader.Services
                 suspendedCount++;
             }
 
-            _logger.Info($"Download queue suspended: {suspendedCount} tasks returned to Pending");
-            DownloadQueueSuspended?.Invoke(this, suspendedCount);
+            // 複数の実行中タスクが同時にログインエラーで失敗すると SuspendQueueForLogin が
+            // 連続で呼ばれるため、通知イベントは初回のみ発火する (ResumeAfterLogin でリセット)
+            if (Interlocked.Exchange(ref _suspendNotifiedForLogin, 1) == 0)
+            {
+                _logger.Info($"Download queue suspended: {suspendedCount} tasks returned to Pending");
+                DownloadQueueSuspended?.Invoke(this, suspendedCount);
+            }
         }
 
         /// <summary>
@@ -1124,6 +1151,8 @@ namespace IwaraDownloader.Services
         public void ResumeAfterLogin()
         {
             if (!_iwaraApi.IsLoggedIn) return;
+
+            Interlocked.Exchange(ref _suspendNotifiedForLogin, 0);
 
             var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
             var count = 0;
