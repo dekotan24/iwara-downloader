@@ -2699,6 +2699,281 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>Monthly</value>
   </data>
+  <data name="SvcDownloadManager_D001" xml:space="preserve">
+    <value>Skipped: external video DL is off</value>
+  </data>
+  <data name="SvcDownloadManager_D002" xml:space="preserve">
+    <value>Failed to fetch video info</value>
+  </data>
+  <data name="SvcDownloadManager_D003" xml:space="preserve">
+    <value>Download failed</value>
+  </data>
+  <data name="SvcDownloadManager_D004" xml:space="preserve">
+    <value>External video download failed</value>
+  </data>
+  <data name="SvcDownloadManager_D005" xml:space="preserve">
+    <value>Refreshing video info: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D006" xml:space="preserve">
+    <value>Title fetched: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D007" xml:space="preserve">
+    <value>Fetch failed: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D008" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D009" xml:space="preserve">
+    <value>{0} is already registered</value>
+  </data>
+  <data name="SvcDownloadManager_D010" xml:space="preserve">
+    <value>{0} is queued for adding</value>
+  </data>
+  <data name="SvcDownloadManager_D011" xml:space="preserve">
+    <value>Cannot accept channel addition: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D012" xml:space="preserve">
+    <value>Channel addition queued: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D013" xml:space="preserve">
+    <value>Channel addition failed: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D014" xml:space="preserve">
+    <value>New video check: {0} channels queued</value>
+  </data>
+  <data name="SvcDownloadManager_D015" xml:space="preserve">
+    <value>add</value>
+  </data>
+  <data name="SvcDownloadManager_D016" xml:space="preserve">
+    <value>check</value>
+  </data>
+  <data name="SvcDownloadManager_D017" xml:space="preserve">
+    <value>Fetching video list of {0}... ({1})</value>
+  </data>
+  <data name="SvcDownloadManager_D018" xml:space="preserve">
+    <value>Channel "{0}" added ({1} videos)</value>
+  </data>
+  <data name="SvcDownloadManager_D019" xml:space="preserve">
+    <value>{0}: {1} videos / {2} new</value>
+  </data>
+  <data name="SvcDownloadManager_D020" xml:space="preserve">
+    <value>{0} fetch timed out, will retry later ({1}/{2})</value>
+  </data>
+  <data name="SvcDownloadManager_D021" xml:space="preserve">
+    <value>Failed to fetch {0} (timed out)</value>
+  </data>
+  <data name="SvcDownloadManager_D022" xml:space="preserve">
+    <value>Fetch failed: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D023" xml:space="preserve">
+    <value>Fetching video info... (site={0})</value>
+  </data>
+  <data name="SvcDownloadManager_D024" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D025" xml:space="preserve">
+    <value>Reusing existing file: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D026" xml:space="preserve">
+    <value>Migration started: {0} files</value>
+  </data>
+  <data name="SvcDownloadManager_D027" xml:space="preserve">
+    <value>Fetching via API ({0}/{1}): {2}</value>
+  </data>
+  <data name="SvcDownloadManager_D028" xml:space="preserve">
+    <value>Done: tagged {0} / {1} (skipped {2}, failed {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D029" xml:space="preserve">
+    <value>Processing: {0}/{1} (tagged {2}, skipped {3}, failed {4})</value>
+  </data>
+  <data name="SvcDownloadManager_D030" xml:space="preserve">
+    <value>Thumbnail backfill started: {0} videos</value>
+  </data>
+  <data name="SvcDownloadManager_D031" xml:space="preserve">
+    <value>Fetching via API ({0}/{1}): {2}</value>
+  </data>
+  <data name="SvcDownloadManager_D032" xml:space="preserve">
+    <value>Processing: {0}/{1} (URLs {2}, thumbs {3}, failed {4})</value>
+  </data>
+  <data name="SvcDownloadManager_D033" xml:space="preserve">
+    <value>Done: URLs {0} / thumbs {1} / failed {2} (total {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D034" xml:space="preserve">
+    <value>Starting...</value>
+  </data>
+  <data name="SvcDownloadManager_D035" xml:space="preserve">
+    <value>Done: URLs {0} / thumbs {1} / failed {2} (total {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D036" xml:space="preserve">
+    <value>Aborted</value>
+  </data>
+  <data name="SvcDownloadManager_D037" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D038" xml:space="preserve">
+    <value>Tag migration</value>
+  </data>
+  <data name="SvcDownloadManager_D039" xml:space="preserve">
+    <value>Login required</value>
+  </data>
+  <data name="SvcDownloadManager_D040" xml:space="preserve">
+    <value>Done: tagged {0} / skipped {1} / failed {2} (total {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D041" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_LowSpace" xml:space="preserve">
+    <value>Insufficient disk space: free space on the destination drive is below the configured minimum ({0} GB), currently {1} GB</value>
+  </data>
+  <data name="SvcDownloadManager_TaskBackfill" xml:space="preserve">
+    <value>Thumbnail backfill</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D001" xml:space="preserve">
+    <value>Downloading Python embeddable...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D002" xml:space="preserve">
+    <value>Python DL {0}MB / {1}MB</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D003" xml:space="preserve">
+    <value>Extracting Python...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D004" xml:space="preserve">
+    <value>Adjusting Python config (._pth)...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D005" xml:space="preserve">
+    <value>Installing pip...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D006" xml:space="preserve">
+    <value>pip is already installed</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D007" xml:space="preserve">
+    <value>Downloading get-pip.py...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D008" xml:space="preserve">
+    <value>Running pip install...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D009" xml:space="preserve">
+    <value>Installing {0}...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D010" xml:space="preserve">
+    <value>Verifying {0}...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D011" xml:space="preserve">
+    <value>Checking the specified Python...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D012" xml:space="preserve">
+    <value>Creating setup marker...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D013" xml:space="preserve">
+    <value>Setup complete</value>
+  </data>
+  <data name="SvcFileMove_D001" xml:space="preserve">
+    <value>Not enough free space on the destination drive ({0}).
+
+</value>
+  </data>
+  <data name="SvcFileMove_D002" xml:space="preserve">
+    <value>Required: {0}
+</value>
+  </data>
+  <data name="SvcFileMove_D003" xml:space="preserve">
+    <value>Free: {0}
+
+</value>
+  </data>
+  <data name="SvcFileMove_D004" xml:space="preserve">
+    <value>Save folder change aborted.</value>
+  </data>
+  <data name="SvcFileMove_D005" xml:space="preserve">
+    <value>Insufficient space</value>
+  </data>
+  <data name="SvcFileMove_D006" xml:space="preserve">
+    <value>{0} will be changed.
+
+</value>
+  </data>
+  <data name="SvcFileMove_D007" xml:space="preserve">
+    <value>Existing downloaded files: {0} ({1})
+</value>
+  </data>
+  <data name="SvcFileMove_D008" xml:space="preserve">
+    <value>From: {0}
+</value>
+  </data>
+  <data name="SvcFileMove_D009" xml:space="preserve">
+    <value>To: {0}</value>
+  </data>
+  <data name="SvcFileMove_D010" xml:space="preserve">
+    <value>Move these files to the new location?
+</value>
+  </data>
+  <data name="SvcFileMove_D011" xml:space="preserve">
+    <value>(metadata .json files move along with them)
+
+</value>
+  </data>
+  <data name="SvcFileMove_D012" xml:space="preserve">
+    <value>[Yes]    Move files and change the save folder
+</value>
+  </data>
+  <data name="SvcFileMove_D013" xml:space="preserve">
+    <value>[No]     Change the setting only, without moving files
+</value>
+  </data>
+  <data name="SvcFileMove_D014" xml:space="preserve">
+    <value>[Cancel] Do nothing</value>
+  </data>
+  <data name="SvcFileMove_D015" xml:space="preserve">
+    <value>Confirm file move</value>
+  </data>
+  <data name="SvcIwaraApiService_D001" xml:space="preserve">
+    <value>Fetching video list of {0}...</value>
+  </data>
+  <data name="SvcIwaraApiService_D002" xml:space="preserve">
+    <value>Failed to run the Python script</value>
+  </data>
+  <data name="SvcIwaraApiService_D003" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D004" xml:space="preserve">
+    <value>Fetched {0} videos</value>
+  </data>
+  <data name="SvcIwaraApiService_D005" xml:space="preserve">
+    <value>Downloading: {0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D006" xml:space="preserve">
+    <value>Download complete</value>
+  </data>
+  <data name="SvcIwaraApiService_D007" xml:space="preserve">
+    <value>Downloading external video: {0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D008" xml:space="preserve">
+    <value>External video download complete</value>
+  </data>
+  <data name="SvcIwaraApiService_D009" xml:space="preserve">
+    <value>Running setup...</value>
+  </data>
+  <data name="SvcIwaraApiService_D010" xml:space="preserve">
+    <value>Setup complete</value>
+  </data>
+  <data name="SvcIwaraApiService_D011" xml:space="preserve">
+    <value>Setup failed (see the log for details)</value>
+  </data>
+  <data name="SvcNotificationService_D001" xml:space="preserve">
+    <value>Download complete</value>
+  </data>
+  <data name="SvcNotificationService_D002" xml:space="preserve">
+    <value>New videos found</value>
+  </data>
+  <data name="SvcNotificationService_D003" xml:space="preserve">
+    <value>Found {1} new videos from {0}</value>
+  </data>
+  <data name="SvcNotificationService_D004" xml:space="preserve">
+    <value>Download error</value>
+  </data>
+  <data name="Svc_LoginRequired" xml:space="preserve">
+    <value>Login required. Please log in from the settings screen.</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>Pending</value>
   </data>

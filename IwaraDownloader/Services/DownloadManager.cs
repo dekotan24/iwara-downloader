@@ -430,7 +430,7 @@ namespace IwaraDownloader.Services
                 {
                     _logger.Info($"外部動画スキップ (設定によりDLしない): {video.Title} [{video.EmbedUrl}]");
                     video.Status = DownloadStatus.Skipped;
-                    video.LastErrorMessage = "外部動画DL設定がOFFのためスキップ";
+                    video.LastErrorMessage = L.T("SvcDownloadManager_D001");
                     _database.UpdateVideo(video);
 
                     var skippedTask = new DownloadTask
@@ -581,7 +581,7 @@ namespace IwaraDownloader.Services
                 var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
                 if (!urlInfo.Success)
                 {
-                    throw new Exception(urlInfo.Error ?? "動画情報の取得に失敗しました");
+                    throw new Exception(urlInfo.Error ?? L.T("SvcDownloadManager_D002"));
                 }
 
                 // video レコードを最新情報で補強
@@ -654,9 +654,11 @@ namespace IwaraDownloader.Services
 
                     if (freeBytes.HasValue && freeBytes.Value < minFreeGb * 1024L * 1024 * 1024)
                     {
+                        // "DISK_SPACE" マーカー: StatisticsForm のエラー分類 (m.Contains("space")) が
+                        // どの表示言語でも判定できるようにする
                         throw new IOException(
-                            $"空き容量不足: 保存先ドライブの空きが設定の下限 ({minFreeGb} GB) を下回っています " +
-                            $"(現在 {freeBytes.Value / 1024.0 / 1024 / 1024:F2} GB)");
+                            "DISK_SPACE: " + L.T("SvcDownloadManager_LowSpace",
+                                minFreeGb, (freeBytes.Value / 1024.0 / 1024 / 1024).ToString("F2")));
                     }
                 }
 
@@ -786,7 +788,7 @@ namespace IwaraDownloader.Services
                 }
                 else
                 {
-                    throw new Exception(error ?? "ダウンロードに失敗しました");
+                    throw new Exception(error ?? L.T("SvcDownloadManager_D003"));
                 }
             }
             catch (OperationCanceledException)
@@ -821,7 +823,10 @@ namespace IwaraDownloader.Services
                 _logger.Debug($"Download error: {task.Video.Title} - RetryCount={task.Video.RetryCount}, MaxRetry={maxRetry}");
 
                 // ログイン必要: 全タスクが同じ理由で失敗するのでリトライ無駄 → 即失敗 + キュー停止
-                bool isLoginRequired = ex.Message.Contains("ログインが必要です");
+                // LOGIN_REQUIRED は言語非依存のマーカー (表示文言は L.T で翻訳される)。
+                // 旧バージョンで DB に保存された日本語メッセージとの後方互換で日本語判定も残す
+                bool isLoginRequired = ex.Message.Contains("LOGIN_REQUIRED")
+                                    || ex.Message.Contains("ログインが必要です");
 
                 // CDN_UNAVAILABLE / All CDN candidates failed: iwara 側の CDN 振り分けが壊れていて
                 // Python ヘルパーが既に内部で 6 回 CDN ガチャを引いてる。
@@ -1014,7 +1019,7 @@ namespace IwaraDownloader.Services
             }
             else
             {
-                throw new Exception(error ?? "外部動画ダウンロードに失敗しました");
+                throw new Exception(error ?? L.T("SvcDownloadManager_D004"));
             }
         }
 
@@ -1205,7 +1210,7 @@ namespace IwaraDownloader.Services
         {
             try
             {
-                progress?.Report($"動画情報を再取得中: {video.VideoId}");
+                progress?.Report(L.T("SvcDownloadManager_D005", video.VideoId));
 
                 var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
                 var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
@@ -1218,18 +1223,18 @@ namespace IwaraDownloader.Services
                     if (!string.IsNullOrEmpty(urlInfo.FileUuid))
                         video.FileUuid = urlInfo.FileUuid;
                     _database.UpdateVideo(video);
-                    progress?.Report($"タイトル取得成功: {urlInfo.Title}");
+                    progress?.Report(L.T("SvcDownloadManager_D006", urlInfo.Title));
                     return true;
                 }
                 else
                 {
-                    progress?.Report($"取得失敗: {urlInfo.Error}");
+                    progress?.Report(L.T("SvcDownloadManager_D007", urlInfo.Error));
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                progress?.Report($"エラー: {ex.Message}");
+                progress?.Report(L.T("SvcDownloadManager_D008", ex.Message));
                 return false;
             }
         }
@@ -1279,7 +1284,7 @@ namespace IwaraDownloader.Services
             var existing = _database.GetSubscribedUserByUserId(username);
             if (existing != null && existing.VideosLoaded)
             {
-                UserAddStatusChanged?.Invoke(this, $"{username} は既に登録済みです");
+                UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D009", username));
                 return false;
             }
 
@@ -1288,7 +1293,7 @@ namespace IwaraDownloader.Services
             {
                 if (!_pendingUserIds.Add(username))
                 {
-                    UserAddStatusChanged?.Invoke(this, $"{username} は追加処理待ちです");
+                    UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D010", username));
                     return false;
                 }
             }
@@ -1321,11 +1326,11 @@ namespace IwaraDownloader.Services
                 {
                     lock (_pendingUserIds)
                         _pendingUserIds.Remove(username);
-                    UserAddStatusChanged?.Invoke(this, $"チャンネル追加を受け付けられません: {username}");
+                    UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D011", username));
                     return false;
                 }
 
-                UserAddStatusChanged?.Invoke(this, $"チャンネル追加をキューに登録: {username}");
+                UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D012", username));
                 return true;
             }
             catch (Exception ex)
@@ -1333,7 +1338,7 @@ namespace IwaraDownloader.Services
                 _logger.Error($"EnqueueSubscribedUser: {username} のキュー登録に失敗", ex);
                 lock (_pendingUserIds)
                     _pendingUserIds.Remove(username);
-                UserAddStatusChanged?.Invoke(this, $"チャンネル追加失敗: {username}");
+                UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D013", username));
                 return false;
             }
         }
@@ -1359,7 +1364,7 @@ namespace IwaraDownloader.Services
                     lock (_pendingUserIds) _pendingUserIds.Remove(user.UserId);
             }
             if (queued > 0)
-                UserAddStatusChanged?.Invoke(this, $"新着チェック: {queued} チャンネルをキューに登録");
+                UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D014", queued));
         }
 
         /// <summary>
@@ -1437,10 +1442,10 @@ namespace IwaraDownloader.Services
             using var timeoutCts = new CancellationTokenSource(timeout);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(outerToken, timeoutCts.Token);
 
-            var reasonLabel = req.Reason == FetchReason.Add ? "追加" : "新着確認";
+            var reasonLabel = req.Reason == FetchReason.Add ? L.T("SvcDownloadManager_D015") : L.T("SvcDownloadManager_D016");
             try
             {
-                UserAddStatusChanged?.Invoke(this, $"{user.Username} の動画一覧を取得中... ({reasonLabel})");
+                UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D017", user.Username, reasonLabel));
                 var progress = new Progress<string>(msg => UserAddStatusChanged?.Invoke(this, msg));
                 var siteHost = string.IsNullOrEmpty(user.Site) ? Helpers.SiteTv : user.Site;
                 var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
@@ -1471,9 +1476,9 @@ namespace IwaraDownloader.Services
                 _database.UpdateSubscribedUser(user);
 
                 if (req.Reason == FetchReason.Add)
-                    UserAddStatusChanged?.Invoke(this, $"チャンネル「{user.Username}」を追加しました ({videos.Count}件)");
+                    UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D018", user.Username, videos.Count));
                 else
-                    UserAddStatusChanged?.Invoke(this, $"{user.Username}: {videos.Count}件 / 新着 {newVideos.Count}件");
+                    UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D019", user.Username, videos.Count, newVideos.Count));
 
                 UserAdded?.Invoke(this, user);
 
@@ -1507,21 +1512,21 @@ namespace IwaraDownloader.Services
                         FetchTimeoutBase.Ticks * (1L << nextAttempt), FetchTimeoutCap.Ticks));
                     _logger.Warn($"ProcessFetchQueue: {username} 取得タイムアウト ({timeout.TotalSeconds:F0}s)。" +
                                  $"{backoff.TotalSeconds:F0}s 後にリトライ ({nextAttempt}/{FetchMaxAttempts})");
-                    UserAddStatusChanged?.Invoke(this, $"{user.Username} 取得タイムアウト、後でリトライ ({nextAttempt}/{FetchMaxAttempts})");
+                    UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D020", user.Username, nextAttempt, FetchMaxAttempts));
                     // pending は保持したまま (二重投入防止)、別タスクで backoff 後に末尾再投入
                     RequeueAfterDelay(req with { Attempt = nextAttempt }, backoff);
                 }
                 else
                 {
                     _logger.Error($"ProcessFetchQueue: {username} が {FetchMaxAttempts} 回タイムアウト。諦めます (仮登録は残す)");
-                    UserAddStatusChanged?.Invoke(this, $"{user.Username} の取得に失敗 (時間切れ)");
+                    UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D021", user.Username));
                     lock (_pendingUserIds) _pendingUserIds.Remove(username);
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error($"ProcessFetchQueue: {username} 取得失敗", ex);
-                UserAddStatusChanged?.Invoke(this, $"取得失敗: {user.Username}");
+                UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D022", user.Username));
                 lock (_pendingUserIds) _pendingUserIds.Remove(username);
             }
         }
@@ -1584,12 +1589,12 @@ namespace IwaraDownloader.Services
             }
 
             // IwaraApiServiceでダウンロードURL取得(動画情報確認)
-            progress?.Report($"動画情報を取得中... (site={siteHost})");
+            progress?.Report(L.T("SvcDownloadManager_D023", siteHost));
             var urlInfo = await _iwaraApi.GetDownloadUrlAsync(videoId, siteHost);
 
             if (!urlInfo.Success)
             {
-                progress?.Report($"エラー: {urlInfo.Error}");
+                progress?.Report(L.T("SvcDownloadManager_D024", urlInfo.Error));
                 // 失敗しても仮登録(後で再取得可能)
                 var failedVideo = new VideoInfo
                 {
@@ -1610,7 +1615,7 @@ namespace IwaraDownloader.Services
                 var dup = _database.GetVideoByFileUuid(urlInfo.FileUuid);
                 if (dup != null && !string.IsNullOrEmpty(dup.LocalFilePath) && File.Exists(dup.LocalFilePath))
                 {
-                    progress?.Report($"既存ファイルを再利用: {dup.LocalFilePath}");
+                    progress?.Report(L.T("SvcDownloadManager_D025", dup.LocalFilePath));
                     // 既存レコードを返す(これ以上何もしない)
                     return null;
                 }
@@ -1728,7 +1733,7 @@ namespace IwaraDownloader.Services
 
             var apiDelayMs = SettingsManager.Instance.Settings.ApiRequestDelayMs;
 
-            progress?.Report($"マイグレーション開始: {total} 件");
+            progress?.Report(L.T("SvcDownloadManager_D026", total));
             _logger.Info($"Phase3 マイグレーション開始: 候補 {total} 件");
 
             foreach (var video in candidates)
@@ -1761,7 +1766,7 @@ namespace IwaraDownloader.Services
                     // 2. DB に FileUuid が無い場合は iwara API で取得
                     if (string.IsNullOrEmpty(video.FileUuid))
                     {
-                        progress?.Report($"API 取得中 ({processed}/{total}): {video.VideoId}");
+                        progress?.Report(L.T("SvcDownloadManager_D027", processed, total, video.VideoId));
                         var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
                         var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
 
@@ -1816,7 +1821,7 @@ namespace IwaraDownloader.Services
             }
 
             _logger.Info($"Phase3 マイグレーション完了: 合計 {total}, タグ付与 {tagged}, スキップ {skipped}, 失敗 {failed}");
-            progress?.Report($"完了: タグ付与 {tagged} / {total} (スキップ {skipped}, 失敗 {failed})");
+            progress?.Report(L.T("SvcDownloadManager_D028", tagged, total, skipped, failed));
             return (total, tagged, skipped, failed);
         }
 
@@ -1824,7 +1829,7 @@ namespace IwaraDownloader.Services
         {
             if (processed % 5 == 0 || processed == total)
             {
-                progress?.Report($"処理中: {processed}/{total} (タグ付与 {tagged}, スキップ {skipped}, 失敗 {failed})");
+                progress?.Report(L.T("SvcDownloadManager_D029", processed, total, tagged, skipped, failed));
             }
         }
 
@@ -1850,7 +1855,7 @@ namespace IwaraDownloader.Services
             var apiDelayMs = SettingsManager.Instance.Settings.ApiRequestDelayMs;
             var thumbSvc = Services.ThumbnailCacheService.Instance;
 
-            progress?.Report($"サムネ補完開始: {total} 件");
+            progress?.Report(L.T("SvcDownloadManager_D030", total));
             _logger.Info($"Thumbnail backfill: {total} candidates");
 
             int processed = 0;
@@ -1872,7 +1877,7 @@ namespace IwaraDownloader.Services
                         }
                         else if (_iwaraApi.IsLoggedIn)
                         {
-                            progress?.Report($"API 取得中 ({processed}/{total}): {video.VideoId}");
+                            progress?.Report(L.T("SvcDownloadManager_D031", processed, total, video.VideoId));
                             var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
                             var info = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
                             if (info.Success && !string.IsNullOrEmpty(info.ThumbnailUrl))
@@ -1911,12 +1916,12 @@ namespace IwaraDownloader.Services
 
                 if (processed % 25 == 0 || processed == total)
                 {
-                    progress?.Report($"処理中: {processed}/{total} (URL確定 {urlResolved}, サムネDL {thumbDl}, 失敗 {failed})");
+                    progress?.Report(L.T("SvcDownloadManager_D032", processed, total, urlResolved, thumbDl, failed));
                 }
             }
 
             _logger.Info($"Thumbnail backfill done: total={total}, urlResolved={urlResolved}, thumbDl={thumbDl}, failed={failed}");
-            progress?.Report($"完了: URL確定 {urlResolved} / サムネDL {thumbDl} / 失敗 {failed} (合計 {total} 件)");
+            progress?.Report(L.T("SvcDownloadManager_D033", urlResolved, thumbDl, failed, total));
             return (total, urlResolved, thumbDl, failed);
         }
 
@@ -1939,8 +1944,8 @@ namespace IwaraDownloader.Services
         {
             if (IsBackfillRunning) return false;
             IsBackfillRunning = true;
-            var name = "サムネ補完";
-            BackgroundTaskProgress?.Invoke(this, (name, "開始..."));
+            var name = L.T("SvcDownloadManager_TaskBackfill");
+            BackgroundTaskProgress?.Invoke(this, (name, L.T("SvcDownloadManager_D034")));
 
             // Task.Run 外で token をスナップショット (Stop→Start で _globalCts が差し替わる前に固定)
             var snapshot = _globalCts?.Token ?? CancellationToken.None;
@@ -1954,17 +1959,17 @@ namespace IwaraDownloader.Services
                         progress, snapshot);
                     BackgroundTaskCompleted?.Invoke(this, (
                         name,
-                        $"完了: URL確定 {urlResolved} / サムネDL {thumbDl} / 失敗 {failed} (合計 {total})",
+                        L.T("SvcDownloadManager_D035", urlResolved, thumbDl, failed, total),
                         failed < total));
                 }
                 catch (OperationCanceledException)
                 {
-                    BackgroundTaskCompleted?.Invoke(this, (name, "中止しました", false));
+                    BackgroundTaskCompleted?.Invoke(this, (name, L.T("SvcDownloadManager_D036"), false));
                 }
                 catch (Exception ex)
                 {
                     _logger.Error("BackfillThumbnails error", ex);
-                    BackgroundTaskCompleted?.Invoke(this, (name, $"エラー: {ex.Message}", false));
+                    BackgroundTaskCompleted?.Invoke(this, (name, L.T("SvcDownloadManager_D037", ex.Message), false));
                 }
                 finally
                 {
@@ -1980,12 +1985,12 @@ namespace IwaraDownloader.Services
             if (IsMigrationRunning) return false;
             if (!_iwaraApi.IsLoggedIn)
             {
-                BackgroundTaskCompleted?.Invoke(this, ("タグマイグレーション", "ログインが必要です", false));
+                BackgroundTaskCompleted?.Invoke(this, (L.T("SvcDownloadManager_D038"), L.T("SvcDownloadManager_D039"), false));
                 return false;
             }
             IsMigrationRunning = true;
-            var name = "タグマイグレーション";
-            BackgroundTaskProgress?.Invoke(this, (name, "開始..."));
+            var name = L.T("SvcDownloadManager_D038");
+            BackgroundTaskProgress?.Invoke(this, (name, L.T("SvcDownloadManager_D034")));
 
             // Task.Run 外で token をスナップショット
             var snapshot = _globalCts?.Token ?? CancellationToken.None;
@@ -1999,17 +2004,17 @@ namespace IwaraDownloader.Services
                         progress, snapshot);
                     BackgroundTaskCompleted?.Invoke(this, (
                         name,
-                        $"完了: タグ {tagged} / スキップ {skipped} / 失敗 {failed} (合計 {total})",
+                        L.T("SvcDownloadManager_D040", tagged, skipped, failed, total),
                         failed < total));
                 }
                 catch (OperationCanceledException)
                 {
-                    BackgroundTaskCompleted?.Invoke(this, (name, "中止しました", false));
+                    BackgroundTaskCompleted?.Invoke(this, (name, L.T("SvcDownloadManager_D036"), false));
                 }
                 catch (Exception ex)
                 {
                     _logger.Error("MigrateExistingFiles error", ex);
-                    BackgroundTaskCompleted?.Invoke(this, (name, $"エラー: {ex.Message}", false));
+                    BackgroundTaskCompleted?.Invoke(this, (name, L.T("SvcDownloadManager_D041", ex.Message), false));
                 }
                 finally
                 {

@@ -2699,6 +2699,281 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>按月推移</value>
   </data>
+  <data name="SvcDownloadManager_D001" xml:space="preserve">
+    <value>跳过：外部视频下载已关闭</value>
+  </data>
+  <data name="SvcDownloadManager_D002" xml:space="preserve">
+    <value>获取视频信息失败</value>
+  </data>
+  <data name="SvcDownloadManager_D003" xml:space="preserve">
+    <value>下载失败</value>
+  </data>
+  <data name="SvcDownloadManager_D004" xml:space="preserve">
+    <value>外部视频下载失败</value>
+  </data>
+  <data name="SvcDownloadManager_D005" xml:space="preserve">
+    <value>正在重新获取视频信息：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D006" xml:space="preserve">
+    <value>标题获取成功：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D007" xml:space="preserve">
+    <value>获取失败：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D008" xml:space="preserve">
+    <value>错误：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D009" xml:space="preserve">
+    <value>{0} 已注册</value>
+  </data>
+  <data name="SvcDownloadManager_D010" xml:space="preserve">
+    <value>{0} 正在等待添加</value>
+  </data>
+  <data name="SvcDownloadManager_D011" xml:space="preserve">
+    <value>无法接受频道添加：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D012" xml:space="preserve">
+    <value>频道添加已加入队列：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D013" xml:space="preserve">
+    <value>频道添加失败：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D014" xml:space="preserve">
+    <value>新视频检查：{0} 个频道已加入队列</value>
+  </data>
+  <data name="SvcDownloadManager_D015" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="SvcDownloadManager_D016" xml:space="preserve">
+    <value>新视频检查</value>
+  </data>
+  <data name="SvcDownloadManager_D017" xml:space="preserve">
+    <value>正在获取 {0} 的视频列表...（{1}）</value>
+  </data>
+  <data name="SvcDownloadManager_D018" xml:space="preserve">
+    <value>已添加频道「{0}」（{1} 个视频）</value>
+  </data>
+  <data name="SvcDownloadManager_D019" xml:space="preserve">
+    <value>{0}：{1} 个 / 新 {2} 个</value>
+  </data>
+  <data name="SvcDownloadManager_D020" xml:space="preserve">
+    <value>{0} 获取超时，稍后重试（{1}/{2}）</value>
+  </data>
+  <data name="SvcDownloadManager_D021" xml:space="preserve">
+    <value>获取 {0} 失败（超时）</value>
+  </data>
+  <data name="SvcDownloadManager_D022" xml:space="preserve">
+    <value>获取失败：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D023" xml:space="preserve">
+    <value>正在获取视频信息...（site={0}）</value>
+  </data>
+  <data name="SvcDownloadManager_D024" xml:space="preserve">
+    <value>错误：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D025" xml:space="preserve">
+    <value>重用现有文件：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D026" xml:space="preserve">
+    <value>迁移开始：{0} 个文件</value>
+  </data>
+  <data name="SvcDownloadManager_D027" xml:space="preserve">
+    <value>API 获取中（{0}/{1}）：{2}</value>
+  </data>
+  <data name="SvcDownloadManager_D028" xml:space="preserve">
+    <value>完成：已标记 {0} / {1}（跳过 {2}，失败 {3}）</value>
+  </data>
+  <data name="SvcDownloadManager_D029" xml:space="preserve">
+    <value>处理中：{0}/{1}（已标记 {2}，跳过 {3}，失败 {4}）</value>
+  </data>
+  <data name="SvcDownloadManager_D030" xml:space="preserve">
+    <value>缩略图补全开始：{0} 个</value>
+  </data>
+  <data name="SvcDownloadManager_D031" xml:space="preserve">
+    <value>API 获取中（{0}/{1}）：{2}</value>
+  </data>
+  <data name="SvcDownloadManager_D032" xml:space="preserve">
+    <value>处理中：{0}/{1}（URL确定 {2}，缩略图 {3}，失败 {4}）</value>
+  </data>
+  <data name="SvcDownloadManager_D033" xml:space="preserve">
+    <value>完成：URL确定 {0} / 缩略图 {1} / 失败 {2}（共 {3} 个）</value>
+  </data>
+  <data name="SvcDownloadManager_D034" xml:space="preserve">
+    <value>开始...</value>
+  </data>
+  <data name="SvcDownloadManager_D035" xml:space="preserve">
+    <value>完成：URL确定 {0} / 缩略图 {1} / 失败 {2}（共 {3}）</value>
+  </data>
+  <data name="SvcDownloadManager_D036" xml:space="preserve">
+    <value>已中止</value>
+  </data>
+  <data name="SvcDownloadManager_D037" xml:space="preserve">
+    <value>错误：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_D038" xml:space="preserve">
+    <value>标签迁移</value>
+  </data>
+  <data name="SvcDownloadManager_D039" xml:space="preserve">
+    <value>需要登录</value>
+  </data>
+  <data name="SvcDownloadManager_D040" xml:space="preserve">
+    <value>完成：标签 {0} / 跳过 {1} / 失败 {2}（共 {3}）</value>
+  </data>
+  <data name="SvcDownloadManager_D041" xml:space="preserve">
+    <value>错误：{0}</value>
+  </data>
+  <data name="SvcDownloadManager_LowSpace" xml:space="preserve">
+    <value>磁盘空间不足：目标驱动器的可用空间低于设置的下限（{0} GB），当前 {1} GB</value>
+  </data>
+  <data name="SvcDownloadManager_TaskBackfill" xml:space="preserve">
+    <value>缩略图补全</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D001" xml:space="preserve">
+    <value>正在下载 Python embeddable...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D002" xml:space="preserve">
+    <value>Python 下载中 {0}MB / {1}MB</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D003" xml:space="preserve">
+    <value>正在解压 Python...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D004" xml:space="preserve">
+    <value>正在调整 Python 配置 (._pth)...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D005" xml:space="preserve">
+    <value>正在安装 pip...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D006" xml:space="preserve">
+    <value>pip 已安装</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D007" xml:space="preserve">
+    <value>正在下载 get-pip.py...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D008" xml:space="preserve">
+    <value>正在执行 pip 安装...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D009" xml:space="preserve">
+    <value>正在安装 {0}...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D010" xml:space="preserve">
+    <value>正在验证 {0}...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D011" xml:space="preserve">
+    <value>正在检查指定的 Python...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D012" xml:space="preserve">
+    <value>正在创建设置标记...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D013" xml:space="preserve">
+    <value>设置完成</value>
+  </data>
+  <data name="SvcFileMove_D001" xml:space="preserve">
+    <value>目标驱动器（{0}）可用空间不足。
+
+</value>
+  </data>
+  <data name="SvcFileMove_D002" xml:space="preserve">
+    <value>需要：{0}
+</value>
+  </data>
+  <data name="SvcFileMove_D003" xml:space="preserve">
+    <value>可用：{0}
+
+</value>
+  </data>
+  <data name="SvcFileMove_D004" xml:space="preserve">
+    <value>已中止保存位置更改。</value>
+  </data>
+  <data name="SvcFileMove_D005" xml:space="preserve">
+    <value>空间不足</value>
+  </data>
+  <data name="SvcFileMove_D006" xml:space="preserve">
+    <value>将更改{0}。
+
+</value>
+  </data>
+  <data name="SvcFileMove_D007" xml:space="preserve">
+    <value>现有已下载文件：{0} 个（{1}）
+</value>
+  </data>
+  <data name="SvcFileMove_D008" xml:space="preserve">
+    <value>移动源：{0}
+</value>
+  </data>
+  <data name="SvcFileMove_D009" xml:space="preserve">
+    <value>移动目标：{0}</value>
+  </data>
+  <data name="SvcFileMove_D010" xml:space="preserve">
+    <value>将这些文件移动到新位置吗？
+</value>
+  </data>
+  <data name="SvcFileMove_D011" xml:space="preserve">
+    <value>（元数据 .json 也会一起移动）
+
+</value>
+  </data>
+  <data name="SvcFileMove_D012" xml:space="preserve">
+    <value>[是]    移动文件并更改保存位置
+</value>
+  </data>
+  <data name="SvcFileMove_D013" xml:space="preserve">
+    <value>[否]    仅更改设置，不移动文件
+</value>
+  </data>
+  <data name="SvcFileMove_D014" xml:space="preserve">
+    <value>[取消]  不执行任何操作</value>
+  </data>
+  <data name="SvcFileMove_D015" xml:space="preserve">
+    <value>文件移动确认</value>
+  </data>
+  <data name="SvcIwaraApiService_D001" xml:space="preserve">
+    <value>正在获取 {0} 的视频列表...</value>
+  </data>
+  <data name="SvcIwaraApiService_D002" xml:space="preserve">
+    <value>Python 脚本执行失败</value>
+  </data>
+  <data name="SvcIwaraApiService_D003" xml:space="preserve">
+    <value>错误：{0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D004" xml:space="preserve">
+    <value>已获取 {0} 个视频</value>
+  </data>
+  <data name="SvcIwaraApiService_D005" xml:space="preserve">
+    <value>下载中：{0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D006" xml:space="preserve">
+    <value>下载完成</value>
+  </data>
+  <data name="SvcIwaraApiService_D007" xml:space="preserve">
+    <value>外部视频下载中：{0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D008" xml:space="preserve">
+    <value>外部视频下载完成</value>
+  </data>
+  <data name="SvcIwaraApiService_D009" xml:space="preserve">
+    <value>正在执行设置...</value>
+  </data>
+  <data name="SvcIwaraApiService_D010" xml:space="preserve">
+    <value>设置完成</value>
+  </data>
+  <data name="SvcIwaraApiService_D011" xml:space="preserve">
+    <value>设置失败（详情请查看日志）</value>
+  </data>
+  <data name="SvcNotificationService_D001" xml:space="preserve">
+    <value>下载完成</value>
+  </data>
+  <data name="SvcNotificationService_D002" xml:space="preserve">
+    <value>检测到新视频</value>
+  </data>
+  <data name="SvcNotificationService_D003" xml:space="preserve">
+    <value>从 {0} 发现 {1} 个新视频</value>
+  </data>
+  <data name="SvcNotificationService_D004" xml:space="preserve">
+    <value>下载错误</value>
+  </data>
+  <data name="Svc_LoginRequired" xml:space="preserve">
+    <value>需要登录。请从设置画面登录。</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>等待中</value>
   </data>

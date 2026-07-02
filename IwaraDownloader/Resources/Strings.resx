@@ -2703,6 +2703,281 @@ https://www.iwara.ai/profile/username
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>月別推移</value>
   </data>
+  <data name="SvcDownloadManager_D001" xml:space="preserve">
+    <value>外部動画DL設定がOFFのためスキップ</value>
+  </data>
+  <data name="SvcDownloadManager_D002" xml:space="preserve">
+    <value>動画情報の取得に失敗しました</value>
+  </data>
+  <data name="SvcDownloadManager_D003" xml:space="preserve">
+    <value>ダウンロードに失敗しました</value>
+  </data>
+  <data name="SvcDownloadManager_D004" xml:space="preserve">
+    <value>外部動画ダウンロードに失敗しました</value>
+  </data>
+  <data name="SvcDownloadManager_D005" xml:space="preserve">
+    <value>動画情報を再取得中: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D006" xml:space="preserve">
+    <value>タイトル取得成功: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D007" xml:space="preserve">
+    <value>取得失敗: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D008" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D009" xml:space="preserve">
+    <value>{0} は既に登録済みです</value>
+  </data>
+  <data name="SvcDownloadManager_D010" xml:space="preserve">
+    <value>{0} は追加処理待ちです</value>
+  </data>
+  <data name="SvcDownloadManager_D011" xml:space="preserve">
+    <value>チャンネル追加を受け付けられません: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D012" xml:space="preserve">
+    <value>チャンネル追加をキューに登録: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D013" xml:space="preserve">
+    <value>チャンネル追加失敗: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D014" xml:space="preserve">
+    <value>新着チェック: {0} チャンネルをキューに登録</value>
+  </data>
+  <data name="SvcDownloadManager_D015" xml:space="preserve">
+    <value>追加</value>
+  </data>
+  <data name="SvcDownloadManager_D016" xml:space="preserve">
+    <value>新着確認</value>
+  </data>
+  <data name="SvcDownloadManager_D017" xml:space="preserve">
+    <value>{0} の動画一覧を取得中... ({1})</value>
+  </data>
+  <data name="SvcDownloadManager_D018" xml:space="preserve">
+    <value>チャンネル「{0}」を追加しました ({1}件)</value>
+  </data>
+  <data name="SvcDownloadManager_D019" xml:space="preserve">
+    <value>{0}: {1}件 / 新着 {2}件</value>
+  </data>
+  <data name="SvcDownloadManager_D020" xml:space="preserve">
+    <value>{0} 取得タイムアウト、後でリトライ ({1}/{2})</value>
+  </data>
+  <data name="SvcDownloadManager_D021" xml:space="preserve">
+    <value>{0} の取得に失敗 (時間切れ)</value>
+  </data>
+  <data name="SvcDownloadManager_D022" xml:space="preserve">
+    <value>取得失敗: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D023" xml:space="preserve">
+    <value>動画情報を取得中... (site={0})</value>
+  </data>
+  <data name="SvcDownloadManager_D024" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D025" xml:space="preserve">
+    <value>既存ファイルを再利用: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D026" xml:space="preserve">
+    <value>マイグレーション開始: {0} 件</value>
+  </data>
+  <data name="SvcDownloadManager_D027" xml:space="preserve">
+    <value>API 取得中 ({0}/{1}): {2}</value>
+  </data>
+  <data name="SvcDownloadManager_D028" xml:space="preserve">
+    <value>完了: タグ付与 {0} / {1} (スキップ {2}, 失敗 {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D029" xml:space="preserve">
+    <value>処理中: {0}/{1} (タグ付与 {2}, スキップ {3}, 失敗 {4})</value>
+  </data>
+  <data name="SvcDownloadManager_D030" xml:space="preserve">
+    <value>サムネ補完開始: {0} 件</value>
+  </data>
+  <data name="SvcDownloadManager_D031" xml:space="preserve">
+    <value>API 取得中 ({0}/{1}): {2}</value>
+  </data>
+  <data name="SvcDownloadManager_D032" xml:space="preserve">
+    <value>処理中: {0}/{1} (URL確定 {2}, サムネDL {3}, 失敗 {4})</value>
+  </data>
+  <data name="SvcDownloadManager_D033" xml:space="preserve">
+    <value>完了: URL確定 {0} / サムネDL {1} / 失敗 {2} (合計 {3} 件)</value>
+  </data>
+  <data name="SvcDownloadManager_D034" xml:space="preserve">
+    <value>開始...</value>
+  </data>
+  <data name="SvcDownloadManager_D035" xml:space="preserve">
+    <value>完了: URL確定 {0} / サムネDL {1} / 失敗 {2} (合計 {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D036" xml:space="preserve">
+    <value>中止しました</value>
+  </data>
+  <data name="SvcDownloadManager_D037" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_D038" xml:space="preserve">
+    <value>タグマイグレーション</value>
+  </data>
+  <data name="SvcDownloadManager_D039" xml:space="preserve">
+    <value>ログインが必要です</value>
+  </data>
+  <data name="SvcDownloadManager_D040" xml:space="preserve">
+    <value>完了: タグ {0} / スキップ {1} / 失敗 {2} (合計 {3})</value>
+  </data>
+  <data name="SvcDownloadManager_D041" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="SvcDownloadManager_LowSpace" xml:space="preserve">
+    <value>空き容量不足: 保存先ドライブの空きが設定の下限 ({0} GB) を下回っています (現在 {1} GB)</value>
+  </data>
+  <data name="SvcDownloadManager_TaskBackfill" xml:space="preserve">
+    <value>サムネ補完</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D001" xml:space="preserve">
+    <value>Python embeddable をダウンロード中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D002" xml:space="preserve">
+    <value>Python DL中 {0}MB / {1}MB</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D003" xml:space="preserve">
+    <value>Python を展開中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D004" xml:space="preserve">
+    <value>Python設定 (._pth) を調整中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D005" xml:space="preserve">
+    <value>pip をインストール中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D006" xml:space="preserve">
+    <value>pip は既にインストール済み</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D007" xml:space="preserve">
+    <value>get-pip.py をダウンロード中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D008" xml:space="preserve">
+    <value>pip をインストール実行中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D009" xml:space="preserve">
+    <value>{0} をインストール中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D010" xml:space="preserve">
+    <value>{0} の動作確認中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D011" xml:space="preserve">
+    <value>指定されたPythonを確認中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D012" xml:space="preserve">
+    <value>セットアップマーカーを作成中...</value>
+  </data>
+  <data name="SvcEnvironmentSetupService_D013" xml:space="preserve">
+    <value>セットアップ完了</value>
+  </data>
+  <data name="SvcFileMove_D001" xml:space="preserve">
+    <value>移動先ドライブ ({0}) の空き容量が不足しています。
+
+</value>
+  </data>
+  <data name="SvcFileMove_D002" xml:space="preserve">
+    <value>必要: {0}
+</value>
+  </data>
+  <data name="SvcFileMove_D003" xml:space="preserve">
+    <value>空き: {0}
+
+</value>
+  </data>
+  <data name="SvcFileMove_D004" xml:space="preserve">
+    <value>保存先変更を中止します。</value>
+  </data>
+  <data name="SvcFileMove_D005" xml:space="preserve">
+    <value>容量不足</value>
+  </data>
+  <data name="SvcFileMove_D006" xml:space="preserve">
+    <value>{0}を変更します。
+
+</value>
+  </data>
+  <data name="SvcFileMove_D007" xml:space="preserve">
+    <value>既存DL済みファイル: {0} 個 ({1})
+</value>
+  </data>
+  <data name="SvcFileMove_D008" xml:space="preserve">
+    <value>移動元: {0}
+</value>
+  </data>
+  <data name="SvcFileMove_D009" xml:space="preserve">
+    <value>移動先: {0}</value>
+  </data>
+  <data name="SvcFileMove_D010" xml:space="preserve">
+    <value>これらのファイルを移動先に移しますか?
+</value>
+  </data>
+  <data name="SvcFileMove_D011" xml:space="preserve">
+    <value>(メタデータ .json も一緒に移動します)
+
+</value>
+  </data>
+  <data name="SvcFileMove_D012" xml:space="preserve">
+    <value>[はい]   ファイルを移動して保存先を変更
+</value>
+  </data>
+  <data name="SvcFileMove_D013" xml:space="preserve">
+    <value>[いいえ] ファイルは移動せず保存先設定だけ変更
+</value>
+  </data>
+  <data name="SvcFileMove_D014" xml:space="preserve">
+    <value>[キャンセル] 何もしない</value>
+  </data>
+  <data name="SvcFileMove_D015" xml:space="preserve">
+    <value>ファイル移動の確認</value>
+  </data>
+  <data name="SvcIwaraApiService_D001" xml:space="preserve">
+    <value>{0}の動画一覧を取得中...</value>
+  </data>
+  <data name="SvcIwaraApiService_D002" xml:space="preserve">
+    <value>Pythonスクリプトの実行に失敗しました</value>
+  </data>
+  <data name="SvcIwaraApiService_D003" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D004" xml:space="preserve">
+    <value>{0}件の動画を取得しました</value>
+  </data>
+  <data name="SvcIwaraApiService_D005" xml:space="preserve">
+    <value>ダウンロード中: {0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D006" xml:space="preserve">
+    <value>ダウンロード完了</value>
+  </data>
+  <data name="SvcIwaraApiService_D007" xml:space="preserve">
+    <value>外部動画DL中: {0}</value>
+  </data>
+  <data name="SvcIwaraApiService_D008" xml:space="preserve">
+    <value>外部動画DL完了</value>
+  </data>
+  <data name="SvcIwaraApiService_D009" xml:space="preserve">
+    <value>セットアップを実行中...</value>
+  </data>
+  <data name="SvcIwaraApiService_D010" xml:space="preserve">
+    <value>セットアップ完了</value>
+  </data>
+  <data name="SvcIwaraApiService_D011" xml:space="preserve">
+    <value>セットアップに失敗しました(詳細はログ参照)</value>
+  </data>
+  <data name="SvcNotificationService_D001" xml:space="preserve">
+    <value>ダウンロード完了</value>
+  </data>
+  <data name="SvcNotificationService_D002" xml:space="preserve">
+    <value>新着動画を検出</value>
+  </data>
+  <data name="SvcNotificationService_D003" xml:space="preserve">
+    <value>{0} から {1} 件の新着動画が見つかりました</value>
+  </data>
+  <data name="SvcNotificationService_D004" xml:space="preserve">
+    <value>ダウンロードエラー</value>
+  </data>
+  <data name="Svc_LoginRequired" xml:space="preserve">
+    <value>ログインが必要です。設定画面からログインしてください。</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>待機中</value>
   </data>

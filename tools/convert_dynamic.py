@@ -37,6 +37,8 @@ def convert_file(rel_path, form, ja, existing_rev, start_no):
         "UseDescriptionForTitle", "SplashForm.UpdateStatus", "progress?.Report",
         "Filter =",  # OpenFileDialog.Filter
         "HeaderText", "PlaceholderText", "Title = ", "new TreeNode",
+        "UserAddStatusChanged", "progress?.Report", "BackgroundTask", "LastErrorMessage",
+        "throw new Exception", "FromError", "NotifyDownload", "reasonLabel",
         "ShowInputDialog", "ShowPasswordDialog", "ShowNotification", "Columns.Add",
     )
     in_call = False  # マーカー行からセミコロンまでの複数行呼び出しを継続扱いする
