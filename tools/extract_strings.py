@@ -20,7 +20,7 @@ for path in sorted(glob.glob(os.path.join(FORMS_DIR, "*.Designer.cs"))):
     src = open(path, encoding="utf-8-sig").read()
 
     # this.<name>.Text = "..." / this.Text = "..." / ToolTipText / HeaderText
-    for m in re.finditer(r'this(?:\.(\w+))?\.(Text|ToolTipText|HeaderText)\s*=\s*"((?:[^"\\]|\\.)*)"', src):
+    for m in re.finditer(r'this(?:\.(\w+))?\.(Text|ToolTipText|HeaderText|PlaceholderText)\s*=\s*"((?:[^"\\]|\\.)*)"', src):
         name, prop, raw = m.group(1), m.group(2), m.group(3)
         text = unescape(raw)
         if not has_jp(text):
@@ -29,6 +29,8 @@ for path in sorted(glob.glob(os.path.join(FORMS_DIR, "*.Designer.cs"))):
             key = f"{form}_Title"
         elif prop == "ToolTipText":
             key = f"{form}_{name}_Tip"
+        elif prop == "PlaceholderText":
+            key = f"{form}_{name}_Placeholder"
         else:
             key = f"{form}_{name}"
         if key in entries and entries[key] != text:

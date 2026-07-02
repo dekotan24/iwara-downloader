@@ -145,7 +145,7 @@ namespace IwaraDownloader.Forms
         {
             using var ofd = new OpenFileDialog
             {
-                Title = "python.exe を選択",
+                Title = L.T("SetupWizardForm_D021"),
                 Filter = L.T("SetupWizardForm_D013"),
                 FileName = "python.exe",
             };

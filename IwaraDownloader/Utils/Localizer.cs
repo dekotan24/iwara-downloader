@@ -22,7 +22,10 @@ namespace IwaraDownloader.Utils
         public static void Apply(Form form)
         {
             var culture = CultureInfo.CurrentUICulture;
-            var formName = form.Name;
+            // form.Name は Designer が this.Name を設定していないフォームだと空になり
+            // キーが一致しなくなる (SearchImportForm/VideoDetailsForm で実際に発生) ため、
+            // 常にクラス名を使う
+            var formName = form.GetType().Name;
 
             var title = _rm.GetString($"{formName}_Title", culture);
             if (title != null) form.Text = title;
@@ -38,6 +41,29 @@ namespace IwaraDownloader.Utils
                 {
                     var text = _rm.GetString($"{formName}_{control.Name}", culture);
                     if (text != null) control.Text = text;
+
+                    if (control is TextBox textBox)
+                    {
+                        var placeholder = _rm.GetString($"{formName}_{control.Name}_Placeholder", culture);
+                        if (placeholder != null) textBox.PlaceholderText = placeholder;
+                    }
+
+                    // ComboBox の項目: "{Form}_{Name}_Item0" 形式のキーが存在するものだけ差し替える。
+                    // 対象は SelectedIndex で判定しているコンボのみリソースに登録すること
+                    // (項目文字列そのもので判定しているコンボに登録すると判定が壊れる)
+                    if (control is ComboBox comboBox && comboBox.Items.Count > 0)
+                    {
+                        var selectedIndex = comboBox.SelectedIndex;
+                        var replaced = false;
+                        for (var i = 0; i < comboBox.Items.Count; i++)
+                        {
+                            var item = _rm.GetString($"{formName}_{control.Name}_Item{i}", culture);
+                            if (item == null) continue;
+                            comboBox.Items[i] = item;
+                            replaced = true;
+                        }
+                        if (replaced && selectedIndex >= 0) comboBox.SelectedIndex = selectedIndex;
+                    }
                 }
 
                 // ツールバー/メニュー/ステータスバーの項目

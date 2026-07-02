@@ -714,7 +714,7 @@ namespace IwaraDownloader.Forms
             {
                 var msg =
                     $"新規 {_importedNew} / マージ {_mergedCount} / スキップ(既存) {_skippedExistingCount}";
-                Services.NotificationService.Instance.ShowNotification("インポート完了", msg);
+                Services.NotificationService.Instance.ShowNotification(L.T("ImportFromFolderWizard_D030"), msg);
             }
             catch (Exception ex)
             {
@@ -898,8 +898,8 @@ namespace IwaraDownloader.Forms
                 var disp = string.IsNullOrEmpty(DisplayName) || DisplayName == Username
                     ? Username : $"{DisplayName} (@{Username})";
                 return AlreadySubscribed
-                    ? $"{disp} — {VideoCount} 件  [既に登録済]"
-                    : $"{disp} — {VideoCount} 件";
+                    ? L.T("ImportFromFolderWizard_NodeRegistered", disp, VideoCount)
+                    : L.T("ImportFromFolderWizard_NodeNormal", disp, VideoCount);
             }
         }
     }

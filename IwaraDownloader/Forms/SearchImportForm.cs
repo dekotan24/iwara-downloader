@@ -26,6 +26,12 @@ namespace IwaraDownloader.Forms
             _search = new IwaraSearch(downloadManager.IwaraApi);
             InitializeComponent();
             Utils.Localizer.Apply(this);
+            // listResults の列は Columns.Add(文字列) 形式で Name が無く Localizer では
+            // 差し替えられないため、ここで直接適用する
+            listResults.Columns[0].Text = L.T("SearchImportForm_colTitle");
+            listResults.Columns[1].Text = L.T("SearchImportForm_colAuthor");
+            listResults.Columns[3].Text = L.T("SearchImportForm_colDuration");
+            listResults.Columns[4].Text = L.T("SearchImportForm_colDate");
         }
 
         private void txtQuery_KeyDown(object? sender, KeyEventArgs e)
@@ -125,7 +131,7 @@ namespace IwaraDownloader.Forms
             {
                 var alreadyInDb = existing.Contains(item.VideoId);
                 item.AlreadyInDb = alreadyInDb;
-                var title = alreadyInDb ? $"[登録済] {item.Title}" : item.Title;
+                var title = alreadyInDb ? L.T("SearchImportForm_Registered", item.Title) : item.Title;
                 var lvi = new ListViewItem(new[]
                 {
                     title,
@@ -193,7 +199,7 @@ namespace IwaraDownloader.Forms
                 return;
             }
 
-            var msg = $"{checkedItems.Count}件の動画をダウンロードキューに追加します。続行しますか？";
+            var msg = L.T("SearchImportForm_ConfirmImport", checkedItems.Count);
             if (MessageBox.Show(msg, L.T("SearchImportForm_D010"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 

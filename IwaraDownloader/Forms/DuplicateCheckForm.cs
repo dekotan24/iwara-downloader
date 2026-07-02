@@ -71,13 +71,13 @@ namespace IwaraDownloader.Forms
                 {
                     dgvDuplicates.Columns["VideoId"].HeaderText = "Video ID";
                     dgvDuplicates.Columns["VideoId"].Width = 120;
-                    dgvDuplicates.Columns["Title"].HeaderText = "タイトル";
+                    dgvDuplicates.Columns["Title"].HeaderText = L.T("DuplicateCheckForm_D024");
                     dgvDuplicates.Columns["Title"].Width = 200;
-                    dgvDuplicates.Columns["ChannelCount"].HeaderText = "CH数";
+                    dgvDuplicates.Columns["ChannelCount"].HeaderText = L.T("DuplicateCheckForm_D025");
                     dgvDuplicates.Columns["ChannelCount"].Width = 50;
-                    dgvDuplicates.Columns["Channels"].HeaderText = "チャンネル";
+                    dgvDuplicates.Columns["Channels"].HeaderText = L.T("DuplicateCheckForm_D026");
                     dgvDuplicates.Columns["Channels"].Width = 150;
-                    dgvDuplicates.Columns["StatusSummary"].HeaderText = "状態";
+                    dgvDuplicates.Columns["StatusSummary"].HeaderText = L.T("DuplicateCheckForm_D027");
                     dgvDuplicates.Columns["StatusSummary"].Width = 100;
                 }
 
@@ -103,9 +103,9 @@ namespace IwaraDownloader.Forms
             var pending = videos.Count(v => v.Status == DownloadStatus.Pending);
 
             var parts = new List<string>();
-            if (completed > 0) parts.Add($"完了:{completed}");
-            if (failed > 0) parts.Add($"失敗:{failed}");
-            if (pending > 0) parts.Add($"待機:{pending}");
+            if (completed > 0) parts.Add(L.T("DuplicateCheckForm_SumCompleted", completed));
+            if (failed > 0) parts.Add(L.T("DuplicateCheckForm_SumFailed", failed));
+            if (pending > 0) parts.Add(L.T("DuplicateCheckForm_SumPending", pending));
             
             return string.Join(" ", parts);
         }
@@ -130,13 +130,13 @@ namespace IwaraDownloader.Forms
             lstDetails.Items.Clear();
             foreach (var video in duplicate.Videos)
             {
-                var channelName = video.AuthorUsername ?? "(不明)";
+                var channelName = video.AuthorUsername ?? L.T("DuplicateCheckForm_UnknownChannel");
                 var status = video.Status switch
                 {
-                    DownloadStatus.Completed => "✓ 完了",
-                    DownloadStatus.Failed => "✗ 失敗",
-                    DownloadStatus.Pending => "○ 待機",
-                    DownloadStatus.Downloading => "↓ DL中",
+                    DownloadStatus.Completed => L.T("DuplicateCheckForm_StCompleted"),
+                    DownloadStatus.Failed => L.T("DuplicateCheckForm_StFailed"),
+                    DownloadStatus.Pending => L.T("DuplicateCheckForm_StPending"),
+                    DownloadStatus.Downloading => L.T("DuplicateCheckForm_StDownloading"),
                     _ => "?"
                 };
                 lstDetails.Items.Add($"[{status}] {channelName} (ID:{video.Id})");

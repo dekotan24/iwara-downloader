@@ -36,6 +36,8 @@ def convert_file(rel_path, form, ja, existing_rev, start_no):
         ".Text =", ".Text=", "ToolTipText", "StatusText", "Description =",
         "UseDescriptionForTitle", "SplashForm.UpdateStatus", "progress?.Report",
         "Filter =",  # OpenFileDialog.Filter
+        "HeaderText", "PlaceholderText", "Title = ", "new TreeNode",
+        "ShowInputDialog", "ShowPasswordDialog", "ShowNotification", "Columns.Add",
     )
     in_call = False  # マーカー行からセミコロンまでの複数行呼び出しを継続扱いする
     for i, line in enumerate(lines):
@@ -118,7 +120,11 @@ if __name__ == "__main__":
     ja_path = os.path.join(TOOLS, "strings_ja.json")
     ja = json.load(open(ja_path, encoding="utf-8"))
     rev = {}
-    conv, skip, _ = convert_file(target, form, ja, rev, 1)
+    # 既存の {form}_Dnnn キーの最大番号+1 から採番 (再実行時の衝突防止)
+    import re as _re
+    nums = [int(m.group(1)) for k in ja for m in [_re.match(rf"{form}_D(\d+)$", k)] if m]
+    start = (max(nums) + 1) if nums else 1
+    conv, skip, _ = convert_file(target, form, ja, rev, start)
     json.dump(ja, open(ja_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"converted {len(conv)}, skipped {len(skip)}")
     for lineno, why, txt in skip:

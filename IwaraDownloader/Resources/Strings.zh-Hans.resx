@@ -98,6 +98,31 @@
   <data name="BulkImportForm_D013" xml:space="preserve">
     <value>导入</value>
   </data>
+  <data name="BulkImportForm_D014" xml:space="preserve">
+    <value>打开URL列表文件</value>
+  </data>
+  <data name="BulkImportForm_D015" xml:space="preserve">
+    <value>[未获取] {0}</value>
+  </data>
+  <data name="BulkImportForm_ResultChannelSkip" xml:space="preserve">
+    <value> / 跳过 {0} 个</value>
+  </data>
+  <data name="BulkImportForm_ResultChannels" xml:space="preserve">
+    <value>・频道加入队列: {0} 个{1}
+  （视频列表将在后台依次获取）</value>
+  </data>
+  <data name="BulkImportForm_ResultChannelsAllSkip" xml:space="preserve">
+    <value>・频道: 跳过 {0} 个（已注册或等待处理）</value>
+  </data>
+  <data name="BulkImportForm_ResultHeader" xml:space="preserve">
+    <value>处理完成
+
+</value>
+  </data>
+  <data name="BulkImportForm_ResultVideos" xml:space="preserve">
+    <value>・视频添加: {0} 个（重复跳过 {1} 个）
+</value>
+  </data>
   <data name="BulkImportForm_Title" xml:space="preserve">
     <value>批量URL导入</value>
   </data>
@@ -125,6 +150,14 @@
   </data>
   <data name="BulkImportForm_lblStats" xml:space="preserve">
     <value>检测到的URL：0个</value>
+  </data>
+  <data name="BulkImportForm_txtUrls_Placeholder" xml:space="preserve">
+    <value>https://www.iwara.tv/video/xxxxxx
+https://www.iwara.ai/video/yyyyyy
+https://www.iwara.tv/profile/username/videos</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>取消</value>
   </data>
   <data name="Common_Error" xml:space="preserve">
     <value>错误</value>
@@ -214,8 +247,44 @@
   <data name="DuplicateCheckForm_D023" xml:space="preserve">
     <value>删除确认</value>
   </data>
+  <data name="DuplicateCheckForm_D024" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="DuplicateCheckForm_D025" xml:space="preserve">
+    <value>频道数</value>
+  </data>
+  <data name="DuplicateCheckForm_D026" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="DuplicateCheckForm_D027" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="DuplicateCheckForm_StCompleted" xml:space="preserve">
+    <value>✓ 完成</value>
+  </data>
+  <data name="DuplicateCheckForm_StDownloading" xml:space="preserve">
+    <value>↓ 下载中</value>
+  </data>
+  <data name="DuplicateCheckForm_StFailed" xml:space="preserve">
+    <value>✗ 失败</value>
+  </data>
+  <data name="DuplicateCheckForm_StPending" xml:space="preserve">
+    <value>○ 等待</value>
+  </data>
+  <data name="DuplicateCheckForm_SumCompleted" xml:space="preserve">
+    <value>完成:{0}</value>
+  </data>
+  <data name="DuplicateCheckForm_SumFailed" xml:space="preserve">
+    <value>失败:{0}</value>
+  </data>
+  <data name="DuplicateCheckForm_SumPending" xml:space="preserve">
+    <value>等待:{0}</value>
+  </data>
   <data name="DuplicateCheckForm_Title" xml:space="preserve">
     <value>重复检查</value>
+  </data>
+  <data name="DuplicateCheckForm_UnknownChannel" xml:space="preserve">
+    <value>（未知）</value>
   </data>
   <data name="DuplicateCheckForm_btnClose" xml:space="preserve">
     <value>关闭</value>
@@ -255,6 +324,15 @@
   </data>
   <data name="FileMoveProgressForm_D006" xml:space="preserve">
     <value>确认</value>
+  </data>
+  <data name="FileMoveProgressForm_LogAborted" xml:space="preserve">
+    <value>[中止] 已被用户中止</value>
+  </data>
+  <data name="FileMoveProgressForm_LogError" xml:space="preserve">
+    <value>[错误] {0}</value>
+  </data>
+  <data name="FileMoveProgressForm_LogFailed" xml:space="preserve">
+    <value>[失败] {0}: {1}</value>
   </data>
   <data name="FileMoveProgressForm_Title" xml:space="preserve">
     <value>移动文件</value>
@@ -366,6 +444,15 @@
   <data name="ImportFromFolderWizard_D029" xml:space="preserve">
     <value>正在处理。中止并关闭吗？</value>
   </data>
+  <data name="ImportFromFolderWizard_D030" xml:space="preserve">
+    <value>导入完成</value>
+  </data>
+  <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
+    <value>{0} — {1} 个</value>
+  </data>
+  <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
+    <value>{0} — {1} 个  [已注册]</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>从文件夹导入</value>
   </data>
@@ -427,6 +514,22 @@
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>从文件夹导入</value>
+  </data>
+  <data name="MainForm_ConfirmDeleteMany" xml:space="preserve">
+    <value>删除 {0} 个视频吗？</value>
+  </data>
+  <data name="MainForm_ConfirmDeleteOne" xml:space="preserve">
+    <value>删除「{0}」吗？</value>
+  </data>
+  <data name="MainForm_ConfirmRedlMany" xml:space="preserve">
+    <value>将重新下载 {0} 个视频（共 {1}）。
+
+现有文件将被删除。继续吗？</value>
+  </data>
+  <data name="MainForm_ConfirmRedlOne" xml:space="preserve">
+    <value>将重新下载「{0}」。
+
+现有文件将被删除。继续吗？</value>
   </data>
   <data name="MainForm_D001" xml:space="preserve">
     <value>正在加载设置...</value>
@@ -966,6 +1069,131 @@
   <data name="MainForm_D167" xml:space="preserve">
     <value>高级搜索 ▾</value>
   </data>
+  <data name="MainForm_D168" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="MainForm_D169" xml:space="preserve">
+    <value>请输入 iwara 邮箱地址：</value>
+  </data>
+  <data name="MainForm_D170" xml:space="preserve">
+    <value>请输入密码：</value>
+  </data>
+  <data name="MainForm_D171" xml:space="preserve">
+    <value>添加频道</value>
+  </data>
+  <data name="MainForm_D172" xml:space="preserve">
+    <value>请输入用户名或个人资料URL：</value>
+  </data>
+  <data name="MainForm_D173" xml:space="preserve">
+    <value>添加视频</value>
+  </data>
+  <data name="MainForm_D174" xml:space="preserve">
+    <value>请输入视频URL：</value>
+  </data>
+  <data name="MainForm_D175" xml:space="preserve">
+    <value>{0} 完成</value>
+  </data>
+  <data name="MainForm_D176" xml:space="preserve">
+    <value>{0} 结束（部分失败）</value>
+  </data>
+  <data name="MainForm_D177" xml:space="preserve">
+    <value>📊 全部视频 [{0}/{1}]</value>
+  </data>
+  <data name="MainForm_D178" xml:space="preserve">
+    <value>⭐ 收藏 [{0}]</value>
+  </data>
+  <data name="MainForm_D179" xml:space="preserve">
+    <value>📥 下载队列</value>
+  </data>
+  <data name="MainForm_D180" xml:space="preserve">
+    <value>⏳ 未下载 [{0}]</value>
+  </data>
+  <data name="MainForm_D181" xml:space="preserve">
+    <value>✅ 已下载 [{0}]</value>
+  </data>
+  <data name="MainForm_D182" xml:space="preserve">
+    <value>⏭️ 已跳过 [{0}]</value>
+  </data>
+  <data name="MainForm_D183" xml:space="preserve">
+    <value>❌ 错误 [{0}]</value>
+  </data>
+  <data name="MainForm_D184" xml:space="preserve">
+    <value>📁 单个视频 [{0}]</value>
+  </data>
+  <data name="MainForm_D185" xml:space="preserve">
+    <value>🔍 搜索（标题/标签）...</value>
+  </data>
+  <data name="MainForm_D186" xml:space="preserve">
+    <value>🔍 搜索（标题/作者/标签）...</value>
+  </data>
+  <data name="MainForm_FreeSpace" xml:space="preserve">
+    <value>可用: {0} ({1})</value>
+  </data>
+  <data name="MainForm_LowSpaceWarn" xml:space="preserve">
+    <value>
+
+⚠ 部分驱动器可用空间不足。
+移动到这些驱动器将失败，文件将保留在原位置。</value>
+  </data>
+  <data name="MainForm_MoveTitle" xml:space="preserve">
+    <value>{0} 的保存位置</value>
+  </data>
+  <data name="MainForm_NoDownloadedInChannel" xml:space="preserve">
+    <value>「{0}」没有已下载的视频</value>
+  </data>
+  <data name="MainForm_NoDownloadedSelected" xml:space="preserve">
+    <value>未选择已下载的视频</value>
+  </data>
+  <data name="MainForm_ProgressDownloading" xml:space="preserve">
+    <value>下载中...</value>
+  </data>
+  <data name="MainForm_ProgressWritingTags" xml:space="preserve">
+    <value>写入标签中...</value>
+  </data>
+  <data name="MainForm_QueueDownloading" xml:space="preserve">
+    <value>{0} 下载中</value>
+  </data>
+  <data name="MainForm_QueuePending" xml:space="preserve">
+    <value>{0} 等待</value>
+  </data>
+  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
+    <value> | 队列: 下载中 {0} 个 平均{1}% / 等待 {2} 个</value>
+  </data>
+  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
+    <value> | 队列: 等待 {0} 个</value>
+  </data>
+  <data name="MainForm_QueueWritingTags" xml:space="preserve">
+    <value>{0} 写入标签</value>
+  </data>
+  <data name="MainForm_RelinkCopied" xml:space="preserve">
+    <value>
+
+其中 {0} 个在原位置仍有文件（属于复制）。
+重新链接后不会删除原文件，如不需要请手动删除。</value>
+  </data>
+  <data name="MainForm_RelinkHint" xml:space="preserve">
+    <value>
+
+提示：此功能应在「更改保存位置设置 → 用外部工具移动文件」后执行。
+如果尚未更改保存位置设置，请先更改（仅更改设置，不移动文件）。</value>
+  </data>
+  <data name="MainForm_RelinkMissing" xml:space="preserve">
+    <value>目标位置也找不到（链接断开）：{0} 个</value>
+  </data>
+  <data name="MainForm_RelinkNotMoved" xml:space="preserve">
+    <value>尚未移动（目标位置无同名文件）：{0} 个
+  → 请使用 [批量移动未迁移文件]，或用外部工具移动后重新执行</value>
+  </data>
+  <data name="MainForm_RelinkUnverified" xml:space="preserve">
+    <value>验证不一致（同名但大小/UUID 不符）：{0} 个
+  → 可能是复制中断或损坏。不重新链接</value>
+  </data>
+  <data name="MainForm_SourceExternal" xml:space="preserve">
+    <value>外部</value>
+  </data>
+  <data name="MainForm_SourceNico" xml:space="preserve">
+    <value>Niconico</value>
+  </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>＋频道</value>
   </data>
@@ -1043,6 +1271,15 @@
   </data>
   <data name="MainForm_chkFavOnly" xml:space="preserve">
     <value>★ 仅收藏</value>
+  </data>
+  <data name="MainForm_cmbNsfwFilter_Item0" xml:space="preserve">
+    <value>全部显示</value>
+  </data>
+  <data name="MainForm_cmbNsfwFilter_Item1" xml:space="preserve">
+    <value>仅 SFW</value>
+  </data>
+  <data name="MainForm_cmbNsfwFilter_Item2" xml:space="preserve">
+    <value>仅 NSFW</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
     <value>添加时间</value>
@@ -1200,6 +1437,15 @@
   <data name="MainForm_menuVidRetryFailed" xml:space="preserve">
     <value>重试失败项</value>
   </data>
+  <data name="MainForm_txtTagFilter_Placeholder" xml:space="preserve">
+    <value>按标签筛选（空格/逗号分隔，AND）</value>
+  </data>
+  <data name="MainForm_txtUrl_Placeholder" xml:space="preserve">
+    <value>输入URL或粘贴链接...</value>
+  </data>
+  <data name="MainForm_txtVideoFilter_Placeholder" xml:space="preserve">
+    <value>🔍 搜索（标题/作者/标签）...</value>
+  </data>
   <data name="Msg_AlreadyRunning" xml:space="preserve">
     <value>IwaraDownloader 已在运行。</value>
   </data>
@@ -1311,6 +1557,9 @@
   <data name="RenameResultForm_menuSkip" xml:space="preserve">
     <value>跳过</value>
   </data>
+  <data name="SearchImportForm_ConfirmImport" xml:space="preserve">
+    <value>将 {0} 个视频加入下载队列。继续吗？</value>
+  </data>
   <data name="SearchImportForm_D001" xml:space="preserve">
     <value>搜索站点已切换为 {0}。请重新搜索。</value>
   </data>
@@ -1344,6 +1593,9 @@
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>导入完成：新增 {0} 个 / 重新加入队列 {1} 个</value>
   </data>
+  <data name="SearchImportForm_Registered" xml:space="preserve">
+    <value>[已注册] {0}</value>
+  </data>
   <data name="SearchImportForm_Title" xml:space="preserve">
     <value>iwara 搜索导入</value>
   </data>
@@ -1371,8 +1623,23 @@
   <data name="SearchImportForm_btnSelectNone" xml:space="preserve">
     <value>取消选择</value>
   </data>
+  <data name="SearchImportForm_colAuthor" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="SearchImportForm_colDate" xml:space="preserve">
+    <value>发布日期</value>
+  </data>
+  <data name="SearchImportForm_colDuration" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="SearchImportForm_colTitle" xml:space="preserve">
+    <value>标题</value>
+  </data>
   <data name="SearchImportForm_lblStatus" xml:space="preserve">
     <value>输入关键词后点击「搜索」</value>
+  </data>
+  <data name="SearchImportForm_txtQuery_Placeholder" xml:space="preserve">
+    <value>搜索关键词（Enter 搜索）</value>
   </data>
   <data name="SettingsForm_D001" xml:space="preserve">
     <value>当前: {0}</value>
@@ -1681,6 +1948,30 @@
     <value>服务器操作失败：
 {0}</value>
   </data>
+  <data name="SettingsForm_D088" xml:space="preserve">
+    <value>选择 Python 可执行文件</value>
+  </data>
+  <data name="SettingsForm_D089" xml:space="preserve">
+    <value>选择 yt-dlp 可执行文件</value>
+  </data>
+  <data name="SettingsForm_D090" xml:space="preserve">
+    <value>导出设置</value>
+  </data>
+  <data name="SettingsForm_D091" xml:space="preserve">
+    <value>导出订阅列表</value>
+  </data>
+  <data name="SettingsForm_D092" xml:space="preserve">
+    <value>导入设置</value>
+  </data>
+  <data name="SettingsForm_D093" xml:space="preserve">
+    <value>导入订阅列表</value>
+  </data>
+  <data name="SettingsForm_D094" xml:space="preserve">
+    <value>选择音频文件</value>
+  </data>
+  <data name="SettingsForm_D095" xml:space="preserve">
+    <value>选择错误提示音文件</value>
+  </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>设置</value>
   </data>
@@ -1794,6 +2085,33 @@
   </data>
   <data name="SettingsForm_chkWebServerAutoStart" xml:space="preserve">
     <value>启动时自动开启</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item0" xml:space="preserve">
+    <value>30分钟</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item1" xml:space="preserve">
+    <value>1小时</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item2" xml:space="preserve">
+    <value>2小时</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item3" xml:space="preserve">
+    <value>6小时</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item4" xml:space="preserve">
+    <value>12小时</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item5" xml:space="preserve">
+    <value>1天</value>
+  </data>
+  <data name="SettingsForm_cmbQuality_Item0" xml:space="preserve">
+    <value>Source（最高画质）</value>
+  </data>
+  <data name="SettingsForm_cmbThumbLocation_Item0" xml:space="preserve">
+    <value>应用设置文件夹 (AppData\Roaming)</value>
+  </data>
+  <data name="SettingsForm_cmbThumbLocation_Item1" xml:space="preserve">
+    <value>视频保存文件夹 (下载目录\thumbs)</value>
   </data>
   <data name="SettingsForm_grpAccount" xml:space="preserve">
     <value>iwara 账号</value>
@@ -1993,6 +2311,12 @@
   <data name="SettingsForm_tabOther" xml:space="preserve">
     <value>其他</value>
   </data>
+  <data name="SettingsForm_txtErrorSoundFile_Placeholder" xml:space="preserve">
+    <value>留空则使用系统提示音</value>
+  </data>
+  <data name="SettingsForm_txtSoundFile_Placeholder" xml:space="preserve">
+    <value>留空则使用系统提示音</value>
+  </data>
   <data name="Settings_LanguageAuto" xml:space="preserve">
     <value>自动（跟随系统）</value>
   </data>
@@ -2060,6 +2384,9 @@
   </data>
   <data name="SetupWizardForm_D020" xml:space="preserve">
     <value>设置正在运行。关闭将中止设置。继续吗？</value>
+  </data>
+  <data name="SetupWizardForm_D021" xml:space="preserve">
+    <value>选择 python.exe</value>
   </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader 设置向导</value>
@@ -2149,6 +2476,147 @@
   </data>
   <data name="StatisticsForm_D009" xml:space="preserve">
     <value>已禁用</value>
+  </data>
+  <data name="StatisticsForm_D010" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="StatisticsForm_D011" xml:space="preserve">
+    <value>视频总数</value>
+  </data>
+  <data name="StatisticsForm_D012" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="StatisticsForm_D013" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="StatisticsForm_D014" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="StatisticsForm_D015" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="StatisticsForm_D016" xml:space="preserve">
+    <value>下载数</value>
+  </data>
+  <data name="StatisticsForm_D017" xml:space="preserve">
+    <value>错误类型</value>
+  </data>
+  <data name="StatisticsForm_D018" xml:space="preserve">
+    <value>数量</value>
+  </data>
+  <data name="StatisticsForm_D019" xml:space="preserve">
+    <value>比例</value>
+  </data>
+  <data name="StatisticsForm_D020" xml:space="preserve">
+    <value>代表消息</value>
+  </data>
+  <data name="StatisticsForm_D021" xml:space="preserve">
+    <value>重试次数</value>
+  </data>
+  <data name="StatisticsForm_D022" xml:space="preserve">
+    <value>失败视频数</value>
+  </data>
+  <data name="StatisticsForm_D023" xml:space="preserve">
+    <value>年月</value>
+  </data>
+  <data name="StatisticsForm_D024" xml:space="preserve">
+    <value>累计下载数</value>
+  </data>
+  <data name="StatisticsForm_D025" xml:space="preserve">
+    <value>累计大小</value>
+  </data>
+  <data name="StatisticsForm_D026" xml:space="preserve">
+    <value>大小区间</value>
+  </data>
+  <data name="StatisticsForm_D027" xml:space="preserve">
+    <value>视频数</value>
+  </data>
+  <data name="StatisticsForm_D028" xml:space="preserve">
+    <value>总大小</value>
+  </data>
+  <data name="StatisticsForm_D029" xml:space="preserve">
+    <value>时长区间</value>
+  </data>
+  <data name="StatisticsForm_D030" xml:space="preserve">
+    <value>总时长</value>
+  </data>
+  <data name="StatisticsForm_D031" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="StatisticsForm_D032" xml:space="preserve">
+    <value>站点</value>
+  </data>
+  <data name="StatisticsForm_D033" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="StatisticsForm_D034" xml:space="preserve">
+    <value>导出统计</value>
+  </data>
+  <data name="StatisticsForm_Dur1" xml:space="preserve">
+    <value>～1分钟</value>
+  </data>
+  <data name="StatisticsForm_Dur2" xml:space="preserve">
+    <value>1-5分钟</value>
+  </data>
+  <data name="StatisticsForm_Dur3" xml:space="preserve">
+    <value>5-10分钟</value>
+  </data>
+  <data name="StatisticsForm_Dur4" xml:space="preserve">
+    <value>10-30分钟</value>
+  </data>
+  <data name="StatisticsForm_Dur5" xml:space="preserve">
+    <value>30分钟～</value>
+  </data>
+  <data name="StatisticsForm_ErrAuth" xml:space="preserve">
+    <value>认证错误 (401)</value>
+  </data>
+  <data name="StatisticsForm_ErrCdn" xml:space="preserve">
+    <value>CDN 不可用</value>
+  </data>
+  <data name="StatisticsForm_ErrDisk" xml:space="preserve">
+    <value>磁盘空间不足</value>
+  </data>
+  <data name="StatisticsForm_ErrExternalSkip" xml:space="preserve">
+    <value>外部视频跳过</value>
+  </data>
+  <data name="StatisticsForm_ErrFileIo" xml:space="preserve">
+    <value>文件 I/O</value>
+  </data>
+  <data name="StatisticsForm_ErrForbidden" xml:space="preserve">
+    <value>仅好友/拒绝 (403)</value>
+  </data>
+  <data name="StatisticsForm_ErrNetwork" xml:space="preserve">
+    <value>网络</value>
+  </data>
+  <data name="StatisticsForm_ErrNotFound" xml:space="preserve">
+    <value>视频删除/私密 (404)</value>
+  </data>
+  <data name="StatisticsForm_ErrOther" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="StatisticsForm_ErrRateLimit" xml:space="preserve">
+    <value>速率限制 (429)</value>
+  </data>
+  <data name="StatisticsForm_ErrTimeout" xml:space="preserve">
+    <value>超时</value>
+  </data>
+  <data name="StatisticsForm_HoursMinutes" xml:space="preserve">
+    <value>{0}小时{1}分</value>
+  </data>
+  <data name="StatisticsForm_MinutesSeconds" xml:space="preserve">
+    <value>{0}分{1}秒</value>
+  </data>
+  <data name="StatisticsForm_RatingNone" xml:space="preserve">
+    <value>未获取</value>
+  </data>
+  <data name="StatisticsForm_RetryN" xml:space="preserve">
+    <value>{0}次</value>
+  </data>
+  <data name="StatisticsForm_RetryZero" xml:space="preserve">
+    <value>0次（首次失败）</value>
+  </data>
+  <data name="StatisticsForm_SiteLegacy" xml:space="preserve">
+    <value>www.iwara.tv（旧）</value>
   </data>
   <data name="StatisticsForm_Title" xml:space="preserve">
     <value>统计仪表板</value>

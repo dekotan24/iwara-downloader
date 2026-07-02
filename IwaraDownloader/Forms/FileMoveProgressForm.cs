@@ -41,11 +41,11 @@ namespace IwaraDownloader.Forms
             }
             catch (OperationCanceledException)
             {
-                AppendCurrent("[中止] ユーザー操作で中止されました");
+                AppendCurrent(L.T("FileMoveProgressForm_LogAborted"));
             }
             catch (Exception ex)
             {
-                AppendCurrent($"[エラー] {ex.Message}");
+                AppendCurrent(L.T("FileMoveProgressForm_LogError", ex.Message));
             }
             finally
             {
@@ -127,7 +127,7 @@ namespace IwaraDownloader.Forms
                         // RecordDone は書かない: 移動済みなのに DB 更新で失敗したケースを
                         // 次回起動時のジャーナル復旧で拾えるようにするため
                         FailedCount++;
-                        AppendCurrent($"[失敗] {Path.GetFileName(oldPath)}: {ex.Message}");
+                        AppendCurrent(L.T("FileMoveProgressForm_LogFailed", Path.GetFileName(oldPath), ex.Message));
                         LoggingService.Instance.Warn($"ファイル移動失敗: {oldPath} -> {newPath}: {ex.Message}");
                     }
 

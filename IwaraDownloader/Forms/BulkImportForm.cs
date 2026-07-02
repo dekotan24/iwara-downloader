@@ -57,7 +57,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "URLリストファイルを開く",
+                Title = L.T("BulkImportForm_D014"),
                 Filter = L.T("BulkImportForm_D001")
             };
 
@@ -215,7 +215,7 @@ namespace IwaraDownloader.Forms
                                 ImportedVideos.Add(new VideoInfo
                                 {
                                     VideoId = v.Id,
-                                    Title = $"[未取得] {v.Id}",
+                                    Title = L.T("BulkImportForm_D015", v.Id),
                                     Url = v.Url,
                                     Site = v.Site,
                                     Status = DownloadStatus.Pending,
@@ -246,10 +246,11 @@ namespace IwaraDownloader.Forms
 
                 // 結果表示
                 var channelMsg = addedChannels > 0
-                    ? $"・チャンネル キュー登録: {addedChannels}件{(channelFailed > 0 ? $" / スキップ {channelFailed}件" : "")}\n  (動画一覧取得はバックグラウンドで順次実行されます)"
-                    : channelFailed > 0 ? $"・チャンネル: {channelFailed}件スキップ (登録済みまたは処理待ち)" : "";
-                var message = "処理完了\n\n" +
-                    $"・動画 追加: {ImportedVideos.Count}件 (重複スキップ {DuplicateCount}件)\n" +
+                    ? L.T("BulkImportForm_ResultChannels", addedChannels,
+                        channelFailed > 0 ? L.T("BulkImportForm_ResultChannelSkip", channelFailed) : "")
+                    : channelFailed > 0 ? L.T("BulkImportForm_ResultChannelsAllSkip", channelFailed) : "";
+                var message = L.T("BulkImportForm_ResultHeader") +
+                    L.T("BulkImportForm_ResultVideos", ImportedVideos.Count, DuplicateCount) +
                     (channelMsg.Length > 0 ? channelMsg : "");
 
                 MessageBox.Show(message, L.T("BulkImportForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Information);

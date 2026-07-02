@@ -98,6 +98,31 @@ Log in from the settings screen.</value>
   <data name="BulkImportForm_D013" xml:space="preserve">
     <value>Import</value>
   </data>
+  <data name="BulkImportForm_D014" xml:space="preserve">
+    <value>Open URL list file</value>
+  </data>
+  <data name="BulkImportForm_D015" xml:space="preserve">
+    <value>[Not fetched] {0}</value>
+  </data>
+  <data name="BulkImportForm_ResultChannelSkip" xml:space="preserve">
+    <value> / {0} skipped</value>
+  </data>
+  <data name="BulkImportForm_ResultChannels" xml:space="preserve">
+    <value>- Channels queued: {0}{1}
+  (video lists are fetched in the background)</value>
+  </data>
+  <data name="BulkImportForm_ResultChannelsAllSkip" xml:space="preserve">
+    <value>- Channels: {0} skipped (already registered or queued)</value>
+  </data>
+  <data name="BulkImportForm_ResultHeader" xml:space="preserve">
+    <value>Done
+
+</value>
+  </data>
+  <data name="BulkImportForm_ResultVideos" xml:space="preserve">
+    <value>- Videos added: {0} ({1} duplicates skipped)
+</value>
+  </data>
   <data name="BulkImportForm_Title" xml:space="preserve">
     <value>Bulk URL Import</value>
   </data>
@@ -125,6 +150,14 @@ Log in from the settings screen.</value>
   </data>
   <data name="BulkImportForm_lblStats" xml:space="preserve">
     <value>URLs detected: 0</value>
+  </data>
+  <data name="BulkImportForm_txtUrls_Placeholder" xml:space="preserve">
+    <value>https://www.iwara.tv/video/xxxxxx
+https://www.iwara.ai/video/yyyyyy
+https://www.iwara.tv/profile/username/videos</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
   </data>
   <data name="Common_Error" xml:space="preserve">
     <value>Error</value>
@@ -214,8 +247,44 @@ Log in from the settings screen.</value>
   <data name="DuplicateCheckForm_D023" xml:space="preserve">
     <value>Confirm deletion</value>
   </data>
+  <data name="DuplicateCheckForm_D024" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="DuplicateCheckForm_D025" xml:space="preserve">
+    <value>Channels</value>
+  </data>
+  <data name="DuplicateCheckForm_D026" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="DuplicateCheckForm_D027" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="DuplicateCheckForm_StCompleted" xml:space="preserve">
+    <value>✓ Completed</value>
+  </data>
+  <data name="DuplicateCheckForm_StDownloading" xml:space="preserve">
+    <value>↓ Downloading</value>
+  </data>
+  <data name="DuplicateCheckForm_StFailed" xml:space="preserve">
+    <value>✗ Failed</value>
+  </data>
+  <data name="DuplicateCheckForm_StPending" xml:space="preserve">
+    <value>○ Pending</value>
+  </data>
+  <data name="DuplicateCheckForm_SumCompleted" xml:space="preserve">
+    <value>Completed: {0}</value>
+  </data>
+  <data name="DuplicateCheckForm_SumFailed" xml:space="preserve">
+    <value>Failed: {0}</value>
+  </data>
+  <data name="DuplicateCheckForm_SumPending" xml:space="preserve">
+    <value>Pending: {0}</value>
+  </data>
   <data name="DuplicateCheckForm_Title" xml:space="preserve">
     <value>Duplicate Check</value>
+  </data>
+  <data name="DuplicateCheckForm_UnknownChannel" xml:space="preserve">
+    <value>(unknown)</value>
   </data>
   <data name="DuplicateCheckForm_btnClose" xml:space="preserve">
     <value>Close</value>
@@ -255,6 +324,15 @@ Log in from the settings screen.</value>
   </data>
   <data name="FileMoveProgressForm_D006" xml:space="preserve">
     <value>Confirm</value>
+  </data>
+  <data name="FileMoveProgressForm_LogAborted" xml:space="preserve">
+    <value>[Aborted] Cancelled by user</value>
+  </data>
+  <data name="FileMoveProgressForm_LogError" xml:space="preserve">
+    <value>[Error] {0}</value>
+  </data>
+  <data name="FileMoveProgressForm_LogFailed" xml:space="preserve">
+    <value>[Failed] {0}: {1}</value>
   </data>
   <data name="FileMoveProgressForm_Title" xml:space="preserve">
     <value>Moving Files</value>
@@ -366,6 +444,15 @@ Error log:
   <data name="ImportFromFolderWizard_D029" xml:space="preserve">
     <value>Processing. Abort and close?</value>
   </data>
+  <data name="ImportFromFolderWizard_D030" xml:space="preserve">
+    <value>Import complete</value>
+  </data>
+  <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
+    <value>{0} — {1} videos</value>
+  </data>
+  <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
+    <value>{0} — {1} videos  [already registered]</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>Import from Folder</value>
   </data>
@@ -427,6 +514,22 @@ Error log:
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>Import from Folder</value>
+  </data>
+  <data name="MainForm_ConfirmDeleteMany" xml:space="preserve">
+    <value>Delete {0} videos?</value>
+  </data>
+  <data name="MainForm_ConfirmDeleteOne" xml:space="preserve">
+    <value>Delete "{0}"?</value>
+  </data>
+  <data name="MainForm_ConfirmRedlMany" xml:space="preserve">
+    <value>{0} videos will be re-downloaded (total {1}).
+
+Existing files will be deleted. Continue?</value>
+  </data>
+  <data name="MainForm_ConfirmRedlOne" xml:space="preserve">
+    <value>"{0}" will be re-downloaded.
+
+The existing file will be deleted. Continue?</value>
   </data>
   <data name="MainForm_D001" xml:space="preserve">
     <value>Loading settings...</value>
@@ -966,6 +1069,131 @@ Author: {1}</value>
   <data name="MainForm_D167" xml:space="preserve">
     <value>Advanced ▾</value>
   </data>
+  <data name="MainForm_D168" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="MainForm_D169" xml:space="preserve">
+    <value>Enter your iwara email address:</value>
+  </data>
+  <data name="MainForm_D170" xml:space="preserve">
+    <value>Enter your password:</value>
+  </data>
+  <data name="MainForm_D171" xml:space="preserve">
+    <value>Add channel</value>
+  </data>
+  <data name="MainForm_D172" xml:space="preserve">
+    <value>Enter a username or profile URL:</value>
+  </data>
+  <data name="MainForm_D173" xml:space="preserve">
+    <value>Add video</value>
+  </data>
+  <data name="MainForm_D174" xml:space="preserve">
+    <value>Enter a video URL:</value>
+  </data>
+  <data name="MainForm_D175" xml:space="preserve">
+    <value>{0} finished</value>
+  </data>
+  <data name="MainForm_D176" xml:space="preserve">
+    <value>{0} finished (some failed)</value>
+  </data>
+  <data name="MainForm_D177" xml:space="preserve">
+    <value>📊 All videos [{0}/{1}]</value>
+  </data>
+  <data name="MainForm_D178" xml:space="preserve">
+    <value>⭐ Favorites [{0}]</value>
+  </data>
+  <data name="MainForm_D179" xml:space="preserve">
+    <value>📥 Download queue</value>
+  </data>
+  <data name="MainForm_D180" xml:space="preserve">
+    <value>⏳ Not downloaded [{0}]</value>
+  </data>
+  <data name="MainForm_D181" xml:space="preserve">
+    <value>✅ Downloaded [{0}]</value>
+  </data>
+  <data name="MainForm_D182" xml:space="preserve">
+    <value>⏭️ Skipped [{0}]</value>
+  </data>
+  <data name="MainForm_D183" xml:space="preserve">
+    <value>❌ Errors [{0}]</value>
+  </data>
+  <data name="MainForm_D184" xml:space="preserve">
+    <value>📁 Standalone [{0}]</value>
+  </data>
+  <data name="MainForm_D185" xml:space="preserve">
+    <value>🔍 Search (title/tags)...</value>
+  </data>
+  <data name="MainForm_D186" xml:space="preserve">
+    <value>🔍 Search (title/artist/tags)...</value>
+  </data>
+  <data name="MainForm_FreeSpace" xml:space="preserve">
+    <value>Free: {0} ({1})</value>
+  </data>
+  <data name="MainForm_LowSpaceWarn" xml:space="preserve">
+    <value>
+
+! Some drives are low on free space.
+Moves to those drives will fail and files will remain in place.</value>
+  </data>
+  <data name="MainForm_MoveTitle" xml:space="preserve">
+    <value>Save folder for {0}</value>
+  </data>
+  <data name="MainForm_NoDownloadedInChannel" xml:space="preserve">
+    <value>"{0}" has no downloaded videos</value>
+  </data>
+  <data name="MainForm_NoDownloadedSelected" xml:space="preserve">
+    <value>No downloaded videos selected</value>
+  </data>
+  <data name="MainForm_ProgressDownloading" xml:space="preserve">
+    <value>Downloading...</value>
+  </data>
+  <data name="MainForm_ProgressWritingTags" xml:space="preserve">
+    <value>Writing tags...</value>
+  </data>
+  <data name="MainForm_QueueDownloading" xml:space="preserve">
+    <value>{0} downloading</value>
+  </data>
+  <data name="MainForm_QueuePending" xml:space="preserve">
+    <value>{0} pending</value>
+  </data>
+  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
+    <value> | Queue: {0} downloading avg {1}% / {2} pending</value>
+  </data>
+  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
+    <value> | Queue: {0} pending</value>
+  </data>
+  <data name="MainForm_QueueWritingTags" xml:space="preserve">
+    <value>{0} writing tags</value>
+  </data>
+  <data name="MainForm_RelinkCopied" xml:space="preserve">
+    <value>
+
+{0} of them still exist at the original location (copies).
+Original files are not deleted after relinking; remove them manually if unneeded.</value>
+  </data>
+  <data name="MainForm_RelinkHint" xml:space="preserve">
+    <value>
+
+Hint: run this after "change save folder setting -&gt; move files with an external tool".
+If the save folder setting has not been changed yet, change it first (settings only, without moving files).</value>
+  </data>
+  <data name="MainForm_RelinkMissing" xml:space="preserve">
+    <value>Not found at destination either (broken link): {0}</value>
+  </data>
+  <data name="MainForm_RelinkNotMoved" xml:space="preserve">
+    <value>Not yet moved (no file with the same name at destination): {0}
+  -&gt; Use [Move Unrelocated Files], or move with an external tool and run again</value>
+  </data>
+  <data name="MainForm_RelinkUnverified" xml:space="preserve">
+    <value>Verification mismatch (same name but size/UUID differ): {0}
+  -&gt; Possibly a partial or corrupt copy. Not relinked</value>
+  </data>
+  <data name="MainForm_SourceExternal" xml:space="preserve">
+    <value>External</value>
+  </data>
+  <data name="MainForm_SourceNico" xml:space="preserve">
+    <value>Niconico</value>
+  </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>+ Channel</value>
   </data>
@@ -1043,6 +1271,15 @@ Author: {1}</value>
   </data>
   <data name="MainForm_chkFavOnly" xml:space="preserve">
     <value>★ Favorites only</value>
+  </data>
+  <data name="MainForm_cmbNsfwFilter_Item0" xml:space="preserve">
+    <value>Show all</value>
+  </data>
+  <data name="MainForm_cmbNsfwFilter_Item1" xml:space="preserve">
+    <value>SFW only</value>
+  </data>
+  <data name="MainForm_cmbNsfwFilter_Item2" xml:space="preserve">
+    <value>NSFW only</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
     <value>Added</value>
@@ -1200,6 +1437,15 @@ Author: {1}</value>
   <data name="MainForm_menuVidRetryFailed" xml:space="preserve">
     <value>Retry Failed</value>
   </data>
+  <data name="MainForm_txtTagFilter_Placeholder" xml:space="preserve">
+    <value>Filter by tags (space/comma separated, AND)</value>
+  </data>
+  <data name="MainForm_txtUrl_Placeholder" xml:space="preserve">
+    <value>Enter a URL or paste a link...</value>
+  </data>
+  <data name="MainForm_txtVideoFilter_Placeholder" xml:space="preserve">
+    <value>🔍 Search (title/artist/tags)...</value>
+  </data>
   <data name="Msg_AlreadyRunning" xml:space="preserve">
     <value>IwaraDownloader is already running.</value>
   </data>
@@ -1311,6 +1557,9 @@ Existing files will be deleted. Continue?</value>
   <data name="RenameResultForm_menuSkip" xml:space="preserve">
     <value>Skip</value>
   </data>
+  <data name="SearchImportForm_ConfirmImport" xml:space="preserve">
+    <value>Add {0} videos to the download queue. Continue?</value>
+  </data>
   <data name="SearchImportForm_D001" xml:space="preserve">
     <value>Search site switched to {0}. Search again.</value>
   </data>
@@ -1344,6 +1593,9 @@ Existing files will be deleted. Continue?</value>
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>Import complete: {0} new / {1} re-queued</value>
   </data>
+  <data name="SearchImportForm_Registered" xml:space="preserve">
+    <value>[Registered] {0}</value>
+  </data>
   <data name="SearchImportForm_Title" xml:space="preserve">
     <value>iwara Search Import</value>
   </data>
@@ -1371,8 +1623,23 @@ Existing files will be deleted. Continue?</value>
   <data name="SearchImportForm_btnSelectNone" xml:space="preserve">
     <value>Deselect</value>
   </data>
+  <data name="SearchImportForm_colAuthor" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="SearchImportForm_colDate" xml:space="preserve">
+    <value>Posted</value>
+  </data>
+  <data name="SearchImportForm_colDuration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="SearchImportForm_colTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
   <data name="SearchImportForm_lblStatus" xml:space="preserve">
     <value>Enter keywords and click "Search"</value>
+  </data>
+  <data name="SearchImportForm_txtQuery_Placeholder" xml:space="preserve">
+    <value>Search keywords (Enter to search)</value>
   </data>
   <data name="SettingsForm_D001" xml:space="preserve">
     <value>Current: {0}</value>
@@ -1681,6 +1948,30 @@ Current: {0}</value>
     <value>Server operation failed:
 {0}</value>
   </data>
+  <data name="SettingsForm_D088" xml:space="preserve">
+    <value>Select the Python executable</value>
+  </data>
+  <data name="SettingsForm_D089" xml:space="preserve">
+    <value>Select the yt-dlp executable</value>
+  </data>
+  <data name="SettingsForm_D090" xml:space="preserve">
+    <value>Export settings</value>
+  </data>
+  <data name="SettingsForm_D091" xml:space="preserve">
+    <value>Export subscriptions</value>
+  </data>
+  <data name="SettingsForm_D092" xml:space="preserve">
+    <value>Import settings</value>
+  </data>
+  <data name="SettingsForm_D093" xml:space="preserve">
+    <value>Import subscriptions</value>
+  </data>
+  <data name="SettingsForm_D094" xml:space="preserve">
+    <value>Select a sound file</value>
+  </data>
+  <data name="SettingsForm_D095" xml:space="preserve">
+    <value>Select an error sound file</value>
+  </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>Settings</value>
   </data>
@@ -1794,6 +2085,33 @@ Current: {0}</value>
   </data>
   <data name="SettingsForm_chkWebServerAutoStart" xml:space="preserve">
     <value>Start automatically on launch</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item0" xml:space="preserve">
+    <value>30 min</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item1" xml:space="preserve">
+    <value>1 hour</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item2" xml:space="preserve">
+    <value>2 hours</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item3" xml:space="preserve">
+    <value>6 hours</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item4" xml:space="preserve">
+    <value>12 hours</value>
+  </data>
+  <data name="SettingsForm_cmbCheckInterval_Item5" xml:space="preserve">
+    <value>1 day</value>
+  </data>
+  <data name="SettingsForm_cmbQuality_Item0" xml:space="preserve">
+    <value>Source (best quality)</value>
+  </data>
+  <data name="SettingsForm_cmbThumbLocation_Item0" xml:space="preserve">
+    <value>App settings folder (AppData\Roaming)</value>
+  </data>
+  <data name="SettingsForm_cmbThumbLocation_Item1" xml:space="preserve">
+    <value>Video save folder (DL folder\thumbs)</value>
   </data>
   <data name="SettingsForm_grpAccount" xml:space="preserve">
     <value>iwara account</value>
@@ -1993,6 +2311,12 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SettingsForm_tabOther" xml:space="preserve">
     <value>Other</value>
   </data>
+  <data name="SettingsForm_txtErrorSoundFile_Placeholder" xml:space="preserve">
+    <value>System sound if empty</value>
+  </data>
+  <data name="SettingsForm_txtSoundFile_Placeholder" xml:space="preserve">
+    <value>System sound if empty</value>
+  </data>
   <data name="Settings_LanguageAuto" xml:space="preserve">
     <value>Auto (follow OS)</value>
   </data>
@@ -2060,6 +2384,9 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="SetupWizardForm_D020" xml:space="preserve">
     <value>Setup is running. Closing will abort it. Continue?</value>
+  </data>
+  <data name="SetupWizardForm_D021" xml:space="preserve">
+    <value>Select python.exe</value>
   </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader Setup</value>
@@ -2149,6 +2476,147 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="StatisticsForm_D009" xml:space="preserve">
     <value>Disabled</value>
+  </data>
+  <data name="StatisticsForm_D010" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="StatisticsForm_D011" xml:space="preserve">
+    <value>Total videos</value>
+  </data>
+  <data name="StatisticsForm_D012" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="StatisticsForm_D013" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="StatisticsForm_D014" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="StatisticsForm_D015" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="StatisticsForm_D016" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="StatisticsForm_D017" xml:space="preserve">
+    <value>Error type</value>
+  </data>
+  <data name="StatisticsForm_D018" xml:space="preserve">
+    <value>Count</value>
+  </data>
+  <data name="StatisticsForm_D019" xml:space="preserve">
+    <value>Ratio</value>
+  </data>
+  <data name="StatisticsForm_D020" xml:space="preserve">
+    <value>Sample message</value>
+  </data>
+  <data name="StatisticsForm_D021" xml:space="preserve">
+    <value>Retries</value>
+  </data>
+  <data name="StatisticsForm_D022" xml:space="preserve">
+    <value>Failed videos</value>
+  </data>
+  <data name="StatisticsForm_D023" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="StatisticsForm_D024" xml:space="preserve">
+    <value>Cumulative DLs</value>
+  </data>
+  <data name="StatisticsForm_D025" xml:space="preserve">
+    <value>Cumulative size</value>
+  </data>
+  <data name="StatisticsForm_D026" xml:space="preserve">
+    <value>Size range</value>
+  </data>
+  <data name="StatisticsForm_D027" xml:space="preserve">
+    <value>Videos</value>
+  </data>
+  <data name="StatisticsForm_D028" xml:space="preserve">
+    <value>Total size</value>
+  </data>
+  <data name="StatisticsForm_D029" xml:space="preserve">
+    <value>Duration range</value>
+  </data>
+  <data name="StatisticsForm_D030" xml:space="preserve">
+    <value>Total duration</value>
+  </data>
+  <data name="StatisticsForm_D031" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="StatisticsForm_D032" xml:space="preserve">
+    <value>Site</value>
+  </data>
+  <data name="StatisticsForm_D033" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="StatisticsForm_D034" xml:space="preserve">
+    <value>Export statistics</value>
+  </data>
+  <data name="StatisticsForm_Dur1" xml:space="preserve">
+    <value>&lt;1 min</value>
+  </data>
+  <data name="StatisticsForm_Dur2" xml:space="preserve">
+    <value>1-5 min</value>
+  </data>
+  <data name="StatisticsForm_Dur3" xml:space="preserve">
+    <value>5-10 min</value>
+  </data>
+  <data name="StatisticsForm_Dur4" xml:space="preserve">
+    <value>10-30 min</value>
+  </data>
+  <data name="StatisticsForm_Dur5" xml:space="preserve">
+    <value>30+ min</value>
+  </data>
+  <data name="StatisticsForm_ErrAuth" xml:space="preserve">
+    <value>Auth error (401)</value>
+  </data>
+  <data name="StatisticsForm_ErrCdn" xml:space="preserve">
+    <value>CDN unavailable</value>
+  </data>
+  <data name="StatisticsForm_ErrDisk" xml:space="preserve">
+    <value>Out of disk space</value>
+  </data>
+  <data name="StatisticsForm_ErrExternalSkip" xml:space="preserve">
+    <value>External video skipped</value>
+  </data>
+  <data name="StatisticsForm_ErrFileIo" xml:space="preserve">
+    <value>File I/O</value>
+  </data>
+  <data name="StatisticsForm_ErrForbidden" xml:space="preserve">
+    <value>Friends-only/denied (403)</value>
+  </data>
+  <data name="StatisticsForm_ErrNetwork" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="StatisticsForm_ErrNotFound" xml:space="preserve">
+    <value>Deleted/private (404)</value>
+  </data>
+  <data name="StatisticsForm_ErrOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="StatisticsForm_ErrRateLimit" xml:space="preserve">
+    <value>Rate limited (429)</value>
+  </data>
+  <data name="StatisticsForm_ErrTimeout" xml:space="preserve">
+    <value>Timeout</value>
+  </data>
+  <data name="StatisticsForm_HoursMinutes" xml:space="preserve">
+    <value>{0}h {1}m</value>
+  </data>
+  <data name="StatisticsForm_MinutesSeconds" xml:space="preserve">
+    <value>{0}m {1}s</value>
+  </data>
+  <data name="StatisticsForm_RatingNone" xml:space="preserve">
+    <value>Not fetched</value>
+  </data>
+  <data name="StatisticsForm_RetryN" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="StatisticsForm_RetryZero" xml:space="preserve">
+    <value>0 (first attempt)</value>
+  </data>
+  <data name="StatisticsForm_SiteLegacy" xml:space="preserve">
+    <value>www.iwara.tv (legacy)</value>
   </data>
   <data name="StatisticsForm_Title" xml:space="preserve">
     <value>Statistics Dashboard</value>

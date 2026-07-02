@@ -230,7 +230,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "Python実行ファイルを選択",
+                Title = L.T("SettingsForm_D088"),
                 Filter = L.T("SettingsForm_D003"),
                 FileName = "python.exe"
             };
@@ -264,7 +264,7 @@ namespace IwaraDownloader.Forms
             using var dialog = new OpenFileDialog
             {
                 Filter = L.T("SettingsForm_D004"),
-                Title = "yt-dlpの実行ファイルを選択"
+                Title = L.T("SettingsForm_D089")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -438,7 +438,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new SaveFileDialog
             {
-                Title = "設定をエクスポート",
+                Title = L.T("SettingsForm_D090"),
                 Filter = L.T("SettingsForm_D026"),
                 FileName = "iwara_settings.json"
             };
@@ -462,7 +462,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new SaveFileDialog
             {
-                Title = "購読リストをエクスポート",
+                Title = L.T("SettingsForm_D091"),
                 Filter = L.T("SettingsForm_D026"),
                 FileName = "iwara_subscriptions.json"
             };
@@ -486,7 +486,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "設定をインポート",
+                Title = L.T("SettingsForm_D092"),
                 Filter = L.T("SettingsForm_D026")
             };
 
@@ -510,7 +510,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "購読リストをインポート",
+                Title = L.T("SettingsForm_D093"),
                 Filter = L.T("SettingsForm_D026")
             };
 
@@ -614,7 +614,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "音声ファイルを選択",
+                Title = L.T("SettingsForm_D094"),
                 Filter = L.T("SettingsForm_D052")
             };
 
@@ -647,7 +647,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "エラー音声ファイルを選択",
+                Title = L.T("SettingsForm_D095"),
                 Filter = L.T("SettingsForm_D052")
             };
 
