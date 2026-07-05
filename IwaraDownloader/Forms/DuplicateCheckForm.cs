@@ -192,6 +192,10 @@ namespace IwaraDownloader.Forms
 
             if (idsToRemove.Count > 0)
             {
+                // 重複解消は「除外(ゴミ箱)」ではなく生削除が正しい。
+                // 同一 VideoId の冗長行を消すだけで、残す行が VideoExists=true を保つため
+                // 自動取得で復活しない (再取得バグは無関係)。ExcludeVideos に通すと逆に
+                // 残す行と同じ VideoId が除外表にも入り不変条件が壊れ、共有ファイルを消す事故になる。
                 removedCount = _database.DeleteVideosBatch(idsToRemove);
             }
 
@@ -236,6 +240,7 @@ namespace IwaraDownloader.Forms
 
             if (result == DialogResult.Yes)
             {
+                // 重複解消は生削除が正しい (btnRemoveDuplicates_Click のコメント参照)。
                 _database.DeleteVideo(video.Id);
                 ScanDuplicates();
             }

@@ -163,6 +163,42 @@ namespace IwaraDownloader.Services
                 CREATE INDEX IF NOT EXISTS idx_videos_video_id ON Videos(VideoId);
                 CREATE INDEX IF NOT EXISTS idx_videos_file_uuid ON Videos(FileUuid);
                 -- Rating カラムのインデックスは MigrateVideosTable 内 (ALTER TABLE 後) で作成する
+
+                -- 除外(ゴミ箱)テーブル: Videos と同じ列構成 + ExcludedAt。
+                -- 不変条件: ある VideoId は Videos か ExcludedVideos の「片方だけ」に存在する。
+                -- 削除 = Videos → ExcludedVideos へ移動、復元 = 逆に移動。
+                -- これにより自動取得のガードは ProcessFetchQueueAsync の1箇所で済む。
+                CREATE TABLE IF NOT EXISTS ExcludedVideos (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    VideoId TEXT NOT NULL UNIQUE,
+                    Title TEXT NOT NULL,
+                    Url TEXT NOT NULL,
+                    ThumbnailUrl TEXT,
+                    LocalThumbnailPath TEXT,
+                    AuthorUserId TEXT,
+                    AuthorUsername TEXT,
+                    DurationSeconds INTEGER DEFAULT 0,
+                    PostedAt TEXT,
+                    LocalFilePath TEXT,
+                    FileSize INTEGER DEFAULT 0,
+                    Status INTEGER DEFAULT 0,
+                    DownloadedAt TEXT,
+                    SubscribedUserId INTEGER,
+                    RetryCount INTEGER DEFAULT 0,
+                    LastErrorMessage TEXT,
+                    CreatedAt TEXT NOT NULL,
+                    Tags TEXT DEFAULT '',
+                    Memo TEXT DEFAULT '',
+                    FileUuid TEXT DEFAULT '',
+                    EmbedUrl TEXT DEFAULT '',
+                    Rating TEXT DEFAULT '',
+                    Site TEXT DEFAULT '',
+                    IsFavorite INTEGER DEFAULT 0,
+                    ThumbnailStatus INTEGER DEFAULT 0,
+                    ExcludedAt TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_excluded_video_id ON ExcludedVideos(VideoId);
             ";
             command.ExecuteNonQuery();
 
@@ -624,7 +660,10 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
+            // 明示的に追加/インポートされた動画は除外(ゴミ箱)から出す = 不変条件を維持。
+            // 間違えて削除しても、URL 貼り直しやインポートで普通に戻せる。
             command.CommandText = @"
+                DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
                     RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus)
@@ -1030,7 +1069,9 @@ namespace IwaraDownloader.Services
             {
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
+                // インポートされた動画は除外(ゴミ箱)から出す = 不変条件を維持。
                 command.CommandText = @"
+                    DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                     INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                         DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
                         RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus)
@@ -1310,6 +1351,221 @@ namespace IwaraDownloader.Services
             }
 
             return deletedCount;
+        }
+
+        #endregion
+
+        #region Exclusion (bin)
+
+        /// <summary>
+        /// テーブルの列名一覧を取得 (PRAGMA table_info)。
+        /// </summary>
+        private static List<string> GetTableColumns(SqliteConnection connection, string table)
+        {
+            var cols = new List<string>();
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = $"PRAGMA table_info({table})";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                cols.Add(reader.GetString(1));
+            return cols;
+        }
+
+        /// <summary>
+        /// Videos と ExcludedVideos の共通データ列 (Id を除く) をカンマ区切りで返す。
+        /// INSERT ... SELECT で丸ごとコピーするために使い、手動フィールドマッピングの取りこぼしを防ぐ。
+        /// </summary>
+        private static string GetSharedVideoColumnList(SqliteConnection connection)
+        {
+            var excludedCols = new HashSet<string>(
+                GetTableColumns(connection, "ExcludedVideos"), StringComparer.OrdinalIgnoreCase);
+            var shared = GetTableColumns(connection, "Videos")
+                .Where(c => !string.Equals(c, "Id", StringComparison.OrdinalIgnoreCase) && excludedCols.Contains(c));
+            return string.Join(", ", shared);
+        }
+
+        /// <summary>
+        /// 指定した動画を Videos → ExcludedVideos へ移動する (削除の実体)。1トランザクションで原子的に行う。
+        /// 途中で落ちても「Videos から消えたのに Excluded に無い」= 再取得で復活する穴を作らない。
+        /// </summary>
+        /// <returns>除外した件数</returns>
+        public int MoveVideosToExcluded(IEnumerable<int> ids)
+        {
+            var idList = ids.Distinct().ToList();
+            if (idList.Count == 0) return 0;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var cols = GetSharedVideoColumnList(connection);
+            var now = DateTime.Now.ToString("o");
+
+            using var transaction = connection.BeginTransaction();
+            int moved = 0;
+            try
+            {
+                const int batchSize = 500;
+                for (int i = 0; i < idList.Count; i += batchSize)
+                {
+                    var batch = idList.Skip(i).Take(batchSize).ToList();
+                    var placeholders = string.Join(",", batch.Select((_, idx) => $"@id{idx}"));
+
+                    // 1) スナップショットを ExcludedVideos へ。
+                    //    INSERT OR REPLACE で「削除→復元→再削除」サイクルの VideoId UNIQUE 衝突を回避。
+                    var insertCmd = connection.CreateCommand();
+                    insertCmd.Transaction = transaction;
+                    insertCmd.CommandText =
+                        $"INSERT OR REPLACE INTO ExcludedVideos ({cols}, ExcludedAt) " +
+                        $"SELECT {cols}, @now FROM Videos WHERE Id IN ({placeholders})";
+                    insertCmd.Parameters.AddWithValue("@now", now);
+                    for (int j = 0; j < batch.Count; j++)
+                        insertCmd.Parameters.AddWithValue($"@id{j}", batch[j]);
+                    insertCmd.ExecuteNonQuery();
+
+                    // 2) Videos から削除。
+                    var deleteCmd = connection.CreateCommand();
+                    deleteCmd.Transaction = transaction;
+                    deleteCmd.CommandText = $"DELETE FROM Videos WHERE Id IN ({placeholders})";
+                    for (int j = 0; j < batch.Count; j++)
+                        deleteCmd.Parameters.AddWithValue($"@id{j}", batch[j]);
+                    moved += deleteCmd.ExecuteNonQuery();
+                }
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            return moved;
+        }
+
+        /// <summary>
+        /// 指定した VideoId を ExcludedVideos → Videos へ戻す (復元)。1トランザクションで原子的に行う。
+        /// ローカルファイルは除外時に削除済みのため、呼び出し側が復元後にファイル欠損を正規化する。
+        /// </summary>
+        /// <returns>復元した件数</returns>
+        public int RestoreVideosFromExcluded(IEnumerable<string> videoIds)
+        {
+            var idList = videoIds.Distinct().ToList();
+            if (idList.Count == 0) return 0;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var cols = GetSharedVideoColumnList(connection);
+
+            using var transaction = connection.BeginTransaction();
+            int restored = 0;
+            try
+            {
+                const int batchSize = 500;
+                for (int i = 0; i < idList.Count; i += batchSize)
+                {
+                    var batch = idList.Skip(i).Take(batchSize).ToList();
+                    var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
+
+                    // OR IGNORE: 万一同 VideoId が既に Videos にあっても不変条件を壊さない。
+                    var insertCmd = connection.CreateCommand();
+                    insertCmd.Transaction = transaction;
+                    insertCmd.CommandText =
+                        $"INSERT OR IGNORE INTO Videos ({cols}) " +
+                        $"SELECT {cols} FROM ExcludedVideos WHERE VideoId IN ({placeholders})";
+                    for (int j = 0; j < batch.Count; j++)
+                        insertCmd.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                    restored += insertCmd.ExecuteNonQuery();
+
+                    var deleteCmd = connection.CreateCommand();
+                    deleteCmd.Transaction = transaction;
+                    deleteCmd.CommandText = $"DELETE FROM ExcludedVideos WHERE VideoId IN ({placeholders})";
+                    for (int j = 0; j < batch.Count; j++)
+                        deleteCmd.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                    deleteCmd.ExecuteNonQuery();
+                }
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            return restored;
+        }
+
+        /// <summary>
+        /// ある VideoId が除外(ゴミ箱)に入っているか。自動取得のガードで使う。
+        /// </summary>
+        public bool IsVideoExcluded(string videoId)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM ExcludedVideos WHERE VideoId = @VideoId";
+            command.Parameters.AddWithValue("@VideoId", videoId);
+            return Convert.ToInt32(command.ExecuteScalar()) > 0;
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)に入っている全動画を取得 (除外日時の新しい順)。
+        /// </summary>
+        public List<VideoInfo> GetExcludedVideos()
+        {
+            var videos = new List<VideoInfo>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM ExcludedVideos ORDER BY ExcludedAt DESC";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                videos.Add(ReadVideo(reader));
+            return videos;
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)の件数。
+        /// </summary>
+        public int GetExcludedCount()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM ExcludedVideos";
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から完全に削除する (復元不可)。
+        /// </summary>
+        /// <returns>削除した件数</returns>
+        public int DeleteExcludedPermanent(IEnumerable<string> videoIds)
+        {
+            var idList = videoIds.Distinct().ToList();
+            if (idList.Count == 0) return 0;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            int deleted = 0;
+            try
+            {
+                const int batchSize = 500;
+                for (int i = 0; i < idList.Count; i += batchSize)
+                {
+                    var batch = idList.Skip(i).Take(batchSize).ToList();
+                    var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
+                    var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = $"DELETE FROM ExcludedVideos WHERE VideoId IN ({placeholders})";
+                    for (int j = 0; j < batch.Count; j++)
+                        command.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                    deleted += command.ExecuteNonQuery();
+                }
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            return deleted;
         }
 
         #endregion

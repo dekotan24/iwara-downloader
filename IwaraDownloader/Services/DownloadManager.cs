@@ -369,6 +369,113 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 動画を「除外(ゴミ箱)」へ送る。削除操作の実体。
+        /// 全ての削除経路 (単体/一括/Not Found一括/Web) はこのメソッドを通す。
+        ///   1) 進行中/待機中のタスクをキャンセル
+        ///   2) DB を Videos → ExcludedVideos へ原子的に移動 (再取得で復活しなくなる)
+        ///   3) DL 完了済みのローカルファイル(+サイドカー .json)を削除してディスクを解放
+        /// 除外された動画は自動取得で復活しない。復元 (RestoreExcludedVideos) も可能。
+        /// </summary>
+        /// <returns>除外した件数</returns>
+        public int ExcludeVideos(IEnumerable<VideoInfo> videos)
+        {
+            var list = videos?.Where(v => v != null).ToList() ?? new List<VideoInfo>();
+            if (list.Count == 0) return 0;
+
+            // 1) 進行中/待機中はキャンセル (ファイルロック解放のため DB 移動より先に)
+            foreach (var v in list)
+            {
+                if (v.Status == DownloadStatus.Downloading ||
+                    v.Status == DownloadStatus.Pending ||
+                    v.Status == DownloadStatus.Paused)
+                {
+                    try { CancelTask(v.VideoId); }
+                    catch (Exception ex) { _logger.Debug($"Exclude: cancel failed {v.VideoId}: {ex.Message}"); }
+                }
+            }
+
+            // 2) DB を原子的に移動 (Videos → ExcludedVideos)
+            int moved = _database.MoveVideosToExcluded(list.Select(v => v.Id));
+
+            // 3) DL 完了済みのローカルファイルを削除 (ベストエフォート、失敗はログのみ)。
+            //    DB 移動成功後に行う。ファイル削除が失敗しても除外自体は成立している。
+            foreach (var v in list)
+            {
+                if (string.IsNullOrEmpty(v.LocalFilePath) || !File.Exists(v.LocalFilePath)) continue;
+
+                try { File.Delete(v.LocalFilePath); }
+                catch (Exception ex) { _logger.Warn($"Exclude: file delete failed {v.LocalFilePath}: {ex.Message}"); }
+
+                // サイドカー .json も削除
+                var metaPath = Path.ChangeExtension(v.LocalFilePath, ".json");
+                if (File.Exists(metaPath))
+                {
+                    try { File.Delete(metaPath); } catch { }
+                }
+                // インデックスキャッシュを無効化 (UUID マップから外す)
+                var dir = Path.GetDirectoryName(v.LocalFilePath);
+                if (!string.IsNullOrEmpty(dir))
+                    IndexCacheService.Invalidate(dir);
+            }
+
+            _logger.Info($"Excluded {moved} video(s) to bin");
+            return moved;
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から動画を復元する。DB を ExcludedVideos → Videos へ戻す。
+        /// ローカルファイルは除外時に削除済みのため:
+        ///   - 完了扱いだったのにファイルが無いもの → Pending にリセットして再DLキューへ
+        ///   - 元々待機中(Pending)だったもの → 再DLキューへ (取得を再開)
+        ///   - 失敗(Failed)/スキップ/一時停止 → 状態はそのまま (自動DLしない。デコが選ぶ)
+        /// </summary>
+        /// <returns>復元した件数</returns>
+        public int RestoreExcludedVideos(IEnumerable<string> videoIds)
+        {
+            var idList = videoIds?.Distinct().ToList() ?? new List<string>();
+            if (idList.Count == 0) return 0;
+
+            int restored = _database.RestoreVideosFromExcluded(idList);
+
+            foreach (var vid in idList)
+            {
+                var v = _database.GetVideoByVideoId(vid);
+                if (v == null) continue;
+
+                bool fileExists = !string.IsNullOrEmpty(v.LocalFilePath) && File.Exists(v.LocalFilePath);
+                bool shouldRequeue = false;
+
+                if (v.Status == DownloadStatus.Completed && !fileExists)
+                {
+                    // ファイルは除外時に消えている → 未DL状態に戻して再取得可能にする
+                    v.Status = DownloadStatus.Pending;
+                    v.LocalFilePath = string.Empty;
+                    v.FileSize = 0;
+                    v.DownloadedAt = null;
+                    v.RetryCount = 0;
+                    v.LastErrorMessage = null;
+                    _database.UpdateVideo(v);
+                    shouldRequeue = true;
+                }
+                else if (v.Status == DownloadStatus.Pending)
+                {
+                    shouldRequeue = true;
+                }
+
+                if (shouldRequeue)
+                {
+                    SubscribedUser? user = v.SubscribedUserId.HasValue
+                        ? _database.GetSubscribedUserById(v.SubscribedUserId.Value)
+                        : null;
+                    EnqueueDownload(v, user != null, user);
+                }
+            }
+
+            _logger.Info($"Restored {restored} video(s) from bin");
+            return restored;
+        }
+
+        /// <summary>
         /// ダウンロードマネージャーを停止
         /// </summary>
         public void Stop()
@@ -1455,7 +1562,9 @@ namespace IwaraDownloader.Services
                 var newVideos = new List<VideoInfo>();
                 foreach (var video in videos)
                 {
-                    if (!_database.VideoExists(video.VideoId))
+                    // 除外(ゴミ箱)に入っている動画は自動取得で復活させない。
+                    // ここが再取得ループの唯一のガード地点 (手動追加/インポートは除外解除して追加)。
+                    if (!_database.VideoExists(video.VideoId) && !_database.IsVideoExcluded(video.VideoId))
                     {
                         video.AuthorUserId = user.UserId;
                         video.AuthorUsername = user.Username;

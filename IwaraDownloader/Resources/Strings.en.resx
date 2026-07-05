@@ -521,6 +521,16 @@ Error log:
   <data name="MainForm_ConfirmDeleteOne" xml:space="preserve">
     <value>Delete "{0}"?</value>
   </data>
+  <data name="MainForm_ConfirmPurgeMany" xml:space="preserve">
+    <value>Permanently delete {0} videos?
+
+* This cannot be undone (no restore)</value>
+  </data>
+  <data name="MainForm_ConfirmPurgeOne" xml:space="preserve">
+    <value>Permanently delete "{0}"?
+
+* This cannot be undone (no restore)</value>
+  </data>
   <data name="MainForm_ConfirmRedlMany" xml:space="preserve">
     <value>{0} videos will be re-downloaded (total {1}).
 
@@ -819,15 +829,15 @@ Author: {1}</value>
     <value>Info</value>
   </data>
   <data name="MainForm_D091" xml:space="preserve">
-    <value>Delete {0} Not Found (removed) videos from the database?
+    <value>Move {0} Not Found (removed) videos to the exclusion list (bin)?
 
-* Local files will not be deleted</value>
+Downloaded files will be deleted (restorable later)</value>
   </data>
   <data name="MainForm_D092" xml:space="preserve">
     <value>Remove Not Found</value>
   </data>
   <data name="MainForm_D093" xml:space="preserve">
-    <value>Deleted {0} Not Found videos</value>
+    <value>Moved {0} Not Found videos to the bin</value>
   </data>
   <data name="MainForm_D094" xml:space="preserve">
     <value>Select save folder for {0}</value>
@@ -913,10 +923,11 @@ Author: {1}</value>
   <data name="MainForm_D120" xml:space="preserve">
     <value>
 
-* Downloaded files will not be deleted</value>
+Moves to the exclusion list (bin).
+Downloaded files will be deleted (restorable later)</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
-    <value>Deleted {0} videos</value>
+    <value>Moved {0} videos to the bin</value>
   </data>
   <data name="MainForm_D122" xml:space="preserve">
     <value>Confirm re-download</value>
@@ -1126,6 +1137,12 @@ Author: {1}</value>
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 Search (title/artist/tags)...</value>
   </data>
+  <data name="MainForm_ExcludedHeader" xml:space="preserve">
+    <value>Excluded (Bin)</value>
+  </data>
+  <data name="MainForm_ExcludedNode" xml:space="preserve">
+    <value>🚫 Excluded ({0})</value>
+  </data>
   <data name="MainForm_FreeSpace" xml:space="preserve">
     <value>Free: {0} ({1})</value>
   </data>
@@ -1149,6 +1166,9 @@ Moves to those drives will fail and files will remain in place.</value>
   </data>
   <data name="MainForm_ProgressWritingTags" xml:space="preserve">
     <value>Writing tags...</value>
+  </data>
+  <data name="MainForm_PurgedStatus" xml:space="preserve">
+    <value>Permanently deleted {0} videos</value>
   </data>
   <data name="MainForm_QueueDownloading" xml:space="preserve">
     <value>{0} downloading</value>
@@ -1187,6 +1207,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_RelinkUnverified" xml:space="preserve">
     <value>Verification mismatch (same name but size/UUID differ): {0}
   -&gt; Possibly a partial or corrupt copy. Not relinked</value>
+  </data>
+  <data name="MainForm_RestoredStatus" xml:space="preserve">
+    <value>Restored {0} videos</value>
   </data>
   <data name="MainForm_SourceExternal" xml:space="preserve">
     <value>External</value>
@@ -1425,6 +1448,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_menuVidOpenPage" xml:space="preserve">
     <value>Open Page</value>
   </data>
+  <data name="MainForm_menuVidPermanentDelete" xml:space="preserve">
+    <value>Delete permanently</value>
+  </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>Play</value>
   </data>
@@ -1433,6 +1459,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidRefreshInfo" xml:space="preserve">
     <value>Refresh Info</value>
+  </data>
+  <data name="MainForm_menuVidRestore" xml:space="preserve">
+    <value>Restore</value>
   </data>
   <data name="MainForm_menuVidRetryFailed" xml:space="preserve">
     <value>Retry Failed</value>

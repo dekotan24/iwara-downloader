@@ -525,6 +525,16 @@ https://www.iwara.ai/profile/username
   <data name="MainForm_ConfirmDeleteOne" xml:space="preserve">
     <value>「{0}」を削除しますか？</value>
   </data>
+  <data name="MainForm_ConfirmPurgeMany" xml:space="preserve">
+    <value>{0} 件を完全に削除しますか？
+
+※この操作は取り消せません（復元できません）</value>
+  </data>
+  <data name="MainForm_ConfirmPurgeOne" xml:space="preserve">
+    <value>「{0}」を完全に削除しますか？
+
+※この操作は取り消せません（復元できません）</value>
+  </data>
   <data name="MainForm_ConfirmRedlMany" xml:space="preserve">
     <value>{0}件の動画を再ダウンロードします (合計 {1})。
 
@@ -823,15 +833,15 @@ https://www.iwara.ai/profile/username
     <value>情報</value>
   </data>
   <data name="MainForm_D091" xml:space="preserve">
-    <value>Not Found (削除済み) の動画 {0} 件をデータベースから削除しますか？
+    <value>Not Found（削除済み）の動画 {0} 件を除外リスト（ゴミ箱）へ移動しますか？
 
-※ローカルファイルは削除されません</value>
+DL済みのファイルは削除されます（後で復元できます）</value>
   </data>
   <data name="MainForm_D092" xml:space="preserve">
     <value>Not Found を除外</value>
   </data>
   <data name="MainForm_D093" xml:space="preserve">
-    <value>Not Found の動画 {0} 件を削除しました</value>
+    <value>Not Found の動画 {0} 件を除外（ゴミ箱）へ移動しました</value>
   </data>
   <data name="MainForm_D094" xml:space="preserve">
     <value>{0} の保存先フォルダを選択</value>
@@ -917,10 +927,11 @@ https://www.iwara.ai/profile/username
   <data name="MainForm_D120" xml:space="preserve">
     <value>
 
-※ダウンロード済みのファイルは削除されません</value>
+除外リスト（ゴミ箱）へ移動します。
+DL済みのファイルは削除されます（後で復元できます）</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
-    <value>{0}件の動画を削除しました</value>
+    <value>{0} 件の動画を除外（ゴミ箱）へ移動しました</value>
   </data>
   <data name="MainForm_D122" xml:space="preserve">
     <value>再ダウンロード確認</value>
@@ -1130,6 +1141,12 @@ https://www.iwara.ai/profile/username
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 検索 (タイトル/アーティスト/タグ)...</value>
   </data>
+  <data name="MainForm_ExcludedHeader" xml:space="preserve">
+    <value>除外済み（ゴミ箱）</value>
+  </data>
+  <data name="MainForm_ExcludedNode" xml:space="preserve">
+    <value>🚫 除外済み ({0})</value>
+  </data>
   <data name="MainForm_FreeSpace" xml:space="preserve">
     <value>空き: {0} ({1})</value>
   </data>
@@ -1153,6 +1170,9 @@ https://www.iwara.ai/profile/username
   </data>
   <data name="MainForm_ProgressWritingTags" xml:space="preserve">
     <value>タグ書込中...</value>
+  </data>
+  <data name="MainForm_PurgedStatus" xml:space="preserve">
+    <value>{0} 件を完全に削除しました</value>
   </data>
   <data name="MainForm_QueueDownloading" xml:space="preserve">
     <value>{0}DL中</value>
@@ -1191,6 +1211,9 @@ https://www.iwara.ai/profile/username
   <data name="MainForm_RelinkUnverified" xml:space="preserve">
     <value>検証不一致 (同名だがサイズ/UUID が合わない): {0} 件
   → コピー途中・破損の可能性があります。再リンクしません</value>
+  </data>
+  <data name="MainForm_RestoredStatus" xml:space="preserve">
+    <value>{0} 件を復元しました</value>
   </data>
   <data name="MainForm_SourceExternal" xml:space="preserve">
     <value>外部</value>
@@ -1429,6 +1452,9 @@ https://www.iwara.ai/profile/username
   <data name="MainForm_menuVidOpenPage" xml:space="preserve">
     <value>ページを開く</value>
   </data>
+  <data name="MainForm_menuVidPermanentDelete" xml:space="preserve">
+    <value>完全に削除</value>
+  </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>再生</value>
   </data>
@@ -1437,6 +1463,9 @@ https://www.iwara.ai/profile/username
   </data>
   <data name="MainForm_menuVidRefreshInfo" xml:space="preserve">
     <value>情報再取得</value>
+  </data>
+  <data name="MainForm_menuVidRestore" xml:space="preserve">
+    <value>復元</value>
   </data>
   <data name="MainForm_menuVidRetryFailed" xml:space="preserve">
     <value>失敗を再試行</value>

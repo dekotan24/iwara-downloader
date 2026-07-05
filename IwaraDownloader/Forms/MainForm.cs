@@ -28,6 +28,7 @@ namespace IwaraDownloader.Forms
         private const string NODE_FAILED_VIDEOS = "__FAILED_VIDEOS__";
         private const string NODE_SINGLE_VIDEOS = "__SINGLE_VIDEOS__";
         private const string NODE_FAVORITES = "__FAVORITES__";
+        private const string NODE_EXCLUDED = "__EXCLUDED__";
         
         // フィルター用の全動画キャッシュ(フィルター前)
         private List<VideoInfo> _allVideoList = new();
@@ -988,6 +989,18 @@ namespace IwaraDownloader.Forms
                 treeViewChannels.Nodes.Add(singleNode);
             }
 
+            // 「除外(ゴミ箱)」ノード: 削除した動画置き場。復元できる。0件なら非表示。
+            var excludedCount = _database.GetExcludedCount();
+            if (excludedCount > 0)
+            {
+                var excludedNode = new TreeNode(L.T("MainForm_ExcludedNode", excludedCount))
+                {
+                    Tag = NODE_EXCLUDED,
+                    ForeColor = Color.Gray
+                };
+                treeViewChannels.Nodes.Add(excludedNode);
+            }
+
             // 登録チャンネル (users は await で取得済み)
             foreach (var user in users)
             {
@@ -1054,6 +1067,7 @@ namespace IwaraDownloader.Forms
                     NODE_FAILED_VIDEOS => L.T("MainForm_D065"),
                     NODE_SINGLE_VIDEOS => L.T("MainForm_D066"),
                     NODE_FAVORITES => L.T("MainForm_D067"),
+                    NODE_EXCLUDED => L.T("MainForm_ExcludedHeader"),
                     _ => L.T("MainForm_D068")
                 };
             }
@@ -1133,6 +1147,7 @@ namespace IwaraDownloader.Forms
                                 .Where(v => !v.SubscribedUserId.HasValue).ToList(),
                             NODE_FAVORITES => _database.GetAllVideos()
                                 .Where(v => v.IsFavorite).ToList(),
+                            NODE_EXCLUDED => _database.GetExcludedVideos(),
                             _ => new List<VideoInfo>(),
                         };
                     }
@@ -1759,8 +1774,8 @@ namespace IwaraDownloader.Forms
 
             if (result != DialogResult.Yes) return;
 
-            var ids = notFound.Select(v => v.Id).ToList();
-            int deleted = _database.DeleteVideosBatch(ids);
+            // 除外(ゴミ箱)へ移動 = 次回の自動取得で復活しなくなる。
+            int deleted = _downloadManager.ExcludeVideos(notFound);
             RefreshChannelTree();
             RefreshVideoList();
             UpdateStatusBar(L.T("MainForm_D093", deleted));
@@ -1952,6 +1967,31 @@ namespace IwaraDownloader.Forms
                 return;
             }
 
+            // 除外(ゴミ箱)ノードでは「復元」「完全に削除」だけを出す。通常の操作項目は全て隠す。
+            bool isExcludedNode = (treeViewChannels.SelectedNode?.Tag as string) == NODE_EXCLUDED;
+            if (isExcludedNode)
+            {
+                menuVidDownload.Visible = false;
+                menuVidCancel.Visible = false;
+                menuVidRetryFailed.Visible = false;
+                menuVidReDownload.Visible = false;
+                menuVidRefreshInfo.Visible = false;
+                menuVidCheckFileExists.Visible = false;
+                menuVidPlay.Visible = false;
+                menuVidOpenFolder.Visible = false;
+                menuVidOpenPage.Visible = selected.Count == 1;   // iwara ページは開ける (本当に消えたか確認用)
+                menuVidOpenAuthor.Visible = false;
+                menuVidCopyUrl.Visible = true;
+                menuVidCopyTitle.Visible = true;
+                menuVidFavorite.Visible = false;
+                menuVidDetails.Visible = false;
+                menuVidDelete.Visible = false;
+                menuVidRestore.Visible = true;
+                menuVidPermanentDelete.Visible = true;
+                AdjustSeparators();
+                return;
+            }
+
             bool isSingle = selected.Count == 1;
             var single = isSingle ? selected[0] : null;
             bool hasPending = selected.Any(v => v.Status == DownloadStatus.Pending);
@@ -1993,6 +2033,9 @@ namespace IwaraDownloader.Forms
             menuVidFavorite.Text = allFav ? L.T("MainForm_D106") : L.T("MainForm_D107");
             menuVidDetails.Visible = isSingle;
             menuVidDelete.Visible = true;
+            // 通常ノードでは復元/完全削除は隠す (除外ノード専用)
+            menuVidRestore.Visible = false;
+            menuVidPermanentDelete.Visible = false;
 
             AdjustSeparators();
             // 注意: Opening 中は ContextMenuStrip がまだ表示前なので、
@@ -2345,23 +2388,51 @@ namespace IwaraDownloader.Forms
 
             if (result != DialogResult.Yes) return;
 
-            var deletedCount = 0;
-            foreach (var video in selectedVideos)
-            {
-                // ダウンロード中の場合はキャンセル
-                if (video.Status == DownloadStatus.Downloading || video.Status == DownloadStatus.Pending)
-                {
-                    _downloadManager.CancelTask(video.VideoId);
-                }
-                
-                // DBから削除
-                _database.DeleteVideo(video.Id);
-                deletedCount++;
-            }
+            // 削除 = 除外(ゴミ箱)へ移動。自動取得で復活しなくなる。DL済みファイルは削除される。
+            // 間違えて消しても「除外済み」ノードから復元できる。
+            var deletedCount = _downloadManager.ExcludeVideos(selectedVideos);
 
             RefreshChannelTree();
             RefreshVideoList();
             UpdateStatusBar(L.T("MainForm_D121", deletedCount));
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から選択動画を復元する。ファイルは除外時に削除済みなので、
+        /// 完了扱いだったものは再DL、待機中だったものは取得再開する (DownloadManager 側で処理)。
+        /// </summary>
+        private void menuVidRestore_Click(object sender, EventArgs e)
+        {
+            var selected = GetSelectedVideos();
+            if (selected.Count == 0) return;
+
+            int restored = _downloadManager.RestoreExcludedVideos(selected.Select(v => v.VideoId));
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar(L.T("MainForm_RestoredStatus", restored));
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から選択動画を完全に削除する (復元不可)。
+        /// </summary>
+        private void menuVidPermanentDelete_Click(object sender, EventArgs e)
+        {
+            var selected = GetSelectedVideos();
+            if (selected.Count == 0) return;
+
+            var count = selected.Count;
+            var message = count == 1
+                ? L.T("MainForm_ConfirmPurgeOne", selected[0].Title)
+                : L.T("MainForm_ConfirmPurgeMany", count);
+
+            var result = MessageBox.Show(message, L.T("MainForm_D103"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes) return;
+
+            int deleted = _database.DeleteExcludedPermanent(selected.Select(v => v.VideoId));
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar(L.T("MainForm_PurgedStatus", deleted));
         }
 
         /// <summary>
