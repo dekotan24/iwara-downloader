@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img width="32" height="32" alt="icon" src="https://github.com/user-attachments/assets/dfae4206-78de-45de-a975-d9b69b96c68b" />IwaraDownloader
+# <img width="32" height="32" alt="icon" src="https://github.com/user-attachments/assets/dfae4206-78de-45de-a975-d9b69b96c68b" /> IwaraDownloader
 
 **iwara.tv / iwara.ai 対応の高機能動画ダウンローダー & メディアサーバー for Windows**
 
