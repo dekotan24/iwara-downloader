@@ -20,6 +20,8 @@
 
 ---
 
+<img width="1000" height="652" alt="2026-06-12_14h30_40" src="https://github.com/user-attachments/assets/de36894c-65e9-41af-b150-e65c7ff4a8bf" />
+
 ## ✨ ハイライト
 
 - 📺 **チャンネル購読** — お気に入りユーザーを登録するだけで、新着を自動検出して自動ダウンロード
