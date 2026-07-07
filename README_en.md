@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎬 IwaraDownloader
+# <img width="32" height="32" alt="icon" src="https://github.com/user-attachments/assets/dfae4206-78de-45de-a975-d9b69b96c68b" /> IwaraDownloader
 
 **Feature-rich video downloader & media server for iwara.tv / iwara.ai on Windows**
 
@@ -19,6 +19,8 @@ A Windows desktop app that handles everything from downloading to collection man
 </div>
 
 ---
+
+<img width="1000" height="652" alt="2026-06-12_14h30_40" src="https://github.com/user-attachments/assets/de36894c-65e9-41af-b150-e65c7ff4a8bf" />
 
 ## ✨ Highlights
 
