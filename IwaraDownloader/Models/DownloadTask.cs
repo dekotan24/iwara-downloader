@@ -89,6 +89,13 @@ namespace IwaraDownloader.Models
         public string ProgressFormatted => $"{Progress:F1}%";
 
         /// <summary>
+        /// ログイン必要エラーによるキュー一時停止で巻き添えキャンセルされたことを示すフラグ。
+        /// trueの場合、キャンセル後のステータスは Paused ではなく Pending として保存され、
+        /// ログイン後の ResumeAfterLogin で自動再開の対象になる。
+        /// </summary>
+        public bool SuspendedForLogin { get; set; }
+
+        /// <summary>
         /// キャンセル
         /// </summary>
         public void Cancel()

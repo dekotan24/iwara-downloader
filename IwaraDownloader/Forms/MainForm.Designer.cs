@@ -1008,6 +1008,9 @@ namespace IwaraDownloader.Forms
             this.menuVidDetails = new ToolStripMenuItem();
             this.menuVidSep4 = new ToolStripSeparator();
             this.menuVidDelete = new ToolStripMenuItem();
+            this.menuVidSepBin = new ToolStripSeparator();
+            this.menuVidRestore = new ToolStripMenuItem();
+            this.menuVidPermanentDelete = new ToolStripMenuItem();
 
             this.contextMenuVideo.Name = "contextMenuVideo";
             this.contextMenuVideo.Items.AddRange(new ToolStripItem[]
@@ -1023,6 +1026,9 @@ namespace IwaraDownloader.Forms
                 this.menuVidDetails,
                 this.menuVidSep4,
                 this.menuVidDelete,
+                this.menuVidSepBin,
+                this.menuVidRestore,
+                this.menuVidPermanentDelete,
             });
             this.contextMenuVideo.Opening += new System.ComponentModel.CancelEventHandler(this.OnVideoContextMenuOpening);
 
@@ -1058,6 +1064,10 @@ namespace IwaraDownloader.Forms
             this.menuVidDelete.Text = "削除";
             this.menuVidDelete.ShortcutKeyDisplayString = "Delete";
             this.menuVidDelete.Click += new EventHandler(this.menuVidDelete_Click);
+            this.menuVidRestore.Text = "復元";
+            this.menuVidRestore.Click += new EventHandler(this.menuVidRestore_Click);
+            this.menuVidPermanentDelete.Text = "完全に削除";
+            this.menuVidPermanentDelete.Click += new EventHandler(this.menuVidPermanentDelete_Click);
 
             //
             // imageListTree
@@ -1195,6 +1205,9 @@ namespace IwaraDownloader.Forms
         private ToolStripMenuItem menuVidDetails;
         private ToolStripSeparator menuVidSep4;
         private ToolStripMenuItem menuVidDelete;
+        private ToolStripSeparator menuVidSepBin;
+        private ToolStripMenuItem menuVidRestore;
+        private ToolStripMenuItem menuVidPermanentDelete;
         private ImageList imageListTree;
         private Panel panelVideoFilter;
         private TextBox txtVideoFilter;

@@ -195,6 +195,9 @@ namespace IwaraDownloader.Services
 
         private void ConfigureApi(WebApplication app)
         {
+            // --- Config (認証不要: ログイン画面自体の翻訳に言語設定が必要) ---
+            app.MapGet("/api/config", HandleGetConfig);
+
             // --- Auth ---
             app.MapPost("/api/auth/login", (Delegate)HandleLogin);
             app.MapPost("/api/auth/logout", HandleLogout);
@@ -227,6 +230,30 @@ namespace IwaraDownloader.Services
             // --- Batch ---
             app.MapPost("/api/videos/delete-batch", (Delegate)HandleDeleteBatch);
         }
+
+        #region Config
+
+        /// <summary>
+        /// WebUI向けの公開設定。language はアプリの言語設定("auto"はOS言語から解決済みの実効値)を返す。
+        /// </summary>
+        private IResult HandleGetConfig()
+        {
+            var setting = SettingsManager.Instance.Settings.Language;
+            string language;
+            if (setting is "ja" or "en" or "zh-Hans")
+            {
+                language = setting;
+            }
+            else
+            {
+                // "auto": デスクトップ側と同じ規則で解決 (ja→ja / zh系→zh-Hans / その他→en)
+                var osLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                language = osLang switch { "ja" => "ja", "zh" => "zh-Hans", _ => "en" };
+            }
+            return Results.Ok(new { language });
+        }
+
+        #endregion
 
         #region Auth
 
@@ -601,21 +628,20 @@ namespace IwaraDownloader.Services
         {
             var authResult = RequireAuth(ctx);
             if (authResult != null) return authResult;
+            if (_downloadManager == null) return Results.StatusCode(503);
 
             var errors = _database.GetVideosByStatus(DownloadStatus.Failed);
-            var notFoundIds = errors
+            var notFound = errors
                 .Where(v => v.LastErrorMessage != null &&
                            (v.LastErrorMessage.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
                             v.LastErrorMessage.Contains("404", StringComparison.OrdinalIgnoreCase) ||
                             v.LastErrorMessage.Contains("deleted", StringComparison.OrdinalIgnoreCase)))
-                .Select(v => v.Id)
                 .ToList();
 
-            int deleted = 0;
-            if (notFoundIds.Count > 0)
-                deleted = _database.DeleteVideosBatch(notFoundIds);
+            // 除外(ゴミ箱)へ移動 = 次回の自動取得で復活しなくなる。
+            int deleted = _downloadManager.ExcludeVideos(notFound);
 
-            _logger.Info($"Web API: Deleted {deleted} not-found videos");
+            _logger.Info($"Web API: Excluded {deleted} not-found videos to bin");
             return Results.Ok(new { success = true, deletedCount = deleted });
         }
 
@@ -702,11 +728,19 @@ namespace IwaraDownloader.Services
             var authResult = RequireAuth(ctx);
             if (authResult != null) return authResult;
 
+            if (_downloadManager == null) return Results.StatusCode(503);
+
             var body = await ctx.Request.ReadFromJsonAsync<DeleteBatchRequest>();
             if (body?.Ids == null || body.Ids.Length == 0)
                 return Results.BadRequest(new { error = "No IDs specified" });
 
-            int deleted = _database.DeleteVideosBatch(body.Ids);
+            // 除外(ゴミ箱)へ移動。DL済みファイルは削除、復元も可能。
+            var videos = body.Ids
+                .Select(id => _database.GetVideoById(id))
+                .Where(v => v != null)
+                .Cast<VideoInfo>()
+                .ToList();
+            int deleted = _downloadManager.ExcludeVideos(videos);
             return Results.Ok(new { success = true, deletedCount = deleted });
         }
 

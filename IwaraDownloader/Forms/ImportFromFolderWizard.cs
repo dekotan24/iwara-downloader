@@ -66,11 +66,11 @@ namespace IwaraDownloader.Forms
             clbAuthors.Items.Clear();
             clbAuthors.Tag = null;
             lblScanResult.Text = "";
-            lblScanStatus.Text = "準備中...";
+            lblScanStatus.Text = L.T("ImportFromFolderWizard_D001");
             progressScan.Value = 0;
             progressScan.Style = ProgressBarStyle.Marquee;
             txtImportLog.Clear();
-            lblImportStatus.Text = "準備中...";
+            lblImportStatus.Text = L.T("ImportFromFolderWizard_D001");
             progressImport.Value = 0;
             lblSummary.Text = "";
             lblDupNotice.Text = "";
@@ -105,6 +105,7 @@ namespace IwaraDownloader.Forms
         public ImportFromFolderWizard(DownloadManager downloadManager)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _downloadManager = downloadManager;
             _database = DatabaseService.Instance;
             UpdateStepUi();
@@ -118,7 +119,7 @@ namespace IwaraDownloader.Forms
             pnlStep4.Visible = _step == 4;
             pnlStep5.Visible = _step == 5;
 
-            lblStep.Text = $"ステップ {_step}/5";
+            lblStep.Text = L.T("ImportFromFolderWizard_D002", _step);
 
             btnBack.Enabled = _step == 3 && !_busy;
             btnNext.Enabled = !_busy && _step != 2 && _step != 4;
@@ -132,21 +133,21 @@ namespace IwaraDownloader.Forms
 
             btnNext.Text = _step switch
             {
-                2 => "スキャン中...",
-                3 => "取り込み実行 >",
-                4 => "取り込み中...",
-                5 => "閉じる",
-                _ => "次へ >",
+                2 => L.T("ImportFromFolderWizard_D003"),
+                3 => L.T("ImportFromFolderWizard_D004"),
+                4 => L.T("ImportFromFolderWizard_D005"),
+                5 => L.T("ImportFromFolderWizard_D006"),
+                _ => L.T("ImportFromFolderWizard_D007"),
             };
 
-            btnCancel.Text = _busy ? "中止" : "キャンセル";
+            btnCancel.Text = _busy ? L.T("ImportFromFolderWizard_D008") : L.T("ImportFromFolderWizard_D009");
         }
 
         private void btnBrowse_Click(object sender, EventArgs e)
         {
             using var d = new FolderBrowserDialog
             {
-                Description = "スキャンするフォルダを選択",
+                Description = L.T("ImportFromFolderWizard_D010"),
                 UseDescriptionForTitle = true,
                 SelectedPath = string.IsNullOrEmpty(txtFolder.Text)
                     ? SettingsManager.Instance.Settings.DownloadFolder
@@ -163,15 +164,15 @@ namespace IwaraDownloader.Forms
                 case 1:
                     if (string.IsNullOrWhiteSpace(txtFolder.Text) || !Directory.Exists(txtFolder.Text))
                     {
-                        MessageBox.Show(this, "有効なフォルダを指定してください。",
-                            "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show(this, L.T("ImportFromFolderWizard_D011"),
+                            L.T("ImportFromFolderWizard_D012"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     if (!_downloadManager.IsLoggedIn)
                     {
                         MessageBox.Show(this,
-                            "iwara にログインしていません。\n設定画面からログインしてから再度お試しください。",
-                            "ログイン必要", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            L.T("ImportFromFolderWizard_D013"),
+                            L.T("ImportFromFolderWizard_D014"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     _step = 2;
@@ -205,7 +206,7 @@ namespace IwaraDownloader.Forms
         {
             if (_busy)
             {
-                if (MessageBox.Show(this, "処理を中止しますか?", "確認",
+                if (MessageBox.Show(this, L.T("ImportFromFolderWizard_D015"), L.T("ImportFromFolderWizard_D016"),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
                 _cts?.Cancel();
@@ -254,7 +255,7 @@ namespace IwaraDownloader.Forms
             {
                 // Phase A: ファイル列挙 + タグ読取り
                 progressScan.Style = ProgressBarStyle.Marquee;
-                lblScanStatus.Text = "ファイルを列挙中...";
+                lblScanStatus.Text = L.T("ImportFromFolderWizard_D017");
 
                 var taggedItems = await Task.Run(() =>
                 {
@@ -431,7 +432,7 @@ namespace IwaraDownloader.Forms
                 clbAuthors.Tag = authorGroups;
 
                 lblSingleVideos.Text = singleVideoCount > 0
-                    ? $"+ 単発動画 (作者情報なし): {singleVideoCount} 件 — 自動的に取り込まれます"
+                    ? L.T("ImportFromFolderWizard_D018", singleVideoCount)
                     : "";
 
                 AppendScanResult(
@@ -454,8 +455,8 @@ namespace IwaraDownloader.Forms
             catch (Exception ex)
             {
                 AppendScanResult($"[エラー] {ex.Message}");
-                MessageBox.Show(this, $"スキャン中にエラー:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, L.T("ImportFromFolderWizard_D019", ex.Message),
+                    L.T("ImportFromFolderWizard_D020"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _step = 1;
             }
             finally
@@ -502,7 +503,7 @@ namespace IwaraDownloader.Forms
             _importedNew = _mergedCount = _skippedExistingCount = _failedCount = 0;
             txtImportLog.Clear();
             progressImport.Value = 0;
-            lblImportStatus.Text = "準備中...";
+            lblImportStatus.Text = L.T("ImportFromFolderWizard_D001");
 
             // チェックされた作者ユーザー名を取得
             var authorEntries = clbAuthors.Tag as List<AuthorEntry> ?? new List<AuthorEntry>();
@@ -663,8 +664,8 @@ namespace IwaraDownloader.Forms
             catch (Exception ex)
             {
                 AppendImportLog($"[エラー] {ex.Message}");
-                MessageBox.Show(this, $"取り込み中にエラー:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, L.T("ImportFromFolderWizard_D021", ex.Message),
+                    L.T("ImportFromFolderWizard_D020"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -691,15 +692,15 @@ namespace IwaraDownloader.Forms
             _lastErrorLogPath = WriteImportErrorLog();
 
             lblSummary.Text =
-                $"新規取り込み:       {_importedNew} 件\r\n" +
-                $"マージ (パス更新):  {_mergedCount} 件\r\n" +
-                $"スキップ (既存):    {_skippedExistingCount} 件\r\n" +
-                $"タグ無しスキップ:   {_untaggedCount} 件\r\n" +
-                $"API 取得失敗:       {apiFailed} 件\r\n" +
-                $"DB 書込失敗:        {_failedCount} 件" +
+                L.T("ImportFromFolderWizard_D022", _importedNew) +
+                L.T("ImportFromFolderWizard_D023", _mergedCount) +
+                L.T("ImportFromFolderWizard_D024", _skippedExistingCount) +
+                L.T("ImportFromFolderWizard_D025", _untaggedCount) +
+                L.T("ImportFromFolderWizard_D026", apiFailed) +
+                L.T("ImportFromFolderWizard_D027", _failedCount) +
                 (string.IsNullOrEmpty(_lastErrorLogPath)
                     ? ""
-                    : $"\r\n\r\nエラー詳細ログ:\r\n{_lastErrorLogPath}");
+                    : L.T("ImportFromFolderWizard_D028", _lastErrorLogPath));
 
             lblDupNotice.Text = "";
 
@@ -713,7 +714,7 @@ namespace IwaraDownloader.Forms
             {
                 var msg =
                     $"新規 {_importedNew} / マージ {_mergedCount} / スキップ(既存) {_skippedExistingCount}";
-                Services.NotificationService.Instance.ShowNotification("インポート完了", msg);
+                Services.NotificationService.Instance.ShowNotification(L.T("ImportFromFolderWizard_D030"), msg);
             }
             catch (Exception ex)
             {
@@ -864,8 +865,8 @@ namespace IwaraDownloader.Forms
         {
             if (_busy)
             {
-                var r = MessageBox.Show(this, "処理中です。中止して閉じますか?",
-                    "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                var r = MessageBox.Show(this, L.T("ImportFromFolderWizard_D029"),
+                    L.T("ImportFromFolderWizard_D016"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (r != DialogResult.Yes) { e.Cancel = true; return; }
                 _cts?.Cancel();
             }
@@ -897,8 +898,8 @@ namespace IwaraDownloader.Forms
                 var disp = string.IsNullOrEmpty(DisplayName) || DisplayName == Username
                     ? Username : $"{DisplayName} (@{Username})";
                 return AlreadySubscribed
-                    ? $"{disp} — {VideoCount} 件  [既に登録済]"
-                    : $"{disp} — {VideoCount} 件";
+                    ? L.T("ImportFromFolderWizard_NodeRegistered", disp, VideoCount)
+                    : L.T("ImportFromFolderWizard_NodeNormal", disp, VideoCount);
             }
         }
     }

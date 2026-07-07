@@ -1,0 +1,257 @@
+# 残存UI文言の手作業修正 第2弾 + 新キーの3言語翻訳投入 (1回限り)
+import json
+import os
+
+TOOLS = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.join(TOOLS, "..", "IwaraDownloader")
+
+def patch(rel, reps):
+    p = os.path.join(ROOT, rel)
+    s = open(p, encoding="utf-8-sig").read()
+    for old, new in reps:
+        assert old in s, f"{rel}: NOT FOUND: {old[:70]}"
+        s = s.replace(old, new)
+    open(p, "w", encoding="utf-8").write(s)
+    print(f"{rel}: {len(reps)} patched")
+
+# --- StatisticsForm.cs (エラーメッセージ内容のContains判定行は日本語のまま維持) ---
+patch("Forms/StatisticsForm.cs", [
+    ('{ "～1分", "1-5分", "5-10分", "10-30分", "30分～" };',
+     '{ L.T("StatisticsForm_Dur1"), L.T("StatisticsForm_Dur2"), L.T("StatisticsForm_Dur3"), L.T("StatisticsForm_Dur4"), L.T("StatisticsForm_Dur5") };'),
+    ('.GroupBy(v => string.IsNullOrEmpty(v.Rating) ? "未取得" : v.Rating)',
+     '.GroupBy(v => string.IsNullOrEmpty(v.Rating) ? L.T("StatisticsForm_RatingNone") : v.Rating)'),
+    ('if (string.IsNullOrWhiteSpace(msg)) return "不明";',
+     'if (string.IsNullOrWhiteSpace(msg)) return L.T("Common_Unknown");'),
+    ('return "動画削除/非公開 (404)";', 'return L.T("StatisticsForm_ErrNotFound");'),
+    ('return "フレンド限定/拒否 (403)";', 'return L.T("StatisticsForm_ErrForbidden");'),
+    ('return "CDN利用不可";', 'return L.T("StatisticsForm_ErrCdn");'),
+    ('return "レート制限 (429)";', 'return L.T("StatisticsForm_ErrRateLimit");'),
+    ('return "認証エラー (401)";', 'return L.T("StatisticsForm_ErrAuth");'),
+    ('return "タイムアウト";', 'return L.T("StatisticsForm_ErrTimeout");'),
+    ('return "ディスク容量不足";', 'return L.T("StatisticsForm_ErrDisk");'),
+    ('return "ファイルI/O";', 'return L.T("StatisticsForm_ErrFileIo");'),
+    ('return "ネットワーク";', 'return L.T("StatisticsForm_ErrNetwork");'),
+    ('return "外部動画スキップ";', 'return L.T("StatisticsForm_ErrExternalSkip");'),
+    ('return "その他";', 'return L.T("StatisticsForm_ErrOther");'),
+    ('if (seconds < 60) return "～1分";', 'if (seconds < 60) return L.T("StatisticsForm_Dur1");'),
+    ('if (seconds < 300) return "1-5分";', 'if (seconds < 300) return L.T("StatisticsForm_Dur2");'),
+    ('if (seconds < 600) return "5-10分";', 'if (seconds < 600) return L.T("StatisticsForm_Dur3");'),
+    ('if (seconds < 1800) return "10-30分";', 'if (seconds < 1800) return L.T("StatisticsForm_Dur4");'),
+    ('return "30分～";', 'return L.T("StatisticsForm_Dur5");'),
+    ('public string RetryCountFormatted => RetryCount == 0 ? "0回(初回失敗)" : $"{RetryCount}回";',
+     'public string RetryCountFormatted => RetryCount == 0 ? L.T("StatisticsForm_RetryZero") : L.T("StatisticsForm_RetryN", RetryCount);'),
+    ('return $"{(int)ts.TotalHours}時間{ts.Minutes}分";',
+     'return L.T("StatisticsForm_HoursMinutes", (int)ts.TotalHours, ts.Minutes);'),
+])
+
+# --- ImportFromFolderWizard.cs 作者ノード表示 ---
+patch("Forms/ImportFromFolderWizard.cs", [
+    ('? $"{disp} — {VideoCount} 件  [既に登録済]"', '? L.T("ImportFromFolderWizard_NodeRegistered", disp, VideoCount)'),
+    (': $"{disp} — {VideoCount} 件";', ': L.T("ImportFromFolderWizard_NodeNormal", disp, VideoCount);'),
+])
+
+# usingが無いフォームに追加 (StatisticsFormは既にある想定、確認して無ければ)
+for rel in ("Forms/StatisticsForm.cs", "Forms/ImportFromFolderWizard.cs", "Forms/SearchImportForm.cs", "Forms/FileMoveProgressForm.cs", "Forms/BulkImportForm.cs", "Forms/DuplicateCheckForm.cs"):
+    p = os.path.join(ROOT, rel)
+    s = open(p, encoding="utf-8-sig").read()
+    if "using IwaraDownloader.Utils;" not in s and "L.T(" in s:
+        idx = s.index("using ")
+        s = s[:idx] + "using IwaraDownloader.Utils;\n" + s[idx:]
+        open(p, "w", encoding="utf-8").write(s)
+        print(f"using added: {rel}")
+
+# --- 新キーの3言語翻訳 ---
+ja_add = {
+"Common_Cancel": "キャンセル",
+"MainForm_QueueDownloading": "{0}DL中", "MainForm_QueueWritingTags": "{0}タグ書込", "MainForm_QueuePending": "{0}待機",
+"MainForm_SourceNico": "ニコニコ", "MainForm_SourceExternal": "外部",
+"MainForm_ProgressDownloading": "DL中...", "MainForm_ProgressWritingTags": "タグ書込中...",
+"MainForm_MoveTitle": "{0} の保存先",
+"MainForm_NoDownloadedSelected": "ダウンロード済みの動画が選択されていません",
+"MainForm_NoDownloadedInChannel": "「{0}」にダウンロード済みの動画がありません",
+"MainForm_ConfirmDeleteOne": "「{0}」を削除しますか？", "MainForm_ConfirmDeleteMany": "{0}件の動画を削除しますか？",
+"MainForm_ConfirmRedlOne": "「{0}」を再ダウンロードします。\n\n既存ファイルは削除されます。続行しますか？",
+"MainForm_ConfirmRedlMany": "{0}件の動画を再ダウンロードします (合計 {1})。\n\n既存ファイルは削除されます。続行しますか？",
+"MainForm_FreeSpace": "空き: {0} ({1})",
+"MainForm_QueueSummaryFull": " | キュー: DL中 {0}件 平均{1}% / 待機 {2}件",
+"MainForm_QueueSummaryPending": " | キュー: 待機 {0}件",
+"MainForm_LowSpaceWarn": "\n\n⚠ 空き容量が不足しているドライブがあります。\nそのドライブへの移動は失敗し、ファイルは元の場所に残ります。",
+"MainForm_RelinkNotMoved": "まだ移動されていない (移動先に同名ファイルなし): {0} 件\n  → [未移動ファイルの一括移動] で移動するか、外部ツールで移動後に再実行してください",
+"MainForm_RelinkUnverified": "検証不一致 (同名だがサイズ/UUID が合わない): {0} 件\n  → コピー途中・破損の可能性があります。再リンクしません",
+"MainForm_RelinkMissing": "移動先でも見つからない (リンク切れ): {0} 件",
+"MainForm_RelinkHint": "\n\nヒント: この機能は「保存先設定の変更 → 外部ツールでファイル移動」の後に実行するものです。\n保存先設定がまだ変更されていない場合は、先に変更 (ファイルは移動せず設定だけ変更) してください。",
+"MainForm_RelinkCopied": "\n\nうち {0} 件は元の場所にもファイルが残っています (コピーされたもの)。\n再リンク後も元のファイルは削除しません。不要なら手動で削除してください。",
+"MainForm_cmbNsfwFilter_Item0": "全部表示", "MainForm_cmbNsfwFilter_Item1": "SFWのみ", "MainForm_cmbNsfwFilter_Item2": "NSFWのみ",
+"DuplicateCheckForm_SumCompleted": "完了:{0}", "DuplicateCheckForm_SumFailed": "失敗:{0}", "DuplicateCheckForm_SumPending": "待機:{0}",
+"DuplicateCheckForm_UnknownChannel": "(不明)",
+"DuplicateCheckForm_StCompleted": "✓ 完了", "DuplicateCheckForm_StFailed": "✗ 失敗",
+"DuplicateCheckForm_StPending": "○ 待機", "DuplicateCheckForm_StDownloading": "↓ DL中",
+"BulkImportForm_ResultHeader": "処理完了\n\n",
+"BulkImportForm_ResultVideos": "・動画 追加: {0}件 (重複スキップ {1}件)\n",
+"BulkImportForm_ResultChannels": "・チャンネル キュー登録: {0}件{1}\n  (動画一覧取得はバックグラウンドで順次実行されます)",
+"BulkImportForm_ResultChannelSkip": " / スキップ {0}件",
+"BulkImportForm_ResultChannelsAllSkip": "・チャンネル: {0}件スキップ (登録済みまたは処理待ち)",
+"SearchImportForm_Registered": "[登録済] {0}",
+"SearchImportForm_ConfirmImport": "{0}件の動画をダウンロードキューに追加します。続行しますか？",
+"SearchImportForm_colTitle": "タイトル", "SearchImportForm_colAuthor": "投稿者",
+"SearchImportForm_colDuration": "長さ", "SearchImportForm_colDate": "投稿日",
+"FileMoveProgressForm_LogAborted": "[中止] ユーザー操作で中止されました",
+"FileMoveProgressForm_LogError": "[エラー] {0}",
+"FileMoveProgressForm_LogFailed": "[失敗] {0}: {1}",
+"StatisticsForm_Dur1": "～1分", "StatisticsForm_Dur2": "1-5分", "StatisticsForm_Dur3": "5-10分",
+"StatisticsForm_Dur4": "10-30分", "StatisticsForm_Dur5": "30分～",
+"StatisticsForm_RatingNone": "未取得",
+"StatisticsForm_ErrNotFound": "動画削除/非公開 (404)", "StatisticsForm_ErrForbidden": "フレンド限定/拒否 (403)",
+"StatisticsForm_ErrCdn": "CDN利用不可", "StatisticsForm_ErrRateLimit": "レート制限 (429)",
+"StatisticsForm_ErrAuth": "認証エラー (401)", "StatisticsForm_ErrTimeout": "タイムアウト",
+"StatisticsForm_ErrDisk": "ディスク容量不足", "StatisticsForm_ErrFileIo": "ファイルI/O",
+"StatisticsForm_ErrNetwork": "ネットワーク", "StatisticsForm_ErrExternalSkip": "外部動画スキップ",
+"StatisticsForm_ErrOther": "その他",
+"StatisticsForm_RetryZero": "0回(初回失敗)", "StatisticsForm_RetryN": "{0}回",
+"StatisticsForm_HoursMinutes": "{0}時間{1}分",
+"ImportFromFolderWizard_NodeRegistered": "{0} — {1} 件  [既に登録済]",
+"ImportFromFolderWizard_NodeNormal": "{0} — {1} 件",
+"SettingsForm_cmbQuality_Item0": "Source (最高画質)",
+"SettingsForm_cmbCheckInterval_Item0": "30分", "SettingsForm_cmbCheckInterval_Item1": "1時間",
+"SettingsForm_cmbCheckInterval_Item2": "2時間", "SettingsForm_cmbCheckInterval_Item3": "6時間",
+"SettingsForm_cmbCheckInterval_Item4": "12時間", "SettingsForm_cmbCheckInterval_Item5": "1日",
+"SettingsForm_cmbThumbLocation_Item0": "アプリ設定フォルダ (AppData\\Roaming)",
+"SettingsForm_cmbThumbLocation_Item1": "動画保存先フォルダ (DL先\\thumbs)",
+}
+
+en_add = {
+"Common_Cancel": "Cancel",
+"MainForm_QueueDownloading": "{0} downloading", "MainForm_QueueWritingTags": "{0} writing tags", "MainForm_QueuePending": "{0} pending",
+"MainForm_SourceNico": "Niconico", "MainForm_SourceExternal": "External",
+"MainForm_ProgressDownloading": "Downloading...", "MainForm_ProgressWritingTags": "Writing tags...",
+"MainForm_MoveTitle": "Save folder for {0}",
+"MainForm_NoDownloadedSelected": "No downloaded videos selected",
+"MainForm_NoDownloadedInChannel": "\"{0}\" has no downloaded videos",
+"MainForm_ConfirmDeleteOne": "Delete \"{0}\"?", "MainForm_ConfirmDeleteMany": "Delete {0} videos?",
+"MainForm_ConfirmRedlOne": "\"{0}\" will be re-downloaded.\n\nThe existing file will be deleted. Continue?",
+"MainForm_ConfirmRedlMany": "{0} videos will be re-downloaded (total {1}).\n\nExisting files will be deleted. Continue?",
+"MainForm_FreeSpace": "Free: {0} ({1})",
+"MainForm_QueueSummaryFull": " | Queue: {0} downloading avg {1}% / {2} pending",
+"MainForm_QueueSummaryPending": " | Queue: {0} pending",
+"MainForm_LowSpaceWarn": "\n\n! Some drives are low on free space.\nMoves to those drives will fail and files will remain in place.",
+"MainForm_RelinkNotMoved": "Not yet moved (no file with the same name at destination): {0}\n  -> Use [Move Unrelocated Files], or move with an external tool and run again",
+"MainForm_RelinkUnverified": "Verification mismatch (same name but size/UUID differ): {0}\n  -> Possibly a partial or corrupt copy. Not relinked",
+"MainForm_RelinkMissing": "Not found at destination either (broken link): {0}",
+"MainForm_RelinkHint": "\n\nHint: run this after \"change save folder setting -> move files with an external tool\".\nIf the save folder setting has not been changed yet, change it first (settings only, without moving files).",
+"MainForm_RelinkCopied": "\n\n{0} of them still exist at the original location (copies).\nOriginal files are not deleted after relinking; remove them manually if unneeded.",
+"MainForm_cmbNsfwFilter_Item0": "Show all", "MainForm_cmbNsfwFilter_Item1": "SFW only", "MainForm_cmbNsfwFilter_Item2": "NSFW only",
+"DuplicateCheckForm_SumCompleted": "Completed: {0}", "DuplicateCheckForm_SumFailed": "Failed: {0}", "DuplicateCheckForm_SumPending": "Pending: {0}",
+"DuplicateCheckForm_UnknownChannel": "(unknown)",
+"DuplicateCheckForm_StCompleted": "✓ Completed", "DuplicateCheckForm_StFailed": "✗ Failed",
+"DuplicateCheckForm_StPending": "○ Pending", "DuplicateCheckForm_StDownloading": "↓ Downloading",
+"BulkImportForm_ResultHeader": "Done\n\n",
+"BulkImportForm_ResultVideos": "- Videos added: {0} ({1} duplicates skipped)\n",
+"BulkImportForm_ResultChannels": "- Channels queued: {0}{1}\n  (video lists are fetched in the background)",
+"BulkImportForm_ResultChannelSkip": " / {0} skipped",
+"BulkImportForm_ResultChannelsAllSkip": "- Channels: {0} skipped (already registered or queued)",
+"SearchImportForm_Registered": "[Registered] {0}",
+"SearchImportForm_ConfirmImport": "Add {0} videos to the download queue. Continue?",
+"SearchImportForm_colTitle": "Title", "SearchImportForm_colAuthor": "Author",
+"SearchImportForm_colDuration": "Duration", "SearchImportForm_colDate": "Posted",
+"FileMoveProgressForm_LogAborted": "[Aborted] Cancelled by user",
+"FileMoveProgressForm_LogError": "[Error] {0}",
+"FileMoveProgressForm_LogFailed": "[Failed] {0}: {1}",
+"StatisticsForm_Dur1": "<1 min", "StatisticsForm_Dur2": "1-5 min", "StatisticsForm_Dur3": "5-10 min",
+"StatisticsForm_Dur4": "10-30 min", "StatisticsForm_Dur5": "30+ min",
+"StatisticsForm_RatingNone": "Not fetched",
+"StatisticsForm_ErrNotFound": "Deleted/private (404)", "StatisticsForm_ErrForbidden": "Friends-only/denied (403)",
+"StatisticsForm_ErrCdn": "CDN unavailable", "StatisticsForm_ErrRateLimit": "Rate limited (429)",
+"StatisticsForm_ErrAuth": "Auth error (401)", "StatisticsForm_ErrTimeout": "Timeout",
+"StatisticsForm_ErrDisk": "Out of disk space", "StatisticsForm_ErrFileIo": "File I/O",
+"StatisticsForm_ErrNetwork": "Network", "StatisticsForm_ErrExternalSkip": "External video skipped",
+"StatisticsForm_ErrOther": "Other",
+"StatisticsForm_RetryZero": "0 (first attempt)", "StatisticsForm_RetryN": "{0}",
+"StatisticsForm_HoursMinutes": "{0}h {1}m",
+"ImportFromFolderWizard_NodeRegistered": "{0} — {1} videos  [already registered]",
+"ImportFromFolderWizard_NodeNormal": "{0} — {1} videos",
+"SettingsForm_cmbQuality_Item0": "Source (best quality)",
+"SettingsForm_cmbCheckInterval_Item0": "30 min", "SettingsForm_cmbCheckInterval_Item1": "1 hour",
+"SettingsForm_cmbCheckInterval_Item2": "2 hours", "SettingsForm_cmbCheckInterval_Item3": "6 hours",
+"SettingsForm_cmbCheckInterval_Item4": "12 hours", "SettingsForm_cmbCheckInterval_Item5": "1 day",
+"SettingsForm_cmbThumbLocation_Item0": "App settings folder (AppData\\Roaming)",
+"SettingsForm_cmbThumbLocation_Item1": "Video save folder (DL folder\\thumbs)",
+"BulkImportForm_txtUrls_Placeholder": "https://www.iwara.tv/video/xxxxxx\nhttps://www.iwara.ai/video/yyyyyy\nhttps://www.iwara.tv/profile/username/videos",
+"MainForm_txtUrl_Placeholder": "Enter a URL or paste a link...",
+"MainForm_txtVideoFilter_Placeholder": "🔍 Search (title/artist/tags)...",
+"MainForm_txtTagFilter_Placeholder": "Filter by tags (space/comma separated, AND)",
+"SearchImportForm_txtQuery_Placeholder": "Search keywords (Enter to search)",
+"SettingsForm_txtSoundFile_Placeholder": "System sound if empty",
+"SettingsForm_txtErrorSoundFile_Placeholder": "System sound if empty",
+}
+
+zh_add = {
+"Common_Cancel": "取消",
+"MainForm_QueueDownloading": "{0} 下载中", "MainForm_QueueWritingTags": "{0} 写入标签", "MainForm_QueuePending": "{0} 等待",
+"MainForm_SourceNico": "Niconico", "MainForm_SourceExternal": "外部",
+"MainForm_ProgressDownloading": "下载中...", "MainForm_ProgressWritingTags": "写入标签中...",
+"MainForm_MoveTitle": "{0} 的保存位置",
+"MainForm_NoDownloadedSelected": "未选择已下载的视频",
+"MainForm_NoDownloadedInChannel": "「{0}」没有已下载的视频",
+"MainForm_ConfirmDeleteOne": "删除「{0}」吗？", "MainForm_ConfirmDeleteMany": "删除 {0} 个视频吗？",
+"MainForm_ConfirmRedlOne": "将重新下载「{0}」。\n\n现有文件将被删除。继续吗？",
+"MainForm_ConfirmRedlMany": "将重新下载 {0} 个视频（共 {1}）。\n\n现有文件将被删除。继续吗？",
+"MainForm_FreeSpace": "可用: {0} ({1})",
+"MainForm_QueueSummaryFull": " | 队列: 下载中 {0} 个 平均{1}% / 等待 {2} 个",
+"MainForm_QueueSummaryPending": " | 队列: 等待 {0} 个",
+"MainForm_LowSpaceWarn": "\n\n⚠ 部分驱动器可用空间不足。\n移动到这些驱动器将失败，文件将保留在原位置。",
+"MainForm_RelinkNotMoved": "尚未移动（目标位置无同名文件）：{0} 个\n  → 请使用 [批量移动未迁移文件]，或用外部工具移动后重新执行",
+"MainForm_RelinkUnverified": "验证不一致（同名但大小/UUID 不符）：{0} 个\n  → 可能是复制中断或损坏。不重新链接",
+"MainForm_RelinkMissing": "目标位置也找不到（链接断开）：{0} 个",
+"MainForm_RelinkHint": "\n\n提示：此功能应在「更改保存位置设置 → 用外部工具移动文件」后执行。\n如果尚未更改保存位置设置，请先更改（仅更改设置，不移动文件）。",
+"MainForm_RelinkCopied": "\n\n其中 {0} 个在原位置仍有文件（属于复制）。\n重新链接后不会删除原文件，如不需要请手动删除。",
+"MainForm_cmbNsfwFilter_Item0": "全部显示", "MainForm_cmbNsfwFilter_Item1": "仅 SFW", "MainForm_cmbNsfwFilter_Item2": "仅 NSFW",
+"DuplicateCheckForm_SumCompleted": "完成:{0}", "DuplicateCheckForm_SumFailed": "失败:{0}", "DuplicateCheckForm_SumPending": "等待:{0}",
+"DuplicateCheckForm_UnknownChannel": "（未知）",
+"DuplicateCheckForm_StCompleted": "✓ 完成", "DuplicateCheckForm_StFailed": "✗ 失败",
+"DuplicateCheckForm_StPending": "○ 等待", "DuplicateCheckForm_StDownloading": "↓ 下载中",
+"BulkImportForm_ResultHeader": "处理完成\n\n",
+"BulkImportForm_ResultVideos": "・视频添加: {0} 个（重复跳过 {1} 个）\n",
+"BulkImportForm_ResultChannels": "・频道加入队列: {0} 个{1}\n  （视频列表将在后台依次获取）",
+"BulkImportForm_ResultChannelSkip": " / 跳过 {0} 个",
+"BulkImportForm_ResultChannelsAllSkip": "・频道: 跳过 {0} 个（已注册或等待处理）",
+"SearchImportForm_Registered": "[已注册] {0}",
+"SearchImportForm_ConfirmImport": "将 {0} 个视频加入下载队列。继续吗？",
+"SearchImportForm_colTitle": "标题", "SearchImportForm_colAuthor": "作者",
+"SearchImportForm_colDuration": "时长", "SearchImportForm_colDate": "发布日期",
+"FileMoveProgressForm_LogAborted": "[中止] 已被用户中止",
+"FileMoveProgressForm_LogError": "[错误] {0}",
+"FileMoveProgressForm_LogFailed": "[失败] {0}: {1}",
+"StatisticsForm_Dur1": "～1分钟", "StatisticsForm_Dur2": "1-5分钟", "StatisticsForm_Dur3": "5-10分钟",
+"StatisticsForm_Dur4": "10-30分钟", "StatisticsForm_Dur5": "30分钟～",
+"StatisticsForm_RatingNone": "未获取",
+"StatisticsForm_ErrNotFound": "视频删除/私密 (404)", "StatisticsForm_ErrForbidden": "仅好友/拒绝 (403)",
+"StatisticsForm_ErrCdn": "CDN 不可用", "StatisticsForm_ErrRateLimit": "速率限制 (429)",
+"StatisticsForm_ErrAuth": "认证错误 (401)", "StatisticsForm_ErrTimeout": "超时",
+"StatisticsForm_ErrDisk": "磁盘空间不足", "StatisticsForm_ErrFileIo": "文件 I/O",
+"StatisticsForm_ErrNetwork": "网络", "StatisticsForm_ErrExternalSkip": "外部视频跳过",
+"StatisticsForm_ErrOther": "其他",
+"StatisticsForm_RetryZero": "0次（首次失败）", "StatisticsForm_RetryN": "{0}次",
+"StatisticsForm_HoursMinutes": "{0}小时{1}分",
+"ImportFromFolderWizard_NodeRegistered": "{0} — {1} 个  [已注册]",
+"ImportFromFolderWizard_NodeNormal": "{0} — {1} 个",
+"SettingsForm_cmbQuality_Item0": "Source（最高画质）",
+"SettingsForm_cmbCheckInterval_Item0": "30分钟", "SettingsForm_cmbCheckInterval_Item1": "1小时",
+"SettingsForm_cmbCheckInterval_Item2": "2小时", "SettingsForm_cmbCheckInterval_Item3": "6小时",
+"SettingsForm_cmbCheckInterval_Item4": "12小时", "SettingsForm_cmbCheckInterval_Item5": "1天",
+"SettingsForm_cmbThumbLocation_Item0": "应用设置文件夹 (AppData\\Roaming)",
+"SettingsForm_cmbThumbLocation_Item1": "视频保存文件夹 (下载目录\\thumbs)",
+"BulkImportForm_txtUrls_Placeholder": "https://www.iwara.tv/video/xxxxxx\nhttps://www.iwara.ai/video/yyyyyy\nhttps://www.iwara.tv/profile/username/videos",
+"MainForm_txtUrl_Placeholder": "输入URL或粘贴链接...",
+"MainForm_txtVideoFilter_Placeholder": "🔍 搜索（标题/作者/标签）...",
+"MainForm_txtTagFilter_Placeholder": "按标签筛选（空格/逗号分隔，AND）",
+"SearchImportForm_txtQuery_Placeholder": "搜索关键词（Enter 搜索）",
+"SettingsForm_txtSoundFile_Placeholder": "留空则使用系统提示音",
+"SettingsForm_txtErrorSoundFile_Placeholder": "留空则使用系统提示音",
+}
+
+for fname, add in (("strings_ja.json", ja_add), ("strings_en.json", en_add), ("strings_zh-Hans.json", zh_add)):
+    path = os.path.join(TOOLS, fname)
+    d = json.load(open(path, encoding="utf-8"))
+    d.update(add)
+    json.dump(d, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"{fname}: +{len(add)} -> {len(d)}")

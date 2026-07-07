@@ -16,6 +16,7 @@ namespace IwaraDownloader.Forms
         public RenameResultForm(List<RenameItem> items, string template)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
             _items = items;
             _template = template;
@@ -81,7 +82,7 @@ namespace IwaraDownloader.Forms
             var notFound = _items.Count(i => i.Status == RenameStatus.FileNotFound);
             var error = _items.Count(i => i.Status == RenameStatus.Error);
 
-            lblStatus.Text = $"成功: {success}  スキップ: {skipped}  重複: {conflict}  ファイル不在: {notFound}  エラー: {error}";
+            lblStatus.Text = L.T("RenameResultForm_D001", success, skipped, conflict, notFound, error);
         }
 
         /// <summary>
@@ -175,8 +176,8 @@ namespace IwaraDownloader.Forms
             if (conflictItems.Count == 0) return;
 
             var result = MessageBox.Show(
-                $"{conflictItems.Count}件のファイルを上書きします。\n既存のファイルは削除されます。続行しますか？",
-                "上書き確認",
+                L.T("RenameResultForm_D002", conflictItems.Count),
+                L.T("RenameResultForm_D003"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
@@ -358,13 +359,13 @@ namespace IwaraDownloader.Forms
         {
             return Status switch
             {
-                RenameStatus.Success => "成功",
-                RenameStatus.Skipped => "スキップ(同名)",
-                RenameStatus.Conflict => $"重複: {Path.GetFileName(ConflictingPath)}",
-                RenameStatus.FileNotFound => "ファイル不在",
-                RenameStatus.Error => $"エラー: {ErrorMessage}",
-                RenameStatus.Pending => "処理待ち",
-                _ => "不明"
+                RenameStatus.Success => L.T("RenameResultForm_D004"),
+                RenameStatus.Skipped => L.T("RenameResultForm_D005"),
+                RenameStatus.Conflict => L.T("RenameResultForm_D006", Path.GetFileName(ConflictingPath)),
+                RenameStatus.FileNotFound => L.T("RenameResultForm_D007"),
+                RenameStatus.Error => L.T("RenameResultForm_D008", ErrorMessage),
+                RenameStatus.Pending => L.T("RenameResultForm_D009"),
+                _ => L.T("RenameResultForm_D010")
             };
         }
     }

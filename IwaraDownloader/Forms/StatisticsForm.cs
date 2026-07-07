@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 
@@ -13,6 +14,7 @@ namespace IwaraDownloader.Forms
         public StatisticsForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
         }
 
@@ -74,8 +76,8 @@ namespace IwaraDownloader.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"統計情報の読み込みに失敗しました:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("StatisticsForm_D001", ex.Message),
+                    L.T("StatisticsForm_D002"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -117,17 +119,17 @@ namespace IwaraDownloader.Forms
             // Width を代入すると set_Thickness 内部で NullReferenceException が発生する (Fill では FillWeight が正解)。
             if (dgvChannelStats.Columns.Count > 0)
             {
-                dgvChannelStats.Columns["Username"].HeaderText = "チャンネル";
+                dgvChannelStats.Columns["Username"].HeaderText = L.T("StatisticsForm_D010");
                 dgvChannelStats.Columns["Username"].FillWeight = 150;
-                dgvChannelStats.Columns["TotalVideos"].HeaderText = "総動画数";
+                dgvChannelStats.Columns["TotalVideos"].HeaderText = L.T("StatisticsForm_D011");
                 dgvChannelStats.Columns["TotalVideos"].FillWeight = 80;
-                dgvChannelStats.Columns["CompletedVideos"].HeaderText = "完了";
+                dgvChannelStats.Columns["CompletedVideos"].HeaderText = L.T("StatisticsForm_D012");
                 dgvChannelStats.Columns["CompletedVideos"].FillWeight = 60;
-                dgvChannelStats.Columns["FailedVideos"].HeaderText = "失敗";
+                dgvChannelStats.Columns["FailedVideos"].HeaderText = L.T("StatisticsForm_D013");
                 dgvChannelStats.Columns["FailedVideos"].FillWeight = 60;
-                dgvChannelStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
+                dgvChannelStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
                 dgvChannelStats.Columns["TotalSizeFormatted"].FillWeight = 80;
-                dgvChannelStats.Columns["StatusText"].HeaderText = "状態";
+                dgvChannelStats.Columns["StatusText"].HeaderText = L.T("StatisticsForm_D003");
                 dgvChannelStats.Columns["StatusText"].FillWeight = 60;
 
                 // 非表示カラム
@@ -159,11 +161,11 @@ namespace IwaraDownloader.Forms
             // カラム設定
             if (dgvDailyStats.Columns.Count > 0)
             {
-                dgvDailyStats.Columns["DateFormatted"].HeaderText = "日付";
+                dgvDailyStats.Columns["DateFormatted"].HeaderText = L.T("StatisticsForm_D015");
                 dgvDailyStats.Columns["DateFormatted"].FillWeight = 100;
-                dgvDailyStats.Columns["Count"].HeaderText = "DL数";
+                dgvDailyStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D016");
                 dgvDailyStats.Columns["Count"].FillWeight = 60;
-                dgvDailyStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
+                dgvDailyStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
                 dgvDailyStats.Columns["TotalSizeFormatted"].FillWeight = 80;
 
                 // 非表示カラム
@@ -194,13 +196,13 @@ namespace IwaraDownloader.Forms
 
             if (dgvErrorStats.Columns.Count > 0)
             {
-                dgvErrorStats.Columns["Category"].HeaderText = "エラー種別";
+                dgvErrorStats.Columns["Category"].HeaderText = L.T("StatisticsForm_D017");
                 dgvErrorStats.Columns["Category"].FillWeight = 110;
-                dgvErrorStats.Columns["Count"].HeaderText = "件数";
+                dgvErrorStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D018");
                 dgvErrorStats.Columns["Count"].FillWeight = 50;
-                dgvErrorStats.Columns["PercentageFormatted"].HeaderText = "割合";
+                dgvErrorStats.Columns["PercentageFormatted"].HeaderText = L.T("StatisticsForm_D019");
                 dgvErrorStats.Columns["PercentageFormatted"].FillWeight = 50;
-                dgvErrorStats.Columns["SampleMessage"].HeaderText = "代表メッセージ";
+                dgvErrorStats.Columns["SampleMessage"].HeaderText = L.T("StatisticsForm_D020");
                 dgvErrorStats.Columns["SampleMessage"].FillWeight = 200;
 
                 dgvErrorStats.Columns["Percentage"].Visible = false;
@@ -226,9 +228,9 @@ namespace IwaraDownloader.Forms
 
             if (dgvRetryStats.Columns.Count > 0)
             {
-                dgvRetryStats.Columns["RetryCountFormatted"].HeaderText = "リトライ回数";
+                dgvRetryStats.Columns["RetryCountFormatted"].HeaderText = L.T("StatisticsForm_D021");
                 dgvRetryStats.Columns["RetryCountFormatted"].FillWeight = 100;
-                dgvRetryStats.Columns["Count"].HeaderText = "失敗動画数";
+                dgvRetryStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D022");
                 dgvRetryStats.Columns["Count"].FillWeight = 100;
 
                 dgvRetryStats.Columns["RetryCount"].Visible = false;
@@ -270,15 +272,15 @@ namespace IwaraDownloader.Forms
 
             if (dgvMonthlyStats.Columns.Count > 0)
             {
-                dgvMonthlyStats.Columns["MonthFormatted"].HeaderText = "年月";
+                dgvMonthlyStats.Columns["MonthFormatted"].HeaderText = L.T("StatisticsForm_D023");
                 dgvMonthlyStats.Columns["MonthFormatted"].FillWeight = 80;
-                dgvMonthlyStats.Columns["Count"].HeaderText = "DL数";
+                dgvMonthlyStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D016");
                 dgvMonthlyStats.Columns["Count"].FillWeight = 60;
-                dgvMonthlyStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
+                dgvMonthlyStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
                 dgvMonthlyStats.Columns["TotalSizeFormatted"].FillWeight = 80;
-                dgvMonthlyStats.Columns["CumulativeCount"].HeaderText = "累積DL数";
+                dgvMonthlyStats.Columns["CumulativeCount"].HeaderText = L.T("StatisticsForm_D024");
                 dgvMonthlyStats.Columns["CumulativeCount"].FillWeight = 80;
-                dgvMonthlyStats.Columns["CumulativeSizeFormatted"].HeaderText = "累積サイズ";
+                dgvMonthlyStats.Columns["CumulativeSizeFormatted"].HeaderText = L.T("StatisticsForm_D025");
                 dgvMonthlyStats.Columns["CumulativeSizeFormatted"].FillWeight = 90;
 
                 dgvMonthlyStats.Columns["Month"].Visible = false;
@@ -314,11 +316,11 @@ namespace IwaraDownloader.Forms
 
             if (dgvSizeStats.Columns.Count > 0)
             {
-                dgvSizeStats.Columns["Bucket"].HeaderText = "サイズ帯";
+                dgvSizeStats.Columns["Bucket"].HeaderText = L.T("StatisticsForm_D026");
                 dgvSizeStats.Columns["Bucket"].FillWeight = 100;
-                dgvSizeStats.Columns["Count"].HeaderText = "動画数";
+                dgvSizeStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
                 dgvSizeStats.Columns["Count"].FillWeight = 70;
-                dgvSizeStats.Columns["TotalSizeFormatted"].HeaderText = "合計サイズ";
+                dgvSizeStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D028");
                 dgvSizeStats.Columns["TotalSizeFormatted"].FillWeight = 90;
 
                 dgvSizeStats.Columns["TotalSize"].Visible = false;
@@ -327,7 +329,7 @@ namespace IwaraDownloader.Forms
 
         // 動画長分布のビン定義(順序保持用)
         private static readonly string[] DurationBinOrder =
-            { "～1分", "1-5分", "5-10分", "10-30分", "30分～" };
+            { L.T("StatisticsForm_Dur1"), L.T("StatisticsForm_Dur2"), L.T("StatisticsForm_Dur3"), L.T("StatisticsForm_Dur4"), L.T("StatisticsForm_Dur5") };
 
         /// <summary>
         /// 動画長分布を読み込み
@@ -352,11 +354,11 @@ namespace IwaraDownloader.Forms
 
             if (dgvDurationStats.Columns.Count > 0)
             {
-                dgvDurationStats.Columns["Bucket"].HeaderText = "再生時間帯";
+                dgvDurationStats.Columns["Bucket"].HeaderText = L.T("StatisticsForm_D029");
                 dgvDurationStats.Columns["Bucket"].FillWeight = 100;
-                dgvDurationStats.Columns["Count"].HeaderText = "動画数";
+                dgvDurationStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
                 dgvDurationStats.Columns["Count"].FillWeight = 70;
-                dgvDurationStats.Columns["TotalDurationFormatted"].HeaderText = "合計再生時間";
+                dgvDurationStats.Columns["TotalDurationFormatted"].HeaderText = L.T("StatisticsForm_D030");
                 dgvDurationStats.Columns["TotalDurationFormatted"].FillWeight = 90;
 
                 dgvDurationStats.Columns["TotalSeconds"].Visible = false;
@@ -395,9 +397,9 @@ namespace IwaraDownloader.Forms
             {
                 dgvTagStats.Columns["Rank"].HeaderText = "#";
                 dgvTagStats.Columns["Rank"].FillWeight = 40;
-                dgvTagStats.Columns["Tag"].HeaderText = "タグ";
+                dgvTagStats.Columns["Tag"].HeaderText = L.T("StatisticsForm_D031");
                 dgvTagStats.Columns["Tag"].FillWeight = 180;
-                dgvTagStats.Columns["Count"].HeaderText = "動画数";
+                dgvTagStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
                 dgvTagStats.Columns["Count"].FillWeight = 70;
             }
         }
@@ -409,7 +411,7 @@ namespace IwaraDownloader.Forms
         {
             var total = completed.Count;
             var ratingStats = completed
-                .GroupBy(v => string.IsNullOrEmpty(v.Rating) ? "未取得" : v.Rating)
+                .GroupBy(v => string.IsNullOrEmpty(v.Rating) ? L.T("StatisticsForm_RatingNone") : v.Rating)
                 .Select(g => new RatingStatItem
                 {
                     Rating = g.Key,
@@ -425,9 +427,9 @@ namespace IwaraDownloader.Forms
             {
                 dgvRatingStats.Columns["Rating"].HeaderText = "Rating";
                 dgvRatingStats.Columns["Rating"].FillWeight = 100;
-                dgvRatingStats.Columns["Count"].HeaderText = "動画数";
+                dgvRatingStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
                 dgvRatingStats.Columns["Count"].FillWeight = 70;
-                dgvRatingStats.Columns["PercentageFormatted"].HeaderText = "割合";
+                dgvRatingStats.Columns["PercentageFormatted"].HeaderText = L.T("StatisticsForm_D019");
                 dgvRatingStats.Columns["PercentageFormatted"].FillWeight = 70;
 
                 dgvRatingStats.Columns["Percentage"].Visible = false;
@@ -440,7 +442,7 @@ namespace IwaraDownloader.Forms
         private void LoadSiteStatistics(List<VideoInfo> completed)
         {
             var siteStats = completed
-                .GroupBy(v => string.IsNullOrEmpty(v.Site) ? "www.iwara.tv (旧)" : v.Site)
+                .GroupBy(v => string.IsNullOrEmpty(v.Site) ? L.T("StatisticsForm_SiteLegacy") : v.Site)
                 .Select(g => new SiteStatItem
                 {
                     Site = g.Key,
@@ -454,11 +456,11 @@ namespace IwaraDownloader.Forms
 
             if (dgvSiteStats.Columns.Count > 0)
             {
-                dgvSiteStats.Columns["Site"].HeaderText = "サイト";
+                dgvSiteStats.Columns["Site"].HeaderText = L.T("StatisticsForm_D032");
                 dgvSiteStats.Columns["Site"].FillWeight = 130;
-                dgvSiteStats.Columns["Count"].HeaderText = "動画数";
+                dgvSiteStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
                 dgvSiteStats.Columns["Count"].FillWeight = 70;
-                dgvSiteStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
+                dgvSiteStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
                 dgvSiteStats.Columns["TotalSizeFormatted"].FillWeight = 80;
 
                 dgvSiteStats.Columns["TotalSize"].Visible = false;
@@ -491,11 +493,11 @@ namespace IwaraDownloader.Forms
             {
                 dgvAuthorStats.Columns["Rank"].HeaderText = "#";
                 dgvAuthorStats.Columns["Rank"].FillWeight = 40;
-                dgvAuthorStats.Columns["Username"].HeaderText = "投稿者";
+                dgvAuthorStats.Columns["Username"].HeaderText = L.T("StatisticsForm_D033");
                 dgvAuthorStats.Columns["Username"].FillWeight = 180;
-                dgvAuthorStats.Columns["Count"].HeaderText = "動画数";
+                dgvAuthorStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
                 dgvAuthorStats.Columns["Count"].FillWeight = 70;
-                dgvAuthorStats.Columns["TotalSizeFormatted"].HeaderText = "サイズ";
+                dgvAuthorStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
                 dgvAuthorStats.Columns["TotalSizeFormatted"].FillWeight = 80;
 
                 dgvAuthorStats.Columns["TotalSize"].Visible = false;
@@ -511,44 +513,44 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private static string CategorizeError(string? msg)
         {
-            if (string.IsNullOrWhiteSpace(msg)) return "不明";
+            if (string.IsNullOrWhiteSpace(msg)) return L.T("Common_Unknown");
             var m = msg.ToLowerInvariant();
 
             if (msg.Contains("VIDEO_NOT_FOUND") || msg.Contains("errors.notFound")
                 || m.Contains("video not found") || m.Contains("404") || m.Contains("not found"))
-                return "動画削除/非公開 (404)";
+                return L.T("StatisticsForm_ErrNotFound");
 
             if (msg.Contains("PRIVATE_VIDEO") || msg.Contains("errors.privateVideo")
                 || m.Contains("private video") || m.Contains("403") || m.Contains("forbidden"))
-                return "フレンド限定/拒否 (403)";
+                return L.T("StatisticsForm_ErrForbidden");
 
             if (msg.Contains("CDN_UNAVAILABLE") || m.Contains("all cdn candidates failed"))
-                return "CDN利用不可";
+                return L.T("StatisticsForm_ErrCdn");
 
             if (m.Contains("429") || m.Contains("rate limit") || m.Contains("too many"))
-                return "レート制限 (429)";
+                return L.T("StatisticsForm_ErrRateLimit");
 
             if (m.Contains("401") || m.Contains("unauthorized"))
-                return "認証エラー (401)";
+                return L.T("StatisticsForm_ErrAuth");
 
             if (m.Contains("timeout") || m.Contains("timed out"))
-                return "タイムアウト";
+                return L.T("StatisticsForm_ErrTimeout");
 
             if (m.Contains("disk") || m.Contains("space") || m.Contains("容量"))
-                return "ディスク容量不足";
+                return L.T("StatisticsForm_ErrDisk");
 
             if (m.Contains("ioexception") || m.Contains("being used")
                 || m.Contains("access to the path") || m.Contains("denied"))
-                return "ファイルI/O";
+                return L.T("StatisticsForm_ErrFileIo");
 
             if (m.Contains("connection") || m.Contains("network") || m.Contains("socket")
                 || m.Contains("ssl") || m.Contains("no such host") || m.Contains("name or service"))
-                return "ネットワーク";
+                return L.T("StatisticsForm_ErrNetwork");
 
             if (m.Contains("外部動画") || m.Contains("スキップ"))
-                return "外部動画スキップ";
+                return L.T("StatisticsForm_ErrExternalSkip");
 
-            return "その他";
+            return L.T("StatisticsForm_ErrOther");
         }
 
         /// <summary>
@@ -577,11 +579,11 @@ namespace IwaraDownloader.Forms
 
         private static string DurationBin(int seconds)
         {
-            if (seconds < 60) return "～1分";
-            if (seconds < 300) return "1-5分";
-            if (seconds < 600) return "5-10分";
-            if (seconds < 1800) return "10-30分";
-            return "30分～";
+            if (seconds < 60) return L.T("StatisticsForm_Dur1");
+            if (seconds < 300) return L.T("StatisticsForm_Dur2");
+            if (seconds < 600) return L.T("StatisticsForm_Dur3");
+            if (seconds < 1800) return L.T("StatisticsForm_Dur4");
+            return L.T("StatisticsForm_Dur5");
         }
 
         /// <summary>
@@ -620,8 +622,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new SaveFileDialog
             {
-                Title = "統計をエクスポート",
-                Filter = "CSVファイル (*.csv)|*.csv",
+                Title = L.T("StatisticsForm_D034"),
+                Filter = L.T("StatisticsForm_D004"),
                 FileName = $"iwara_stats_{DateTime.Now:yyyyMMdd}.csv"
             };
 
@@ -694,12 +696,12 @@ namespace IwaraDownloader.Forms
                         writer.WriteLine($"{rank++},{EscapeCsv(g.Key)},{g.Count()},{g.Sum(v => v.FileSize)}");
                     }
 
-                    MessageBox.Show("エクスポートしました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("StatisticsForm_D005"), L.T("StatisticsForm_D006"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}",
-                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("StatisticsForm_D007", ex.Message),
+                        L.T("StatisticsForm_D002"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -727,7 +729,7 @@ namespace IwaraDownloader.Forms
         public bool IsEnabled { get; set; }
 
         public string TotalSizeFormatted => StatisticsForm.FormatBytes(TotalSize);
-        public string StatusText => IsEnabled ? "有効" : "無効";
+        public string StatusText => IsEnabled ? L.T("StatisticsForm_D008") : L.T("StatisticsForm_D009");
     }
 
     /// <summary>
@@ -761,7 +763,7 @@ namespace IwaraDownloader.Forms
     /// </summary>
     public class RetryStatItem
     {
-        public string RetryCountFormatted => RetryCount == 0 ? "0回(初回失敗)" : $"{RetryCount}回";
+        public string RetryCountFormatted => RetryCount == 0 ? L.T("StatisticsForm_RetryZero") : L.T("StatisticsForm_RetryN", RetryCount);
         public int Count { get; set; }
         public int RetryCount { get; set; } // 非表示(ソート用の生値)
     }
@@ -811,8 +813,8 @@ namespace IwaraDownloader.Forms
             {
                 var ts = TimeSpan.FromSeconds(TotalSeconds);
                 if (ts.TotalHours >= 1)
-                    return $"{(int)ts.TotalHours}時間{ts.Minutes}分";
-                return $"{ts.Minutes}分{ts.Seconds}秒";
+                    return L.T("StatisticsForm_HoursMinutes", (int)ts.TotalHours, ts.Minutes);
+                return L.T("StatisticsForm_MinutesSeconds", ts.Minutes, ts.Seconds);
             }
         }
     }

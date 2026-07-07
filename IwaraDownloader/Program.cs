@@ -11,12 +11,15 @@ namespace IwaraDownloader
         [STAThread]
         static void Main()
         {
+            // UI言語の適用。フォーム生成前(=文言が読まれる前)に必ず行う
+            ApplyUiLanguage();
+
             // 多重起動防止
             using var mutex = new Mutex(true, "IwaraDownloader_SingleInstance", out bool createdNew);
             if (!createdNew)
             {
                 MessageBox.Show(
-                    "IwaraDownloaderは既に起動しています。",
+                    Utils.L.T("Msg_AlreadyRunning"),
                     "IwaraDownloader",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -58,6 +61,43 @@ namespace IwaraDownloader
                 // ログサービス終了
                 logger.Dispose();
             }
+        }
+
+        /// <summary>
+        /// 設定に基づいてUI言語を適用する。
+        /// "auto" はOSのUI言語に従う: 日本語OS→ja(ニュートラル)、中国語系OS→zh-Hans、それ以外→en。
+        /// </summary>
+        private static void ApplyUiLanguage()
+        {
+            try
+            {
+                var setting = Utils.SettingsManager.Instance.Settings.Language;
+                var culture = setting switch
+                {
+                    "ja" => System.Globalization.CultureInfo.GetCultureInfo("ja"),
+                    "en" => System.Globalization.CultureInfo.GetCultureInfo("en"),
+                    "zh-Hans" => System.Globalization.CultureInfo.GetCultureInfo("zh-Hans"),
+                    _ => ResolveAutoCulture()
+                };
+                System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+                Thread.CurrentThread.CurrentUICulture = culture;
+            }
+            catch
+            {
+                // 言語適用に失敗してもニュートラル(日本語)で起動できるため無視する
+            }
+        }
+
+        private static System.Globalization.CultureInfo ResolveAutoCulture()
+        {
+            var os = System.Globalization.CultureInfo.CurrentUICulture;
+            var lang = os.TwoLetterISOLanguageName;
+            return lang switch
+            {
+                "ja" => System.Globalization.CultureInfo.GetCultureInfo("ja"),
+                "zh" => System.Globalization.CultureInfo.GetCultureInfo("zh-Hans"),
+                _ => System.Globalization.CultureInfo.GetCultureInfo("en")
+            };
         }
 
         /// <summary>

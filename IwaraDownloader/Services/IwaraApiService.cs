@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using System.Diagnostics;
 using System.Text.Json;
 using IwaraDownloader.Models;
@@ -471,17 +472,17 @@ namespace IwaraDownloader.Services
         {
             if (!IsLoggedIn)
             {
-                progress?.Report("ログインが必要です。設定画面からログインしてください。");
+                progress?.Report("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
                 return new List<VideoInfo>();
             }
 
-            progress?.Report($"{username}の動画一覧を取得中...");
+            progress?.Report(L.T("SvcIwaraApiService_D001", username));
 
             var result = await RunPythonAsync("get_videos", site, ct, username);
             
             if (result == null)
             {
-                progress?.Report("Pythonスクリプトの実行に失敗しました");
+                progress?.Report(L.T("SvcIwaraApiService_D002"));
                 return new List<VideoInfo>();
             }
 
@@ -492,7 +493,7 @@ namespace IwaraDownloader.Services
                 var error = root.TryGetProperty("error", out var errorProp) 
                     ? errorProp.GetString() 
                     : "Unknown error";
-                progress?.Report($"エラー: {error}");
+                progress?.Report(L.T("SvcIwaraApiService_D003", error));
                 return new List<VideoInfo>();
             }
 
@@ -523,7 +524,7 @@ namespace IwaraDownloader.Services
             }
 
             var count = root.TryGetProperty("count", out var countProp) ? countProp.GetInt32() : videos.Count;
-            progress?.Report($"{count}件の動画を取得しました");
+            progress?.Report(L.T("SvcIwaraApiService_D004", count));
 
             return videos;
         }
@@ -536,7 +537,7 @@ namespace IwaraDownloader.Services
         public async Task<VideoUrlInfo> GetDownloadUrlAsync(string videoId, string? site = null)
         {
             if (!IsLoggedIn)
-                return VideoUrlInfo.FromError("ログインが必要です。設定画面からログインしてください。");
+                return VideoUrlInfo.FromError("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
 
             var info = await GetDownloadUrlInternalAsync(videoId, site);
             // site が未指定 (= iwara.tv デフォルト) かつ "errors.differentSite" → iwara.ai で再試行
@@ -562,7 +563,7 @@ namespace IwaraDownloader.Services
             var result = await RunPythonAsync("get_url", site, videoId);
 
             if (result == null)
-                return VideoUrlInfo.FromError("Pythonスクリプトの実行に失敗しました");
+                return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
 
             var root = result.RootElement;
 
@@ -626,9 +627,9 @@ namespace IwaraDownloader.Services
             string? site = null)
         {
             if (!IsLoggedIn)
-                return (false, "ログインが必要です。設定画面からログインしてください。");
+                return (false, "LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
 
-            progress?.Report($"ダウンロード中: {videoId}");
+            progress?.Report(L.T("SvcIwaraApiService_D005", videoId));
 
             var result = await RunPythonWithProgressAsync("download", percentProgress, ct, site, videoId, outputPath);
             
@@ -639,7 +640,7 @@ namespace IwaraDownloader.Services
             
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
             {
-                progress?.Report("ダウンロード完了");
+                progress?.Report(L.T("SvcIwaraApiService_D006"));
                 return (true, null);
             }
 
@@ -663,7 +664,7 @@ namespace IwaraDownloader.Services
             if (string.IsNullOrEmpty(embedUrl))
                 return (false, "埋め込みURLが空です", null);
 
-            progress?.Report($"外部動画DL中: {embedUrl}");
+            progress?.Report(L.T("SvcIwaraApiService_D007", embedUrl));
 
             var ytDlpPath = Utils.SettingsManager.Instance.Settings.YtDlpPath;
             if (string.IsNullOrWhiteSpace(ytDlpPath))
@@ -686,7 +687,7 @@ namespace IwaraDownloader.Services
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
             {
                 var filePath = root.TryGetProperty("file_path", out var fpProp) ? fpProp.GetString() : null;
-                progress?.Report("外部動画DL完了");
+                progress?.Report(L.T("SvcIwaraApiService_D008"));
                 return (true, null, filePath);
             }
 
@@ -900,7 +901,7 @@ namespace IwaraDownloader.Services
                 try { File.Delete(SetupMarkerPath); LoggingService.Instance.Info("[セットアップ] 既存マーカー削除"); } catch (Exception ex) { LoggingService.Instance.Warn($"[セットアップ] マーカー削除失敗: {ex.Message}"); }
             }
 
-            progress?.Report("セットアップを実行中...");
+            progress?.Report(L.T("SvcIwaraApiService_D009"));
 
             var psi = new ProcessStartInfo
             {
@@ -965,7 +966,7 @@ namespace IwaraDownloader.Services
             if (setupSuccess)
             {
                 LoggingService.Instance.Info("[セットアップ] 成功");
-                progress?.Report("セットアップ完了");
+                progress?.Report(L.T("SvcIwaraApiService_D010"));
             }
             else
             {
@@ -975,7 +976,7 @@ namespace IwaraDownloader.Services
                     $"[セットアップ] 失敗 ExitCode={process.ExitCode}, マーカー={File.Exists(SetupMarkerPath)}, " +
                     $"PathHint='Pythonが新規インストール直後ならPC再起動でPATHを反映してください'\n" +
                     $"--- stderr ---\n{errSummary}\n--- stdout(末尾) ---\n{(outSummary.Length > 1500 ? outSummary[^1500..] : outSummary)}");
-                progress?.Report("セットアップに失敗しました(詳細はログ参照)");
+                progress?.Report(L.T("SvcIwaraApiService_D011"));
             }
 
             return setupSuccess;

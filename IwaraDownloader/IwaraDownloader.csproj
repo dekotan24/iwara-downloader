@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
     <RootNamespace>IwaraDownloader</RootNamespace>
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
     <Authors>deko</Authors>
     <Description>Iwara video downloader</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -17,6 +17,8 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/dekotan24/iwara-downloader</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <!-- 多言語対応: ニュートラルリソース(Strings.resx)は日本語。en/zh-Hansはサテライトアセンブリ -->
+    <NeutralResourcesLanguage>ja</NeutralResourcesLanguage>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

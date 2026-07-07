@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🎬 IwaraDownloader
+# <img width="32" height="32" alt="icon" src="https://github.com/user-attachments/assets/dfae4206-78de-45de-a975-d9b69b96c68b" /> IwaraDownloader
 
 **iwara.tv / iwara.ai 対応の高機能動画ダウンローダー & メディアサーバー for Windows**
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -20,6 +20,8 @@
 
 ---
 
+<img width="1000" height="652" alt="2026-06-12_14h30_40" src="https://github.com/user-attachments/assets/de36894c-65e9-41af-b150-e65c7ff4a8bf" />
+
 ## ✨ ハイライト
 
 - 📺 **チャンネル購読** — お気に入りユーザーを登録するだけで、新着を自動検出して自動ダウンロード
@@ -27,6 +29,8 @@
 - 🌐 **Web メディアサーバー内蔵** — スマホやタブレットのブラウザから LAN 内で視聴・管理（日本語 UI）
 - ⭐ **お気に入り・強力な検索** — アプリと Web の両方からお気に入り管理、タイトル/アーティスト/タグの混合検索
 - 🧰 **コレクション管理** — UUID ベースの重複検出、保存先移動（クラッシュ復旧付き）、統計ダッシュボード
+- 🗑️ **除外リスト（ゴミ箱）** — 削除した動画は自動取得で復活せず、いつでも復元可能
+- 🌐 **多言語対応** — 日本語 / English / 简体中文（設定でいつでも切替）
 - 🔒 **完全ローカル** — データはすべてローカル保存。外部へのデータ送信は一切ありません
 
 ## 📋 主な機能
@@ -57,6 +61,7 @@
 - **保存先の変更とファイル移動** — 容量チェック → 進捗表示付き移動。ジャーナル方式でクラッシュ・強制終了からも自動復旧
 - **未移動ファイルの一括移動** — 容量不足などで移動に失敗したファイルを、原因解消後にまとめて再移動
 - **移動済みファイルの再リンク** — FastCopy 等の外部ツールで移動した後、検証（サイズ → UUID）して DB のパスだけ追従
+- **除外リスト（ゴミ箱）** — 動画を削除すると除外リストへ移動し、チャンネルの新着チェックで再び取得されるのを防止。ツリーの「🚫 除外済み」から復元・完全削除が可能
 - **重複チェック / 一括リネーム / 統計ダッシュボード**（動画数・成功率・日別推移）
 
 ### 🌐 Web メディアサーバー
@@ -78,6 +83,7 @@
 | OS | Windows 10 / 11 (64bit) |
 | ランタイム | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
 | Python | 不要（初回セットアップウィザードが自動で取得）。既存の Python 3.10 以上を使うことも可 |
+| 表示言語 | 日本語 / English / 简体中文（設定 → 一般 で切替。「自動」選択時は OS の言語に追従） |
 
 ## 🚀 インストール
 

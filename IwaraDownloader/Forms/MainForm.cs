@@ -28,6 +28,7 @@ namespace IwaraDownloader.Forms
         private const string NODE_FAILED_VIDEOS = "__FAILED_VIDEOS__";
         private const string NODE_SINGLE_VIDEOS = "__SINGLE_VIDEOS__";
         private const string NODE_FAVORITES = "__FAVORITES__";
+        private const string NODE_EXCLUDED = "__EXCLUDED__";
         
         // フィルター用の全動画キャッシュ(フィルター前)
         private List<VideoInfo> _allVideoList = new();
@@ -55,6 +56,7 @@ namespace IwaraDownloader.Forms
         public MainForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _downloadManager = new DownloadManager();
             _database = DatabaseService.Instance;
             _webServer = new WebServerService();
@@ -67,13 +69,13 @@ namespace IwaraDownloader.Forms
         private void MainForm_Load(object sender, EventArgs e)
         {
             // スプラッシュ更新
-            SplashForm.UpdateStatus("設定を読み込み中...", 10);
+            SplashForm.UpdateStatus(L.T("MainForm_D001"), 10);
 
             // 設定読み込み
             var settings = SettingsManager.Instance.Settings;
 
             // タスクトレイアイコン設定
-            SplashForm.UpdateStatus("システムトレイを初期化中...", 20);
+            SplashForm.UpdateStatus(L.T("MainForm_D002"), 20);
             try
             {
                 notifyIcon.Icon = this.Icon ?? SystemIcons.Application;
@@ -94,7 +96,7 @@ namespace IwaraDownloader.Forms
             }
 
             // イベント登録
-            SplashForm.UpdateStatus("イベントを登録中...", 30);
+            SplashForm.UpdateStatus(L.T("MainForm_D003"), 30);
             _downloadManager.TaskProgressChanged += OnTaskProgressChanged;
             _downloadManager.TaskStatusChanged += OnTaskStatusChanged;
             _downloadManager.NewVideosFound += OnNewVideosFound;
@@ -104,29 +106,29 @@ namespace IwaraDownloader.Forms
             _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => UpdateStatusBar(msg));
             _downloadManager.UserAdded += (_, _) => PostToUi(() => RefreshChannelTree());
             _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() =>
-                UpdateStatusBar($"ログインが必要です — DLキューを停止しました ({count}件待機中)。ログイン後に自動再開します。"));
+                UpdateStatusBar(L.T("MainForm_D004", count)));
 
             // 前回プロセスがファイル移動中に強制終了されていた場合の整合性復旧
-            SplashForm.UpdateStatus("整合性をチェック中...", 35);
+            SplashForm.UpdateStatus(L.T("MainForm_D005"), 35);
             var recoveryMessage = Services.FileMoveJournal.RecoverIfNeeded(_database);
 
             // サムネキャッシュ移行が中断されていた場合の残り移行 (バックグラウンド)
             _ = Task.Run(Services.ThumbnailCacheService.SyncCacheDirIfMoved);
 
             // 環境チェック
-            SplashForm.UpdateStatus("環境をチェック中...", 40);
+            SplashForm.UpdateStatus(L.T("MainForm_D006"), 40);
             CheckEnvironment();
 
             // ログイン状態確認
-            SplashForm.UpdateStatus("ログイン状態を確認中...", 50);
+            SplashForm.UpdateStatus(L.T("MainForm_D007"), 50);
             UpdateLoginStatus();
 
             // ツリー初期化
-            SplashForm.UpdateStatus("チャンネルデータを読み込み中...", 60);
+            SplashForm.UpdateStatus(L.T("MainForm_D008"), 60);
             RefreshChannelTree();
 
             // ListViewソーター初期化
-            SplashForm.UpdateStatus("UIを初期化中...", 70);
+            SplashForm.UpdateStatus(L.T("MainForm_D009"), 70);
             InitializeListViewSorter();
 
             // 動画コンテキストメニューは Designer で構築済み (Items.AddRange は InitializeComponent 内で完了)
@@ -138,17 +140,17 @@ namespace IwaraDownloader.Forms
             btnClipMonitor.Checked = settings.EnableClipboardMonitor;
 
             // ダウンロードマネージャー開始
-            SplashForm.UpdateStatus("ダウンロードマネージャーを開始中...", 80);
+            SplashForm.UpdateStatus(L.T("MainForm_D010"), 80);
             _downloadManager.Start();
 
             // 起動時に未完了ダウンロードを再開
-            SplashForm.UpdateStatus("未完了タスクを復元中...", 90);
+            SplashForm.UpdateStatus(L.T("MainForm_D011"), 90);
             _downloadManager.ResumeIncompleteDownloads();
             RefreshChannelTree();
             RefreshVideoList();
 
             // 起動完了
-            SplashForm.UpdateStatus("起動完了", 100);
+            SplashForm.UpdateStatus(L.T("MainForm_D012"), 100);
 
             // 整合性復旧の結果をユーザーに通知 (CheckEnvironment のステータス表示の後に上書き)
             if (recoveryMessage != null)
@@ -204,12 +206,12 @@ namespace IwaraDownloader.Forms
             if (result == DialogResult.OK)
             {
                 btnSetup.BackColor = SystemColors.Control;
-                MessageBox.Show("セットアップが完了しました!", "完了",
+                MessageBox.Show(L.T("MainForm_D013"), L.T("MainForm_D014"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else if (autoTriggered)
             {
-                UpdateStatusBar("セットアップ未完了。「環境セットアップ」ボタンから再実行できます。");
+                UpdateStatusBar(L.T("MainForm_D015"));
             }
             CheckEnvironment();
         }
@@ -261,7 +263,7 @@ namespace IwaraDownloader.Forms
                 if (slowClose)
                 {
                     notifyIcon.ShowBalloonTip(10000, "IwaraDownloader",
-                        "終了処理中です。実行中のダウンロードの中断とタグ書き込みの完了を待っています...",
+                        L.T("MainForm_D016"),
                         ToolTipIcon.Info);
                 }
             }
@@ -354,16 +356,16 @@ namespace IwaraDownloader.Forms
 
             if (!setupComplete)
             {
-                UpdateStatusBar("環境が未セットアップです。「環境セットアップ」ボタンをクリックしてください。");
+                UpdateStatusBar(L.T("MainForm_D017"));
                 btnSetup.BackColor = Color.Yellow;
             }
             else if (!_downloadManager.IsLoggedIn)
             {
-                UpdateStatusBar("ログインが必要です。「ログイン」ボタンをクリックしてください。");
+                UpdateStatusBar(L.T("MainForm_D018"));
             }
             else
             {
-                UpdateStatusBar("準備完了");
+                UpdateStatusBar(L.T("MainForm_D019"));
                 // トークン有効性を API で非同期検証(失敗時は内部でログアウトされる)
                 _ = VerifyLoginInBackgroundAsync();
             }
@@ -384,7 +386,7 @@ namespace IwaraDownloader.Forms
                     this.BeginInvoke((Action)(() =>
                     {
                         UpdateLoginStatus();
-                        UpdateStatusBar($"ログインセッションが無効です: {error ?? "不明"}。再ログインしてください。");
+                        UpdateStatusBar(L.T("MainForm_D020", error ?? L.T("Common_Unknown")));
                     }));
                 }
             }
@@ -407,15 +409,15 @@ namespace IwaraDownloader.Forms
         {
             if (_downloadManager.IsLoggedIn)
             {
-                lblLoginStatus.Text = "(ログイン済)";
+                lblLoginStatus.Text = L.T("MainForm_D022");
                 lblLoginStatus.ForeColor = Color.Green;
-                btnLogin.Text = "ログアウト";
+                btnLogin.Text = L.T("MainForm_D023");
             }
             else
             {
-                lblLoginStatus.Text = "(未ログイン)";
+                lblLoginStatus.Text = L.T("MainForm_D024");
                 lblLoginStatus.ForeColor = Color.Gray;
-                btnLogin.Text = "ログイン";
+                btnLogin.Text = L.T("MainForm_D025");
             }
         }
 
@@ -423,12 +425,12 @@ namespace IwaraDownloader.Forms
         {
             if (_downloadManager.IsLoggedIn)
             {
-                var result = MessageBox.Show("ログアウトしますか？", "ログアウト", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                var result = MessageBox.Show(L.T("MainForm_D026"), L.T("MainForm_D023"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (result == DialogResult.Yes)
                 {
                     _downloadManager.Logout();
                     UpdateLoginStatus();
-                    UpdateStatusBar("ログアウトしました");
+                    UpdateStatusBar(L.T("MainForm_D027"));
                 }
             }
             else
@@ -441,18 +443,18 @@ namespace IwaraDownloader.Forms
         {
             if (!_downloadManager.IsEnvironmentReady)
             {
-                MessageBox.Show("先に環境セットアップを実行してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("MainForm_D028"), L.T("MainForm_D029"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var email = ShowInputDialog("ログイン", "iwaraのメールアドレスを入力:");
+            var email = ShowInputDialog(L.T("MainForm_D168"), L.T("MainForm_D169"));
             if (string.IsNullOrEmpty(email)) return;
 
-            var password = ShowPasswordDialog("ログイン", "パスワードを入力:");
+            var password = ShowPasswordDialog(L.T("MainForm_D168"), L.T("MainForm_D170"));
             if (string.IsNullOrEmpty(password)) return;
 
             btnLogin.Enabled = false;
-            UpdateStatusBar("ログイン中...");
+            UpdateStatusBar(L.T("MainForm_D030"));
 
             try
             {
@@ -464,20 +466,20 @@ namespace IwaraDownloader.Forms
                     settings.IwaraEmail = email;
                     SettingsManager.Instance.Save();
                     
-                    UpdateStatusBar("ログイン完了！");
+                    UpdateStatusBar(L.T("MainForm_D031"));
                     _downloadManager.ResumeAfterLogin();
-                    MessageBox.Show("ログインに成功しました！", "ログイン成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("MainForm_D032"), L.T("MainForm_D033"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    UpdateStatusBar("ログインに失敗しました");
-                    MessageBox.Show($"ログインに失敗しました:\n{error}", "ログイン失敗", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    UpdateStatusBar(L.T("MainForm_D034"));
+                    MessageBox.Show(L.T("MainForm_D035", error), L.T("MainForm_D036"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
-                UpdateStatusBar("ログインエラー");
-                MessageBox.Show($"ログイン中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UpdateStatusBar(L.T("MainForm_D037"));
+                MessageBox.Show(L.T("MainForm_D038", ex.Message), L.T("MainForm_D029"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -492,7 +494,7 @@ namespace IwaraDownloader.Forms
 
         private void btnAddUser_Click(object sender, EventArgs e)
         {
-            var input = ShowInputDialog("チャンネル追加", "ユーザー名またはプロフィールURLを入力:");
+            var input = ShowInputDialog(L.T("MainForm_D171"), L.T("MainForm_D172"));
             if (string.IsNullOrEmpty(input)) return;
 
             var isUrl = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
@@ -503,8 +505,8 @@ namespace IwaraDownloader.Forms
                 if (!Helpers.IsUserProfileUrl(input))
                 {
                     MessageBox.Show(
-                        "iwara.tvのプロフィールURLを入力してください。\n\n対応形式: https://www.iwara.tv/profile/username",
-                        "無効なURL",
+                        L.T("MainForm_D039"),
+                        L.T("MainForm_D040"),
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                     return;
@@ -515,8 +517,8 @@ namespace IwaraDownloader.Forms
                 if (!Helpers.IsValidUsername(input))
                 {
                     MessageBox.Show(
-                        "無効なユーザー名です。\n\nユーザー名には英数字、@、_、- のみ使用できます。",
-                        "無効な入力",
+                        L.T("MainForm_D041"),
+                        L.T("MainForm_D042"),
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                     return;
@@ -528,14 +530,14 @@ namespace IwaraDownloader.Forms
 
         private async void btnAddVideo_Click(object sender, EventArgs e)
         {
-            var url = ShowInputDialog("動画追加", "動画URLを入力:");
+            var url = ShowInputDialog(L.T("MainForm_D173"), L.T("MainForm_D174"));
             if (string.IsNullOrEmpty(url)) return;
 
             if (!Helpers.IsVideoUrl(url))
             {
                 MessageBox.Show(
-                    "iwara.tvの動画URLを入力してください。\n\n対応形式: https://www.iwara.tv/video/xxxxx",
-                    "無効なURL",
+                    L.T("MainForm_D043"),
+                    L.T("MainForm_D040"),
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
                 return;
@@ -554,13 +556,13 @@ namespace IwaraDownloader.Forms
         private void btnStartAll_Click(object sender, EventArgs e)
         {
             _downloadManager.Start();
-            UpdateStatusBar("ダウンロード開始");
+            UpdateStatusBar(L.T("MainForm_D044"));
         }
 
         private void btnStopAll_Click(object sender, EventArgs e)
         {
             _downloadManager.CancelAllTasks();
-            UpdateStatusBar("全てのダウンロードを停止しました");
+            UpdateStatusBar(L.T("MainForm_D045"));
             RefreshChannelTree();
             RefreshVideoList();
         }
@@ -627,8 +629,8 @@ namespace IwaraDownloader.Forms
             {
                 // URL形式だがiwaraのURLではない
                 MessageBox.Show(
-                    "iwara.tvのURLを入力してください。\n\n対応形式:\n・動画: https://www.iwara.tv/video/xxxxx\n・チャンネル: https://www.iwara.tv/profile/username",
-                    "無効なURL",
+                    L.T("MainForm_D046"),
+                    L.T("MainForm_D040"),
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
             }
@@ -636,8 +638,8 @@ namespace IwaraDownloader.Forms
             {
                 // ユーザー名として無効な文字が含まれている
                 MessageBox.Show(
-                    "無効なユーザー名です。\n\nユーザー名には英数字、@、_、- のみ使用できます。",
-                    "無効な入力",
+                    L.T("MainForm_D041"),
+                    L.T("MainForm_D042"),
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
             }
@@ -650,7 +652,7 @@ namespace IwaraDownloader.Forms
 
         private async Task AddVideoAsync(string url)
         {
-            UpdateStatusBar("動画を追加中...");
+            UpdateStatusBar(L.T("MainForm_D047"));
 
             try
             {
@@ -663,11 +665,11 @@ namespace IwaraDownloader.Forms
                     {
                         var statusText = GetStatusText(existingVideo.Status);
                         var result = MessageBox.Show(
-                            $"この動画は既に登録されています。\n\n" +
-                            $"タイトル: {existingVideo.Title}\n" +
-                            $"状態: {statusText}\n\n" +
-                            $"ダウンロードキューに追加しますか？",
-                            "重複確認",
+                            L.T("MainForm_D048") +
+                            L.T("MainForm_D049", existingVideo.Title) +
+                            L.T("MainForm_D050", statusText) +
+                            L.T("MainForm_D051"),
+                            L.T("MainForm_D052"),
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Question);
 
@@ -682,11 +684,11 @@ namespace IwaraDownloader.Forms
                             _downloadManager.EnqueueDownload(existingVideo, existingVideo.SubscribedUserId.HasValue, user);
                             RefreshChannelTree();
                             RefreshVideoList();
-                            UpdateStatusBar($"動画「{existingVideo.Title}」をキューに追加しました");
+                            UpdateStatusBar(L.T("MainForm_D053", existingVideo.Title));
                         }
                         else
                         {
-                            UpdateStatusBar("キャンセルされました");
+                            UpdateStatusBar(L.T("MainForm_D054"));
                         }
                         return;
                     }
@@ -699,18 +701,18 @@ namespace IwaraDownloader.Forms
                 {
                     RefreshChannelTree();
                     RefreshVideoList();
-                    UpdateStatusBar($"動画「{task.Video.Title}」を追加しました");
+                    UpdateStatusBar(L.T("MainForm_D055", task.Video.Title));
                 }
                 else
                 {
-                    MessageBox.Show("動画の追加に失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    UpdateStatusBar("動画追加失敗");
+                    MessageBox.Show(L.T("MainForm_D056"), L.T("MainForm_D029"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    UpdateStatusBar(L.T("MainForm_D057"));
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"エラー: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                UpdateStatusBar("エラー");
+                MessageBox.Show(L.T("MainForm_D058", ex.Message), L.T("MainForm_D029"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UpdateStatusBar(L.T("MainForm_D029"));
             }
         }
 
@@ -808,7 +810,7 @@ namespace IwaraDownloader.Forms
             try
             {
                 Services.NotificationService.Instance.ShowNotification(
-                    e.Success ? $"{e.TaskName} 完了" : $"{e.TaskName} 終了 (一部失敗)",
+                    e.Success ? L.T("MainForm_D175", e.TaskName) : L.T("MainForm_D176", e.TaskName),
                     e.Summary);
             }
             catch { }
@@ -899,7 +901,7 @@ namespace IwaraDownloader.Forms
             var pendingCount = _downloadManager.PendingTaskCount;
 
             // 「全ての動画」ノード
-            var allVideosNode = new TreeNode($"📊 全ての動画 [{completedCount}/{totalCount}]")
+            var allVideosNode = new TreeNode(L.T("MainForm_D177", completedCount, totalCount))
             {
                 Tag = NODE_ALL_VIDEOS,
                 NodeFont = new Font(treeViewChannels.Font, FontStyle.Bold)
@@ -908,7 +910,7 @@ namespace IwaraDownloader.Forms
 
             // 「お気に入り」ノード (0件でも常時表示して機能を見つけやすくする)
             var favoriteCount = allVideos.Count(v => v.IsFavorite);
-            var favoritesNode = new TreeNode($"⭐ お気に入り [{favoriteCount}]")
+            var favoritesNode = new TreeNode(L.T("MainForm_D178", favoriteCount))
             {
                 Tag = NODE_FAVORITES,
                 ForeColor = Color.Goldenrod
@@ -917,16 +919,16 @@ namespace IwaraDownloader.Forms
 
             // 「ダウンロードキュー」ノード
             var queueCount = downloadingCount + writingTagsCount + pendingCount;
-            var allDownloadsNode = new TreeNode($"📥 ダウンロードキュー")
+            var allDownloadsNode = new TreeNode(L.T("MainForm_D179"))
             {
                 Tag = NODE_ALL_DOWNLOADS
             };
             if (queueCount > 0)
             {
                 var parts = new List<string>();
-                if (downloadingCount > 0) parts.Add($"{downloadingCount}DL中");
-                if (writingTagsCount > 0) parts.Add($"{writingTagsCount}タグ書込");
-                if (pendingCount > 0) parts.Add($"{pendingCount}待機");
+                if (downloadingCount > 0) parts.Add(L.T("MainForm_QueueDownloading", downloadingCount));
+                if (writingTagsCount > 0) parts.Add(L.T("MainForm_QueueWritingTags", writingTagsCount));
+                if (pendingCount > 0) parts.Add(L.T("MainForm_QueuePending", pendingCount));
                 allDownloadsNode.Text += $" ({string.Join("/", parts)})";
                 allDownloadsNode.NodeFont = new Font(treeViewChannels.Font, FontStyle.Bold);
             }
@@ -935,7 +937,7 @@ namespace IwaraDownloader.Forms
             // 「未DL」ノード
             if (notDownloadedCount > 0)
             {
-                var notDownloadedNode = new TreeNode($"⏳ 未DL [{notDownloadedCount}]")
+                var notDownloadedNode = new TreeNode(L.T("MainForm_D180", notDownloadedCount))
                 {
                     Tag = NODE_NOT_DOWNLOADED,
                     ForeColor = Color.DarkOrange
@@ -946,7 +948,7 @@ namespace IwaraDownloader.Forms
             // 「DL済」ノード
             if (completedCount > 0)
             {
-                var downloadedNode = new TreeNode($"✅ DL済 [{completedCount}]")
+                var downloadedNode = new TreeNode(L.T("MainForm_D181", completedCount))
                 {
                     Tag = NODE_DOWNLOADED,
                     ForeColor = Color.Green
@@ -957,7 +959,7 @@ namespace IwaraDownloader.Forms
             // 「スキップ」ノード
             if (skippedCount > 0)
             {
-                var skippedNode = new TreeNode($"⏭️ スキップ [{skippedCount}]")
+                var skippedNode = new TreeNode(L.T("MainForm_D182", skippedCount))
                 {
                     Tag = NODE_SKIPPED,
                     ForeColor = Color.Gray
@@ -968,7 +970,7 @@ namespace IwaraDownloader.Forms
             // 「エラー」ノード
             if (failedCount > 0)
             {
-                var failedNode = new TreeNode($"❌ エラー [{failedCount}]")
+                var failedNode = new TreeNode(L.T("MainForm_D183", failedCount))
                 {
                     Tag = NODE_FAILED_VIDEOS,
                     ForeColor = Color.Red
@@ -980,11 +982,23 @@ namespace IwaraDownloader.Forms
             var singleVideos = allVideos.Where(v => !v.SubscribedUserId.HasValue).ToList();
             if (singleVideos.Any())
             {
-                var singleNode = new TreeNode($"📁 単発動画 [{singleVideos.Count}]")
+                var singleNode = new TreeNode(L.T("MainForm_D184", singleVideos.Count))
                 {
                     Tag = NODE_SINGLE_VIDEOS
                 };
                 treeViewChannels.Nodes.Add(singleNode);
+            }
+
+            // 「除外(ゴミ箱)」ノード: 削除した動画置き場。復元できる。0件なら非表示。
+            var excludedCount = _database.GetExcludedCount();
+            if (excludedCount > 0)
+            {
+                var excludedNode = new TreeNode(L.T("MainForm_ExcludedNode", excludedCount))
+                {
+                    Tag = NODE_EXCLUDED,
+                    ForeColor = Color.Gray
+                };
+                treeViewChannels.Nodes.Add(excludedNode);
             }
 
             // 登録チャンネル (users は await で取得済み)
@@ -1036,24 +1050,25 @@ namespace IwaraDownloader.Forms
             if (e.Node.Tag is SubscribedUser user)
             {
                 _selectedChannel = user;
-                lblVideoHeader.Text = $"動画一覧 - {user.Username}";
-                txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/タグ)...";
+                lblVideoHeader.Text = L.T("MainForm_D059", user.Username);
+                txtVideoFilter.PlaceholderText = L.T("MainForm_D185");
             }
             else if (e.Node.Tag is string tag)
             {
                 _selectedChannel = null;
-                txtVideoFilter.PlaceholderText = "🔍 検索 (タイトル/アーティスト/タグ)...";
+                txtVideoFilter.PlaceholderText = L.T("MainForm_D186");
                 lblVideoHeader.Text = tag switch
                 {
-                    NODE_ALL_VIDEOS => "全ての動画",
-                    NODE_ALL_DOWNLOADS => "ダウンロード中/待機中",
-                    NODE_NOT_DOWNLOADED => "未DL動画",
-                    NODE_DOWNLOADED => "DL済動画",
-                    NODE_SKIPPED => "スキップ動画",
-                    NODE_FAILED_VIDEOS => "エラー一覧",
-                    NODE_SINGLE_VIDEOS => "単発動画",
-                    NODE_FAVORITES => "お気に入り",
-                    _ => "動画一覧"
+                    NODE_ALL_VIDEOS => L.T("MainForm_D060"),
+                    NODE_ALL_DOWNLOADS => L.T("MainForm_D061"),
+                    NODE_NOT_DOWNLOADED => L.T("MainForm_D062"),
+                    NODE_DOWNLOADED => L.T("MainForm_D063"),
+                    NODE_SKIPPED => L.T("MainForm_D064"),
+                    NODE_FAILED_VIDEOS => L.T("MainForm_D065"),
+                    NODE_SINGLE_VIDEOS => L.T("MainForm_D066"),
+                    NODE_FAVORITES => L.T("MainForm_D067"),
+                    NODE_EXCLUDED => L.T("MainForm_ExcludedHeader"),
+                    _ => L.T("MainForm_D068")
                 };
             }
 
@@ -1132,6 +1147,7 @@ namespace IwaraDownloader.Forms
                                 .Where(v => !v.SubscribedUserId.HasValue).ToList(),
                             NODE_FAVORITES => _database.GetAllVideos()
                                 .Where(v => v.IsFavorite).ToList(),
+                            NODE_EXCLUDED => _database.GetExcludedVideos(),
                             _ => new List<VideoInfo>(),
                         };
                     }
@@ -1236,7 +1252,7 @@ namespace IwaraDownloader.Forms
             // フィルター結果をステータスに表示
             if (!query.IsEmpty || nsfwMode != 0 || favOnly || tagTerms.Length > 0)
             {
-                UpdateStatusBar($"フィルター: {_displayVideoList.Count}/{_allVideoList.Count}件");
+                UpdateStatusBar(L.T("MainForm_D069", _displayVideoList.Count, _allVideoList.Count));
             }
         }
 
@@ -1263,10 +1279,10 @@ namespace IwaraDownloader.Forms
             if (url.Contains("twitter.com") || url.Contains("x.com"))
                 return "X/Twitter";
             if (url.Contains("nicovideo.jp"))
-                return "ニコニコ";
+                return L.T("MainForm_SourceNico");
             if (url.Contains("bilibili.com"))
                 return "Bilibili";
-            return "外部";
+            return L.T("MainForm_SourceExternal");
         }
 
         private ListViewItem CreateVideoListItem(VideoInfo video)
@@ -1296,12 +1312,12 @@ namespace IwaraDownloader.Forms
                 }
                 else
                 {
-                    progressText = "DL中...";
+                    progressText = L.T("MainForm_ProgressDownloading");
                 }
             }
             else if (task != null && task.Status == DownloadStatus.WritingTags)
             {
-                progressText = "タグ書込中...";
+                progressText = L.T("MainForm_ProgressWritingTags");
             }
             else if (video.Status == DownloadStatus.Completed)
             {
@@ -1309,7 +1325,7 @@ namespace IwaraDownloader.Forms
             }
             else if (video.Status == DownloadStatus.Pending)
             {
-                progressText = "待機";
+                progressText = L.T("MainForm_D074");
             }
 
             var item = new ListViewItem(new[]
@@ -1348,19 +1364,19 @@ namespace IwaraDownloader.Forms
             // ツールチップ(エラー詳細表示)
             if (video.Status == DownloadStatus.Failed && !string.IsNullOrEmpty(video.LastErrorMessage))
             {
-                item.ToolTipText = $"エラー: {video.LastErrorMessage}\nリトライ: {video.RetryCount}回";
+                item.ToolTipText = L.T("MainForm_D070", video.LastErrorMessage, video.RetryCount);
             }
             else if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath))
             {
-                item.ToolTipText = $"保存先: {video.LocalFilePath}";
+                item.ToolTipText = L.T("MainForm_D071", video.LocalFilePath);
             }
             else if (task != null && task.Status == DownloadStatus.Downloading && task.EstimatedTimeRemaining.HasValue)
             {
-                item.ToolTipText = $"{video.Title}\n残り: {task.EtaFormatted}";
+                item.ToolTipText = L.T("MainForm_D072", video.Title, task.EtaFormatted);
             }
             else
             {
-                item.ToolTipText = $"{video.Title}\n投稿者: {video.AuthorUsername}";
+                item.ToolTipText = L.T("MainForm_D073", video.Title, video.AuthorUsername);
             }
 
             return item;
@@ -1435,14 +1451,14 @@ namespace IwaraDownloader.Forms
         {
             return status switch
             {
-                DownloadStatus.Pending => "待機中",
-                DownloadStatus.Downloading => "DL中",
-                DownloadStatus.WritingTags => "タグ書込中",
-                DownloadStatus.Completed => "完了",
-                DownloadStatus.Failed => "失敗",
-                DownloadStatus.Skipped => "スキップ",
-                DownloadStatus.Paused => "一時停止",
-                _ => "不明"
+                DownloadStatus.Pending => L.T("MainForm_D074"),
+                DownloadStatus.Downloading => L.T("MainForm_D075"),
+                DownloadStatus.WritingTags => L.T("MainForm_D076"),
+                DownloadStatus.Completed => L.T("MainForm_D014"),
+                DownloadStatus.Failed => L.T("MainForm_D077"),
+                DownloadStatus.Skipped => L.T("MainForm_D078"),
+                DownloadStatus.Paused => L.T("MainForm_D079"),
+                _ => L.T("MainForm_D080")
             };
         }
 
@@ -1505,7 +1521,7 @@ namespace IwaraDownloader.Forms
                     }
                 }
                 var sizeText = totalSize > 0 ? $" ({FormatFileSize(totalSize)})" : "";
-                UpdateStatusBar($"{selectedCount}件選択中{sizeText}");
+                UpdateStatusBar(L.T("MainForm_D081", selectedCount, sizeText));
             }
         }
 
@@ -1611,7 +1627,7 @@ namespace IwaraDownloader.Forms
 
                 // 「今すぐ確認」は無効化中だとグレーアウト
                 menuChCheckNow.Enabled = u.IsEnabled;
-                menuChCheckNow.Text = u.IsEnabled ? "今すぐ確認" : "今すぐ確認 (無効化中)";
+                menuChCheckNow.Text = u.IsEnabled ? L.T("MainForm_D082") : L.T("MainForm_D083");
 
                 // iwara外動画DL設定の現在値をチェックマーク表示
                 menuChExternalDLInherit.Checked = !u.DownloadExternalVideosOverride.HasValue;
@@ -1619,12 +1635,12 @@ namespace IwaraDownloader.Forms
                 menuChExternalDLOff.Checked = u.DownloadExternalVideosOverride == false;
 
                 var globalDefault = Utils.SettingsManager.Instance.Settings.DownloadExternalVideosDefault;
-                menuChExternalDLInherit.Text = $"デフォルト設定に従う ({(globalDefault ? "ON" : "OFF")})";
+                menuChExternalDLInherit.Text = L.T("MainForm_D084", globalDefault ? "ON" : "OFF");
 
                 // 保存先表示（カスタムが設定されているか視覚化）
                 menuChSetSavePath.Text = string.IsNullOrEmpty(u.CustomSavePath)
-                    ? "保存先を変更..."
-                    : "保存先を変更... (カスタム設定済み)";
+                    ? L.T("MainForm_D085")
+                    : L.T("MainForm_D086");
             }
             else
             {
@@ -1662,7 +1678,7 @@ namespace IwaraDownloader.Forms
                 // 手動の単一チェックは優先キューへ (通常の新着チェックより先に処理される)。
                 // 取得は統合ワーカーが処理し、進捗はステータスバーに表示される。
                 _downloadManager.EnqueueUserForCheck(user, priority: true);
-                UpdateStatusBar($"{user.Username} の新着確認をキューに登録しました");
+                UpdateStatusBar(L.T("MainForm_D087", user.Username));
             }
         }
 
@@ -1731,7 +1747,7 @@ namespace IwaraDownloader.Forms
 
             RefreshChannelTree();
             RefreshVideoList();
-            UpdateStatusBar($"{videos.Count} 件のダウンロードをキューに追加しました");
+            UpdateStatusBar(L.T("MainForm_D088", videos.Count));
         }
 
         private void menuChDeleteNotFound_Click(object sender, EventArgs e)
@@ -1746,23 +1762,23 @@ namespace IwaraDownloader.Forms
 
             if (notFound.Count == 0)
             {
-                MessageBox.Show("Not Found の動画はありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L.T("MainForm_D089"), L.T("MainForm_D090"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var result = MessageBox.Show(
-                $"Not Found (削除済み) の動画 {notFound.Count} 件をデータベースから削除しますか？\n\n※ローカルファイルは削除されません",
-                "Not Found を除外",
+                L.T("MainForm_D091", notFound.Count),
+                L.T("MainForm_D092"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
             if (result != DialogResult.Yes) return;
 
-            var ids = notFound.Select(v => v.Id).ToList();
-            int deleted = _database.DeleteVideosBatch(ids);
+            // 除外(ゴミ箱)へ移動 = 次回の自動取得で復活しなくなる。
+            int deleted = _downloadManager.ExcludeVideos(notFound);
             RefreshChannelTree();
             RefreshVideoList();
-            UpdateStatusBar($"Not Found の動画 {deleted} 件を削除しました");
+            UpdateStatusBar(L.T("MainForm_D093", deleted));
         }
 
         private void menuChSetSavePath_Click(object sender, EventArgs e)
@@ -1774,7 +1790,7 @@ namespace IwaraDownloader.Forms
 
             using var dialog = new FolderBrowserDialog
             {
-                Description = $"{user.Username} の保存先フォルダを選択",
+                Description = L.T("MainForm_D094", user.Username),
                 UseDescriptionForTitle = true,
                 SelectedPath = oldSavePath
             };
@@ -1796,13 +1812,13 @@ namespace IwaraDownloader.Forms
             var movableFiles = FileMoveHelper.GetMovableFiles(allUserVideos, oldSavePath);
 
             var decision = FileMoveHelper.ConfirmMove(
-                this, $"{user.Username} の保存先", movableFiles, oldSavePath, newSavePath);
+                this, L.T("MainForm_MoveTitle", user.Username), movableFiles, oldSavePath, newSavePath);
             if (decision == FileMoveHelper.MoveDecision.Cancel) return;
 
             // 設定変更
             user.CustomSavePath = newSavePath;
             _database.UpdateSubscribedUser(user);
-            UpdateStatusBar($"保存先を変更しました: {newSavePath}");
+            UpdateStatusBar(L.T("MainForm_D095", newSavePath));
 
             if (decision == FileMoveHelper.MoveDecision.Move && movableFiles.Count > 0)
             {
@@ -1819,15 +1835,15 @@ namespace IwaraDownloader.Forms
                 RefreshVideoList();
 
                 UpdateStatusBar(
-                    $"移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
+                    L.T("MainForm_D096", progressForm.MovedCount, progressForm.FailedCount));
 
                 if (progressForm.FailedCount > 0)
                 {
                     MessageBox.Show(this,
-                        $"移動に失敗したファイルが {progressForm.FailedCount} 件あります。\n" +
-                        "失敗したファイルは元の場所に残っています (詳細はログを確認してください)。\n\n" +
-                        "原因を解消後、[ツール] → [未移動ファイルの一括移動] で再移動できます。",
-                        "ファイル移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        L.T("MainForm_D097", progressForm.FailedCount) +
+                        L.T("MainForm_D098") +
+                        L.T("MainForm_D099"),
+                        L.T("MainForm_D100"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
         }
@@ -1864,11 +1880,11 @@ namespace IwaraDownloader.Forms
             _database.UpdateSubscribedUser(user);
             var label = value switch
             {
-                true => "DLする",
-                false => "DLしない",
-                null => "デフォルト設定に従う"
+                true => L.T("MainForm_menuChExternalDLOn"),
+                false => L.T("MainForm_menuChExternalDLOff"),
+                null => L.T("MainForm_menuChExternalDLInherit")
             };
-            UpdateStatusBar($"{user.Username} のiwara外動画DL設定を「{label}」に変更しました");
+            UpdateStatusBar(L.T("MainForm_D101", user.Username, label));
         }
 
         private void menuChDisable_Click(object sender, EventArgs e)
@@ -1886,8 +1902,8 @@ namespace IwaraDownloader.Forms
             if (treeViewChannels.SelectedNode?.Tag is not SubscribedUser user) return;
 
             var result = MessageBox.Show(
-                $"「{user.Username}」を購読リストから削除しますか？",
-                "確認",
+                L.T("MainForm_D102", user.Username),
+                L.T("MainForm_D103"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -1951,6 +1967,31 @@ namespace IwaraDownloader.Forms
                 return;
             }
 
+            // 除外(ゴミ箱)ノードでは「復元」「完全に削除」だけを出す。通常の操作項目は全て隠す。
+            bool isExcludedNode = (treeViewChannels.SelectedNode?.Tag as string) == NODE_EXCLUDED;
+            if (isExcludedNode)
+            {
+                menuVidDownload.Visible = false;
+                menuVidCancel.Visible = false;
+                menuVidRetryFailed.Visible = false;
+                menuVidReDownload.Visible = false;
+                menuVidRefreshInfo.Visible = false;
+                menuVidCheckFileExists.Visible = false;
+                menuVidPlay.Visible = false;
+                menuVidOpenFolder.Visible = false;
+                menuVidOpenPage.Visible = selected.Count == 1;   // iwara ページは開ける (本当に消えたか確認用)
+                menuVidOpenAuthor.Visible = false;
+                menuVidCopyUrl.Visible = true;
+                menuVidCopyTitle.Visible = true;
+                menuVidFavorite.Visible = false;
+                menuVidDetails.Visible = false;
+                menuVidDelete.Visible = false;
+                menuVidRestore.Visible = true;
+                menuVidPermanentDelete.Visible = true;
+                AdjustSeparators();
+                return;
+            }
+
             bool isSingle = selected.Count == 1;
             var single = isSingle ? selected[0] : null;
             bool hasPending = selected.Any(v => v.Status == DownloadStatus.Pending);
@@ -1974,7 +2015,7 @@ namespace IwaraDownloader.Forms
             bool canOpenAuthor = isSingle && !string.IsNullOrEmpty(single!.AuthorUsername);
 
             menuVidDownload.Visible = canDownload;
-            menuVidDownload.Text = hasFailed && !hasSkipped ? "ダウンロード (失敗をリトライ含む)" : "ダウンロード";
+            menuVidDownload.Text = hasFailed && !hasSkipped ? L.T("MainForm_D104") : L.T("MainForm_D105");
             menuVidCancel.Visible = canCancel;
             menuVidRetryFailed.Visible = hasFailed;
             menuVidReDownload.Visible = hasCompleted;
@@ -1989,9 +2030,12 @@ namespace IwaraDownloader.Forms
             // お気に入り: 選択が全てお気に入りなら「削除」、でなければ「追加」
             bool allFav = selected.All(v => v.IsFavorite);
             menuVidFavorite.Visible = true;
-            menuVidFavorite.Text = allFav ? "★ お気に入りから削除" : "★ お気に入りに追加";
+            menuVidFavorite.Text = allFav ? L.T("MainForm_D106") : L.T("MainForm_D107");
             menuVidDetails.Visible = isSingle;
             menuVidDelete.Visible = true;
+            // 通常ノードでは復元/完全削除は隠す (除外ノード専用)
+            menuVidRestore.Visible = false;
+            menuVidPermanentDelete.Visible = false;
 
             AdjustSeparators();
             // 注意: Opening 中は ContextMenuStrip がまだ表示前なので、
@@ -2100,11 +2144,11 @@ namespace IwaraDownloader.Forms
             
             if (retryCount > 0)
             {
-                UpdateStatusBar($"{retryCount}件の動画を再試行キューに追加しました");
+                UpdateStatusBar(L.T("MainForm_D108", retryCount));
             }
             else
             {
-                UpdateStatusBar("失敗した動画が選択されていません");
+                UpdateStatusBar(L.T("MainForm_D109"));
             }
         }
 
@@ -2130,7 +2174,7 @@ namespace IwaraDownloader.Forms
             }
             
             RefreshVideoList();
-            UpdateStatusBar($"{refreshCount}件の情報を更新しました");
+            UpdateStatusBar(L.T("MainForm_D110", refreshCount));
         }
 
         private void menuVidPlay_Click(object sender, EventArgs e)
@@ -2185,7 +2229,7 @@ namespace IwaraDownloader.Forms
             if (urls.Count > 0)
             {
                 Clipboard.SetText(string.Join(Environment.NewLine, urls));
-                UpdateStatusBar($"{urls.Count}件のURLをコピーしました");
+                UpdateStatusBar(L.T("MainForm_D111", urls.Count));
             }
         }
 
@@ -2205,7 +2249,7 @@ namespace IwaraDownloader.Forms
             if (titles.Count > 0)
             {
                 Clipboard.SetText(string.Join(Environment.NewLine, titles));
-                UpdateStatusBar($"{titles.Count}件のタイトルをコピーしました");
+                UpdateStatusBar(L.T("MainForm_D112", titles.Count));
             }
         }
 
@@ -2216,7 +2260,7 @@ namespace IwaraDownloader.Forms
         {
             var selectedVideos = GetSelectedVideos();
             if (selectedVideos.Count == 0) return;
-            CheckFilesExistence(selectedVideos, "ダウンロード済みの動画が選択されていません");
+            CheckFilesExistence(selectedVideos, L.T("MainForm_NoDownloadedSelected"));
         }
 
         // ファイル存在チェックの多重起動防止
@@ -2231,11 +2275,11 @@ namespace IwaraDownloader.Forms
         {
             if (_isCheckingFiles)
             {
-                UpdateStatusBar("ファイル存在チェックを実行中です…");
+                UpdateStatusBar(L.T("MainForm_D113"));
                 return;
             }
             _isCheckingFiles = true;
-            UpdateStatusBar($"ファイル存在チェック中… ({videos.Count}件)");
+            UpdateStatusBar(L.T("MainForm_D114", videos.Count));
 
             try
             {
@@ -2280,14 +2324,14 @@ namespace IwaraDownloader.Forms
                 if (checkedCount == 0)
                     UpdateStatusBar(noTargetMessage);
                 else if (missing.Count == 0)
-                    UpdateStatusBar($"{checkedCount}件チェック: 全てのファイルが存在します");
+                    UpdateStatusBar(L.T("MainForm_D115", checkedCount));
                 else
-                    UpdateStatusBar($"{checkedCount}件チェック: {missing.Count}件のファイルが見つからず、キューに追加しました");
+                    UpdateStatusBar(L.T("MainForm_D116", checkedCount, missing.Count));
             }
             catch (Exception ex)
             {
                 _logger.Error("ファイル存在チェックに失敗しました", ex);
-                UpdateStatusBar($"ファイル存在チェック失敗: {ex.Message}");
+                UpdateStatusBar(L.T("MainForm_D117", ex.Message));
             }
             finally
             {
@@ -2306,20 +2350,20 @@ namespace IwaraDownloader.Forms
                 var videos = _database.GetVideosBySubscribedUser(user.Id);
                 if (videos.Count == 0)
                 {
-                    UpdateStatusBar($"「{user.Username}」には動画がありません");
+                    UpdateStatusBar(L.T("MainForm_D118", user.Username));
                     return;
                 }
-                CheckFilesExistence(videos, $"「{user.Username}」にダウンロード済みの動画がありません");
+                CheckFilesExistence(videos, L.T("MainForm_NoDownloadedInChannel", user.Username));
             }
             else if (tag as string == NODE_DOWNLOADED)
             {
                 var videos = _database.GetVideosByStatus(DownloadStatus.Completed);
                 if (videos.Count == 0)
                 {
-                    UpdateStatusBar("DL済みの動画がありません");
+                    UpdateStatusBar(L.T("MainForm_D119"));
                     return;
                 }
-                CheckFilesExistence(videos, "DL済みの動画がありません");
+                CheckFilesExistence(videos, L.T("MainForm_D119"));
             }
         }
 
@@ -2333,34 +2377,62 @@ namespace IwaraDownloader.Forms
 
             var count = selectedVideos.Count;
             var message = count == 1
-                ? $"「{selectedVideos[0].Title}」を削除しますか？"
-                : $"{count}件の動画を削除しますか？";
+                ? L.T("MainForm_ConfirmDeleteOne", selectedVideos[0].Title)
+                : L.T("MainForm_ConfirmDeleteMany", count);
 
             var result = MessageBox.Show(
-                message + "\n\n※ダウンロード済みのファイルは削除されません",
-                "確認",
+                message + L.T("MainForm_D120"),
+                L.T("MainForm_D103"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
             if (result != DialogResult.Yes) return;
 
-            var deletedCount = 0;
-            foreach (var video in selectedVideos)
-            {
-                // ダウンロード中の場合はキャンセル
-                if (video.Status == DownloadStatus.Downloading || video.Status == DownloadStatus.Pending)
-                {
-                    _downloadManager.CancelTask(video.VideoId);
-                }
-                
-                // DBから削除
-                _database.DeleteVideo(video.Id);
-                deletedCount++;
-            }
+            // 削除 = 除外(ゴミ箱)へ移動。自動取得で復活しなくなる。DL済みファイルは削除される。
+            // 間違えて消しても「除外済み」ノードから復元できる。
+            var deletedCount = _downloadManager.ExcludeVideos(selectedVideos);
 
             RefreshChannelTree();
             RefreshVideoList();
-            UpdateStatusBar($"{deletedCount}件の動画を削除しました");
+            UpdateStatusBar(L.T("MainForm_D121", deletedCount));
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から選択動画を復元する。ファイルは除外時に削除済みなので、
+        /// 完了扱いだったものは再DL、待機中だったものは取得再開する (DownloadManager 側で処理)。
+        /// </summary>
+        private void menuVidRestore_Click(object sender, EventArgs e)
+        {
+            var selected = GetSelectedVideos();
+            if (selected.Count == 0) return;
+
+            int restored = _downloadManager.RestoreExcludedVideos(selected.Select(v => v.VideoId));
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar(L.T("MainForm_RestoredStatus", restored));
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から選択動画を完全に削除する (復元不可)。
+        /// </summary>
+        private void menuVidPermanentDelete_Click(object sender, EventArgs e)
+        {
+            var selected = GetSelectedVideos();
+            if (selected.Count == 0) return;
+
+            var count = selected.Count;
+            var message = count == 1
+                ? L.T("MainForm_ConfirmPurgeOne", selected[0].Title)
+                : L.T("MainForm_ConfirmPurgeMany", count);
+
+            var result = MessageBox.Show(message, L.T("MainForm_D103"),
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes) return;
+
+            int deleted = _database.DeleteExcludedPermanent(selected.Select(v => v.VideoId));
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar(L.T("MainForm_PurgedStatus", deleted));
         }
 
         /// <summary>
@@ -2387,12 +2459,10 @@ namespace IwaraDownloader.Forms
             var count = selectedVideos.Count;
             var totalSize = selectedVideos.Sum(v => v.FileSize);
             var message = count == 1
-                ? $"「{selectedVideos[0].Title}」を再ダウンロードします。\n\n" +
-                  $"既存ファイルは削除されます。続行しますか？"
-                : $"{count}件の動画を再ダウンロードします (合計 {FormatFileSize(totalSize)})。\n\n" +
-                  $"既存ファイルは削除されます。続行しますか？";
+                ? L.T("MainForm_ConfirmRedlOne", selectedVideos[0].Title)
+                : L.T("MainForm_ConfirmRedlMany", count, FormatFileSize(totalSize));
 
-            var result = MessageBox.Show(message, "再ダウンロード確認",
+            var result = MessageBox.Show(message, L.T("MainForm_D122"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (result != DialogResult.Yes) return;
 
@@ -2439,7 +2509,7 @@ namespace IwaraDownloader.Forms
 
             RefreshChannelTree();
             RefreshVideoList();
-            UpdateStatusBar($"{requeuedCount}件を再ダウンロードキューに追加しました");
+            UpdateStatusBar(L.T("MainForm_D123", requeuedCount));
         }
 
         /// <summary>
@@ -2457,7 +2527,7 @@ namespace IwaraDownloader.Forms
                 InvalidateVideoItem(video.VideoId);
                 // お気に入りのみ表示中なら一覧から外れる可能性 → 再フィルタ
                 if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
-                UpdateStatusBar($"「{video.Title}」を更新しました");
+                UpdateStatusBar(L.T("MainForm_D124", video.Title));
             }
         }
 
@@ -2491,7 +2561,7 @@ namespace IwaraDownloader.Forms
             if (changed == 0) return;
             // お気に入りのみ表示中なら、解除で一覧から外れる → 再フィルタ
             if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
-            UpdateStatusBar(newState ? $"{changed}件をお気に入りに追加しました" : $"{changed}件をお気に入りから削除しました");
+            UpdateStatusBar(newState ? L.T("MainForm_D125", changed) : L.T("MainForm_D126", changed));
         }
 
         /// <summary>
@@ -2592,7 +2662,7 @@ namespace IwaraDownloader.Forms
                     if (!string.IsNullOrEmpty(root))
                     {
                         var free = new DriveInfo(root).AvailableFreeSpace;
-                        text = $"空き: {FileMoveHelper.FormatSize(free)} ({root.TrimEnd('\\')})";
+                        text = L.T("MainForm_FreeSpace", FileMoveHelper.FormatSize(free), root.TrimEnd('\\'));
                         if (settings.MinFreeSpaceGb > 0
                             && free < settings.MinFreeSpaceGb * 1024L * 1024 * 1024)
                         {
@@ -2651,15 +2721,15 @@ namespace IwaraDownloader.Forms
             {
                 double avgInProgress = dlTasks.Average(t => t.Progress);
                 progressBarValue = Math.Clamp((int)avgInProgress, 0, 100);
-                queueText = $" | キュー: DL中 {dlTasks.Count}件 平均{avgInProgress:F0}% / 待機 {pending}件";
+                queueText = L.T("MainForm_QueueSummaryFull", dlTasks.Count, avgInProgress.ToString("F0"), pending);
             }
             else if (pending > 0)
             {
                 // DL 開始待ち (セマフォ待ち or rate-limit delay 中)
-                queueText = $" | キュー: 待機 {pending}件";
+                queueText = L.T("MainForm_QueueSummaryPending", pending);
             }
 
-            lblDownloadCount.Text = $"DL: {downloading} / 待機: {pending} | 完了: {completed}件 ({totalSizeStr}){queueText}";
+            lblDownloadCount.Text = L.T("MainForm_D127", downloading, pending, completed, totalSizeStr, queueText);
 
             progressBar.Style = ProgressBarStyle.Continuous;
             progressBar.Value = progressBarValue;
@@ -2695,7 +2765,7 @@ namespace IwaraDownloader.Forms
             var label = new Label { Text = prompt, Location = new Point(10, 15), Size = new Size(360, 20) };
             var textBox = new TextBox { Location = new Point(10, 40), Size = new Size(360, 25), Text = defaultValue };
             var btnOk = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(210, 75), Size = new Size(75, 25) };
-            var btnCancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Location = new Point(295, 75), Size = new Size(75, 25) };
+            var btnCancel = new Button { Text = L.T("Common_Cancel"), DialogResult = DialogResult.Cancel, Location = new Point(295, 75), Size = new Size(75, 25) };
 
             form.Controls.AddRange(new Control[] { label, textBox, btnOk, btnCancel });
             form.AcceptButton = btnOk;
@@ -2717,7 +2787,7 @@ namespace IwaraDownloader.Forms
             var label = new Label { Text = prompt, Location = new Point(10, 15), Size = new Size(360, 20) };
             var textBox = new TextBox { Location = new Point(10, 40), Size = new Size(360, 25), UseSystemPasswordChar = true };
             var btnOk = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(210, 75), Size = new Size(75, 25) };
-            var btnCancel = new Button { Text = "キャンセル", DialogResult = DialogResult.Cancel, Location = new Point(295, 75), Size = new Size(75, 25) };
+            var btnCancel = new Button { Text = L.T("Common_Cancel"), DialogResult = DialogResult.Cancel, Location = new Point(295, 75), Size = new Size(75, 25) };
 
             form.Controls.AddRange(new Control[] { label, textBox, btnOk, btnCancel });
             form.AcceptButton = btnOk;
@@ -2966,7 +3036,7 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private void UpdateColumnHeaders()
         {
-            var baseTexts = new[] { "タイトル", "ソース", "状態", "進捗", "サイズ", "追加日時" };
+            var baseTexts = new[] { L.T("MainForm_colVideoTitle"), L.T("MainForm_colVideoSource"), L.T("MainForm_colVideoStatus"), L.T("MainForm_colVideoProgress"), L.T("MainForm_colVideoSize"), L.T("MainForm_colVideoDate") };
 
             for (int i = 0; i < listViewVideos.Columns.Count && i < baseTexts.Length; i++)
             {
@@ -3082,11 +3152,11 @@ namespace IwaraDownloader.Forms
                 if (result.HasUpdate)
                 {
                     var dialogResult = MessageBox.Show(
-                        $"新しいバージョンがあります！\n\n" +
-                        $"現在: {UpdateService.CurrentVersionString}\n" +
-                        $"最新: {result.LatestVersion}\n\n" +
-                        $"リリースページを開きますか？",
-                        "更新のお知らせ",
+                        L.T("MainForm_D128") +
+                        L.T("MainForm_D129", UpdateService.CurrentVersionString) +
+                        L.T("MainForm_D130", result.LatestVersion) +
+                        L.T("MainForm_D131"),
+                        L.T("MainForm_D132"),
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Information);
 
@@ -3132,7 +3202,7 @@ namespace IwaraDownloader.Forms
             }
             else
             {
-                MessageBox.Show("ログフォルダが存在しません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L.T("MainForm_D133"), L.T("MainForm_D090"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -3189,9 +3259,9 @@ namespace IwaraDownloader.Forms
             if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
             {
                 MessageBox.Show(this,
-                    "ダウンロード実行中は実行できません。\n" +
-                    "完了を待つか、キューを停止してから再度実行してください。",
-                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    L.T("MainForm_D134") +
+                    L.T("MainForm_D135"),
+                    L.T("MainForm_D136"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -3202,8 +3272,8 @@ namespace IwaraDownloader.Forms
             if (plan.Count == 0)
             {
                 MessageBox.Show(this,
-                    "現在の保存先設定の外にあるファイルはありません。",
-                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    L.T("MainForm_D137"),
+                    L.T("MainForm_D136"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -3216,16 +3286,15 @@ namespace IwaraDownloader.Forms
             var spaceSummary = FileMoveHelper.BuildDriveSpaceSummary(plan, out bool insufficient);
             var spaceLines = string.IsNullOrEmpty(spaceSummary) ? "" : "\n\n" + spaceSummary;
             var warnLine = insufficient
-                ? "\n\n⚠ 空き容量が不足しているドライブがあります。\n" +
-                  "そのドライブへの移動は失敗し、ファイルは元の場所に残ります。"
+                ? L.T("MainForm_LowSpaceWarn")
                 : "";
 
             var confirm = MessageBox.Show(this,
-                $"現在の保存先設定の外にあるファイルが {plan.Count} 個見つかりました" +
+                L.T("MainForm_D138", plan.Count) +
                 $" ({FileMoveHelper.FormatSize(totalBytes)})。\n" +
-                "これらを本来の保存先へ移動しますか?\n" +
-                "(メタデータ .json も一緒に移動します)" + spaceLines + warnLine,
-                "未移動ファイルの一括移動",
+                L.T("MainForm_D139") +
+                L.T("MainForm_D140") + spaceLines + warnLine,
+                L.T("MainForm_D136"),
                 MessageBoxButtons.YesNo,
                 insufficient ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes) return;
@@ -3235,9 +3304,9 @@ namespace IwaraDownloader.Forms
             if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
             {
                 MessageBox.Show(this,
-                    "ダウンロードが開始されたため中止しました。\n" +
-                    "完了を待つか、キューを停止してから再度実行してください。",
-                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    L.T("MainForm_D141") +
+                    L.T("MainForm_D135"),
+                    L.T("MainForm_D136"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -3273,15 +3342,15 @@ namespace IwaraDownloader.Forms
             RefreshVideoList();
 
             UpdateStatusBar(
-                $"未移動ファイルの移動完了: 成功 {progressForm.MovedCount} / 失敗 {progressForm.FailedCount}");
+                L.T("MainForm_D142", progressForm.MovedCount, progressForm.FailedCount));
 
             if (progressForm.FailedCount > 0)
             {
                 MessageBox.Show(this,
-                    $"移動に失敗したファイルが {progressForm.FailedCount} 件あります。\n" +
-                    "失敗したファイルは元の場所に残っています (詳細はログを確認してください)。\n\n" +
-                    "原因を解消後、もう一度このメニューを実行すると残りを移動できます。",
-                    "未移動ファイルの一括移動", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    L.T("MainForm_D143", progressForm.FailedCount) +
+                    L.T("MainForm_D098") +
+                    L.T("MainForm_D144"),
+                    L.T("MainForm_D136"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -3297,9 +3366,9 @@ namespace IwaraDownloader.Forms
             if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
             {
                 MessageBox.Show(this,
-                    "ダウンロード実行中は実行できません。\n" +
-                    "完了を待つか、キューを停止してから再度実行してください。",
-                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    L.T("MainForm_D134") +
+                    L.T("MainForm_D135"),
+                    L.T("MainForm_D145"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -3309,7 +3378,7 @@ namespace IwaraDownloader.Forms
 
             menuToolsRelinkFiles.Enabled = false;
             UseWaitCursor = true;
-            UpdateStatusBar("移動済みファイルをスキャン中...");
+            UpdateStatusBar(L.T("MainForm_D146"));
             FileMoveHelper.RelinkResult result;
             try
             {
@@ -3324,39 +3393,35 @@ namespace IwaraDownloader.Forms
 
             var notes = new List<string>();
             if (result.NotMovedCount > 0)
-                notes.Add($"まだ移動されていない (移動先に同名ファイルなし): {result.NotMovedCount} 件\n" +
-                          "  → [未移動ファイルの一括移動] で移動するか、外部ツールで移動後に再実行してください");
+                notes.Add(L.T("MainForm_RelinkNotMoved", result.NotMovedCount));
             if (result.UnverifiedCount > 0)
-                notes.Add($"検証不一致 (同名だがサイズ/UUID が合わない): {result.UnverifiedCount} 件\n" +
-                          "  → コピー途中・破損の可能性があります。再リンクしません");
+                notes.Add(L.T("MainForm_RelinkUnverified", result.UnverifiedCount));
             if (result.MissingCount > 0)
-                notes.Add($"移動先でも見つからない (リンク切れ): {result.MissingCount} 件");
+                notes.Add(L.T("MainForm_RelinkMissing", result.MissingCount));
             var notesText = notes.Count > 0 ? "\n\n" + string.Join("\n", notes) : "";
 
             if (result.Items.Count == 0)
             {
-                UpdateStatusBar("再リンク対象なし");
+                UpdateStatusBar(L.T("MainForm_D147"));
                 var hint = (result.NotMovedCount + result.MissingCount + result.UnverifiedCount) > 0
-                    ? "\n\nヒント: この機能は「保存先設定の変更 → 外部ツールでファイル移動」の後に実行するものです。\n" +
-                      "保存先設定がまだ変更されていない場合は、先に変更 (ファイルは移動せず設定だけ変更) してください。"
+                    ? L.T("MainForm_RelinkHint")
                     : "";
                 MessageBox.Show(this,
-                    "再リンクできるファイルはありません。" + notesText + hint,
-                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    L.T("MainForm_D148") + notesText + hint,
+                    L.T("MainForm_D145"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             int copiedCount = result.Items.Count(i => i.OldFileStillExists);
             var copiedLine = copiedCount > 0
-                ? $"\n\nうち {copiedCount} 件は元の場所にもファイルが残っています (コピーされたもの)。\n" +
-                  "再リンク後も元のファイルは削除しません。不要なら手動で削除してください。"
+                ? L.T("MainForm_RelinkCopied", copiedCount)
                 : "";
 
             var confirm = MessageBox.Show(this,
-                $"移動先で検証済みのファイルが {result.Items.Count} 件見つかりました。\n" +
-                "データベースのパスを移動先に書き換えますか?\n" +
-                "(ファイルは移動しません)" + copiedLine + notesText,
-                "移動済みファイルの再リンク",
+                L.T("MainForm_D149", result.Items.Count) +
+                L.T("MainForm_D150") +
+                L.T("MainForm_D151") + copiedLine + notesText,
+                L.T("MainForm_D145"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes) return;
 
@@ -3365,9 +3430,9 @@ namespace IwaraDownloader.Forms
             if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
             {
                 MessageBox.Show(this,
-                    "スキャン中にダウンロードが開始されたため中止しました。\n" +
-                    "完了を待つか、キューを停止してから再度実行してください。",
-                    "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    L.T("MainForm_D152") +
+                    L.T("MainForm_D135"),
+                    L.T("MainForm_D145"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -3395,11 +3460,11 @@ namespace IwaraDownloader.Forms
 
             RefreshChannelTree();
             RefreshVideoList();
-            UpdateStatusBar($"再リンク完了: {relinked} 件");
+            UpdateStatusBar(L.T("MainForm_D153", relinked));
 
             MessageBox.Show(this,
-                $"{relinked} 件のパスを移動先に書き換えました。" + copiedLine + notesText,
-                "移動済みファイルの再リンク", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                L.T("MainForm_D154", relinked) + copiedLine + notesText,
+                L.T("MainForm_D145"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
@@ -3457,7 +3522,7 @@ namespace IwaraDownloader.Forms
         private void btnClipMonitor_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = btnClipMonitor.Checked;
-            btnClipMonitor.Text = enabled ? "📋監視: ON" : "📋監視: OFF";
+            btnClipMonitor.Text = enabled ? L.T("MainForm_D155") : L.T("MainForm_D156");
             btnClipMonitor.BackColor = enabled ? Color.LightGreen : SystemColors.Control;
 
             // 設定保存
@@ -3472,7 +3537,7 @@ namespace IwaraDownloader.Forms
                 if (AddClipboardFormatListener(this.Handle))
                 {
                     _clipboardListenerRegistered = true;
-                    UpdateStatusBar("クリップボード監視を開始");
+                    UpdateStatusBar(L.T("MainForm_D157"));
                 }
                 else
                 {
@@ -3483,7 +3548,7 @@ namespace IwaraDownloader.Forms
             {
                 RemoveClipboardFormatListener(this.Handle);
                 _clipboardListenerRegistered = false;
-                UpdateStatusBar("クリップボード監視を停止");
+                UpdateStatusBar(L.T("MainForm_D158"));
             }
         }
 
@@ -3530,10 +3595,10 @@ namespace IwaraDownloader.Forms
                     var vid = Helpers.ExtractVideoIdFromUrl(text);
                     if (!string.IsNullOrEmpty(vid) && _database.GetVideoByVideoId(vid) != null)
                     {
-                        UpdateStatusBar($"クリップボード: 既に登録済み ({vid})");
+                        UpdateStatusBar(L.T("MainForm_D159", vid));
                         return;
                     }
-                    UpdateStatusBar($"クリップボード検出: 動画追加中...");
+                    UpdateStatusBar(L.T("MainForm_D160"));
                     await AddVideoAsync(text);
                 }
                 else
@@ -3558,7 +3623,7 @@ namespace IwaraDownloader.Forms
         // C グループ用のスタブ: ApplyViewMode は C: サムネ表示で本実装
         private void ApplyViewMode(bool tileMode)
         {
-            btnViewMode.Text = tileMode ? "🖼サムネ" : "📋詳細";
+            btnViewMode.Text = tileMode ? L.T("MainForm_D161") : L.T("MainForm_D162");
             var settings = SettingsManager.Instance.Settings;
             settings.VideoListViewMode = tileMode ? 1 : 0;
             SettingsManager.Instance.Save();
@@ -3611,9 +3676,9 @@ namespace IwaraDownloader.Forms
                         }
 
                         if (count > limit)
-                            UpdateStatusBar($"サムネモード: 全{count}件中先頭{limit}件を表示中 (フィルタで絞ってください)");
+                            UpdateStatusBar(L.T("MainForm_D163", count, limit));
                         else
-                            UpdateStatusBar($"サムネモード: {limit}件");
+                            UpdateStatusBar(L.T("MainForm_D164", limit));
                     }
                     else
                     {
@@ -3630,8 +3695,8 @@ namespace IwaraDownloader.Forms
             catch (Exception ex)
             {
                 _logger.Error($"SetVideoListViewMode({tileMode}) failed", ex);
-                MessageBox.Show($"表示モード切替でエラー:\n{ex.GetType().Name}: {ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("MainForm_D165", ex.GetType().Name, ex.Message),
+                    L.T("MainForm_D029"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -3806,7 +3871,7 @@ namespace IwaraDownloader.Forms
         private void btnAdvancedSearch_Click(object sender, EventArgs e)
         {
             panelAdvancedFilter.Visible = !panelAdvancedFilter.Visible;
-            btnAdvancedSearch.Text = panelAdvancedFilter.Visible ? "詳細検索 ▴" : "詳細検索 ▾";
+            btnAdvancedSearch.Text = panelAdvancedFilter.Visible ? L.T("MainForm_D166") : L.T("MainForm_D167");
         }
 
         private void chkFavOnly_CheckedChanged(object sender, EventArgs e) => ApplyVideoFilter();

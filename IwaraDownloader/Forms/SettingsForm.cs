@@ -30,6 +30,7 @@ namespace IwaraDownloader.Forms
         public SettingsForm(DownloadManager? downloadManager)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _settingsManager = SettingsManager.Instance;
             _database = DatabaseService.Instance;
             // DownloadManager と同じ IwaraApiService インスタンスを共有する。
@@ -75,6 +76,19 @@ namespace IwaraDownloader.Forms
             chkStartMinimized.Checked = settings.StartMinimized;
             chkMinimizeToTray.Checked = settings.MinimizeToTray;
 
+            // 言語 (Tagに設定値を持たせ、表示名は各言語のネイティブ表記で固定)
+            cmbLanguage.Items.Clear();
+            cmbLanguage.Items.Add(new LanguageItem("auto", Utils.L.T("Settings_LanguageAuto")));
+            cmbLanguage.Items.Add(new LanguageItem("ja", "日本語"));
+            cmbLanguage.Items.Add(new LanguageItem("en", "English"));
+            cmbLanguage.Items.Add(new LanguageItem("zh-Hans", "简体中文"));
+            var langIndex = 0;
+            for (var i = 0; i < cmbLanguage.Items.Count; i++)
+            {
+                if (((LanguageItem)cmbLanguage.Items[i]!).Code == settings.Language) { langIndex = i; break; }
+            }
+            cmbLanguage.SelectedIndex = langIndex;
+
             // Python環境
             txtPythonPath.Text = settings.PythonPath;
             txtYtDlpPath.Text = settings.YtDlpPath;
@@ -101,7 +115,7 @@ namespace IwaraDownloader.Forms
             chkSaveMetadata.Checked = settings.SaveMetadata;
             chkCheckUpdate.Checked = settings.CheckUpdateOnStartup;
             chkResumeOnStartup.Checked = settings.ResumeDownloadsOnStartup;
-            lblCurrentVersion.Text = $"現在: {UpdateService.CurrentVersionString}";
+            lblCurrentVersion.Text = L.T("SettingsForm_D001", UpdateService.CurrentVersionString);
 
             // メディアサーバー
             chkWebServerAutoStart.Checked = settings.WebServerAutoStart;
@@ -145,6 +159,14 @@ namespace IwaraDownloader.Forms
             settings.EnableToastNotification = chkToast.Checked;
             settings.StartMinimized = chkStartMinimized.Checked;
             settings.MinimizeToTray = chkMinimizeToTray.Checked;
+
+            // 言語 (変更時は再起動後に反映される旨を案内)
+            if (cmbLanguage.SelectedItem is LanguageItem langItem && langItem.Code != settings.Language)
+            {
+                settings.Language = langItem.Code;
+                MessageBox.Show(Utils.L.T("Msg_LanguageRestart"), "IwaraDownloader",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
 
             // Python環境
             settings.PythonPath = txtPythonPath.Text.Trim();
@@ -193,7 +215,7 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new FolderBrowserDialog
             {
-                Description = "ダウンロード先フォルダを選択してください",
+                Description = L.T("SettingsForm_D002"),
                 ShowNewFolderButton = true,
                 SelectedPath = txtDownloadFolder.Text
             };
@@ -208,8 +230,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "Python実行ファイルを選択",
-                Filter = "実行ファイル (*.exe)|*.exe|すべてのファイル (*.*)|*.*",
+                Title = L.T("SettingsForm_D088"),
+                Filter = L.T("SettingsForm_D003"),
                 FileName = "python.exe"
             };
 
@@ -241,8 +263,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Filter = "yt-dlp実行ファイル (yt-dlp.exe;yt-dlp)|yt-dlp.exe;yt-dlp|すべてのファイル (*.*)|*.*",
-                Title = "yt-dlpの実行ファイルを選択"
+                Filter = L.T("SettingsForm_D004"),
+                Title = L.T("SettingsForm_D089")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -258,7 +280,7 @@ namespace IwaraDownloader.Forms
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                MessageBox.Show("メールアドレスとパスワードを入力してください。", "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("SettingsForm_D005"), L.T("SettingsForm_D006"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -266,7 +288,7 @@ namespace IwaraDownloader.Forms
             SaveSettings();
 
             btnReLogin.Enabled = false;
-            btnReLogin.Text = "ログイン中...";
+            btnReLogin.Text = L.T("SettingsForm_D007");
 
             try
             {
@@ -278,21 +300,21 @@ namespace IwaraDownloader.Forms
                 if (success)
                 {
                     _downloadManager?.ResumeAfterLogin();
-                    MessageBox.Show("ログインに成功しました！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("SettingsForm_D008"), L.T("SettingsForm_D009"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show($"ログインに失敗しました:\n{error}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("SettingsForm_D010", error), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ログイン中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("SettingsForm_D012", ex.Message), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 btnReLogin.Enabled = true;
-                btnReLogin.Text = "再ログイン";
+                btnReLogin.Text = L.T("SettingsForm_D013");
                 UpdateLoginStatusDisplay();
             }
         }
@@ -304,12 +326,12 @@ namespace IwaraDownloader.Forms
         {
             if (_iwaraApi.IsLoggedIn)
             {
-                lblLoginStatus.Text = "(ログイン済)";
+                lblLoginStatus.Text = L.T("SettingsForm_D014");
                 lblLoginStatus.ForeColor = Color.Green;
             }
             else
             {
-                lblLoginStatus.Text = "(未ログイン)";
+                lblLoginStatus.Text = L.T("SettingsForm_D015");
                 lblLoginStatus.ForeColor = Color.Gray;
             }
         }
@@ -324,7 +346,7 @@ namespace IwaraDownloader.Forms
         private void btnApply_Click(object sender, EventArgs e)
         {
             if (!ApplySettings()) return;
-            MessageBox.Show("設定を保存しました。", "設定", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(L.T("SettingsForm_D016"), L.T("SettingsForm_D017"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
@@ -364,9 +386,9 @@ namespace IwaraDownloader.Forms
                     && (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0))
                 {
                     MessageBox.Show(this,
-                        "ダウンロード実行中は保存先フォルダを変更できません。\n" +
-                        "完了を待つか、キューを停止してから再度実行してください。",
-                        "保存先変更", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        L.T("SettingsForm_D018") +
+                        L.T("SettingsForm_D019"),
+                        L.T("SettingsForm_D020"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return false;
                 }
 
@@ -398,13 +420,13 @@ namespace IwaraDownloader.Forms
                 FileMoveHelper.CleanupEmptyDirectories(oldFolder);
 
                 MessageBox.Show(this,
-                    $"ファイル移動が完了しました。\n\n" +
-                    $"成功: {progressForm.MovedCount} 件 / 失敗: {progressForm.FailedCount} 件\n" +
+                    L.T("SettingsForm_D021") +
+                    L.T("SettingsForm_D022", progressForm.MovedCount, progressForm.FailedCount) +
                     (progressForm.FailedCount > 0
-                        ? "\n失敗したファイルは元の場所に残っています。詳細はログを確認してください。\n" +
-                          "原因を解消後、メイン画面の [ツール] → [未移動ファイルの一括移動] で再移動できます。"
+                        ? L.T("SettingsForm_D023") +
+                          L.T("SettingsForm_D024")
                         : ""),
-                    "移動完了", MessageBoxButtons.OK,
+                    L.T("SettingsForm_D025"), MessageBoxButtons.OK,
                     progressForm.FailedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
             }
             return true;
@@ -416,8 +438,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new SaveFileDialog
             {
-                Title = "設定をエクスポート",
-                Filter = "JSONファイル (*.json)|*.json",
+                Title = L.T("SettingsForm_D090"),
+                Filter = L.T("SettingsForm_D026"),
                 FileName = "iwara_settings.json"
             };
 
@@ -427,11 +449,11 @@ namespace IwaraDownloader.Forms
                 {
                     var json = _settingsManager.ExportToJson();
                     File.WriteAllText(dialog.FileName, json);
-                    MessageBox.Show("設定をエクスポートしました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("SettingsForm_D027"), L.T("SettingsForm_D028"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("SettingsForm_D029", ex.Message), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -440,8 +462,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new SaveFileDialog
             {
-                Title = "購読リストをエクスポート",
-                Filter = "JSONファイル (*.json)|*.json",
+                Title = L.T("SettingsForm_D091"),
+                Filter = L.T("SettingsForm_D026"),
                 FileName = "iwara_subscriptions.json"
             };
 
@@ -451,11 +473,11 @@ namespace IwaraDownloader.Forms
                 {
                     var json = _database.ExportSubscriptionsToJson();
                     File.WriteAllText(dialog.FileName, json);
-                    MessageBox.Show("購読リストをエクスポートしました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("SettingsForm_D030"), L.T("SettingsForm_D028"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"エクスポートに失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("SettingsForm_D031", ex.Message), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -464,8 +486,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "設定をインポート",
-                Filter = "JSONファイル (*.json)|*.json"
+                Title = L.T("SettingsForm_D092"),
+                Filter = L.T("SettingsForm_D026")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -475,11 +497,11 @@ namespace IwaraDownloader.Forms
                     var json = File.ReadAllText(dialog.FileName);
                     _settingsManager.ImportFromJson(json);
                     LoadSettings(); // UIを更新
-                    MessageBox.Show("設定をインポートしました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("SettingsForm_D032"), L.T("SettingsForm_D028"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"インポートに失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("SettingsForm_D033", ex.Message), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -488,8 +510,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "購読リストをインポート",
-                Filter = "JSONファイル (*.json)|*.json"
+                Title = L.T("SettingsForm_D093"),
+                Filter = L.T("SettingsForm_D026")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -498,11 +520,11 @@ namespace IwaraDownloader.Forms
                 {
                     var json = File.ReadAllText(dialog.FileName);
                     var count = _database.ImportSubscriptionsFromJson(json);
-                    MessageBox.Show($"{count}件の購読をインポートしました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("SettingsForm_D034", count), L.T("SettingsForm_D028"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"インポートに失敗しました:\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("SettingsForm_D035", ex.Message), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -511,31 +533,31 @@ namespace IwaraDownloader.Forms
         {
             if (_downloadManager == null)
             {
-                MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("SettingsForm_D036"), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             if (_downloadManager.IsMigrationRunning)
             {
-                MessageBox.Show(this, "既に実行中です。完了まで待ってから再度開始してください。",
-                    "実行中", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, L.T("SettingsForm_D037"),
+                    L.T("SettingsForm_D038"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var confirm = MessageBox.Show(
-                "ダウンロード済みの mp4 ファイルに iwara の UUID タグを書き込みます。\n" +
-                "DB に登録されている動画のうち、ローカルにファイルが存在するもの全てが対象です。\n\n" +
-                "★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。\n" +
-                "  進捗はメイン画面のステータスバーに表示されます。\n\n" +
-                "続行しますか？",
-                "既存ファイルにタグを書き込む",
+                L.T("SettingsForm_D039") +
+                L.T("SettingsForm_D040") +
+                L.T("SettingsForm_D041") +
+                L.T("SettingsForm_D042") +
+                L.T("SettingsForm_D043"),
+                L.T("SettingsForm_D044"),
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question);
             if (confirm != DialogResult.OK) return;
 
             if (_downloadManager.StartMigrateExistingFiles())
             {
-                MessageBox.Show(this, "バックグラウンドで開始しました。\nこの画面を閉じても処理は継続されます。",
-                    "開始", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, L.T("SettingsForm_D045"),
+                    L.T("SettingsForm_D046"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -547,33 +569,33 @@ namespace IwaraDownloader.Forms
         {
             if (_downloadManager == null)
             {
-                MessageBox.Show("DownloadManager が利用できません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("SettingsForm_D036"), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             if (_downloadManager.IsBackfillRunning)
             {
-                MessageBox.Show(this, "既に実行中です。完了まで待ってから再度開始してください。",
-                    "実行中", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, L.T("SettingsForm_D037"),
+                    L.T("SettingsForm_D038"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var confirm = MessageBox.Show(
-                "DB 内の動画のうちサムネ URL が未保存 / 画像未キャッシュのものを補完します。\n\n" +
-                "・FileUuid を既に持つ動画 → 即時組み立て (API リクエスト不要)\n" +
-                "・FileUuid 無し動画 → iwara API で取得 (要ログイン・時間かかる)\n" +
-                "・確定後、サムネ画像もネット DL (レート制限あり)\n\n" +
-                "★ バックグラウンドで実行します。設定画面を閉じてもアプリ起動中は処理が続きます。\n" +
-                "  進捗はメイン画面のステータスバーに表示されます。\n\n" +
-                "続行しますか？",
-                "サムネ URL 一括補完",
+                L.T("SettingsForm_D047") +
+                L.T("SettingsForm_D048") +
+                L.T("SettingsForm_D049") +
+                L.T("SettingsForm_D050") +
+                L.T("SettingsForm_D041") +
+                L.T("SettingsForm_D042") +
+                L.T("SettingsForm_D043"),
+                L.T("SettingsForm_D051"),
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question);
             if (confirm != DialogResult.OK) return;
 
             if (_downloadManager.StartBackfillThumbnails())
             {
-                MessageBox.Show(this, "バックグラウンドで開始しました。\nこの画面を閉じても処理は継続されます。",
-                    "開始", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, L.T("SettingsForm_D045"),
+                    L.T("SettingsForm_D046"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -592,8 +614,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "音声ファイルを選択",
-                Filter = "音声ファイル (*.wav;*.mp3;*.m4a)|*.wav;*.mp3;*.m4a|すべてのファイル (*.*)|*.*"
+                Title = L.T("SettingsForm_D094"),
+                Filter = L.T("SettingsForm_D052")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -617,7 +639,7 @@ namespace IwaraDownloader.Forms
             }
             else
             {
-                MessageBox.Show("指定されたファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("SettingsForm_D053"), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -625,8 +647,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "エラー音声ファイルを選択",
-                Filter = "音声ファイル (*.wav;*.mp3;*.m4a)|*.wav;*.mp3;*.m4a|すべてのファイル (*.*)|*.*"
+                Title = L.T("SettingsForm_D095"),
+                Filter = L.T("SettingsForm_D052")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -650,7 +672,7 @@ namespace IwaraDownloader.Forms
             }
             else
             {
-                MessageBox.Show("指定されたファイルが見つかりません。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("SettingsForm_D053"), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -664,7 +686,7 @@ namespace IwaraDownloader.Forms
             var template = txtFilenameTemplate.Text.Trim();
             if (string.IsNullOrEmpty(template))
             {
-                MessageBox.Show("テンプレートを入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("SettingsForm_D054"), L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -675,12 +697,12 @@ namespace IwaraDownloader.Forms
 
             if (completedVideos.Count == 0)
             {
-                MessageBox.Show("リネーム対象のファイルがありません。", "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L.T("SettingsForm_D055"), L.T("SettingsForm_D056"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             btnRenameFiles.Enabled = false;
-            btnRenameFiles.Text = "スキャン中...";
+            btnRenameFiles.Text = L.T("SettingsForm_D057");
 
             // リネーム項目を作成
             var items = new List<RenameItem>();
@@ -760,42 +782,42 @@ namespace IwaraDownloader.Forms
             if (conflictCount > 0)
             {
                 var warningResult = MessageBox.Show(
-                    $"リネーム対象: {completedVideos.Count}件\n\n" +
-                    $"・処理可能: {pendingCount}件\n" +
-                    $"・重複あり: {conflictCount}件\n" +
-                    $"・ファイル不在: {notFoundCount}件\n\n" +
-                    $"重複ファイルは結果画面で個別に処理できます。\n" +
-                    $"続行しますか？",
-                    "重複警告",
+                    L.T("SettingsForm_D058", completedVideos.Count) +
+                    L.T("SettingsForm_D059", pendingCount) +
+                    L.T("SettingsForm_D060", conflictCount) +
+                    L.T("SettingsForm_D061", notFoundCount) +
+                    L.T("SettingsForm_D062") +
+                    L.T("SettingsForm_D063"),
+                    L.T("SettingsForm_D064"),
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
 
                 if (warningResult != DialogResult.Yes)
                 {
                     btnRenameFiles.Enabled = true;
-                    btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+                    btnRenameFiles.Text = L.T("SettingsForm_D065");
                     return;
                 }
             }
             else if (pendingCount > 0)
             {
                 var confirmResult = MessageBox.Show(
-                    $"{pendingCount}件のファイルをリネームします。\n\n" +
-                    $"テンプレート: {template}\n\n" +
-                    "この操作は取り消しできません。続行しますか？",
-                    "一括リネーム確認",
+                    L.T("SettingsForm_D066", pendingCount) +
+                    L.T("SettingsForm_D067", template) +
+                    L.T("SettingsForm_D068"),
+                    L.T("SettingsForm_D069"),
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
 
                 if (confirmResult != DialogResult.Yes)
                 {
                     btnRenameFiles.Enabled = true;
-                    btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+                    btnRenameFiles.Text = L.T("SettingsForm_D065");
                     return;
                 }
             }
 
-            btnRenameFiles.Text = "リネーム中...";
+            btnRenameFiles.Text = L.T("SettingsForm_D070");
 
             // Pending状態のファイルをリネーム
             await Task.Run(() =>
@@ -837,7 +859,7 @@ namespace IwaraDownloader.Forms
             });
 
             btnRenameFiles.Enabled = true;
-            btnRenameFiles.Text = "DL済みファイルを一括リネーム";
+            btnRenameFiles.Text = L.T("SettingsForm_D065");
 
             // 結果ダイアログを表示
             using var resultForm = new RenameResultForm(items, template);
@@ -891,9 +913,9 @@ namespace IwaraDownloader.Forms
 
             // 警告を表示
             MessageBox.Show(
-                "積極的プリセットはエラーが発生しやすくなります。\n" +
-                "403/429エラーが頻発する場合は、標準または控えめに変更してください。",
-                "注意",
+                L.T("SettingsForm_D071") +
+                L.T("SettingsForm_D072"),
+                L.T("SettingsForm_D073"),
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
@@ -905,7 +927,7 @@ namespace IwaraDownloader.Forms
         private async void btnCheckUpdateNow_Click(object sender, EventArgs e)
         {
             btnCheckUpdateNow.Enabled = false;
-            btnCheckUpdateNow.Text = "チェック中...";
+            btnCheckUpdateNow.Text = L.T("SettingsForm_D074");
 
             try
             {
@@ -913,19 +935,19 @@ namespace IwaraDownloader.Forms
 
                 if (!result.Success)
                 {
-                    MessageBox.Show($"更新チェックに失敗しました:\n{result.ErrorMessage}", 
-                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("SettingsForm_D075", result.ErrorMessage), 
+                        L.T("SettingsForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 if (result.HasUpdate)
                 {
                     var dialogResult = MessageBox.Show(
-                        $"新しいバージョンがあります！\n\n" +
-                        $"現在: {UpdateService.CurrentVersionString}\n" +
-                        $"最新: {result.LatestVersionString}\n\n" +
-                        $"ダウンロードページを開きますか？",
-                        "更新があります",
+                        L.T("SettingsForm_D076") +
+                        L.T("SettingsForm_D077", UpdateService.CurrentVersionString) +
+                        L.T("SettingsForm_D078", result.LatestVersionString) +
+                        L.T("SettingsForm_D079"),
+                        L.T("SettingsForm_D080"),
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Information);
 
@@ -936,14 +958,14 @@ namespace IwaraDownloader.Forms
                 }
                 else
                 {
-                    MessageBox.Show($"最新バージョンです！\n\n現在: {UpdateService.CurrentVersionString}", 
-                        "更新チェック", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(L.T("SettingsForm_D081", UpdateService.CurrentVersionString), 
+                        L.T("SettingsForm_D082"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             finally
             {
                 btnCheckUpdateNow.Enabled = true;
-                btnCheckUpdateNow.Text = "今すぐチェック";
+                btnCheckUpdateNow.Text = L.T("SettingsForm_D083");
             }
         }
 
@@ -956,17 +978,17 @@ namespace IwaraDownloader.Forms
             var webServer = WebServerServiceHolder.Instance;
             if (webServer != null && webServer.IsRunning)
             {
-                lblWebStatus.Text = "稼働中";
+                lblWebStatus.Text = L.T("SettingsForm_D084");
                 lblWebStatus.ForeColor = Color.Green;
                 lblWebUrl.Text = webServer.BaseUrl ?? "";
-                btnWebStartStop.Text = "停止";
+                btnWebStartStop.Text = L.T("SettingsForm_D085");
             }
             else
             {
-                lblWebStatus.Text = "停止中";
+                lblWebStatus.Text = L.T("SettingsForm_D086");
                 lblWebStatus.ForeColor = Color.Gray;
                 lblWebUrl.Text = "";
-                btnWebStartStop.Text = "開始";
+                btnWebStartStop.Text = L.T("SettingsForm_D046");
             }
         }
 
@@ -991,7 +1013,7 @@ namespace IwaraDownloader.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"サーバー操作に失敗しました:\n{ex.Message}", "エラー",
+                MessageBox.Show(L.T("SettingsForm_D087", ex.Message), L.T("SettingsForm_D011"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -1024,5 +1046,11 @@ namespace IwaraDownloader.Forms
     public static class WebServerServiceHolder
     {
         public static WebServerService? Instance { get; set; }
+    }
+
+    /// <summary>言語ComboBoxの項目 (Code=設定値, Display=ネイティブ表記)</summary>
+    public sealed record LanguageItem(string Code, string Display)
+    {
+        public override string ToString() => Display;
     }
 }

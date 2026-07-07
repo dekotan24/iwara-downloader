@@ -23,6 +23,7 @@ namespace IwaraDownloader.Forms
         public BulkImportForm(DownloadManager? downloadManager = null)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
             _downloadManager = downloadManager;
         }
@@ -56,8 +57,8 @@ namespace IwaraDownloader.Forms
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "URLリストファイルを開く",
-                Filter = "テキストファイル (*.txt)|*.txt|すべてのファイル (*.*)|*.*"
+                Title = L.T("BulkImportForm_D014"),
+                Filter = L.T("BulkImportForm_D001")
             };
 
             if (dialog.ShowDialog() == DialogResult.OK)
@@ -70,8 +71,8 @@ namespace IwaraDownloader.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"ファイルの読み込みに失敗しました:\n{ex.Message}", 
-                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L.T("BulkImportForm_D002", ex.Message), 
+                        L.T("BulkImportForm_D003"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -99,7 +100,7 @@ namespace IwaraDownloader.Forms
         private void UpdateStats()
         {
             var (videos, profiles) = ExtractEntries(txtUrls.Text);
-            lblStats.Text = $"検出: 動画 {videos.Count}件 / チャンネル {profiles.Count}件";
+            lblStats.Text = L.T("BulkImportForm_D004", videos.Count, profiles.Count);
         }
 
         /// <summary>
@@ -165,26 +166,26 @@ namespace IwaraDownloader.Forms
 
             if (videos.Count == 0 && profiles.Count == 0)
             {
-                MessageBox.Show("有効な URL が見つかりませんでした。\n\n対応形式:\n・動画URL / 動画ID\n・チャンネル(プロフィール)URL\n  例: https://www.iwara.tv/profile/xxxx/videos\n(iwara.tv / iwara.ai 両対応)",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("BulkImportForm_D005"),
+                    L.T("BulkImportForm_D003"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (profiles.Count > 0 && _downloadManager == null)
             {
-                MessageBox.Show("チャンネル(プロフィール)URL の取り込みには内部初期化が必要です。動画URL/IDのみ処理します。",
-                    "情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L.T("BulkImportForm_D006"),
+                    L.T("BulkImportForm_D007"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
 
             if (profiles.Count > 0 && _downloadManager != null && !_downloadManager.IsLoggedIn)
             {
-                MessageBox.Show("チャンネル取り込みには iwara ログインが必要です。\n設定画面からログインしてください。",
-                    "ログイン必要", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L.T("BulkImportForm_D008"),
+                    L.T("BulkImportForm_D009"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             btnImport.Enabled = false;
-            btnImport.Text = "処理中...";
+            btnImport.Text = L.T("BulkImportForm_D010");
             progressBar.Visible = true;
             progressBar.Value = 0;
             progressBar.Maximum = Math.Max(1, videos.Count + profiles.Count);
@@ -214,7 +215,7 @@ namespace IwaraDownloader.Forms
                                 ImportedVideos.Add(new VideoInfo
                                 {
                                     VideoId = v.Id,
-                                    Title = $"[未取得] {v.Id}",
+                                    Title = L.T("BulkImportForm_D015", v.Id),
                                     Url = v.Url,
                                     Site = v.Site,
                                     Status = DownloadStatus.Pending,
@@ -245,13 +246,14 @@ namespace IwaraDownloader.Forms
 
                 // 結果表示
                 var channelMsg = addedChannels > 0
-                    ? $"・チャンネル キュー登録: {addedChannels}件{(channelFailed > 0 ? $" / スキップ {channelFailed}件" : "")}\n  (動画一覧取得はバックグラウンドで順次実行されます)"
-                    : channelFailed > 0 ? $"・チャンネル: {channelFailed}件スキップ (登録済みまたは処理待ち)" : "";
-                var message = "処理完了\n\n" +
-                    $"・動画 追加: {ImportedVideos.Count}件 (重複スキップ {DuplicateCount}件)\n" +
+                    ? L.T("BulkImportForm_ResultChannels", addedChannels,
+                        channelFailed > 0 ? L.T("BulkImportForm_ResultChannelSkip", channelFailed) : "")
+                    : channelFailed > 0 ? L.T("BulkImportForm_ResultChannelsAllSkip", channelFailed) : "";
+                var message = L.T("BulkImportForm_ResultHeader") +
+                    L.T("BulkImportForm_ResultVideos", ImportedVideos.Count, DuplicateCount) +
                     (channelMsg.Length > 0 ? channelMsg : "");
 
-                MessageBox.Show(message, "インポート結果", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(message, L.T("BulkImportForm_D011"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 if (ImportedVideos.Count > 0 || addedChannels > 0)
                 {
@@ -261,13 +263,13 @@ namespace IwaraDownloader.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"インポート中にエラーが発生しました:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.T("BulkImportForm_D012", ex.Message),
+                    L.T("BulkImportForm_D003"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 btnImport.Enabled = true;
-                btnImport.Text = "インポート";
+                btnImport.Text = L.T("BulkImportForm_D013");
                 progressBar.Visible = false;
             }
         }

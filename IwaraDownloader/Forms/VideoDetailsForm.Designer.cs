@@ -84,17 +84,17 @@ namespace IwaraDownloader.Forms
             this.tableLayout.AutoScroll = true;
 
             // 行追加 (タイトル, ソース, 投稿者, ...)
-            AddRow(lblTitle, "タイトル", txtTitle, multiline: false);
-            AddRow(lblSource, "ソース", txtSource, multiline: false);
-            AddRow(lblAuthor, "投稿者", txtAuthor, multiline: false);
+            AddRow(lblTitle, Utils.L.T("VideoDetailsForm_RowTitle"), txtTitle, multiline: false);
+            AddRow(lblSource, Utils.L.T("VideoDetailsForm_RowSource"), txtSource, multiline: false);
+            AddRow(lblAuthor, Utils.L.T("VideoDetailsForm_RowAuthor"), txtAuthor, multiline: false);
             AddRow(lblVideoId, "Video ID", txtVideoId, multiline: false);
             AddRow(lblFileUuid, "File UUID", txtFileUuid, multiline: false);
-            AddRow(lblStatus, "ステータス", txtStatus, multiline: false);
-            AddRow(lblDuration, "長さ", txtDuration, multiline: false);
-            AddRow(lblFileSize, "ファイルサイズ", txtFileSize, multiline: false);
-            AddRow(lblPostedAt, "投稿日時", txtPostedAt, multiline: false);
-            AddRow(lblDownloadedAt, "DL日時", txtDownloadedAt, multiline: false);
-            AddRow(lblCreatedAt, "登録日時", txtCreatedAt, multiline: false);
+            AddRow(lblStatus, Utils.L.T("VideoDetailsForm_RowStatus"), txtStatus, multiline: false);
+            AddRow(lblDuration, Utils.L.T("VideoDetailsForm_RowDuration"), txtDuration, multiline: false);
+            AddRow(lblFileSize, Utils.L.T("VideoDetailsForm_RowFileSize"), txtFileSize, multiline: false);
+            AddRow(lblPostedAt, Utils.L.T("VideoDetailsForm_RowPostedAt"), txtPostedAt, multiline: false);
+            AddRow(lblDownloadedAt, Utils.L.T("VideoDetailsForm_RowDownloadedAt"), txtDownloadedAt, multiline: false);
+            AddRow(lblCreatedAt, Utils.L.T("VideoDetailsForm_RowCreatedAt"), txtCreatedAt, multiline: false);
 
             // URL 行 (TextBox + ボタン)
             {
@@ -115,7 +115,7 @@ namespace IwaraDownloader.Forms
                 urlRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70F));
                 txtUrl.ReadOnly = true;
                 txtUrl.Dock = DockStyle.Fill;
-                btnOpenUrl.Text = "開く";
+                btnOpenUrl.Text = Utils.L.T("VideoDetailsForm_btnOpen");
                 btnOpenUrl.Dock = DockStyle.Fill;
                 btnOpenUrl.Click += btnOpenUrl_Click;
                 urlRow.Controls.Add(txtUrl, 0, 0);
@@ -127,7 +127,7 @@ namespace IwaraDownloader.Forms
 
             // LocalFilePath 行 (TextBox + ボタン)
             {
-                lblLocalFilePath.Text = "保存先";
+                lblLocalFilePath.Text = Utils.L.T("VideoDetailsForm_lblLocalFilePath");
                 lblLocalFilePath.TextAlign = ContentAlignment.MiddleLeft;
                 lblLocalFilePath.Anchor = AnchorStyles.Left | AnchorStyles.Right;
                 lblLocalFilePath.AutoSize = false;
@@ -144,7 +144,7 @@ namespace IwaraDownloader.Forms
                 fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70F));
                 txtLocalFilePath.ReadOnly = true;
                 txtLocalFilePath.Dock = DockStyle.Fill;
-                btnOpenFile.Text = "開く";
+                btnOpenFile.Text = Utils.L.T("VideoDetailsForm_btnOpen");
                 btnOpenFile.Dock = DockStyle.Fill;
                 btnOpenFile.Click += btnOpenFile_Click;
                 fileRow.Controls.Add(txtLocalFilePath, 0, 0);
@@ -154,14 +154,14 @@ namespace IwaraDownloader.Forms
                 tableLayout.Controls.Add(fileRow);
             }
 
-            AddRow(lblRetry, "リトライ回数", txtRetry, multiline: false);
-            AddRow(lblLastError, "最終エラー", txtLastError, multiline: true, height: 50);
-            AddRow(lblTags, "タグ (カンマ区切り)", txtTags, multiline: false, editable: true);
-            AddRow(lblMemo, "メモ", txtMemo, multiline: true, height: 100, editable: true);
+            AddRow(lblRetry, Utils.L.T("VideoDetailsForm_RowRetry"), txtRetry, multiline: false);
+            AddRow(lblLastError, Utils.L.T("VideoDetailsForm_RowLastError"), txtLastError, multiline: true, height: 50);
+            AddRow(lblTags, Utils.L.T("VideoDetailsForm_RowTags"), txtTags, multiline: false, editable: true);
+            AddRow(lblMemo, Utils.L.T("VideoDetailsForm_RowMemo"), txtMemo, multiline: true, height: 100, editable: true);
 
             // お気に入り行 (ラベル + チェックボックス)
             {
-                lblFavorite.Text = "お気に入り";
+                lblFavorite.Text = Utils.L.T("VideoDetailsForm_lblFavorite");
                 lblFavorite.TextAlign = ContentAlignment.MiddleLeft;
                 lblFavorite.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
                 lblFavorite.AutoSize = false;

@@ -10,6 +10,7 @@ const App = {
     lastVideos: null,
 
     async init() {
+        await initI18n();
         Player.init();
         this.bindEvents();
 
@@ -48,7 +49,7 @@ const App = {
                 await API.login(user, pass);
                 this.showApp();
             } catch (err) {
-                errEl.textContent = err.message || 'ログインに失敗しました';
+                errEl.textContent = err.message || t('loginFailed');
                 errEl.classList.remove('hidden');
             }
         });
@@ -188,7 +189,7 @@ const App = {
                     this.currentChannel = parseInt(el.dataset.channelId);
                     this.currentPage = 1;
                     const ch = this.channels.find(c => c.id === this.currentChannel);
-                    document.getElementById('viewTitle').textContent = ch ? ch.username : 'チャンネル';
+                    document.getElementById('viewTitle').textContent = ch ? ch.username : t('channel');
                     // setView 経由で統計/DLビューの表示状態をリセットする
                     // (直接 loadVideos すると統計ビューの残骸が画面に残る)
                     this.setView('channel');
@@ -203,7 +204,7 @@ const App = {
 
     async loadVideos() {
         const container = document.getElementById('videoContainer');
-        container.innerHTML = '<div class="loading">読み込み中</div>';
+        container.innerHTML = `<div class="loading">${t('loading')}</div>`;
 
         const params = {
             page: this.currentPage,
@@ -215,19 +216,19 @@ const App = {
         if (this.searchQuery) params.search = this.searchQuery;
         if (this.currentChannel) params.channel = this.currentChannel;
 
-        let viewTitle = '全ての動画';
+        let viewTitle = t('navAll');
         if (this.currentView === 'downloaded') {
             params.status = 'downloaded';
-            viewTitle = 'DL済み';
+            viewTitle = t('navDownloaded');
         } else if (this.currentView === 'favorites') {
             params.favorite = 1;
-            viewTitle = 'お気に入り';
+            viewTitle = t('navFavorites');
         } else if (this.currentView === 'errors') {
             params.status = 3; // Failed
-            viewTitle = 'エラー';
+            viewTitle = t('navErrors');
         } else if (this.currentChannel) {
             const ch = this.channels.find(c => c.id === this.currentChannel);
-            viewTitle = ch ? ch.username : 'チャンネル';
+            viewTitle = ch ? ch.username : t('channel');
         }
 
         if (this.currentView !== 'channel') {
@@ -237,7 +238,7 @@ const App = {
         try {
             const data = await API.getVideos(params);
             this.lastVideos = data;
-            document.getElementById('videoCount').textContent = `${data.total} 件`;
+            document.getElementById('videoCount').textContent = t('videoCount', data.total);
             this.renderVideos(data);
             this.renderPagination(data);
             this.renderFilterActions();
@@ -252,7 +253,7 @@ const App = {
         container.className = this.viewMode === 'grid' ? 'video-grid' : 'video-list';
 
         if (data.items.length === 0) {
-            container.innerHTML = '<div class="loading" style="animation:none">動画が見つかりません</div>';
+            container.innerHTML = `<div class="loading" style="animation:none">${t('noVideos')}</div>`;
             return;
         }
 
@@ -280,7 +281,7 @@ const App = {
                     if (item) item.isFavorite = r.favorite;
                     btn.classList.toggle('active', r.favorite);
                     btn.innerHTML = r.favorite ? '&#9733;' : '&#9734;';
-                    btn.title = r.favorite ? 'お気に入り解除' : 'お気に入りに追加';
+                    btn.title = r.favorite ? t('favRemove') : t('favAdd');
                     // お気に入りビューで解除したらリストから消す
                     if (this.currentView === 'favorites' && !r.favorite) this.loadVideos();
                 } catch {}
@@ -293,7 +294,7 @@ const App = {
                 const id = parseInt(btn.dataset.id);
                 try {
                     await API.retryError(id);
-                    btn.textContent = '追加済み';
+                    btn.textContent = t('added');
                     btn.disabled = true;
                 } catch {}
             });
@@ -305,7 +306,7 @@ const App = {
                 const id = parseInt(btn.dataset.id);
                 try {
                     await API.queueDownload(id);
-                    btn.textContent = '追加済み';
+                    btn.textContent = t('added');
                     btn.disabled = true;
                 } catch {}
             });
@@ -324,20 +325,20 @@ const App = {
         }[v.statusText] || '';
 
         const statusLabel = {
-            'Completed': '完了',
-            'Failed': '失敗',
-            'Pending': '待機',
-            'Downloading': 'DL中',
-            'Skipped': 'スキップ',
-            'WritingTags': 'タグ書込',
-            'Paused': '一時停止'
+            'Completed': t('stCompleted'),
+            'Failed': t('stFailed'),
+            'Pending': t('stPending'),
+            'Downloading': t('stDownloading'),
+            'Skipped': t('stSkipped'),
+            'WritingTags': t('stWritingTags'),
+            'Paused': t('stPaused')
         }[v.statusText] || v.statusText;
 
         const thumb = `<img src="${API.thumbnailUrl(v.id)}" loading="lazy" alt="" onerror="this.parentElement.innerHTML='<div class=\\'no-thumb\\'>&#127909;</div>'">`;
 
         const actions = [];
-        if (v.status === 3) actions.push(`<button class="btn-primary btn-retry" data-id="${v.id}">再試行</button>`);
-        if (v.status === 3 || v.status === 4) actions.push(`<button class="btn-primary btn-queue" data-id="${v.id}">ダウンロード</button>`);
+        if (v.status === 3) actions.push(`<button class="btn-primary btn-retry" data-id="${v.id}">${t('retry')}</button>`);
+        if (v.status === 3 || v.status === 4) actions.push(`<button class="btn-primary btn-queue" data-id="${v.id}">${t('download')}</button>`);
 
         const errorLine = v.lastErrorMessage
             ? `<div class="error-message" title="${this.esc(v.lastErrorMessage)}">${this.esc(v.lastErrorMessage)}</div>`
@@ -349,10 +350,10 @@ const App = {
                     ${thumb}
                     ${v.durationFormatted ? `<span class="thumb-duration">${v.durationFormatted}</span>` : ''}
                     <button class="fav-star ${v.isFavorite ? 'active' : ''}" data-id="${v.id}"
-                        title="${v.isFavorite ? 'お気に入り解除' : 'お気に入りに追加'}">${v.isFavorite ? '&#9733;' : '&#9734;'}</button>
+                        title="${v.isFavorite ? t('favRemove') : t('favAdd')}">${v.isFavorite ? '&#9733;' : '&#9734;'}</button>
                 </div>
                 <div class="video-info">
-                    <div class="video-title" title="${this.esc(v.title)}">${this.esc(v.title || '無題')}</div>
+                    <div class="video-title" title="${this.esc(v.title)}">${this.esc(v.title || t('noTitle'))}</div>
                     <div class="video-meta">
                         ${v.authorUsername ? `<span>${this.esc(v.authorUsername)}</span>` : ''}
                         ${v.fileSizeFormatted && v.fileSize > 0 ? `<span>${v.fileSizeFormatted}</span>` : ''}
@@ -404,22 +405,22 @@ const App = {
         const actions = document.getElementById('filterActions');
         if (this.currentView === 'errors') {
             actions.innerHTML = `
-                <button class="btn-primary" id="btnRetryAll">全て再試行</button>
-                <button class="btn-danger" id="btnDeleteNotFound">Not Found を削除</button>
+                <button class="btn-primary" id="btnRetryAll">${t('retryAll')}</button>
+                <button class="btn-danger" id="btnDeleteNotFound">${t('deleteNotFound')}</button>
             `;
             document.getElementById('btnRetryAll').addEventListener('click', async () => {
-                if (!confirm('失敗した動画を全て再試行しますか?')) return;
+                if (!confirm(t('confirmRetryAll'))) return;
                 try {
                     const r = await API.retryAllErrors();
-                    alert(`${r.retriedCount} 件を再試行キューに追加しました`);
+                    alert(t('retriedCount', r.retriedCount));
                     this.loadVideos();
                 } catch (err) { alert(err.message); }
             });
             document.getElementById('btnDeleteNotFound').addEventListener('click', async () => {
-                if (!confirm('Not Found (削除済み) の動画を全てデータベースから削除しますか?')) return;
+                if (!confirm(t('confirmDeleteNotFound'))) return;
                 try {
                     const r = await API.deleteNotFound();
-                    alert(`${r.deletedCount} 件を削除しました`);
+                    alert(t('deletedCount', r.deletedCount));
                     this.loadVideos();
                 } catch (err) { alert(err.message); }
             });
@@ -430,45 +431,45 @@ const App = {
 
     async loadStats() {
         const view = document.getElementById('statsView');
-        view.innerHTML = '<div class="loading">統計を読み込み中</div>';
+        view.innerHTML = `<div class="loading">${t('loadingStats')}</div>`;
         try {
             const s = await API.getStats();
             view.innerHTML = `
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value">${s.totalVideos}</div>
-                        <div class="stat-label">総動画数</div>
+                        <div class="stat-label">${t('statTotal')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.downloadedVideos}</div>
-                        <div class="stat-label">DL済み</div>
+                        <div class="stat-label">${t('statDownloaded')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.failedVideos}</div>
-                        <div class="stat-label">失敗</div>
+                        <div class="stat-label">${t('statFailed')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.pendingVideos}</div>
-                        <div class="stat-label">待機</div>
+                        <div class="stat-label">${t('statPending')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.skippedVideos}</div>
-                        <div class="stat-label">スキップ</div>
+                        <div class="stat-label">${t('statSkipped')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.totalChannels}</div>
-                        <div class="stat-label">チャンネル (有効 ${s.enabledChannels})</div>
+                        <div class="stat-label">${t('statChannels', s.enabledChannels)}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.totalSizeFormatted}</div>
-                        <div class="stat-label">合計サイズ</div>
+                        <div class="stat-label">${t('statTotalSize')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${s.favoriteCount}</div>
-                        <div class="stat-label">お気に入り</div>
+                        <div class="stat-label">${t('statFavorites')}</div>
                     </div>
                 </div>
-                <h3 style="margin-bottom:12px">最近のダウンロード</h3>
+                <h3 style="margin-bottom:12px">${t('recentDownloads')}</h3>
                 <div class="video-list" id="recentDownloadsList">
                     ${s.recentDownloads.map(v => this.renderVideoItem(v)).join('')}
                 </div>
@@ -492,35 +493,34 @@ const App = {
 
     async loadActiveDownloads() {
         const container = document.getElementById('videoContainer');
-        container.innerHTML = '<div class="loading">読み込み中</div>';
+        container.innerHTML = `<div class="loading">${t('loading')}</div>`;
         try {
             const data = await API.getActiveDownloads();
-            document.getElementById('viewTitle').textContent = 'ダウンロード状況';
+            document.getElementById('viewTitle').textContent = t('dlStatusTitle');
             document.getElementById('videoCount').textContent =
-                `DL中 ${data.downloading || 0} / 待機 ${data.pending || 0}`;
+                t('dlSummary', data.downloading || 0, data.pending || 0);
 
             container.innerHTML = `
                 <div class="stats-grid" style="margin-bottom:16px">
                     <div class="stat-card">
                         <div class="stat-value">${data.downloading || 0}</div>
-                        <div class="stat-label">DL中</div>
+                        <div class="stat-label">${t('dlDownloading')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${data.writingTags || 0}</div>
-                        <div class="stat-label">タグ書込中</div>
+                        <div class="stat-label">${t('dlWritingTags')}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${data.pending || 0}</div>
-                        <div class="stat-label">待機</div>
+                        <div class="stat-label">${t('statPending')}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">${data.isRunning ? '稼働中' : '停止中'}</div>
-                        <div class="stat-label">マネージャー状態</div>
+                        <div class="stat-value">${data.isRunning ? t('dlRunning') : t('dlStopped')}</div>
+                        <div class="stat-label">${t('dlManagerState')}</div>
                     </div>
                 </div>
                 <p style="color:var(--text-secondary);font-size:13px">
-                    ダウンロード進捗の詳細はデスクトップアプリで確認できます。
-                    このページではキュー全体の状況を確認できます。
+                    ${t('dlNote')}
                 </p>
             `;
         } catch (err) {

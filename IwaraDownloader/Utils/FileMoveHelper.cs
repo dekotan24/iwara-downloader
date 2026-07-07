@@ -93,11 +93,11 @@ namespace IwaraDownloader.Utils
                     if (di.AvailableFreeSpace < totalBytes)
                     {
                         MessageBox.Show(owner,
-                            $"移動先ドライブ ({driveNew}) の空き容量が不足しています。\n\n" +
-                            $"必要: {FormatSize(totalBytes)}\n" +
-                            $"空き: {FormatSize(di.AvailableFreeSpace)}\n\n" +
-                            "保存先変更を中止します。",
-                            "容量不足", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            L.T("SvcFileMove_D001", driveNew) +
+                            L.T("SvcFileMove_D002", FormatSize(totalBytes)) +
+                            L.T("SvcFileMove_D003", FormatSize(di.AvailableFreeSpace)) +
+                            L.T("SvcFileMove_D004"),
+                            L.T("SvcFileMove_D005"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return MoveDecision.Cancel;
                     }
                 }
@@ -108,16 +108,16 @@ namespace IwaraDownloader.Utils
             }
 
             var confirm = MessageBox.Show(owner,
-                $"{subject}を変更します。\n\n" +
-                $"既存DL済みファイル: {movableFiles.Count} 個 ({FormatSize(totalBytes)})\n" +
-                $"移動元: {oldBase}\n" +
-                $"移動先: {newBase}" + freeSpaceLine + "\n\n" +
-                "これらのファイルを移動先に移しますか?\n" +
-                "(メタデータ .json も一緒に移動します)\n\n" +
-                "[はい]   ファイルを移動して保存先を変更\n" +
-                "[いいえ] ファイルは移動せず保存先設定だけ変更\n" +
-                "[キャンセル] 何もしない",
-                "ファイル移動の確認",
+                L.T("SvcFileMove_D006", subject) +
+                L.T("SvcFileMove_D007", movableFiles.Count, FormatSize(totalBytes)) +
+                L.T("SvcFileMove_D008", oldBase) +
+                L.T("SvcFileMove_D009", newBase) + freeSpaceLine + "\n\n" +
+                L.T("SvcFileMove_D010") +
+                L.T("SvcFileMove_D011") +
+                L.T("SvcFileMove_D012") +
+                L.T("SvcFileMove_D013") +
+                L.T("SvcFileMove_D014"),
+                L.T("SvcFileMove_D015"),
                 MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 
             return confirm switch

@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 
@@ -22,6 +23,7 @@ namespace IwaraDownloader.Forms
             DatabaseService database)
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _items = items;
             _database = database;
             lblCount.Text = $"0 / {_items.Count}";
@@ -39,20 +41,20 @@ namespace IwaraDownloader.Forms
             }
             catch (OperationCanceledException)
             {
-                AppendCurrent("[中止] ユーザー操作で中止されました");
+                AppendCurrent(L.T("FileMoveProgressForm_LogAborted"));
             }
             catch (Exception ex)
             {
-                AppendCurrent($"[エラー] {ex.Message}");
+                AppendCurrent(L.T("FileMoveProgressForm_LogError", ex.Message));
             }
             finally
             {
                 _running = false;
                 _cts?.Dispose();
                 _cts = null;
-                btnCancel.Text = "閉じる";
+                btnCancel.Text = L.T("FileMoveProgressForm_D001");
 
-                lblTitle.Text = $"完了: 移動 {MovedCount} / 失敗 {FailedCount}";
+                lblTitle.Text = L.T("FileMoveProgressForm_D002", MovedCount, FailedCount);
                 lblCount.Text = $"{MovedCount + FailedCount} / {_items.Count}";
             }
         }
@@ -125,7 +127,7 @@ namespace IwaraDownloader.Forms
                         // RecordDone は書かない: 移動済みなのに DB 更新で失敗したケースを
                         // 次回起動時のジャーナル復旧で拾えるようにするため
                         FailedCount++;
-                        AppendCurrent($"[失敗] {Path.GetFileName(oldPath)}: {ex.Message}");
+                        AppendCurrent(L.T("FileMoveProgressForm_LogFailed", Path.GetFileName(oldPath), ex.Message));
                         LoggingService.Instance.Warn($"ファイル移動失敗: {oldPath} -> {newPath}: {ex.Message}");
                     }
 
@@ -146,7 +148,7 @@ namespace IwaraDownloader.Forms
 
             progressBar.Value = Math.Min(progressBar.Maximum, processed);
             lblCount.Text = $"{processed} / {_items.Count}";
-            lblSize.Text = $"  ({FormatSize(MovedBytes)} 移動済)";
+            lblSize.Text = L.T("FileMoveProgressForm_D003", FormatSize(MovedBytes));
 
             if (!string.IsNullOrEmpty(oldPath))
             {
@@ -181,7 +183,7 @@ namespace IwaraDownloader.Forms
             {
                 _cts?.Cancel();
                 btnCancel.Enabled = false;
-                lblTitle.Text = "中止中...";
+                lblTitle.Text = L.T("FileMoveProgressForm_D004");
             }
             else
             {
@@ -203,8 +205,8 @@ namespace IwaraDownloader.Forms
             }
 
             var r = MessageBox.Show(this,
-                "移動処理中です。本当に中止しますか?",
-                "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                L.T("FileMoveProgressForm_D005"),
+                L.T("FileMoveProgressForm_D006"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (r != DialogResult.Yes)
             {
                 e.Cancel = true;

@@ -54,7 +54,7 @@ namespace IwaraDownloader.Services
             {
                 _notifyIcon!.ShowBalloonTip(
                     3000,
-                    "ダウンロード完了",
+                    L.T("SvcNotificationService_D001"),
                     title,
                     ToolTipIcon.Info);
             }
@@ -75,8 +75,8 @@ namespace IwaraDownloader.Services
             {
                 _notifyIcon!.ShowBalloonTip(
                     3000,
-                    "新着動画を検出",
-                    $"{username} から {count} 件の新着動画が見つかりました",
+                    L.T("SvcNotificationService_D002"),
+                    L.T("SvcNotificationService_D003", username, count),
                     ToolTipIcon.Info);
             }
             catch (Exception ex)
@@ -96,7 +96,7 @@ namespace IwaraDownloader.Services
             {
                 _notifyIcon!.ShowBalloonTip(
                     3000,
-                    "ダウンロードエラー",
+                    L.T("SvcNotificationService_D004"),
                     $"{title}: {errorMessage}",
                     ToolTipIcon.Error);
             }
@@ -121,7 +121,7 @@ namespace IwaraDownloader.Services
 
                 _notifyIcon!.ShowBalloonTip(
                     3000,
-                    "ダウンロード完了",
+                    L.T("SvcNotificationService_D001"),
                     message,
                     ToolTipIcon.Info);
             }

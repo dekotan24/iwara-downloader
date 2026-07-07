@@ -25,6 +25,13 @@ namespace IwaraDownloader.Forms
             _downloadManager = downloadManager;
             _search = new IwaraSearch(downloadManager.IwaraApi);
             InitializeComponent();
+            Utils.Localizer.Apply(this);
+            // listResults の列は Columns.Add(文字列) 形式で Name が無く Localizer では
+            // 差し替えられないため、ここで直接適用する
+            listResults.Columns[0].Text = L.T("SearchImportForm_colTitle");
+            listResults.Columns[1].Text = L.T("SearchImportForm_colAuthor");
+            listResults.Columns[3].Text = L.T("SearchImportForm_colDuration");
+            listResults.Columns[4].Text = L.T("SearchImportForm_colDate");
         }
 
         private void txtQuery_KeyDown(object? sender, KeyEventArgs e)
@@ -46,7 +53,7 @@ namespace IwaraDownloader.Forms
         {
             if (listResults.Items.Count == 0) return;
             listResults.Items.Clear();
-            lblStatus.Text = $"検索 site を {cmbSite.SelectedItem} に切り替えました。再検索してください。";
+            lblStatus.Text = L.T("SearchImportForm_D001", cmbSite.SelectedItem);
             lblPage.Text = "Page -";
             btnPrevPage.Enabled = false;
             btnNextPage.Enabled = false;
@@ -65,7 +72,7 @@ namespace IwaraDownloader.Forms
             var q = (txtQuery.Text ?? "").Trim();
             if (string.IsNullOrEmpty(q))
             {
-                MessageBox.Show("検索キーワードを入力してください。", "入力エラー",
+                MessageBox.Show(L.T("SearchImportForm_D002"), L.T("SearchImportForm_D003"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -79,7 +86,7 @@ namespace IwaraDownloader.Forms
             btnImport.Enabled = false;
             btnPrevPage.Enabled = false;
             btnNextPage.Enabled = false;
-            lblStatus.Text = $"検索中: \"{q}\" [{siteHost}] (page {page + 1})...";
+            lblStatus.Text = L.T("SearchImportForm_D004", q, siteHost, page + 1);
 
             try
             {
@@ -89,7 +96,7 @@ namespace IwaraDownloader.Forms
                 if (!result.Success)
                 {
                     listResults.Items.Clear();
-                    lblStatus.Text = $"エラー: {result.Error}";
+                    lblStatus.Text = L.T("SearchImportForm_D005", result.Error);
                     return;
                 }
                 _totalCount = result.TotalCount;
@@ -99,11 +106,11 @@ namespace IwaraDownloader.Forms
                 lblPage.Text = $"Page {_currentPage + 1} / {totalPages}";
                 btnPrevPage.Enabled = _currentPage > 0;
                 btnNextPage.Enabled = (_currentPage + 1) < totalPages;
-                lblStatus.Text = $"検索結果: 全{_totalCount}件中 {result.Items.Count}件表示 (page {_currentPage + 1}/{totalPages})";
+                lblStatus.Text = L.T("SearchImportForm_D006", _totalCount, result.Items.Count, _currentPage + 1, totalPages);
             }
             catch (Exception ex)
             {
-                lblStatus.Text = $"検索失敗: {ex.Message}";
+                lblStatus.Text = L.T("SearchImportForm_D007", ex.Message);
             }
             finally
             {
@@ -124,7 +131,7 @@ namespace IwaraDownloader.Forms
             {
                 var alreadyInDb = existing.Contains(item.VideoId);
                 item.AlreadyInDb = alreadyInDb;
-                var title = alreadyInDb ? $"[登録済] {item.Title}" : item.Title;
+                var title = alreadyInDb ? L.T("SearchImportForm_Registered", item.Title) : item.Title;
                 var lvi = new ListViewItem(new[]
                 {
                     title,
@@ -187,13 +194,13 @@ namespace IwaraDownloader.Forms
             }
             if (checkedItems.Count == 0)
             {
-                MessageBox.Show("インポートする動画を選択してください。", "情報",
+                MessageBox.Show(L.T("SearchImportForm_D008"), L.T("SearchImportForm_D009"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            var msg = $"{checkedItems.Count}件の動画をダウンロードキューに追加します。続行しますか？";
-            if (MessageBox.Show(msg, "確認",
+            var msg = L.T("SearchImportForm_ConfirmImport", checkedItems.Count);
+            if (MessageBox.Show(msg, L.T("SearchImportForm_D010"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             int addedNew = 0, skippedExisting = 0;
@@ -238,7 +245,7 @@ namespace IwaraDownloader.Forms
                 addedNew++;
             }
 
-            lblStatus.Text = $"インポート完了: 新規 {addedNew}件 / 再キュー {skippedExisting}件";
+            lblStatus.Text = L.T("SearchImportForm_D011", addedNew, skippedExisting);
             DialogResult = DialogResult.OK; // 親フォームに更新通知
         }
     }

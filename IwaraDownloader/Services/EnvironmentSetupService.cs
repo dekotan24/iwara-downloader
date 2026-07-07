@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http;
@@ -34,7 +35,7 @@ namespace IwaraDownloader.Services
         {
             var tempZip = Path.Combine(Path.GetTempPath(), $"python-{PythonVersion}-embed-amd64.zip");
 
-            progress?.Report(new SetupProgress("Python embeddable をダウンロード中...", 0));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D001"), 0));
 
             using (var resp = await _http.GetAsync(PythonEmbedUrl, HttpCompletionOption.ResponseHeadersRead, ct))
             {
@@ -53,13 +54,13 @@ namespace IwaraDownloader.Services
                     {
                         int pct = (int)(readTotal * 25 / total);
                         progress?.Report(new SetupProgress(
-                            $"Python DL中 {readTotal / 1024 / 1024}MB / {total / 1024 / 1024}MB",
+                            L.T("SvcEnvironmentSetupService_D002", readTotal / 1024 / 1024, total / 1024 / 1024),
                             pct));
                     }
                 }
             }
 
-            progress?.Report(new SetupProgress("Python を展開中...", 30));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D003"), 30));
 
             // 既存フォルダがあれば退避
             if (Directory.Exists(destDir))
@@ -79,10 +80,10 @@ namespace IwaraDownloader.Services
             if (!File.Exists(pythonExe))
                 throw new InvalidOperationException($"Python展開後に python.exe が見つかりません: {pythonExe}");
 
-            progress?.Report(new SetupProgress("Python設定 (._pth) を調整中...", 35));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D004"), 35));
             await PreparePthAsync(destDir, ct);
 
-            progress?.Report(new SetupProgress("pip をインストール中...", 40));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D005"), 40));
             await InstallPipAsync(pythonExe, progress, ct);
 
             return pythonExe;
@@ -121,14 +122,14 @@ namespace IwaraDownloader.Services
             var check = await RunProcessAsync(pythonExe, "-m pip --version", progress, ct);
             if (check.ExitCode == 0)
             {
-                progress?.Report(new SetupProgress("pip は既にインストール済み", 55));
+                progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D006"), 55));
                 return;
             }
 
             var pythonDir = Path.GetDirectoryName(pythonExe)!;
             var getPipPath = Path.Combine(pythonDir, "get-pip.py");
 
-            progress?.Report(new SetupProgress("get-pip.py をダウンロード中...", 45));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D007"), 45));
             using (var resp = await _http.GetAsync(GetPipUrl, HttpCompletionOption.ResponseHeadersRead, ct))
             {
                 resp.EnsureSuccessStatusCode();
@@ -136,7 +137,7 @@ namespace IwaraDownloader.Services
                 await resp.Content.CopyToAsync(fs, ct);
             }
 
-            progress?.Report(new SetupProgress("pip をインストール実行中...", 50));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D008"), 50));
             var result = await RunProcessAsync(
                 pythonExe,
                 $"\"{getPipPath}\" --no-warn-script-location",
@@ -156,7 +157,7 @@ namespace IwaraDownloader.Services
             IProgress<SetupProgress>? progress = null,
             CancellationToken ct = default)
         {
-            progress?.Report(new SetupProgress($"{packageName} をインストール中...", basePercent));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D009", packageName), basePercent));
             var inst = await RunProcessAsync(
                 pythonExe,
                 $"-m pip install -U --no-warn-script-location {packageName}",
@@ -165,7 +166,7 @@ namespace IwaraDownloader.Services
                 throw new InvalidOperationException($"{packageName} インストール失敗 (exit={inst.ExitCode})\n{inst.Output}");
 
             importName ??= packageName.Replace("-", "_");
-            progress?.Report(new SetupProgress($"{packageName} の動作確認中...", basePercent + 3));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D010", packageName), basePercent + 3));
             var verify = await RunProcessAsync(
                 pythonExe,
                 $"-c \"import {importName}\"",
@@ -195,7 +196,7 @@ namespace IwaraDownloader.Services
                 pythonExe = pythonPath.Trim('"', ' ');
 
                 // バージョン確認 (pythonとして動くか)
-                progress?.Report(new SetupProgress("指定されたPythonを確認中...", 10));
+                progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D011"), 10));
                 var ver = await RunProcessAsync(pythonExe, "--version", progress, ct);
                 if (ver.ExitCode != 0)
                     throw new InvalidOperationException(
@@ -216,14 +217,14 @@ namespace IwaraDownloader.Services
             await InstallPackageAsync(pythonExe, "yt-dlp", importName: "yt_dlp", basePercent: 80, progress: progress, ct: ct);
 
             // マーカーファイル作成
-            progress?.Report(new SetupProgress("セットアップマーカーを作成中...", 95));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D012"), 95));
             var marker = Path.Combine(appDir, ".python_setup_done");
             await File.WriteAllTextAsync(
                 marker,
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\npython={pythonExe}\n",
                 ct);
 
-            progress?.Report(new SetupProgress("セットアップ完了", 100));
+            progress?.Report(new SetupProgress(L.T("SvcEnvironmentSetupService_D013"), 100));
             return pythonExe;
         }
 

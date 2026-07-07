@@ -20,6 +20,7 @@ namespace IwaraDownloader.Forms
         public SetupWizardForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _appDir = AppDomain.CurrentDomain.BaseDirectory;
             // Designer の Anchor=Top|Right + 絶対 Location だと AutoScaleMode=Font の
             // スケーリングや InitializeComponent 時の Panel サイズで Next ボタンが
@@ -46,12 +47,12 @@ namespace IwaraDownloader.Forms
             pnlStep3.Visible = _step == 3;
             pnlStep4.Visible = _step == 4;
 
-            lblStep.Text = $"ステップ {_step}/4: " + _step switch
+            lblStep.Text = L.T("SetupWizardForm_D001", _step) + _step switch
             {
-                1 => "ようこそ",
-                2 => "Python の取得方法",
-                3 => "セットアップ実行中",
-                4 => "完了",
+                1 => L.T("SetupWizardForm_D002"),
+                2 => L.T("SetupWizardForm_D003"),
+                3 => L.T("SetupWizardForm_D004"),
+                4 => L.T("SetupWizardForm_D005"),
                 _ => "",
             };
 
@@ -61,9 +62,9 @@ namespace IwaraDownloader.Forms
 
             btnNext.Text = _step switch
             {
-                3 => "実行中...",
-                4 => "完了",
-                _ => "次へ >",
+                3 => L.T("SetupWizardForm_D006"),
+                4 => L.T("SetupWizardForm_D005"),
+                _ => L.T("SetupWizardForm_D007"),
             };
         }
 
@@ -91,14 +92,14 @@ namespace IwaraDownloader.Forms
                         var p = txtPythonPath.Text.Trim().Trim('"');
                         if (string.IsNullOrEmpty(p))
                         {
-                            MessageBox.Show("Python のパスを入力してください。", "入力エラー",
+                            MessageBox.Show(L.T("SetupWizardForm_D008"), L.T("SetupWizardForm_D009"),
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
                         // 「python」のような相対名も許容する (パス探索でリゾルブされる)
                         if (Path.IsPathRooted(p) && !File.Exists(p))
                         {
-                            MessageBox.Show($"指定されたパスが存在しません:\n{p}", "入力エラー",
+                            MessageBox.Show(L.T("SetupWizardForm_D010", p), L.T("SetupWizardForm_D009"),
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
@@ -123,7 +124,7 @@ namespace IwaraDownloader.Forms
         {
             if (_setupRunning)
             {
-                if (MessageBox.Show("セットアップを中止しますか?", "確認",
+                if (MessageBox.Show(L.T("SetupWizardForm_D011"), L.T("SetupWizardForm_D012"),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
                 _cts?.Cancel();
@@ -144,8 +145,8 @@ namespace IwaraDownloader.Forms
         {
             using var ofd = new OpenFileDialog
             {
-                Title = "python.exe を選択",
-                Filter = "Python実行ファイル|python.exe|すべてのファイル|*.*",
+                Title = L.T("SetupWizardForm_D021"),
+                Filter = L.T("SetupWizardForm_D013"),
                 FileName = "python.exe",
             };
             if (ofd.ShowDialog(this) == DialogResult.OK)
@@ -159,7 +160,7 @@ namespace IwaraDownloader.Forms
             UpdateStepUi();
             txtLog.Clear();
             progressBar.Value = 0;
-            lblProgressMsg.Text = "セットアップを開始しています...";
+            lblProgressMsg.Text = L.T("SetupWizardForm_D014");
 
             string? pythonPath = rbExistingPython.Checked ? txtPythonPath.Text.Trim() : null;
 
@@ -192,16 +193,16 @@ namespace IwaraDownloader.Forms
             catch (OperationCanceledException)
             {
                 AppendLog("[キャンセル] ユーザー操作で中止されました");
-                MessageBox.Show("セットアップを中止しました。", "中止",
+                MessageBox.Show(L.T("SetupWizardForm_D015"), L.T("SetupWizardForm_D016"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 AppendLog($"[エラー] {ex.Message}");
                 MessageBox.Show(
-                    $"セットアップに失敗しました。\n\n{ex.Message}\n\n" +
-                    "ネットワーク接続を確認するか、「既存のPythonを使用」で別のPythonを試してください。",
-                    "セットアップエラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    L.T("SetupWizardForm_D017", ex.Message) +
+                    L.T("SetupWizardForm_D018"),
+                    L.T("SetupWizardForm_D019"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _step = 2;
             }
             finally
@@ -228,8 +229,8 @@ namespace IwaraDownloader.Forms
         {
             if (_setupRunning)
             {
-                if (MessageBox.Show("セットアップ実行中です。閉じると中止されます。続行しますか?",
-                    "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                if (MessageBox.Show(L.T("SetupWizardForm_D020"),
+                    L.T("SetupWizardForm_D012"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 {
                     e.Cancel = true;
                     return;

@@ -1,3 +1,4 @@
+using IwaraDownloader.Utils;
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 
@@ -14,6 +15,7 @@ namespace IwaraDownloader.Forms
         public DuplicateCheckForm()
         {
             InitializeComponent();
+            Utils.Localizer.Apply(this);
             _database = DatabaseService.Instance;
         }
 
@@ -28,8 +30,8 @@ namespace IwaraDownloader.Forms
         private void ScanDuplicates()
         {
             btnScan.Enabled = false;
-            btnScan.Text = "スキャン中...";
-            lblStatus.Text = "スキャン中...";
+            btnScan.Text = L.T("DuplicateCheckForm_D001");
+            lblStatus.Text = L.T("DuplicateCheckForm_D001");
 
             try
             {
@@ -69,28 +71,28 @@ namespace IwaraDownloader.Forms
                 {
                     dgvDuplicates.Columns["VideoId"].HeaderText = "Video ID";
                     dgvDuplicates.Columns["VideoId"].Width = 120;
-                    dgvDuplicates.Columns["Title"].HeaderText = "タイトル";
+                    dgvDuplicates.Columns["Title"].HeaderText = L.T("DuplicateCheckForm_D024");
                     dgvDuplicates.Columns["Title"].Width = 200;
-                    dgvDuplicates.Columns["ChannelCount"].HeaderText = "CH数";
+                    dgvDuplicates.Columns["ChannelCount"].HeaderText = L.T("DuplicateCheckForm_D025");
                     dgvDuplicates.Columns["ChannelCount"].Width = 50;
-                    dgvDuplicates.Columns["Channels"].HeaderText = "チャンネル";
+                    dgvDuplicates.Columns["Channels"].HeaderText = L.T("DuplicateCheckForm_D026");
                     dgvDuplicates.Columns["Channels"].Width = 150;
-                    dgvDuplicates.Columns["StatusSummary"].HeaderText = "状態";
+                    dgvDuplicates.Columns["StatusSummary"].HeaderText = L.T("DuplicateCheckForm_D027");
                     dgvDuplicates.Columns["StatusSummary"].Width = 100;
                 }
 
-                lblStatus.Text = $"重複: {duplicateGroups.Count}件({duplicateGroups.Sum(d => d.Videos.Count)}動画)";
+                lblStatus.Text = L.T("DuplicateCheckForm_D002", duplicateGroups.Count, duplicateGroups.Sum(d => d.Videos.Count));
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"スキャン中にエラーが発生しました:\n{ex.Message}",
-                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                lblStatus.Text = "エラー";
+                MessageBox.Show(L.T("DuplicateCheckForm_D003", ex.Message),
+                    L.T("DuplicateCheckForm_D004"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = L.T("DuplicateCheckForm_D004");
             }
             finally
             {
                 btnScan.Enabled = true;
-                btnScan.Text = "再スキャン";
+                btnScan.Text = L.T("DuplicateCheckForm_D005");
             }
         }
 
@@ -101,9 +103,9 @@ namespace IwaraDownloader.Forms
             var pending = videos.Count(v => v.Status == DownloadStatus.Pending);
 
             var parts = new List<string>();
-            if (completed > 0) parts.Add($"完了:{completed}");
-            if (failed > 0) parts.Add($"失敗:{failed}");
-            if (pending > 0) parts.Add($"待機:{pending}");
+            if (completed > 0) parts.Add(L.T("DuplicateCheckForm_SumCompleted", completed));
+            if (failed > 0) parts.Add(L.T("DuplicateCheckForm_SumFailed", failed));
+            if (pending > 0) parts.Add(L.T("DuplicateCheckForm_SumPending", pending));
             
             return string.Join(" ", parts);
         }
@@ -128,13 +130,13 @@ namespace IwaraDownloader.Forms
             lstDetails.Items.Clear();
             foreach (var video in duplicate.Videos)
             {
-                var channelName = video.AuthorUsername ?? "(不明)";
+                var channelName = video.AuthorUsername ?? L.T("DuplicateCheckForm_UnknownChannel");
                 var status = video.Status switch
                 {
-                    DownloadStatus.Completed => "✓ 完了",
-                    DownloadStatus.Failed => "✗ 失敗",
-                    DownloadStatus.Pending => "○ 待機",
-                    DownloadStatus.Downloading => "↓ DL中",
+                    DownloadStatus.Completed => L.T("DuplicateCheckForm_StCompleted"),
+                    DownloadStatus.Failed => L.T("DuplicateCheckForm_StFailed"),
+                    DownloadStatus.Pending => L.T("DuplicateCheckForm_StPending"),
+                    DownloadStatus.Downloading => L.T("DuplicateCheckForm_StDownloading"),
                     _ => "?"
                 };
                 lstDetails.Items.Add($"[{status}] {channelName} (ID:{video.Id})");
@@ -148,20 +150,20 @@ namespace IwaraDownloader.Forms
         {
             if (_duplicates.Count == 0)
             {
-                MessageBox.Show("重複が見つかりませんでした。", "情報", 
+                MessageBox.Show(L.T("DuplicateCheckForm_D006"), L.T("DuplicateCheckForm_D007"), 
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var result = MessageBox.Show(
-                "重複動画を解消します。\n\n" +
-                "各VideoIdについて、以下の優先順位で1つを残し、他を削除します:\n" +
-                "1. 完了済み(ファイルが存在する)\n" +
-                "2. 完了済み(ファイルが存在しない)\n" +
-                "3. 待機中\n" +
-                "4. 失敗\n\n" +
-                "続行しますか？",
-                "重複解消",
+                L.T("DuplicateCheckForm_D008") +
+                L.T("DuplicateCheckForm_D009") +
+                L.T("DuplicateCheckForm_D010") +
+                L.T("DuplicateCheckForm_D011") +
+                L.T("DuplicateCheckForm_D012") +
+                L.T("DuplicateCheckForm_D013") +
+                L.T("DuplicateCheckForm_D014"),
+                L.T("DuplicateCheckForm_D015"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -190,10 +192,14 @@ namespace IwaraDownloader.Forms
 
             if (idsToRemove.Count > 0)
             {
+                // 重複解消は「除外(ゴミ箱)」ではなく生削除が正しい。
+                // 同一 VideoId の冗長行を消すだけで、残す行が VideoExists=true を保つため
+                // 自動取得で復活しない (再取得バグは無関係)。ExcludeVideos に通すと逆に
+                // 残す行と同じ VideoId が除外表にも入り不変条件が壊れ、共有ファイルを消す事故になる。
                 removedCount = _database.DeleteVideosBatch(idsToRemove);
             }
 
-            MessageBox.Show($"{removedCount}件の重複を削除しました。", "完了",
+            MessageBox.Show(L.T("DuplicateCheckForm_D016", removedCount), L.T("DuplicateCheckForm_D017"),
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             // 再スキャン
@@ -207,7 +213,7 @@ namespace IwaraDownloader.Forms
         {
             if (lstDetails.SelectedIndex < 0)
             {
-                MessageBox.Show("削除する項目を選択してください。", "情報",
+                MessageBox.Show(L.T("DuplicateCheckForm_D018"), L.T("DuplicateCheckForm_D007"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -224,16 +230,17 @@ namespace IwaraDownloader.Forms
             var video = duplicate.Videos[lstDetails.SelectedIndex];
 
             var result = MessageBox.Show(
-                $"以下の項目を削除しますか？\n\n" +
-                $"チャンネル: {video.AuthorUsername}\n" +
-                $"タイトル: {video.Title}\n" +
-                $"状態: {video.Status}",
-                "削除確認",
+                L.T("DuplicateCheckForm_D019") +
+                L.T("DuplicateCheckForm_D020", video.AuthorUsername) +
+                L.T("DuplicateCheckForm_D021", video.Title) +
+                L.T("DuplicateCheckForm_D022", video.Status),
+                L.T("DuplicateCheckForm_D023"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
             if (result == DialogResult.Yes)
             {
+                // 重複解消は生削除が正しい (btnRemoveDuplicates_Click のコメント参照)。
                 _database.DeleteVideo(video.Id);
                 ScanDuplicates();
             }
