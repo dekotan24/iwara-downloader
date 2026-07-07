@@ -4,7 +4,7 @@
 
 **Feature-rich video downloader & media server for iwara.tv / iwara.ai on Windows**
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -27,6 +27,8 @@ A Windows desktop app that handles everything from downloading to collection man
 - 🌐 **Built-in web media server** — watch and manage your library from a phone or tablet browser on your LAN
 - ⭐ **Favorites & powerful search** — manage favorites from both the app and the web UI, mixed title/artist/tag search
 - 🧰 **Collection management** — UUID-based duplicate detection, crash-safe library relocation, statistics dashboard
+- 🗑️ **Trash / exclusion list** — deleted videos never come back via auto-fetch, and can be restored anytime
+- 🌐 **Multi-language UI** — Japanese / English / Simplified Chinese (switchable anytime in Settings)
 - 🔒 **Fully local** — all data stays on your machine; nothing is ever sent anywhere
 
 ## 📋 Features
@@ -57,6 +59,7 @@ A Windows desktop app that handles everything from downloading to collection man
 - **Save-folder relocation** — free-space check → progress dialog. A journal makes moves crash-safe and auto-recovered on restart
 - **Bulk move of leftover files** — files that failed to move (e.g. out of disk space) can be re-moved in one click later
 - **Relink externally moved files** — after moving files with FastCopy etc., verifies them (size → UUID) and updates only the DB paths
+- **Trash / exclusion list** — deleting a video moves it to the exclusion list so channel auto-checks won't re-download it. Restore or permanently delete it from the "🚫 Excluded" tree node
 - **Duplicate check / bulk rename / statistics dashboard** (video counts, success rate, daily trends)
 
 ### 🌐 Web Media Server
@@ -78,6 +81,7 @@ Start the built-in web server and **watch / manage your library from any browser
 | OS | Windows 10 / 11 (64-bit) |
 | Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
 | Python | Not required (the first-run setup wizard fetches it automatically). An existing Python 3.10+ can also be used |
+| Display language | Japanese / English / Simplified Chinese (switch in Settings → General; "Auto" follows the OS language) |
 
 ## 🚀 Installation
 
