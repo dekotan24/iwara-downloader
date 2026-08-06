@@ -107,7 +107,14 @@ namespace IwaraDownloader.Forms
                             L.T("UntaggedFileMatchForm_D009"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
-                    var fetched = await _downloadManager.IwaraApi.GetUserVideosAsync(username);
+                    // GetUserVideosAsync は site 省略時 iwara.tv 扱いになる。iwara.ai の URL/購読なら
+                    // それを渡さないと differentSite で 0 件になる (通常の購読チェック側と同じ判定に揃える)。
+                    var site = Helpers.IsUserProfileUrl(raw)
+                        ? Helpers.ExtractSiteFromUrl(raw)
+                        : !string.IsNullOrEmpty(subUser?.Site)
+                            ? subUser.Site
+                            : Helpers.SiteTv;
+                    var fetched = await _downloadManager.IwaraApi.GetUserVideosAsync(username, site: site);
                     if (fetched.Count == 0)
                     {
                         lblArtistResolved.Text = L.T("UntaggedFileMatchForm_D010", username);
