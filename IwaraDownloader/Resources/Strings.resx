@@ -451,11 +451,57 @@ https://www.iwara.ai/profile/username
   <data name="ImportFromFolderWizard_D030" xml:space="preserve">
     <value>インポート完了</value>
   </data>
+  <data name="ImportFromFolderWizard_D031" xml:space="preserve">
+    <value>タイトル照合取込:   {0} 件
+</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} 件</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} 件  [既に登録済]</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
+    <value>複数候補と一致</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMAmbiguousMultiFile" xml:space="preserve">
+    <value>同じ動画に複数ファイルが一致</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMArtistDropdownHint" xml:space="preserve">
+    <value>複数の候補が見つかりました。ドロップダウンから採用する動画を選び直せます。</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMDurationDiff" xml:space="preserve">
+    <value>長さ差{0}秒</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMDurationUnknown" xml:space="preserve">
+    <value>長さ不明</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMHighConfidence" xml:space="preserve">
+    <value>高確度</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMManuallySelected" xml:space="preserve">
+    <value>手動選択済み(長さ一致)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMManuallySelectedReview" xml:space="preserve">
+    <value>手動選択済み(長さ不一致・要確認)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMNeedsReview" xml:space="preserve">
+    <value>要確認</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMNeedsReviewWithReason" xml:space="preserve">
+    <value>要確認:{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierExact" xml:space="preserve">
+    <value>完全一致</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierId" xml:space="preserve">
+    <value>ID一致</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierPrefix" xml:space="preserve">
+    <value>接頭辞一致</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
+    <value>部分一致</value>
   </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>フォルダから取り込み</value>
@@ -484,6 +530,24 @@ https://www.iwara.ai/profile/username
   <data name="ImportFromFolderWizard_chkRecursive" xml:space="preserve">
     <value>サブフォルダも再帰的にスキャン</value>
   </data>
+  <data name="ImportFromFolderWizard_colTMArtist" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMConfidence" xml:space="preserve">
+    <value>確度/安全性</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMDuration" xml:space="preserve">
+    <value>長さ差</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMFileName" xml:space="preserve">
+    <value>ファイル名</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMTier" xml:space="preserve">
+    <value>種別</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMTitle" xml:space="preserve">
+    <value>動画タイトル</value>
+  </data>
   <data name="ImportFromFolderWizard_lblImportStatus" xml:space="preserve">
     <value>準備中...</value>
   </data>
@@ -494,8 +558,11 @@ https://www.iwara.ai/profile/username
     <value>ステップ 1/5</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep1Desc" xml:space="preserve">
-    <value>選択したフォルダ内の mp4/m4v ファイルをスキャンし、iwara のカスタムタグから
-</value>
+    <value>選択したフォルダ内の mp4 ファイルをスキャンし、iwara のカスタムタグから
+videoId を取得して DB に取り込みます。
+
+※ タグの無いファイルはファイル名から未DL動画と照合します (Step 3 で確認)
+※ iwara にログイン済みである必要があります</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep1Title" xml:space="preserve">
     <value>取り込み元フォルダを選択</value>
@@ -518,6 +585,13 @@ https://www.iwara.ai/profile/username
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>フォルダから取り込み</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitleMatchDesc" xml:space="preserve">
+    <value>iwara タグの無いファイルをファイル名から推測して照合した候補です。確度の低いものは
+既定でチェックを外しています。内容を確認してからチェックを入れてください。</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitleMatchTitle" xml:space="preserve">
+    <value>タイトル照合ファイル (要確認)</value>
   </data>
   <data name="MainForm_ConfirmDeleteMany" xml:space="preserve">
     <value>{0}件の動画を削除しますか？</value>
@@ -3006,6 +3080,123 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="Svc_LoginRequired" xml:space="preserve">
     <value>ログインが必要です。設定画面からログインしてください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
+    <value>タグの無いファイルが {0} 件見つかりました。検索方法を選んでください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
+    <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
+    <value>アーティストのフォルダを選択</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D004" xml:space="preserve">
+    <value>アーティストの URL または username を入力してください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D005" xml:space="preserve">
+    <value>入力エラー</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D006" xml:space="preserve">
+    <value>@{0} を確認中...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D007" xml:space="preserve">
+    <value>@{0} (購読済み) — DB上 {1} 件。件数が少なければ「APIで再取得」</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D008" xml:space="preserve">
+    <value>iwara にログインしていません。設定画面からログインしてください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D009" xml:space="preserve">
+    <value>ログイン必要</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D010" xml:space="preserve">
+    <value>@{0}: 動画が見つかりませんでした (ユーザー名が違う可能性)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D011" xml:space="preserve">
+    <value>@{0} (API取得) — {1} 件</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D012" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D013" xml:space="preserve">
+    <value>先にアーティストを「確認」してください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D014" xml:space="preserve">
+    <value>有効なフォルダを指定してください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D015" xml:space="preserve">
+    <value>選択したフォルダ配下にタグ無しファイルがありません。フォルダの選択を確認してください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D016" xml:space="preserve">
+    <value>対象なし</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D017" xml:space="preserve">
+    <value>{0} 件を照合中...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D018" xml:space="preserve">
+    <value>照合中にエラーが発生しました:
+{0}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D019" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D020" xml:space="preserve">
+    <value>{0} 件を照合中 (DB全体対象)...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_Title" xml:space="preserve">
+    <value>タグの無いファイルの照合</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseArtistFolder" xml:space="preserve">
+    <value>参照...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnCancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnRefetchArtist" xml:space="preserve">
+    <value>APIで再取得</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnResolveArtist" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnRun" xml:space="preserve">
+    <value>検索実行</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistDesc" xml:space="preserve">
+    <value>指定した1人のアーティストの動画だけに絞って照合します。誤マッチが最も起きにくく、新規動画の取り込みにも対応します。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistFolder" xml:space="preserve">
+    <value>対象フォルダ:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistInput" xml:space="preserve">
+    <value>アーティスト URL/username:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistTemplate" xml:space="preserve">
+    <value>ファイル名テンプレート:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
+    <value>{id} = 動画ID / {title} = タイトル。このアーティストの動画とだけ照合するので {artist} は不要です。
+例: "{id}_{title}.mp4" / "{title}.mp4"</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
+    <value>ローカルDB全体を対象にファイル名だけで照合します。既存のDB登録済み動画への照合のみ (新規追加はしません)。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameTemplate" xml:space="preserve">
+    <value>パス構成のヒント (任意):</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
+    <value>{id} = 動画ID / {title} = タイトル / {artist} (または {author}) = 作者名。
+例: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
+    <value>タグの無いファイルはこのアプリに取り込みません。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbArtist" xml:space="preserve">
+    <value>アーティストフォルダ選択検索 (推奨・最も安全)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbFilename" xml:space="preserve">
+    <value>ファイル名による検索 (DB全体が対象)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
+    <value>スキップ (取り込まない)</value>
   </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>待機中</value>
