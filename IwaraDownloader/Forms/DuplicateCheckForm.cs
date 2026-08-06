@@ -69,16 +69,16 @@ namespace IwaraDownloader.Forms
                 // カラム設定
                 if (dgvDuplicates.Columns.Count > 0)
                 {
-                    dgvDuplicates.Columns["VideoId"].HeaderText = "Video ID";
-                    dgvDuplicates.Columns["VideoId"].Width = 120;
-                    dgvDuplicates.Columns["Title"].HeaderText = L.T("DuplicateCheckForm_D024");
-                    dgvDuplicates.Columns["Title"].Width = 200;
-                    dgvDuplicates.Columns["ChannelCount"].HeaderText = L.T("DuplicateCheckForm_D025");
-                    dgvDuplicates.Columns["ChannelCount"].Width = 50;
-                    dgvDuplicates.Columns["Channels"].HeaderText = L.T("DuplicateCheckForm_D026");
-                    dgvDuplicates.Columns["Channels"].Width = 150;
-                    dgvDuplicates.Columns["StatusSummary"].HeaderText = L.T("DuplicateCheckForm_D027");
-                    dgvDuplicates.Columns["StatusSummary"].Width = 100;
+                    dgvDuplicates.Columns["VideoId"]!.HeaderText = "Video ID";
+                    dgvDuplicates.Columns["VideoId"]!.Width = 120;
+                    dgvDuplicates.Columns["Title"]!.HeaderText = L.T("DuplicateCheckForm_D024");
+                    dgvDuplicates.Columns["Title"]!.Width = 200;
+                    dgvDuplicates.Columns["ChannelCount"]!.HeaderText = L.T("DuplicateCheckForm_D025");
+                    dgvDuplicates.Columns["ChannelCount"]!.Width = 50;
+                    dgvDuplicates.Columns["Channels"]!.HeaderText = L.T("DuplicateCheckForm_D026");
+                    dgvDuplicates.Columns["Channels"]!.Width = 150;
+                    dgvDuplicates.Columns["StatusSummary"]!.HeaderText = L.T("DuplicateCheckForm_D027");
+                    dgvDuplicates.Columns["StatusSummary"]!.Width = 100;
                 }
 
                 lblStatus.Text = L.T("DuplicateCheckForm_D002", duplicateGroups.Count, duplicateGroups.Sum(d => d.Videos.Count));

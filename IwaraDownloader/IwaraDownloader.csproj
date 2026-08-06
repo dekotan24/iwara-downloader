@@ -2,9 +2,10 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
     <RootNamespace>IwaraDownloader</RootNamespace>
@@ -67,17 +68,10 @@
 
   <ItemGroup>
     <!-- SQLite for database -->
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
-    
-    <!-- JSON serialization -->
-    <PackageReference Include="System.Text.Json" Version="8.0.6" />
-    
-    <!-- HTTP client extensions -->
-    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-    
-    <!-- Data Protection API (for password encryption) -->
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
-    
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <!-- Microsoft.Data.Sqlite間接依存のSQLitePCLRaw 2.1.11以下にSQLite側の既知脆弱性(GHSA-2m69-gcr7-jv3q)があるため明示的に新しいバイナリへ固定 -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+
     <!-- NAudio for completion sound -->
     <PackageReference Include="NAudio" Version="2.2.1" />
 
