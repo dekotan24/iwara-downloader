@@ -5,7 +5,7 @@
 **Feature-rich video downloader & media server for iwara.tv / iwara.ai on Windows**
 
 [![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -42,7 +42,7 @@ A Windows desktop app that handles everything from downloading to collection man
 | Channel subscriptions | Just add a username / profile URL. Per-channel save folders |
 | Automatic new-video checks | Periodic polling with a serialized worker (timeouts, exponential backoff, priority queue) |
 | Single downloads | Paste a video URL and hit Enter. With clipboard monitoring enabled, copying a URL is enough |
-| Bulk import | Import from URL lists, iwara search results, or a local folder |
+| Bulk import | Import from URL lists, iwara search results, or a local folder. mp4 files without iwara tags (mp4 only, no m4v support) can also be matched against DB videos by filename/folder structure and recognized as already downloaded |
 | Resume | Continues after disconnects / pauses via HTTP Range (verified by file_id / size / ETag) |
 | Parallel downloads | Up to 3 concurrent downloads + configurable rate limits (API interval, download interval, 429 backoff) |
 | iwara.ai support | Site is detected automatically from the URL |
@@ -81,7 +81,7 @@ Start the built-in web server and **watch / manage your library from any browser
 | Item | Requirement |
 |------|-------------|
 | OS | Windows 10 / 11 (64-bit) |
-| Runtime | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| Runtime | [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
 | Python | Not required (the first-run setup wizard fetches it automatically). An existing Python 3.10+ can also be used |
 | Display language | Japanese / English / Simplified Chinese (switch in Settings → General; "Auto" follows the OS language) |
 
@@ -153,6 +153,21 @@ While a channel is selected, free-text terms intentionally skip the author field
 | `{quality}` | Source |
 
 Default: `{id}_{title}`
+
+</details>
+
+<details>
+<summary><b>🏷️ Importing files without tags</b></summary>
+
+You can make mp4 files you already have (e.g. downloaded with an external tool) that lack the iwara tag (mp4 only — m4v is not supported) recognized as "already downloaded". When a folder import finds untagged files, a dialog lets you pick a matching strategy.
+
+| Method | Description |
+|--------|-------------|
+| Artist folder search | Explicitly designate one folder = one artist, then match only against that artist's videos (safest) |
+| Filename search | Matches against the entire local DB. Providing path hints via a `{id}` `{title}` `{artist}` template improves accuracy |
+| Skip | Import nothing |
+
+Matching priority is: direct ID match → exact title match → substring match → prefix match. If a file has multiple candidates left after auto-matching, it's flagged for review in the grid, where you can pick the video to use from a dropdown.
 
 </details>
 
@@ -234,13 +249,13 @@ cd iwara-downloader
 dotnet build IwaraDownloader\IwaraDownloader.csproj -c Release
 ```
 
-Builds with Visual Studio 2022 / the .NET 8.0 SDK.
+Builds with Visual Studio 2022 / the .NET 10.0 SDK.
 
 ## 🧩 Tech Stack
 
 | Area | Technology |
 |------|------------|
-| Desktop app | C# / WinForms (.NET 8.0) |
+| Desktop app | C# / WinForms (.NET 10.0) |
 | Web server | ASP.NET Core Kestrel (Minimal API) + vanilla JS |
 | Database | SQLite (Microsoft.Data.Sqlite) |
 | iwara API | Python 3.10+ / [cloudscraper](https://github.com/VeNoMouS/cloudscraper) (Cloudflare bypass) |

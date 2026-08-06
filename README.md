@@ -5,7 +5,7 @@
 **iwara.tv / iwara.ai 対応の高機能動画ダウンローダー & メディアサーバー for Windows**
 
 [![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -42,7 +42,7 @@
 | チャンネル購読 | ユーザー名 / プロフィール URL を追加するだけ。チャンネルごとに保存先を個別設定可 |
 | 新着自動チェック | 指定間隔で自動巡回。タイムアウト・指数バックオフ・優先キュー付きの直列ワーカーで安定動作 |
 | 単発ダウンロード | 動画 URL を入力して Enter。クリップボード監視を ON にすればコピーするだけで追加 |
-| 一括インポート | URL リスト / iwara 検索結果 / ローカルフォルダから一括取り込み |
+| 一括インポート | URL リスト / iwara 検索結果 / ローカルフォルダから一括取り込み。iwara タグの無い mp4 (対象は mp4 のみ) もファイル名やフォルダ構成から DB 上の動画と照合し、取り込み済みとして認識可能 |
 | レジューム | 通信断・一時停止後も HTTP Range で続きから再開（file_id / サイズ / ETag で整合性検証） |
 | 並列ダウンロード | 最大 3 並列 + レート制限設定（API 間隔 / DL 間隔 / 429 時の待機など） |
 | iwara.ai 対応 | URL からサイトを自動判別 |
@@ -81,7 +81,7 @@
 | 項目 | 要件 |
 |------|------|
 | OS | Windows 10 / 11 (64bit) |
-| ランタイム | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| ランタイム | [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
 | Python | 不要（初回セットアップウィザードが自動で取得）。既存の Python 3.10 以上を使うことも可 |
 | 表示言語 | 日本語 / English / 简体中文（設定 → 一般 で切替。「自動」選択時は OS の言語に追従） |
 
@@ -153,6 +153,21 @@ URL 入力欄にユーザー名またはプロフィール URL（`https://www.iw
 | `{quality}` | Source |
 
 デフォルト: `{id}_{title}`
+
+</details>
+
+<details>
+<summary><b>🏷️ タグの無いファイルの取り込み</b></summary>
+
+外部ツールなどで既に手元にある、iwara タグの無い mp4（対象は mp4 のみ、m4v は非対応）を「取り込み済み」として認識させることができます。フォルダ取り込みでタグ無しファイルが見つかると、検索方法を選ぶダイアログが表示されます。
+
+| 方法 | 内容 |
+|------|------|
+| アーティストフォルダ選択検索 | フォルダ = 1 アーティストを明示指定し、そのアーティストの動画一覧だけを対象に照合（最も安全） |
+| ファイル名による検索 | ローカル DB 全体を対象に照合。`{id}` `{title}` `{artist}` テンプレートでパス構成のヒントを与えると精度が上がる |
+| スキップ | 何も取り込まない |
+
+照合優先順位は「ID 直接一致 → タイトル完全一致 → 部分一致 → 接頭辞一致」。1 ファイルに複数候補が残って自動確定できない場合は要確認としてグリッドに表示され、ドロップダウンから採用する動画を選び直せます。
 
 </details>
 
@@ -234,13 +249,13 @@ cd iwara-downloader
 dotnet build IwaraDownloader\IwaraDownloader.csproj -c Release
 ```
 
-Visual Studio 2022 / .NET 8.0 SDK でビルドできます。
+Visual Studio 2022 / .NET 10.0 SDK でビルドできます。
 
 ## 🧩 技術スタック
 
 | 領域 | 技術 |
 |------|------|
-| アプリ本体 | C# / WinForms (.NET 8.0) |
+| アプリ本体 | C# / WinForms (.NET 10.0) |
 | Web サーバー | ASP.NET Core Kestrel (Minimal API) + Vanilla JS |
 | データベース | SQLite (Microsoft.Data.Sqlite) |
 | iwara API | Python 3.10+ / [cloudscraper](https://github.com/VeNoMouS/cloudscraper)（Cloudflare 回避） |
