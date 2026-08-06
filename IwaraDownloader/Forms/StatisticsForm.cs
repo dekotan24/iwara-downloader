@@ -119,22 +119,22 @@ namespace IwaraDownloader.Forms
             // Width を代入すると set_Thickness 内部で NullReferenceException が発生する (Fill では FillWeight が正解)。
             if (dgvChannelStats.Columns.Count > 0)
             {
-                dgvChannelStats.Columns["Username"].HeaderText = L.T("StatisticsForm_D010");
-                dgvChannelStats.Columns["Username"].FillWeight = 150;
-                dgvChannelStats.Columns["TotalVideos"].HeaderText = L.T("StatisticsForm_D011");
-                dgvChannelStats.Columns["TotalVideos"].FillWeight = 80;
-                dgvChannelStats.Columns["CompletedVideos"].HeaderText = L.T("StatisticsForm_D012");
-                dgvChannelStats.Columns["CompletedVideos"].FillWeight = 60;
-                dgvChannelStats.Columns["FailedVideos"].HeaderText = L.T("StatisticsForm_D013");
-                dgvChannelStats.Columns["FailedVideos"].FillWeight = 60;
-                dgvChannelStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
-                dgvChannelStats.Columns["TotalSizeFormatted"].FillWeight = 80;
-                dgvChannelStats.Columns["StatusText"].HeaderText = L.T("StatisticsForm_D003");
-                dgvChannelStats.Columns["StatusText"].FillWeight = 60;
+                dgvChannelStats.Columns["Username"]!.HeaderText = L.T("StatisticsForm_D010");
+                dgvChannelStats.Columns["Username"]!.FillWeight = 150;
+                dgvChannelStats.Columns["TotalVideos"]!.HeaderText = L.T("StatisticsForm_D011");
+                dgvChannelStats.Columns["TotalVideos"]!.FillWeight = 80;
+                dgvChannelStats.Columns["CompletedVideos"]!.HeaderText = L.T("StatisticsForm_D012");
+                dgvChannelStats.Columns["CompletedVideos"]!.FillWeight = 60;
+                dgvChannelStats.Columns["FailedVideos"]!.HeaderText = L.T("StatisticsForm_D013");
+                dgvChannelStats.Columns["FailedVideos"]!.FillWeight = 60;
+                dgvChannelStats.Columns["TotalSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D014");
+                dgvChannelStats.Columns["TotalSizeFormatted"]!.FillWeight = 80;
+                dgvChannelStats.Columns["StatusText"]!.HeaderText = L.T("StatisticsForm_D003");
+                dgvChannelStats.Columns["StatusText"]!.FillWeight = 60;
 
                 // 非表示カラム
-                dgvChannelStats.Columns["TotalSize"].Visible = false;
-                dgvChannelStats.Columns["IsEnabled"].Visible = false;
+                dgvChannelStats.Columns["TotalSize"]!.Visible = false;
+                dgvChannelStats.Columns["IsEnabled"]!.Visible = false;
             }
         }
 
@@ -161,16 +161,16 @@ namespace IwaraDownloader.Forms
             // カラム設定
             if (dgvDailyStats.Columns.Count > 0)
             {
-                dgvDailyStats.Columns["DateFormatted"].HeaderText = L.T("StatisticsForm_D015");
-                dgvDailyStats.Columns["DateFormatted"].FillWeight = 100;
-                dgvDailyStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D016");
-                dgvDailyStats.Columns["Count"].FillWeight = 60;
-                dgvDailyStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
-                dgvDailyStats.Columns["TotalSizeFormatted"].FillWeight = 80;
+                dgvDailyStats.Columns["DateFormatted"]!.HeaderText = L.T("StatisticsForm_D015");
+                dgvDailyStats.Columns["DateFormatted"]!.FillWeight = 100;
+                dgvDailyStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D016");
+                dgvDailyStats.Columns["Count"]!.FillWeight = 60;
+                dgvDailyStats.Columns["TotalSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D014");
+                dgvDailyStats.Columns["TotalSizeFormatted"]!.FillWeight = 80;
 
                 // 非表示カラム
-                dgvDailyStats.Columns["Date"].Visible = false;
-                dgvDailyStats.Columns["TotalSize"].Visible = false;
+                dgvDailyStats.Columns["Date"]!.Visible = false;
+                dgvDailyStats.Columns["TotalSize"]!.Visible = false;
             }
         }
 
@@ -196,16 +196,16 @@ namespace IwaraDownloader.Forms
 
             if (dgvErrorStats.Columns.Count > 0)
             {
-                dgvErrorStats.Columns["Category"].HeaderText = L.T("StatisticsForm_D017");
-                dgvErrorStats.Columns["Category"].FillWeight = 110;
-                dgvErrorStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D018");
-                dgvErrorStats.Columns["Count"].FillWeight = 50;
-                dgvErrorStats.Columns["PercentageFormatted"].HeaderText = L.T("StatisticsForm_D019");
-                dgvErrorStats.Columns["PercentageFormatted"].FillWeight = 50;
-                dgvErrorStats.Columns["SampleMessage"].HeaderText = L.T("StatisticsForm_D020");
-                dgvErrorStats.Columns["SampleMessage"].FillWeight = 200;
+                dgvErrorStats.Columns["Category"]!.HeaderText = L.T("StatisticsForm_D017");
+                dgvErrorStats.Columns["Category"]!.FillWeight = 110;
+                dgvErrorStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D018");
+                dgvErrorStats.Columns["Count"]!.FillWeight = 50;
+                dgvErrorStats.Columns["PercentageFormatted"]!.HeaderText = L.T("StatisticsForm_D019");
+                dgvErrorStats.Columns["PercentageFormatted"]!.FillWeight = 50;
+                dgvErrorStats.Columns["SampleMessage"]!.HeaderText = L.T("StatisticsForm_D020");
+                dgvErrorStats.Columns["SampleMessage"]!.FillWeight = 200;
 
-                dgvErrorStats.Columns["Percentage"].Visible = false;
+                dgvErrorStats.Columns["Percentage"]!.Visible = false;
             }
         }
 
@@ -228,12 +228,12 @@ namespace IwaraDownloader.Forms
 
             if (dgvRetryStats.Columns.Count > 0)
             {
-                dgvRetryStats.Columns["RetryCountFormatted"].HeaderText = L.T("StatisticsForm_D021");
-                dgvRetryStats.Columns["RetryCountFormatted"].FillWeight = 100;
-                dgvRetryStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D022");
-                dgvRetryStats.Columns["Count"].FillWeight = 100;
+                dgvRetryStats.Columns["RetryCountFormatted"]!.HeaderText = L.T("StatisticsForm_D021");
+                dgvRetryStats.Columns["RetryCountFormatted"]!.FillWeight = 100;
+                dgvRetryStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D022");
+                dgvRetryStats.Columns["Count"]!.FillWeight = 100;
 
-                dgvRetryStats.Columns["RetryCount"].Visible = false;
+                dgvRetryStats.Columns["RetryCount"]!.Visible = false;
             }
         }
 
@@ -272,20 +272,20 @@ namespace IwaraDownloader.Forms
 
             if (dgvMonthlyStats.Columns.Count > 0)
             {
-                dgvMonthlyStats.Columns["MonthFormatted"].HeaderText = L.T("StatisticsForm_D023");
-                dgvMonthlyStats.Columns["MonthFormatted"].FillWeight = 80;
-                dgvMonthlyStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D016");
-                dgvMonthlyStats.Columns["Count"].FillWeight = 60;
-                dgvMonthlyStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
-                dgvMonthlyStats.Columns["TotalSizeFormatted"].FillWeight = 80;
-                dgvMonthlyStats.Columns["CumulativeCount"].HeaderText = L.T("StatisticsForm_D024");
-                dgvMonthlyStats.Columns["CumulativeCount"].FillWeight = 80;
-                dgvMonthlyStats.Columns["CumulativeSizeFormatted"].HeaderText = L.T("StatisticsForm_D025");
-                dgvMonthlyStats.Columns["CumulativeSizeFormatted"].FillWeight = 90;
+                dgvMonthlyStats.Columns["MonthFormatted"]!.HeaderText = L.T("StatisticsForm_D023");
+                dgvMonthlyStats.Columns["MonthFormatted"]!.FillWeight = 80;
+                dgvMonthlyStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D016");
+                dgvMonthlyStats.Columns["Count"]!.FillWeight = 60;
+                dgvMonthlyStats.Columns["TotalSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D014");
+                dgvMonthlyStats.Columns["TotalSizeFormatted"]!.FillWeight = 80;
+                dgvMonthlyStats.Columns["CumulativeCount"]!.HeaderText = L.T("StatisticsForm_D024");
+                dgvMonthlyStats.Columns["CumulativeCount"]!.FillWeight = 80;
+                dgvMonthlyStats.Columns["CumulativeSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D025");
+                dgvMonthlyStats.Columns["CumulativeSizeFormatted"]!.FillWeight = 90;
 
-                dgvMonthlyStats.Columns["Month"].Visible = false;
-                dgvMonthlyStats.Columns["TotalSize"].Visible = false;
-                dgvMonthlyStats.Columns["CumulativeSize"].Visible = false;
+                dgvMonthlyStats.Columns["Month"]!.Visible = false;
+                dgvMonthlyStats.Columns["TotalSize"]!.Visible = false;
+                dgvMonthlyStats.Columns["CumulativeSize"]!.Visible = false;
             }
         }
 
@@ -316,14 +316,14 @@ namespace IwaraDownloader.Forms
 
             if (dgvSizeStats.Columns.Count > 0)
             {
-                dgvSizeStats.Columns["Bucket"].HeaderText = L.T("StatisticsForm_D026");
-                dgvSizeStats.Columns["Bucket"].FillWeight = 100;
-                dgvSizeStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
-                dgvSizeStats.Columns["Count"].FillWeight = 70;
-                dgvSizeStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D028");
-                dgvSizeStats.Columns["TotalSizeFormatted"].FillWeight = 90;
+                dgvSizeStats.Columns["Bucket"]!.HeaderText = L.T("StatisticsForm_D026");
+                dgvSizeStats.Columns["Bucket"]!.FillWeight = 100;
+                dgvSizeStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D027");
+                dgvSizeStats.Columns["Count"]!.FillWeight = 70;
+                dgvSizeStats.Columns["TotalSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D028");
+                dgvSizeStats.Columns["TotalSizeFormatted"]!.FillWeight = 90;
 
-                dgvSizeStats.Columns["TotalSize"].Visible = false;
+                dgvSizeStats.Columns["TotalSize"]!.Visible = false;
             }
         }
 
@@ -354,14 +354,14 @@ namespace IwaraDownloader.Forms
 
             if (dgvDurationStats.Columns.Count > 0)
             {
-                dgvDurationStats.Columns["Bucket"].HeaderText = L.T("StatisticsForm_D029");
-                dgvDurationStats.Columns["Bucket"].FillWeight = 100;
-                dgvDurationStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
-                dgvDurationStats.Columns["Count"].FillWeight = 70;
-                dgvDurationStats.Columns["TotalDurationFormatted"].HeaderText = L.T("StatisticsForm_D030");
-                dgvDurationStats.Columns["TotalDurationFormatted"].FillWeight = 90;
+                dgvDurationStats.Columns["Bucket"]!.HeaderText = L.T("StatisticsForm_D029");
+                dgvDurationStats.Columns["Bucket"]!.FillWeight = 100;
+                dgvDurationStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D027");
+                dgvDurationStats.Columns["Count"]!.FillWeight = 70;
+                dgvDurationStats.Columns["TotalDurationFormatted"]!.HeaderText = L.T("StatisticsForm_D030");
+                dgvDurationStats.Columns["TotalDurationFormatted"]!.FillWeight = 90;
 
-                dgvDurationStats.Columns["TotalSeconds"].Visible = false;
+                dgvDurationStats.Columns["TotalSeconds"]!.Visible = false;
             }
         }
 
@@ -395,12 +395,12 @@ namespace IwaraDownloader.Forms
 
             if (dgvTagStats.Columns.Count > 0)
             {
-                dgvTagStats.Columns["Rank"].HeaderText = "#";
-                dgvTagStats.Columns["Rank"].FillWeight = 40;
-                dgvTagStats.Columns["Tag"].HeaderText = L.T("StatisticsForm_D031");
-                dgvTagStats.Columns["Tag"].FillWeight = 180;
-                dgvTagStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
-                dgvTagStats.Columns["Count"].FillWeight = 70;
+                dgvTagStats.Columns["Rank"]!.HeaderText = "#";
+                dgvTagStats.Columns["Rank"]!.FillWeight = 40;
+                dgvTagStats.Columns["Tag"]!.HeaderText = L.T("StatisticsForm_D031");
+                dgvTagStats.Columns["Tag"]!.FillWeight = 180;
+                dgvTagStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D027");
+                dgvTagStats.Columns["Count"]!.FillWeight = 70;
             }
         }
 
@@ -425,14 +425,14 @@ namespace IwaraDownloader.Forms
 
             if (dgvRatingStats.Columns.Count > 0)
             {
-                dgvRatingStats.Columns["Rating"].HeaderText = "Rating";
-                dgvRatingStats.Columns["Rating"].FillWeight = 100;
-                dgvRatingStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
-                dgvRatingStats.Columns["Count"].FillWeight = 70;
-                dgvRatingStats.Columns["PercentageFormatted"].HeaderText = L.T("StatisticsForm_D019");
-                dgvRatingStats.Columns["PercentageFormatted"].FillWeight = 70;
+                dgvRatingStats.Columns["Rating"]!.HeaderText = "Rating";
+                dgvRatingStats.Columns["Rating"]!.FillWeight = 100;
+                dgvRatingStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D027");
+                dgvRatingStats.Columns["Count"]!.FillWeight = 70;
+                dgvRatingStats.Columns["PercentageFormatted"]!.HeaderText = L.T("StatisticsForm_D019");
+                dgvRatingStats.Columns["PercentageFormatted"]!.FillWeight = 70;
 
-                dgvRatingStats.Columns["Percentage"].Visible = false;
+                dgvRatingStats.Columns["Percentage"]!.Visible = false;
             }
         }
 
@@ -456,14 +456,14 @@ namespace IwaraDownloader.Forms
 
             if (dgvSiteStats.Columns.Count > 0)
             {
-                dgvSiteStats.Columns["Site"].HeaderText = L.T("StatisticsForm_D032");
-                dgvSiteStats.Columns["Site"].FillWeight = 130;
-                dgvSiteStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
-                dgvSiteStats.Columns["Count"].FillWeight = 70;
-                dgvSiteStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
-                dgvSiteStats.Columns["TotalSizeFormatted"].FillWeight = 80;
+                dgvSiteStats.Columns["Site"]!.HeaderText = L.T("StatisticsForm_D032");
+                dgvSiteStats.Columns["Site"]!.FillWeight = 130;
+                dgvSiteStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D027");
+                dgvSiteStats.Columns["Count"]!.FillWeight = 70;
+                dgvSiteStats.Columns["TotalSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D014");
+                dgvSiteStats.Columns["TotalSizeFormatted"]!.FillWeight = 80;
 
-                dgvSiteStats.Columns["TotalSize"].Visible = false;
+                dgvSiteStats.Columns["TotalSize"]!.Visible = false;
             }
         }
 
@@ -491,16 +491,16 @@ namespace IwaraDownloader.Forms
 
             if (dgvAuthorStats.Columns.Count > 0)
             {
-                dgvAuthorStats.Columns["Rank"].HeaderText = "#";
-                dgvAuthorStats.Columns["Rank"].FillWeight = 40;
-                dgvAuthorStats.Columns["Username"].HeaderText = L.T("StatisticsForm_D033");
-                dgvAuthorStats.Columns["Username"].FillWeight = 180;
-                dgvAuthorStats.Columns["Count"].HeaderText = L.T("StatisticsForm_D027");
-                dgvAuthorStats.Columns["Count"].FillWeight = 70;
-                dgvAuthorStats.Columns["TotalSizeFormatted"].HeaderText = L.T("StatisticsForm_D014");
-                dgvAuthorStats.Columns["TotalSizeFormatted"].FillWeight = 80;
+                dgvAuthorStats.Columns["Rank"]!.HeaderText = "#";
+                dgvAuthorStats.Columns["Rank"]!.FillWeight = 40;
+                dgvAuthorStats.Columns["Username"]!.HeaderText = L.T("StatisticsForm_D033");
+                dgvAuthorStats.Columns["Username"]!.FillWeight = 180;
+                dgvAuthorStats.Columns["Count"]!.HeaderText = L.T("StatisticsForm_D027");
+                dgvAuthorStats.Columns["Count"]!.FillWeight = 70;
+                dgvAuthorStats.Columns["TotalSizeFormatted"]!.HeaderText = L.T("StatisticsForm_D014");
+                dgvAuthorStats.Columns["TotalSizeFormatted"]!.FillWeight = 80;
 
-                dgvAuthorStats.Columns["TotalSize"].Visible = false;
+                dgvAuthorStats.Columns["TotalSize"]!.Visible = false;
             }
         }
 

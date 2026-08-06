@@ -447,11 +447,57 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="ImportFromFolderWizard_D030" xml:space="preserve">
     <value>导入完成</value>
   </data>
+  <data name="ImportFromFolderWizard_D031" xml:space="preserve">
+    <value>标题匹配导入：      {0} 个
+</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} 个</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} 个  [已注册]</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
+    <value>匹配到多个候选</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMAmbiguousMultiFile" xml:space="preserve">
+    <value>多个文件匹配到同一视频</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMArtistDropdownHint" xml:space="preserve">
+    <value>找到多个候选。可以从下拉列表中重新选择要采用的视频。</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMDurationDiff" xml:space="preserve">
+    <value>时长差{0}秒</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMDurationUnknown" xml:space="preserve">
+    <value>时长未知</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMHighConfidence" xml:space="preserve">
+    <value>高置信度</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMManuallySelected" xml:space="preserve">
+    <value>已手动选择(时长一致)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMManuallySelectedReview" xml:space="preserve">
+    <value>已手动选择(时长不一致,需确认)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMNeedsReview" xml:space="preserve">
+    <value>待确认</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMNeedsReviewWithReason" xml:space="preserve">
+    <value>待确认：{0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierExact" xml:space="preserve">
+    <value>完全匹配</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierId" xml:space="preserve">
+    <value>ID匹配</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierPrefix" xml:space="preserve">
+    <value>前缀匹配</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
+    <value>部分匹配</value>
   </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>从文件夹导入</value>
@@ -480,6 +526,24 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="ImportFromFolderWizard_chkRecursive" xml:space="preserve">
     <value>递归扫描子文件夹</value>
   </data>
+  <data name="ImportFromFolderWizard_colTMArtist" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMConfidence" xml:space="preserve">
+    <value>置信度/安全性</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMDuration" xml:space="preserve">
+    <value>时长差</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMFileName" xml:space="preserve">
+    <value>文件名</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMTier" xml:space="preserve">
+    <value>匹配类型</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMTitle" xml:space="preserve">
+    <value>视频标题</value>
+  </data>
   <data name="ImportFromFolderWizard_lblImportStatus" xml:space="preserve">
     <value>准备中...</value>
   </data>
@@ -490,8 +554,11 @@ https://www.iwara.tv/profile/username/videos</value>
     <value>步骤 1/5</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep1Desc" xml:space="preserve">
-    <value>扫描所选文件夹中的 mp4/m4v 文件，并通过 iwara 的自定义标签
-</value>
+    <value>扫描所选文件夹中的 mp4 文件，并通过 iwara 的自定义标签读取
+videoId 后导入数据库。
+
+※ 没有标签的文件将根据文件名与未下载的视频进行匹配（在 Step 3 中确认）
+※ 需要先登录 iwara</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep1Title" xml:space="preserve">
     <value>选择导入源文件夹</value>
@@ -514,6 +581,13 @@ https://www.iwara.tv/profile/username/videos</value>
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>从文件夹导入</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitleMatchDesc" xml:space="preserve">
+    <value>没有 iwara 标签的文件，通过文件名推测匹配到的候选。置信度较低的项目默认不勾选，
+请确认内容后再勾选。</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitleMatchTitle" xml:space="preserve">
+    <value>标题匹配文件（待确认）</value>
   </data>
   <data name="MainForm_ConfirmDeleteMany" xml:space="preserve">
     <value>删除 {0} 个视频吗？</value>
@@ -3002,6 +3076,123 @@ https://www.iwara.tv/profile/username/videos</value>
   </data>
   <data name="Svc_LoginRequired" xml:space="preserve">
     <value>需要登录。请从设置画面登录。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
+    <value>发现 {0} 个没有标签的文件。请选择搜索方式。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
+    <value>例如: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
+    <value>选择作者的文件夹</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D004" xml:space="preserve">
+    <value>请输入作者的 URL 或用户名。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D005" xml:space="preserve">
+    <value>输入错误</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D006" xml:space="preserve">
+    <value>正在确认 @{0}...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D007" xml:space="preserve">
+    <value>@{0} (已订阅) — 数据库中 {1} 个视频。如果数量偏少，可点击“通过API重新获取”</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D008" xml:space="preserve">
+    <value>尚未登录 iwara。请在设置界面登录。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D009" xml:space="preserve">
+    <value>需要登录</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D010" xml:space="preserve">
+    <value>@{0}: 未找到视频(用户名可能有误)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D011" xml:space="preserve">
+    <value>@{0} (通过API获取) — {1} 个视频</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D012" xml:space="preserve">
+    <value>错误: {0}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D013" xml:space="preserve">
+    <value>请先“确认”作者。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D014" xml:space="preserve">
+    <value>请指定一个有效的文件夹。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D015" xml:space="preserve">
+    <value>所选文件夹下没有无标签文件。请检查文件夹选择是否正确。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D016" xml:space="preserve">
+    <value>没有可处理的对象</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D017" xml:space="preserve">
+    <value>正在匹配 {0} 个文件...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D018" xml:space="preserve">
+    <value>匹配过程中发生错误:
+{0}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D019" xml:space="preserve">
+    <value>错误</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D020" xml:space="preserve">
+    <value>正在匹配 {0} 个文件(面向整个数据库)...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_Title" xml:space="preserve">
+    <value>匹配无标签文件</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseArtistFolder" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnRefetchArtist" xml:space="preserve">
+    <value>通过API重新获取</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnResolveArtist" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnRun" xml:space="preserve">
+    <value>执行搜索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistDesc" xml:space="preserve">
+    <value>只匹配指定的这一位作者的视频。误匹配风险最低，也可以导入全新的视频。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistFolder" xml:space="preserve">
+    <value>目标文件夹:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistInput" xml:space="preserve">
+    <value>作者 URL/用户名:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistTemplate" xml:space="preserve">
+    <value>文件名模板:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
+    <value>{id} = 视频ID / {title} = 标题。此模式只匹配这一位作者的视频，因此不需要 {artist}。
+例如: "{id}_{title}.mp4" / "{title}.mp4"</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
+    <value>以文件名为线索，面向整个本地数据库进行匹配。仅匹配数据库中已有的记录(不会新增视频)。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameTemplate" xml:space="preserve">
+    <value>路径结构提示(可选):</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
+    <value>{id} = 视频ID / {title} = 标题 / {artist} (或 {author}) = 作者名。
+例如: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
+    <value>无标签文件不会被导入此应用。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbArtist" xml:space="preserve">
+    <value>按作者文件夹搜索(推荐，最安全)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbFilename" xml:space="preserve">
+    <value>按文件名搜索(面向整个数据库)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
+    <value>跳过(不导入)</value>
   </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>等待中</value>
