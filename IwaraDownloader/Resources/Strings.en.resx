@@ -447,11 +447,57 @@ Error log:
   <data name="ImportFromFolderWizard_D030" xml:space="preserve">
     <value>Import complete</value>
   </data>
+  <data name="ImportFromFolderWizard_D031" xml:space="preserve">
+    <value>Title-matched:      {0}
+</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} videos</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} videos  [already registered]</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
+    <value>matches multiple candidates</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMAmbiguousMultiFile" xml:space="preserve">
+    <value>multiple files match the same video</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMArtistDropdownHint" xml:space="preserve">
+    <value>Multiple candidates were found. Pick the video to use from the dropdown.</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMDurationDiff" xml:space="preserve">
+    <value>duration diff {0}s</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMDurationUnknown" xml:space="preserve">
+    <value>duration unknown</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMHighConfidence" xml:space="preserve">
+    <value>high confidence</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMManuallySelected" xml:space="preserve">
+    <value>Manually selected (duration matches)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMManuallySelectedReview" xml:space="preserve">
+    <value>Manually selected (duration mismatch, review)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMNeedsReview" xml:space="preserve">
+    <value>needs review</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMNeedsReviewWithReason" xml:space="preserve">
+    <value>needs review: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierExact" xml:space="preserve">
+    <value>exact match</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierId" xml:space="preserve">
+    <value>ID match</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierPrefix" xml:space="preserve">
+    <value>prefix match</value>
+  </data>
+  <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
+    <value>partial match</value>
   </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>Import from Folder</value>
@@ -480,6 +526,24 @@ Error log:
   <data name="ImportFromFolderWizard_chkRecursive" xml:space="preserve">
     <value>Scan subfolders recursively</value>
   </data>
+  <data name="ImportFromFolderWizard_colTMArtist" xml:space="preserve">
+    <value>Artist</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMConfidence" xml:space="preserve">
+    <value>Confidence / Safety</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMDuration" xml:space="preserve">
+    <value>Duration diff</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMFileName" xml:space="preserve">
+    <value>File name</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMTier" xml:space="preserve">
+    <value>Match type</value>
+  </data>
+  <data name="ImportFromFolderWizard_colTMTitle" xml:space="preserve">
+    <value>Video title</value>
+  </data>
   <data name="ImportFromFolderWizard_lblImportStatus" xml:space="preserve">
     <value>Preparing...</value>
   </data>
@@ -490,8 +554,11 @@ Error log:
     <value>Step 1/5</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep1Desc" xml:space="preserve">
-    <value>Scans mp4/m4v files in the selected folder and identifies videos
-</value>
+    <value>Scans mp4 files in the selected folder and reads the videoId from
+iwara's custom tag to import them into the DB.
+
+* Files without a tag are matched against not-yet-downloaded videos by filename (review in Step 3)
+* You must be logged in to iwara</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep1Title" xml:space="preserve">
     <value>Select source folder</value>
@@ -514,6 +581,13 @@ Error log:
   </data>
   <data name="ImportFromFolderWizard_lblTitle" xml:space="preserve">
     <value>Import from Folder</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitleMatchDesc" xml:space="preserve">
+    <value>Candidates matched by filename for files with no iwara tag. Low-confidence matches
+are unchecked by default -- review before checking them.</value>
+  </data>
+  <data name="ImportFromFolderWizard_lblTitleMatchTitle" xml:space="preserve">
+    <value>Title-matched files (needs review)</value>
   </data>
   <data name="MainForm_ConfirmDeleteMany" xml:space="preserve">
     <value>Delete {0} videos?</value>
@@ -3002,6 +3076,123 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="Svc_LoginRequired" xml:space="preserve">
     <value>Login required. Please log in from the settings screen.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
+    <value>Found {0} file(s) without a tag. Choose how to search for matches.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
+    <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
+    <value>Select the artist's folder</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D004" xml:space="preserve">
+    <value>Please enter the artist's URL or username.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D005" xml:space="preserve">
+    <value>Input error</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D006" xml:space="preserve">
+    <value>Checking @{0}...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D007" xml:space="preserve">
+    <value>@{0} (subscribed) — {1} video(s) in DB. If that's too few, use "Refetch via API"</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D008" xml:space="preserve">
+    <value>Not logged in to iwara. Please log in from the settings screen.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D009" xml:space="preserve">
+    <value>Login required</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D010" xml:space="preserve">
+    <value>@{0}: no videos found (the username may be wrong)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D011" xml:space="preserve">
+    <value>@{0} (fetched via API) — {1} video(s)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D012" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D013" xml:space="preserve">
+    <value>Please "Check" the artist first.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D014" xml:space="preserve">
+    <value>Please specify a valid folder.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D015" xml:space="preserve">
+    <value>No untagged files under the selected folder. Please check the folder selection.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D016" xml:space="preserve">
+    <value>Nothing to process</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D017" xml:space="preserve">
+    <value>Matching {0} file(s)...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D018" xml:space="preserve">
+    <value>An error occurred while matching:
+{0}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D019" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D020" xml:space="preserve">
+    <value>Matching {0} file(s) (against the whole DB)...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_Title" xml:space="preserve">
+    <value>Match Untagged Files</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseArtistFolder" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnRefetchArtist" xml:space="preserve">
+    <value>Refetch via API</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnResolveArtist" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnRun" xml:space="preserve">
+    <value>Run search</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistDesc" xml:space="preserve">
+    <value>Matches only against one specified artist's videos. Least likely to mis-match, and can also import brand-new videos.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistFolder" xml:space="preserve">
+    <value>Target folder:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistInput" xml:space="preserve">
+    <value>Artist URL/username:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistTemplate" xml:space="preserve">
+    <value>Filename template:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
+    <value>{id} = video ID / {title} = title. {artist} is not needed since this mode already targets one artist.
+e.g. "{id}_{title}.mp4" / "{title}.mp4"</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
+    <value>Matches by filename against the whole local DB. Only matches existing DB entries (never adds new videos).</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameTemplate" xml:space="preserve">
+    <value>Path structure hint (optional):</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
+    <value>{id} = video ID / {title} = title / {artist} (or {author}) = artist name.
+e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
+    <value>Untagged files will not be imported into this app.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbArtist" xml:space="preserve">
+    <value>Search by artist folder (recommended, safest)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbFilename" xml:space="preserve">
+    <value>Search by filename (whole DB)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
+    <value>Skip (do not import)</value>
   </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>Pending</value>

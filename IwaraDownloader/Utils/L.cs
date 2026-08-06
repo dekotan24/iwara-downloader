@@ -16,7 +16,7 @@ namespace IwaraDownloader.Utils
         public static string T(string key)
             => _rm.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 
-        public static string T(string key, params object[] args)
+        public static string T(string key, params object?[] args)
             => string.Format(CultureInfo.CurrentCulture, T(key), args);
     }
 }

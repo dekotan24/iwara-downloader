@@ -43,6 +43,16 @@ namespace IwaraDownloader.Forms
             this.btnSelectAll = new System.Windows.Forms.Button();
             this.btnSelectNone = new System.Windows.Forms.Button();
             this.lblSingleVideos = new System.Windows.Forms.Label();
+            this.lblTitleMatchTitle = new System.Windows.Forms.Label();
+            this.lblTitleMatchDesc = new System.Windows.Forms.Label();
+            this.dgvTitleMatches = new System.Windows.Forms.DataGridView();
+            this.colTMChecked = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.colTMConfidence = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTMTier = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTMTitle = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTMArtist = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.colTMFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTMDuration = new System.Windows.Forms.DataGridViewTextBoxColumn();
 
             // Step 4: 実行
             this.pnlStep4 = new System.Windows.Forms.Panel();
@@ -126,9 +136,9 @@ namespace IwaraDownloader.Forms
             this.lblStep1Desc.Name = "lblStep1Desc";
             this.lblStep1Desc.Size = new System.Drawing.Size(670, 120);
             this.lblStep1Desc.Text =
-                "選択したフォルダ内の mp4/m4v ファイルをスキャンし、iwara のカスタムタグから\r\n" +
+                "選択したフォルダ内の mp4 ファイルをスキャンし、iwara のカスタムタグから\r\n" +
                 "videoId を取得して DB に取り込みます。\r\n\r\n" +
-                "※ タグの無いファイルはスキップされます (旧バージョン / 手動コピー等)\r\n" +
+                "※ タグの無いファイルはファイル名から未DL動画と照合します (Step 3 で確認)\r\n" +
                 "※ iwara にログイン済みである必要があります";
 
             this.txtFolder.Font = new System.Drawing.Font("Consolas", 9F);
@@ -182,7 +192,10 @@ namespace IwaraDownloader.Forms
             this.lblScanResult.Size = new System.Drawing.Size(670, 200);
             this.lblScanResult.Text = "";
 
-            // pnlStep3 (作者選択)
+            // pnlStep3 (作者選択 + タイトル照合確認)
+            this.pnlStep3.Controls.Add(this.dgvTitleMatches);
+            this.pnlStep3.Controls.Add(this.lblTitleMatchDesc);
+            this.pnlStep3.Controls.Add(this.lblTitleMatchTitle);
             this.pnlStep3.Controls.Add(this.lblSingleVideos);
             this.pnlStep3.Controls.Add(this.btnSelectNone);
             this.pnlStep3.Controls.Add(this.btnSelectAll);
@@ -212,17 +225,17 @@ namespace IwaraDownloader.Forms
             this.clbAuthors.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.clbAuthors.Location = new System.Drawing.Point(10, 90);
             this.clbAuthors.Name = "clbAuthors";
-            this.clbAuthors.Size = new System.Drawing.Size(670, 200);
+            this.clbAuthors.Size = new System.Drawing.Size(670, 115);
             this.clbAuthors.IntegralHeight = false;
 
-            this.btnSelectAll.Location = new System.Drawing.Point(10, 295);
+            this.btnSelectAll.Location = new System.Drawing.Point(10, 210);
             this.btnSelectAll.Name = "btnSelectAll";
             this.btnSelectAll.Size = new System.Drawing.Size(80, 25);
             this.btnSelectAll.Text = "全選択";
             this.btnSelectAll.UseVisualStyleBackColor = true;
             this.btnSelectAll.Click += new System.EventHandler(this.btnSelectAll_Click);
 
-            this.btnSelectNone.Location = new System.Drawing.Point(95, 295);
+            this.btnSelectNone.Location = new System.Drawing.Point(95, 210);
             this.btnSelectNone.Name = "btnSelectNone";
             this.btnSelectNone.Size = new System.Drawing.Size(80, 25);
             this.btnSelectNone.Text = "全解除";
@@ -231,10 +244,88 @@ namespace IwaraDownloader.Forms
 
             this.lblSingleVideos.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.lblSingleVideos.ForeColor = System.Drawing.Color.DimGray;
-            this.lblSingleVideos.Location = new System.Drawing.Point(190, 299);
+            this.lblSingleVideos.Location = new System.Drawing.Point(190, 214);
             this.lblSingleVideos.Name = "lblSingleVideos";
             this.lblSingleVideos.Size = new System.Drawing.Size(490, 20);
             this.lblSingleVideos.Text = "";
+
+            // タイトル照合ファイル (タグ無し・ファイル名から推測した候補) の確認セクション。
+            // ファイル名照合はUUIDタグ照合より確度が低いため、既定でチェックが入るのは
+            // 「完全一致 かつ 長さがほぼ一致」の高確度な組み合わせのみ (RunScanAsync 側で設定)。
+            this.lblTitleMatchTitle.AutoSize = true;
+            this.lblTitleMatchTitle.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblTitleMatchTitle.Location = new System.Drawing.Point(10, 245);
+            this.lblTitleMatchTitle.Name = "lblTitleMatchTitle";
+            this.lblTitleMatchTitle.Text = "タイトル照合ファイル (要確認)";
+
+            this.lblTitleMatchDesc.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblTitleMatchDesc.ForeColor = System.Drawing.Color.DimGray;
+            this.lblTitleMatchDesc.Location = new System.Drawing.Point(10, 268);
+            this.lblTitleMatchDesc.Name = "lblTitleMatchDesc";
+            this.lblTitleMatchDesc.Size = new System.Drawing.Size(670, 32);
+            this.lblTitleMatchDesc.Text =
+                "iwara タグの無いファイルをファイル名から推測して照合した候補です。確度の低いものは\r\n" +
+                "既定でチェックを外しています。内容を確認してからチェックを入れてください。";
+
+            // dgvTitleMatches: チェック列 + 確度/種別/タイトル/作者/ファイル名/長さ差の一覧表示。
+            // 列合計幅がパネル幅より広いため、横スクロールで全カラムを確認できるようにする
+            // (AutoSizeColumnsMode=None で固定幅、ScrollBars は DataGridView 既定で自動表示される)。
+            this.dgvTitleMatches.AllowUserToAddRows = false;
+            this.dgvTitleMatches.AllowUserToDeleteRows = false;
+            this.dgvTitleMatches.AllowUserToResizeRows = false;
+            this.dgvTitleMatches.RowHeadersVisible = false;
+            this.dgvTitleMatches.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.dgvTitleMatches.MultiSelect = false;
+            this.dgvTitleMatches.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.None;
+            // 作者列のドロップダウンをセル1クリックで開けるようにする (既定の EditOnKeystrokeOrF2 だと
+            // 矢印部分しか反応しない)。MultiSelect=false / FullRowSelect なので副作用は小さい。
+            this.dgvTitleMatches.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
+            this.dgvTitleMatches.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.dgvTitleMatches.Location = new System.Drawing.Point(10, 304);
+            this.dgvTitleMatches.Name = "dgvTitleMatches";
+            this.dgvTitleMatches.Size = new System.Drawing.Size(670, 150);
+            this.dgvTitleMatches.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+                this.colTMChecked,
+                this.colTMConfidence,
+                this.colTMTier,
+                this.colTMTitle,
+                this.colTMArtist,
+                this.colTMFileName,
+                this.colTMDuration,
+            });
+            this.dgvTitleMatches.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvTitleMatches_CellContentClick);
+            this.dgvTitleMatches.CurrentCellDirtyStateChanged += new System.EventHandler(this.dgvTitleMatches_CurrentCellDirtyStateChanged);
+            this.dgvTitleMatches.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvTitleMatches_CellValueChanged);
+            this.dgvTitleMatches.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.dgvTitleMatches_DataError);
+
+            this.colTMChecked.Name = "colTMChecked";
+            this.colTMChecked.Width = 36;
+            this.colTMChecked.HeaderText = "";
+            this.colTMChecked.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+
+            this.colTMConfidence.Name = "colTMConfidence";
+            this.colTMConfidence.Width = 150;
+            this.colTMConfidence.ReadOnly = true;
+
+            this.colTMTier.Name = "colTMTier";
+            this.colTMTier.Width = 70;
+            this.colTMTier.ReadOnly = true;
+
+            this.colTMTitle.Name = "colTMTitle";
+            this.colTMTitle.Width = 220;
+            this.colTMTitle.ReadOnly = true;
+
+            this.colTMArtist.Name = "colTMArtist";
+            this.colTMArtist.Width = 110;
+            this.colTMArtist.ReadOnly = true;
+
+            this.colTMFileName.Name = "colTMFileName";
+            this.colTMFileName.Width = 220;
+            this.colTMFileName.ReadOnly = true;
+
+            this.colTMDuration.Name = "colTMDuration";
+            this.colTMDuration.Width = 90;
+            this.colTMDuration.ReadOnly = true;
 
             // pnlStep4 (実行)
             this.pnlStep4.Controls.Add(this.txtImportLog);
@@ -361,7 +452,7 @@ namespace IwaraDownloader.Forms
             // ImportFromFolderWizard
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(720, 540);
+            this.ClientSize = new System.Drawing.Size(720, 620);
             this.Controls.Add(this.pnlBody);
             this.Controls.Add(this.pnlFooter);
             this.Controls.Add(this.pnlHeader);
@@ -414,6 +505,16 @@ namespace IwaraDownloader.Forms
         private System.Windows.Forms.Button btnSelectAll;
         private System.Windows.Forms.Button btnSelectNone;
         private System.Windows.Forms.Label lblSingleVideos;
+        private System.Windows.Forms.Label lblTitleMatchTitle;
+        private System.Windows.Forms.Label lblTitleMatchDesc;
+        private System.Windows.Forms.DataGridView dgvTitleMatches;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn colTMChecked;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTMConfidence;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTMTier;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTMTitle;
+        private System.Windows.Forms.DataGridViewComboBoxColumn colTMArtist;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTMFileName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTMDuration;
         private System.Windows.Forms.Panel pnlStep4;
         private System.Windows.Forms.Label lblStep4Title;
         private System.Windows.Forms.Label lblImportStatus;

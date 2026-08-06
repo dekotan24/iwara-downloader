@@ -61,10 +61,15 @@ namespace IwaraDownloader.Forms
             _apiFailedItems.Clear();
             _dbFailedItems.Clear();
             _lastErrorLogPath = null;
+            _titleMatches.Clear();
+            _titleMatchImported = 0;
+            _titleMatchApiFailed = 0;
+            _alreadyOwnedFiles.Clear();
 
             // UI クリア
             clbAuthors.Items.Clear();
             clbAuthors.Tag = null;
+            dgvTitleMatches.Rows.Clear();
             lblScanResult.Text = "";
             lblScanStatus.Text = L.T("ImportFromFolderWizard_D001");
             progressScan.Value = 0;
@@ -89,6 +94,13 @@ namespace IwaraDownloader.Forms
         // スキャン結果
         private readonly List<ScannedVideo> _scanned = new();
         private int _untaggedCount;
+
+        // タイトル照合結果 (タグ無しファイルをファイル名から推測して照合した候補)
+        private readonly List<TitleMatchDisplayItem> _titleMatches = new();
+        private int _titleMatchImported;
+        private int _titleMatchApiFailed;
+        // videoId直接一致で「既に別の場所にDL済み」と判明したファイル (重複コピー、取り込み対象外)
+        private readonly List<string> _alreadyOwnedFiles = new();
 
         // 取り込み結果
         private int _importedNew;
@@ -233,6 +245,104 @@ namespace IwaraDownloader.Forms
             for (int i = 0; i < clbAuthors.Items.Count; i++) clbAuthors.SetItemChecked(i, false);
         }
 
+        /// <summary>
+        /// チェックボックスセルはクリック直後だと編集がコミットされておらず Value が古い値のままなので、
+        /// EndEdit で即座にコミットする (DataGridView の定番の落とし穴)。
+        /// </summary>
+        private void dgvTitleMatches_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex != colTMChecked.Index) return;
+            dgvTitleMatches.EndEdit();
+        }
+
+        /// <summary>
+        /// 想定外のセル書式化エラー (作者列の ComboBox/TextBox 切り替え周り等) が起きても、
+        /// 既定の DataError ダイアログを連打させずログに残すだけにする保険。
+        /// </summary>
+        private void dgvTitleMatches_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            LoggingService.Instance.Warn(
+                $"dgvTitleMatches DataError: row={e.RowIndex} col={e.ColumnIndex} ctx={e.Context}: {e.Exception?.Message}");
+            e.ThrowException = false;
+        }
+
+        /// <summary>
+        /// 作者列のセルを組み立てる。1ファイルに複数候補があって自動確定できなかった行だけ
+        /// ドロップダウン (DataGridViewComboBoxCell) にし、他候補への選び直しを可能にする。
+        /// それ以外の行は通常のテキスト表示 (ReadOnly) のまま。
+        /// </summary>
+        private void PopulateArtistCell(DataGridViewRow row, TitleMatchDisplayItem m)
+        {
+            var alternatives = m.Candidate.AlternativeCandidates;
+            if (alternatives is { Count: > 1 })
+            {
+                var comboCell = new DataGridViewComboBoxCell();
+                var options = alternatives.Select(v => new ArtistCandidateOption(v)).ToArray();
+                // DataGridView にアタッチする前に Value を設定すると例外になることがあるため、
+                // 差し替え → Items → Value → ReadOnly の順で行う。
+                row.Cells[colTMArtist.Index] = comboCell;
+                comboCell.Items.AddRange(options);
+                comboCell.Value = options.FirstOrDefault(o => ReferenceEquals(o.Video, m.SelectedVideo)) ?? options[0];
+                comboCell.ReadOnly = false;
+                comboCell.ToolTipText = L.T("ImportFromFolderWizard_TMArtistDropdownHint");
+            }
+            else
+            {
+                // 列自体は DataGridViewComboBoxColumn なので、この行にセットするだけでは
+                // Items 無しの ComboBoxCell に書式化不能な値を入れることになり FormatException
+                // (DataError) を招く。選び直しの余地が無い行は普通のテキストセルに差し替える。
+                var textCell = new DataGridViewTextBoxCell();
+                row.Cells[colTMArtist.Index] = textCell;
+                textCell.Value = m.SelectedVideo.AuthorUsername;
+                textCell.ReadOnly = true;
+            }
+        }
+
+        /// <summary>
+        /// ComboBox セルは選択直後だと編集がコミットされておらず CellValueChanged が飛ばないので、
+        /// 即座にコミットする (チェックボックス列と同じ定番の落とし穴)。
+        /// </summary>
+        private void dgvTitleMatches_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (dgvTitleMatches.CurrentCell is DataGridViewComboBoxCell && dgvTitleMatches.IsCurrentCellDirty)
+                dgvTitleMatches.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        }
+
+        /// <summary>
+        /// 作者ドロップダウンで選び直された時、表示中の TitleMatchDisplayItem.SelectedVideo と
+        /// タイトル/長さ差/確度の各列を更新する。選び直した動画に対して長さ差を再計算することで
+        /// 「どの候補を選んでも長さが合わない」ようなケースをこの場で気付けるようにする。
+        /// </summary>
+        private void dgvTitleMatches_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex != colTMArtist.Index) return;
+            var row = dgvTitleMatches.Rows[e.RowIndex];
+            if (row.Tag is not TitleMatchDisplayItem item) return;
+            if (row.Cells[colTMArtist.Index].Value is not ArtistCandidateOption opt) return;
+            if (ReferenceEquals(item.SelectedVideo, opt.Video)) return;
+
+            item.SelectedVideo = opt.Video;
+            item.ManuallySelected = true;
+
+            double? diff = null;
+            bool durationOk = false;
+            if (opt.Video.DurationSeconds > 0)
+            {
+                var fileDuration = TryReadDuration(item.Candidate.FilePath);
+                if (fileDuration.HasValue)
+                {
+                    diff = Math.Abs(fileDuration.Value - opt.Video.DurationSeconds);
+                    durationOk = diff.Value <= 5.0;
+                }
+            }
+            item.DurationDiffSeconds = diff;
+            item.DurationOk = durationOk;
+
+            row.Cells[colTMTitle.Index].Value = opt.Video.Title;
+            row.Cells[colTMDuration.Index].Value = item.DurationLabel;
+            row.Cells[colTMConfidence.Index].Value = item.ConfidenceLabel;
+        }
+
         #region Step 2: スキャン (ファイル列挙 + タグ読取 + iwara API 逆引き)
 
         private async Task RunScanAsync()
@@ -244,6 +354,10 @@ namespace IwaraDownloader.Forms
             _untaggedCount = 0;
             _untaggedFiles.Clear();
             _apiFailedItems.Clear();
+            // 戻る→次へで再スキャンした際に前回分が残って重複表示されるのを防ぐ
+            _titleMatches.Clear();
+            _alreadyOwnedFiles.Clear();
+            _dbFailedItems.Clear();
             lblScanResult.Text = "";
 
             var folder = txtFolder.Text.Trim();
@@ -265,7 +379,7 @@ namespace IwaraDownloader.Forms
                         .Where(p =>
                         {
                             var ext = Path.GetExtension(p).ToLowerInvariant();
-                            return ext == ".mp4" || ext == ".m4v";
+                            return ext == ".mp4";
                         })
                         .ToList();
 
@@ -299,6 +413,43 @@ namespace IwaraDownloader.Forms
                 _scanned.AddRange(taggedItems);
 
                 ReportScan($"タグ付きファイル {_scanned.Count} 件 / タグ無し {_untaggedCount} 件", null, _scanned.Count);
+
+                // Phase A2: タグ無しファイルの照合方法をユーザーに選ばせる
+                // (アーティストフォルダ選択検索 / ファイル名による検索(最終手段) / スキップ)。
+                // ファイル名だけを頼りにした全体検索は誤マッチの温床になるため、既定の自動実行はしない。
+                if (_untaggedFiles.Count > 0)
+                {
+                    var scanRoot = txtFolder.Text.Trim();
+                    FilenameMatchResult? raw;
+                    Models.SubscribedUser? resolvedSubUser;
+                    using (var matchForm = new UntaggedFileMatchForm(_untaggedFiles.ToList(), _database, _downloadManager, scanRoot))
+                    {
+                        var dr = matchForm.ShowDialog(this);
+                        raw = dr == DialogResult.OK ? matchForm.Result : null;
+                        resolvedSubUser = matchForm.ResolvedSubUser;
+                    }
+
+                    if (raw != null)
+                    {
+                        var displayItems = await Task.Run(() => BuildTitleMatchDisplayItems(raw.Matches, resolvedSubUser, ct), ct);
+
+                        // マッチ / 重複判明したファイルは「タグ無しスキップ」から除外する
+                        // (拾えたのに失敗扱いのままだと後のエラーログで混乱するため)
+                        var resolvedFiles = displayItems.Select(m => m.Candidate.FilePath)
+                            .Concat(raw.AlreadyOwnedFiles)
+                            .ToHashSet();
+                        _untaggedFiles.RemoveAll(f => resolvedFiles.Contains(f));
+                        _untaggedCount = _untaggedFiles.Count;
+                        _titleMatches.AddRange(displayItems);
+                        _alreadyOwnedFiles.AddRange(raw.AlreadyOwnedFiles);
+
+                        ReportScan(
+                            $"タイトル照合 {_titleMatches.Count} 件 (うち高確度 {_titleMatches.Count(m => m.HighConfidence)} 件) / " +
+                            $"重複(既にDL済み) {_alreadyOwnedFiles.Count} 件 / タグ無し (照合不可) {_untaggedCount} 件",
+                            null, 1);
+                    }
+                    // スキップ/キャンセルなら _untaggedFiles はそのまま (従来通りエラーログに記録される)
+                }
 
                 // Phase B: 重複videoIdの集約 (同じvideoIdが複数あれば1つだけAPI叩く)
                 var uniqueVideoIds = _scanned
@@ -435,10 +586,25 @@ namespace IwaraDownloader.Forms
                     ? L.T("ImportFromFolderWizard_D018", singleVideoCount)
                     : "";
 
+                dgvTitleMatches.Rows.Clear();
+                foreach (var m in _titleMatches)
+                {
+                    var rowIdx = dgvTitleMatches.Rows.Add(
+                        m.HighConfidence, m.ConfidenceLabel, m.TierLabel,
+                        m.SelectedVideo.Title, "",
+                        m.FileName, m.DurationLabel);
+                    var row = dgvTitleMatches.Rows[rowIdx];
+                    row.Tag = m;
+                    row.Cells[colTMFileName.Index].ToolTipText = m.Candidate.FilePath;
+                    PopulateArtistCell(row, m);
+                }
+
                 AppendScanResult(
                     $"=== スキャン完了 ===\r\n" +
                     $"  タグ付きファイル: {_scanned.Count}\r\n" +
-                    $"  タグ無し (スキップ): {_untaggedCount}\r\n" +
+                    $"  タイトル照合 (要確認): {_titleMatches.Count} (高確度 {_titleMatches.Count(m => m.HighConfidence)})\r\n" +
+                    $"  重複 (既に別の場所にDL済み): {_alreadyOwnedFiles.Count}\r\n" +
+                    $"  タグ無し (照合不可・スキップ): {_untaggedCount}\r\n" +
                     $"  ユニーク videoId: {uniqueVideoIds.Count}\r\n" +
                     $"  API 問い合わせスキップ (DB既存): {apiSkipped}\r\n" +
                     $"  API 取得失敗: {apiFailed}\r\n" +
@@ -465,6 +631,57 @@ namespace IwaraDownloader.Forms
                 _cts?.Dispose();
                 _cts = null;
                 UpdateStepUi();
+            }
+        }
+
+        /// <summary>
+        /// FilenameMatcher の結果を表示用アイテムに変換する。Duration 照合は Prefix tier や
+        /// 曖昧な候補には行わない (どのみち手動確認行きなのでファイルを開く I/O が無駄になる)。
+        /// </summary>
+        private List<TitleMatchDisplayItem> BuildTitleMatchDisplayItems(
+            List<Utils.TitleMatchCandidate> matches, Models.SubscribedUser? subUser, CancellationToken ct)
+        {
+            var displayItems = new List<TitleMatchDisplayItem>();
+            foreach (var m in matches)
+            {
+                ct.ThrowIfCancellationRequested();
+                double? diff = null;
+                bool durationOk = false;
+                if (m.Tier != Utils.TitleMatchTier.Prefix && !m.Ambiguous && m.Video.DurationSeconds > 0)
+                {
+                    var fileDuration = TryReadDuration(m.FilePath);
+                    if (fileDuration.HasValue)
+                    {
+                        diff = Math.Abs(fileDuration.Value - m.Video.DurationSeconds);
+                        durationOk = diff.Value <= 5.0;
+                    }
+                }
+                displayItems.Add(new TitleMatchDisplayItem
+                {
+                    Candidate = m,
+                    DurationDiffSeconds = diff,
+                    DurationOk = durationOk,
+                    SubUser = subUser,
+                });
+            }
+            return displayItems;
+        }
+
+        /// <summary>
+        /// mp4 の再生時間を TagLib で読み取る (フルデコード無しの軽量な読み取り)。
+        /// 失敗時は null。
+        /// </summary>
+        private static double? TryReadDuration(string filePath)
+        {
+            try
+            {
+                using var f = TagLib.File.Create(filePath);
+                var sec = f.Properties.Duration.TotalSeconds;
+                return sec > 0 ? sec : null;
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -501,6 +718,8 @@ namespace IwaraDownloader.Forms
             UpdateStepUi();
             _cts = new CancellationTokenSource();
             _importedNew = _mergedCount = _skippedExistingCount = _failedCount = 0;
+            _titleMatchImported = 0;
+            _titleMatchApiFailed = 0;
             txtImportLog.Clear();
             progressImport.Value = 0;
             lblImportStatus.Text = L.T("ImportFromFolderWizard_D001");
@@ -652,6 +871,8 @@ namespace IwaraDownloader.Forms
                     }
                 }, ct);
 
+                await ImportCheckedTitleMatchesAsync(ct);
+
                 ShowSummary();
                 _step = 5;
             }
@@ -679,6 +900,85 @@ namespace IwaraDownloader.Forms
             }
         }
 
+        /// <summary>
+        /// Step 3 でチェックされたタイトル照合候補を取り込む。
+        /// タグ付きファイルの取り込み (Task.Run 内、同期) とは別に、こちらは非同期な
+        /// API 呼び出し (FileUuid 未解決分の逆引き) を伴うため独立したループにしてある。
+        /// </summary>
+        private async Task ImportCheckedTitleMatchesAsync(CancellationToken ct)
+        {
+            var checkedItems = new List<TitleMatchDisplayItem>();
+            foreach (DataGridViewRow row in dgvTitleMatches.Rows)
+            {
+                if (row.Tag is TitleMatchDisplayItem item
+                    && row.Cells[colTMChecked.Index].Value is bool isChecked && isChecked)
+                    checkedItems.Add(item);
+            }
+            if (checkedItems.Count == 0) return;
+
+            var apiDelayMs = SettingsManager.Instance.Settings.ApiRequestDelayMs;
+            int processed = 0;
+
+            foreach (var item in checkedItems)
+            {
+                ct.ThrowIfCancellationRequested();
+                processed++;
+                var candidate = item.Candidate;
+                var chosen = item.SelectedVideo;
+                ReportImport($"タイトル照合取り込み ({processed}/{checkedItems.Count}) {chosen.Title}",
+                    processed, checkedItems.Count);
+
+                try
+                {
+                    // Step 2 時点のスナップショットではなく最新の DB 行を使う
+                    // (ウィザードを開いている間に別経路で状態が変わっている可能性への保険)。
+                    // ただし chosen.Id==0 (アーティストフォルダ選択検索で iwara API から
+                    // 直接取得しただけの、まだ DB に存在しない動画) は GetVideoByVideoId で見つからない
+                    // のが正常なので、その場合は候補をそのまま使う (ImportOneAsync 側が新規追加する)。
+                    var video = _database.GetVideoByVideoId(chosen.VideoId)
+                        ?? (chosen.Id == 0 ? chosen : null);
+                    if (video == null)
+                    {
+                        AppendImportLog($"[失敗] タイトル照合: {chosen.Title} (DBから消失)");
+                        _failedCount++;
+                        continue;
+                    }
+                    if (video.LocalFileExists)
+                    {
+                        AppendImportLog($"→ スキップ (既にDL済み): {chosen.Title}");
+                        _skippedExistingCount++;
+                        continue;
+                    }
+
+                    bool neededApiResolve = string.IsNullOrEmpty(video.FileUuid);
+                    var outcome = await Utils.TitleMatchImporter.ImportOneAsync(
+                        video, candidate.FilePath, _downloadManager.IwaraApi, _database, item.SubUser);
+
+                    if (outcome.TagWritten)
+                    {
+                        AppendImportLog($"☆ タイトル照合で取込 (タグ書込済): {chosen.Title}");
+                    }
+                    else
+                    {
+                        _titleMatchApiFailed++;
+                        AppendImportLog(
+                            $"☆ タイトル照合で取込 (タグ未書込 - UUID解決失敗: {outcome.ApiError}): {chosen.Title}");
+                    }
+                    _titleMatchImported++;
+
+                    // API を実際に叩いた場合のみレート制限ディレイを入れる
+                    if (neededApiResolve && apiDelayMs > 0) await Task.Delay(apiDelayMs, ct);
+                }
+                catch (Exception ex)
+                {
+                    _failedCount++;
+                    _dbFailedItems.Add((chosen.Title, chosen.VideoId, ex.Message));
+                    AppendImportLog($"[失敗] タイトル照合: {chosen.Title}: {ex.Message}");
+                    LoggingService.Instance.Warn($"TitleMatch Import 失敗 ({chosen.VideoId}): {ex.Message}");
+                }
+            }
+        }
+
         private void ShowSummary()
         {
             if (IsDisposed) return;
@@ -694,6 +994,7 @@ namespace IwaraDownloader.Forms
             lblSummary.Text =
                 L.T("ImportFromFolderWizard_D022", _importedNew) +
                 L.T("ImportFromFolderWizard_D023", _mergedCount) +
+                L.T("ImportFromFolderWizard_D031", _titleMatchImported) +
                 L.T("ImportFromFolderWizard_D024", _skippedExistingCount) +
                 L.T("ImportFromFolderWizard_D025", _untaggedCount) +
                 L.T("ImportFromFolderWizard_D026", apiFailed) +
@@ -713,7 +1014,7 @@ namespace IwaraDownloader.Forms
             try
             {
                 var msg =
-                    $"新規 {_importedNew} / マージ {_mergedCount} / スキップ(既存) {_skippedExistingCount}";
+                    $"新規 {_importedNew} / マージ {_mergedCount} / タイトル照合 {_titleMatchImported} / スキップ(既存) {_skippedExistingCount}";
                 Services.NotificationService.Instance.ShowNotification(L.T("ImportFromFolderWizard_D030"), msg);
             }
             catch (Exception ex)
@@ -743,7 +1044,7 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private string? WriteImportErrorLog()
         {
-            int totalErrors = _untaggedFiles.Count + _apiFailedItems.Count + _dbFailedItems.Count;
+            int totalErrors = _untaggedFiles.Count + _apiFailedItems.Count + _dbFailedItems.Count + _alreadyOwnedFiles.Count;
             if (totalErrors == 0) return null;
 
             try
@@ -772,6 +1073,12 @@ namespace IwaraDownloader.Forms
                 {
                     sb.AppendLine("--- タグ無しスキップ (mp4 内に iwara カスタムタグが無いファイル) ---");
                     foreach (var f in _untaggedFiles) sb.AppendLine(f);
+                    sb.AppendLine();
+                }
+                if (_alreadyOwnedFiles.Count > 0)
+                {
+                    sb.AppendLine("--- 重複 (ファイル名/フォルダ名のvideoIdが既にDL済みの動画と一致) ---");
+                    foreach (var f in _alreadyOwnedFiles) sb.AppendLine(f);
                     sb.AppendLine();
                 }
                 if (_apiFailedItems.Count > 0)
@@ -884,6 +1191,107 @@ namespace IwaraDownloader.Forms
             public string Site = "";  // 自動 site フォールバックで判明した場合に格納
             public bool ApiOk;
             public string? ApiError;
+        }
+
+        /// <summary>
+        /// clbTitleMatches に表示する1行分のラッパー。
+        /// ファイル名照合は UUID/サイズ照合より確度が低いため、既定でチェックが入るのは
+        /// 「曖昧でない かつ Prefix tier でない かつ Duration が閾値内で一致」の高確度な場合のみ。
+        /// </summary>
+        private class TitleMatchDisplayItem
+        {
+            public Utils.TitleMatchCandidate Candidate = null!;
+            public double? DurationDiffSeconds;
+            public bool DurationOk;
+            /// <summary>
+            /// アーティストフォルダ選択検索で、対象アーティストが既に購読済みだった場合の SubscribedUser。
+            /// 取り込み時に新規動画の SubscribedUserId 補完へ渡す (null = 単発扱い)。
+            /// </summary>
+            public Models.SubscribedUser? SubUser;
+
+            private Models.VideoInfo? _selectedVideo;
+
+            /// <summary>
+            /// 実際に取り込む動画。既定は Candidate.Video だが、Candidate.AlternativeCandidates が
+            /// ある行 (1ファイルに複数候補で自動確定できなかった) は、グリッドのドロップダウンで
+            /// ユーザーが選び直せる。取り込み処理はこちらを見る (Candidate.Video ではなく)。
+            /// </summary>
+            public Models.VideoInfo SelectedVideo
+            {
+                get => _selectedVideo ?? Candidate.Video;
+                set => _selectedVideo = value;
+            }
+
+            /// <summary>ドロップダウンで既定候補から選び直された行は true (確度表示を専用ラベルに切り替える)</summary>
+            public bool ManuallySelected { get; set; }
+
+            public bool HighConfidence
+            {
+                get
+                {
+                    if (Candidate.Ambiguous) return false;
+                    if (Candidate.Tier == Utils.TitleMatchTier.Prefix) return false;
+                    if (Candidate.Tier == Utils.TitleMatchTier.Id)
+                    {
+                        // videoId 直接一致はほぼ確実な一致なので、Duration が不明でも高確度扱いにする。
+                        // ただし Duration が判明していて閾値を超えて食い違うなら (別マスターへの差し替え等)
+                        // 要確認に落とす。
+                        return !DurationDiffSeconds.HasValue || DurationDiffSeconds.Value <= 5.0;
+                    }
+                    return DurationOk; // Exact/Substring は Duration 一致が必須
+                }
+            }
+
+            public string TierLabel => Candidate.Tier switch
+            {
+                Utils.TitleMatchTier.Id => L.T("ImportFromFolderWizard_TMTierId"),
+                Utils.TitleMatchTier.Exact => L.T("ImportFromFolderWizard_TMTierExact"),
+                Utils.TitleMatchTier.Substring => L.T("ImportFromFolderWizard_TMTierSubstring"),
+                _ => L.T("ImportFromFolderWizard_TMTierPrefix"),
+            };
+
+            /// <summary>グリッドの「確度/安全性」列に出す文字列 (=このままマージしてよさそうかの判定)</summary>
+            public string ConfidenceLabel
+            {
+                get
+                {
+                    if (ManuallySelected)
+                    {
+                        return DurationOk
+                            ? L.T("ImportFromFolderWizard_TMManuallySelected")
+                            : L.T("ImportFromFolderWizard_TMManuallySelectedReview");
+                    }
+                    if (HighConfidence) return L.T("ImportFromFolderWizard_TMHighConfidence");
+                    if (Candidate.Ambiguous)
+                    {
+                        var reasonText = Candidate.AmbiguousReason == Utils.AmbiguousReason.MultipleFilesForCandidate
+                            ? L.T("ImportFromFolderWizard_TMAmbiguousMultiFile")
+                            : L.T("ImportFromFolderWizard_TMAmbiguousMultiCandidate");
+                        return L.T("ImportFromFolderWizard_TMNeedsReviewWithReason", reasonText);
+                    }
+                    return L.T("ImportFromFolderWizard_TMNeedsReview");
+                }
+            }
+
+            public string DurationLabel => DurationDiffSeconds.HasValue
+                ? L.T("ImportFromFolderWizard_TMDurationDiff", DurationDiffSeconds.Value.ToString("F0"))
+                : L.T("ImportFromFolderWizard_TMDurationUnknown");
+
+            public string FileName => Path.GetFileName(Candidate.FilePath);
+
+            public override string ToString() =>
+                $"[{ConfidenceLabel}/{TierLabel}/{DurationLabel}] {FileName} → {SelectedVideo.Title}  ({Candidate.FilePath})";
+        }
+
+        /// <summary>
+        /// colTMArtist の DataGridViewComboBoxCell に入れる選択肢1件のラッパー。
+        /// ToString() がそのままドロップダウンの表示文字列になる。
+        /// </summary>
+        private class ArtistCandidateOption
+        {
+            public Models.VideoInfo Video { get; }
+            public ArtistCandidateOption(Models.VideoInfo video) => Video = video;
+            public override string ToString() => $"{Video.AuthorUsername} / {Video.Title}";
         }
 
         private class AuthorEntry
