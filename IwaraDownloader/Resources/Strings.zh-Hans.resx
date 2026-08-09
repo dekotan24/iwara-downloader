@@ -3081,7 +3081,7 @@ videoId 后导入数据库。
     <value>发现 {0} 个没有标签的文件。请选择搜索方式。</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
-    <value>例如: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
+    <value>例如: "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
   </data>
   <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
     <value>选择作者的文件夹</value>
@@ -3169,8 +3169,8 @@ videoId 后导入数据库。
     <value>文件名模板:</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
-    <value>{id} = 视频ID / {title} = 标题。此模式只匹配这一位作者的视频，因此不需要 {artist}。
-例如: "{id}_{title}.mp4" / "{title}.mp4"</value>
+    <value>{id}=视频ID / {title}=标题 / {date}=日期 (yyyy-MM-dd、yyyy_MM_dd、yyyyMMdd等)
+例如: "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>以文件名为线索，面向整个本地数据库进行匹配。仅匹配数据库中已有的记录(不会新增视频)。</value>
@@ -3179,8 +3179,8 @@ videoId 后导入数据库。
     <value>路径结构提示(可选):</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
-    <value>{id} = 视频ID / {title} = 标题 / {artist} (或 {author}) = 作者名。
-例如: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
+    <value>{id}=视频ID / {title}=标题 / {artist}=作者 / {date}=日期
+例如: "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>无标签文件不会被导入此应用。</value>

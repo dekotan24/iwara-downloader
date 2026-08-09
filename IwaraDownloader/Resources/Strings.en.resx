@@ -3081,7 +3081,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Found {0} file(s) without a tag. Choose how to search for matches.</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
-    <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
+    <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
   </data>
   <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
     <value>Select the artist's folder</value>
@@ -3169,8 +3169,8 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Filename template:</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
-    <value>{id} = video ID / {title} = title. {artist} is not needed since this mode already targets one artist.
-e.g. "{id}_{title}.mp4" / "{title}.mp4"</value>
+    <value>{id}=video ID / {title}=title / {date}=date (yyyy-MM-dd, yyyy_MM_dd, yyyyMMdd, etc.)
+e.g. "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>Matches by filename against the whole local DB. Only matches existing DB entries (never adds new videos).</value>
@@ -3179,8 +3179,8 @@ e.g. "{id}_{title}.mp4" / "{title}.mp4"</value>
     <value>Path structure hint (optional):</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
-    <value>{id} = video ID / {title} = title / {artist} (or {author}) = artist name.
-e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
+    <value>{id}=video ID / {title}=title / {artist}=artist / {date}=date
+e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>Untagged files will not be imported into this app.</value>

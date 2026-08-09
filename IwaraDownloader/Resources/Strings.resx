@@ -3085,7 +3085,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>タグの無いファイルが {0} 件見つかりました。検索方法を選んでください。</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
-    <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
+    <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
   </data>
   <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
     <value>アーティストのフォルダを選択</value>
@@ -3173,8 +3173,8 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ファイル名テンプレート:</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
-    <value>{id} = 動画ID / {title} = タイトル。このアーティストの動画とだけ照合するので {artist} は不要です。
-例: "{id}_{title}.mp4" / "{title}.mp4"</value>
+    <value>{id}=動画ID / {title}=タイトル / {date}=日付 (yyyy-MM-dd・yyyy_MM_dd・yyyyMMdd等)
+例: "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>ローカルDB全体を対象にファイル名だけで照合します。既存のDB登録済み動画への照合のみ (新規追加はしません)。</value>
@@ -3183,8 +3183,8 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>パス構成のヒント (任意):</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
-    <value>{id} = 動画ID / {title} = タイトル / {artist} (または {author}) = 作者名。
-例: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
+    <value>{id}=動画ID / {title}=タイトル / {artist}=作者 / {date}=日付
+例: "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>タグの無いファイルはこのアプリに取り込みません。</value>

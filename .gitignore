@@ -4,6 +4,8 @@
 /.vs
 /IwaraDownloader/obj
 /IwaraDownloader/bin
+/IwaraDownloader.Tests/obj
+/IwaraDownloader.Tests/bin
 *.user
 
 # Python embeddable runtime artifacts
