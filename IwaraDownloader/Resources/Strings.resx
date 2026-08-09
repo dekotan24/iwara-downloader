@@ -1347,7 +1347,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>▶即DL: ON</value>
   </data>
   <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
-    <value>OFFにすると、追加したアーティスト/動画は保留 (Pending) のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。</value>
+    <value>OFFにすると、追加したアーティスト/動画は保留状態のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>ログイン</value>

@@ -70,7 +70,7 @@
   "MainForm_btnClipMonitor": "📋監視: OFF",
   "MainForm_btnClipMonitor_Tip": "クリップボード監視: iwara URL を自動でキュー追加",
   "MainForm_btnImmediateDownload": "▶即DL: ON",
-  "MainForm_btnImmediateDownload_Tip": "OFFにすると、追加したアーティスト/動画は保留 (Pending) のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。",
+  "MainForm_btnImmediateDownload_Tip": "OFFにすると、追加したアーティスト/動画は保留状態のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。",
   "MainForm_btnViewMode": "📋詳細",
   "MainForm_btnViewMode_Tip": "表示モード切替 (詳細 / サムネ)",
   "MainForm_btnSettings": "設定",

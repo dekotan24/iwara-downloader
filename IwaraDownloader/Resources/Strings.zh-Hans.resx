@@ -1343,7 +1343,7 @@ videoId 后导入数据库。
     <value>▶立即DL：开</value>
   </data>
   <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
-    <value>关闭后，新添加的作者/视频将保持待机(Pending)状态，不会自动开始下载。可以稍后通过右键菜单的「下载」手动开始。不影响定期新作检查的自动下载。</value>
+    <value>关闭后，新添加的作者/视频将保持待机状态，不会自动开始下载。可以稍后通过右键菜单的「下载」手动开始。不影响定期新作检查的自动下载。</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>登录</value>

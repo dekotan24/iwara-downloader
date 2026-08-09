@@ -1218,7 +1218,7 @@ Downloaded files will be deleted (restorable later)</value>
     <value>Mapped local file to "{0}"</value>
   </data>
   <data name="MainForm_D188" xml:space="preserve">
-    <value>Video "{0}" added (Pending, not downloading yet)</value>
+    <value>Video "{0}" added (on hold, not downloading yet)</value>
   </data>
   <data name="MainForm_D189" xml:space="preserve">
     <value>▶Auto-DL: ON</value>
@@ -1343,7 +1343,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>▶Auto-DL: ON</value>
   </data>
   <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
-    <value>When OFF, newly added artists/videos stay Pending and are not downloaded automatically. You can start them later from the right-click "Download" menu. This does not affect auto-downloading from the periodic new-video check.</value>
+    <value>When OFF, newly added artists/videos stay on hold and are not downloaded automatically. You can start them later from the right-click "Download" menu. This does not affect auto-downloading from the periodic new-video check.</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>Log in</value>

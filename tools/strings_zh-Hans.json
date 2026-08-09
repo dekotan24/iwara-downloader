@@ -70,7 +70,7 @@
   "MainForm_btnClipMonitor": "📋监视: OFF",
   "MainForm_btnClipMonitor_Tip": "剪贴板监视：自动将 iwara URL 加入队列",
   "MainForm_btnImmediateDownload": "▶立即DL：开",
-  "MainForm_btnImmediateDownload_Tip": "关闭后，新添加的作者/视频将保持待机(Pending)状态，不会自动开始下载。可以稍后通过右键菜单的「下载」手动开始。不影响定期新作检查的自动下载。",
+  "MainForm_btnImmediateDownload_Tip": "关闭后，新添加的作者/视频将保持待机状态，不会自动开始下载。可以稍后通过右键菜单的「下载」手动开始。不影响定期新作检查的自动下载。",
   "MainForm_btnViewMode": "📋详细",
   "MainForm_btnViewMode_Tip": "切换显示模式（详细 / 缩略图）",
   "MainForm_btnSettings": "设置",
