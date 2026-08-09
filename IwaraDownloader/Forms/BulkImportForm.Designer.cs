@@ -27,6 +27,7 @@ namespace IwaraDownloader.Forms
             this.btnImport = new Button();
             this.btnCancel = new Button();
             this.lblHelp = new Label();
+            this.chkImmediateDownload = new CheckBox();
             this.SuspendLayout();
 
             // 
@@ -111,21 +112,33 @@ namespace IwaraDownloader.Forms
             this.lblHelp.Size = new Size(400, 30);
             this.lblHelp.Text = "※ 対応形式: 動画URL / チャンネル(プロフィール)URL / VideoIdのみ (iwara.tv・iwara.ai 両対応)\n※ 重複URLは自動でスキップされます";
 
-            // 
+            //
+            // chkImmediateDownload
+            //
+            this.chkImmediateDownload.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            this.chkImmediateDownload.AutoSize = true;
+            this.chkImmediateDownload.Location = new Point(12, 394);
+            this.chkImmediateDownload.Name = "chkImmediateDownload";
+            this.chkImmediateDownload.Size = new Size(300, 19);
+            this.chkImmediateDownload.TabIndex = 8;
+            this.chkImmediateDownload.Text = "チャンネルの動画を今すぐダウンロード開始する";
+            this.chkImmediateDownload.UseVisualStyleBackColor = true;
+
+            //
             // progressBar
-            // 
+            //
             this.progressBar.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            this.progressBar.Location = new Point(12, 400);
+            this.progressBar.Location = new Point(12, 414);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new Size(460, 20);
             this.progressBar.TabIndex = 5;
             this.progressBar.Visible = false;
 
-            // 
+            //
             // btnImport
-            // 
+            //
             this.btnImport.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            this.btnImport.Location = new Point(316, 430);
+            this.btnImport.Location = new Point(316, 444);
             this.btnImport.Name = "btnImport";
             this.btnImport.Size = new Size(75, 27);
             this.btnImport.TabIndex = 6;
@@ -133,12 +146,12 @@ namespace IwaraDownloader.Forms
             this.btnImport.UseVisualStyleBackColor = true;
             this.btnImport.Click += new EventHandler(this.btnImport_Click);
 
-            // 
+            //
             // btnCancel
-            // 
+            //
             this.btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             this.btnCancel.DialogResult = DialogResult.Cancel;
-            this.btnCancel.Location = new Point(397, 430);
+            this.btnCancel.Location = new Point(397, 444);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new Size(75, 27);
             this.btnCancel.TabIndex = 7;
@@ -146,14 +159,14 @@ namespace IwaraDownloader.Forms
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new EventHandler(this.btnCancel_Click);
 
-            // 
+            //
             // BulkImportForm
-            // 
+            //
             this.AcceptButton = this.btnImport;
             this.AutoScaleDimensions = new SizeF(7F, 15F);
             this.AutoScaleMode = AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new Size(484, 470);
+            this.ClientSize = new Size(484, 484);
             this.Controls.Add(this.lblDescription);
             this.Controls.Add(this.txtUrls);
             this.Controls.Add(this.btnPaste);
@@ -161,12 +174,13 @@ namespace IwaraDownloader.Forms
             this.Controls.Add(this.btnClear);
             this.Controls.Add(this.lblStats);
             this.Controls.Add(this.lblHelp);
+            this.Controls.Add(this.chkImmediateDownload);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.btnImport);
             this.Controls.Add(this.btnCancel);
             this.FormBorderStyle = FormBorderStyle.Sizable;
             this.MinimizeBox = false;
-            this.MinimumSize = new Size(400, 400);
+            this.MinimumSize = new Size(400, 414);
             this.Name = "BulkImportForm";
             this.ShowInTaskbar = false;
             this.StartPosition = FormStartPosition.CenterParent;
@@ -188,5 +202,6 @@ namespace IwaraDownloader.Forms
         private ProgressBar progressBar;
         private Button btnImport;
         private Button btnCancel;
+        private CheckBox chkImmediateDownload;
     }
 }

@@ -141,6 +141,9 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>从剪贴板</value>
   </data>
+  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
+    <value>立即开始下载频道的视频</value>
+  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>请输入 iwara.tv / iwara.ai 的视频或频道URL（每行一个URL）</value>
   </data>
@@ -1214,6 +1217,15 @@ videoId 后导入数据库。
   <data name="MainForm_D187" xml:space="preserve">
     <value>已将本地文件映射到「{0}」</value>
   </data>
+  <data name="MainForm_D188" xml:space="preserve">
+    <value>已添加视频「{0}」(待机中，尚未开始下载)</value>
+  </data>
+  <data name="MainForm_D189" xml:space="preserve">
+    <value>▶立即DL：开</value>
+  </data>
+  <data name="MainForm_D190" xml:space="preserve">
+    <value>⏸立即DL：关</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1326,6 +1338,12 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_btnHelp" xml:space="preserve">
     <value>帮助</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload" xml:space="preserve">
+    <value>▶立即DL：开</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
+    <value>关闭后，新添加的作者/视频将保持待机(Pending)状态，不会自动开始下载。可以稍后通过右键菜单的「下载」手动开始。不影响定期新作检查的自动下载。</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>登录</value>

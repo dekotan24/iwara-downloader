@@ -138,6 +138,10 @@ namespace IwaraDownloader.Forms
             SetNsfwFilter(settings.NsfwFilterMode);
             btnViewMode.Checked = settings.VideoListViewMode == 1;
             btnClipMonitor.Checked = settings.EnableClipboardMonitor;
+            // Checked への代入は「デフォルト値(false)と一致」だと CheckedChanged が発火しないため、
+            // 表示(Text/BackColor)を確実に同期させるためハンドラを明示的にも呼ぶ。
+            btnImmediateDownload.Checked = settings.ImmediateDownloadOnAdd;
+            btnImmediateDownload_CheckedChanged(this, EventArgs.Empty);
 
             // ダウンロードマネージャー開始
             SplashForm.UpdateStatus(L.T("MainForm_D010"), 80);
@@ -695,13 +699,15 @@ namespace IwaraDownloader.Forms
                 }
 
                 var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                var task = await _downloadManager.AddSingleVideoAsync(url, progress);
+                var addedVideo = await _downloadManager.AddSingleVideoAsync(url, progress);
 
-                if (task != null)
+                if (addedVideo != null)
                 {
                     RefreshChannelTree();
                     RefreshVideoList();
-                    UpdateStatusBar(L.T("MainForm_D055", task.Video.Title));
+                    var statusKey = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd
+                        ? "MainForm_D055" : "MainForm_D188";
+                    UpdateStatusBar(L.T(statusKey, addedVideo.Title));
                 }
                 else
                 {
@@ -1008,12 +1014,16 @@ namespace IwaraDownloader.Forms
                 var chCompletedCount = videos.Count(v => v.Status == DownloadStatus.Completed);
                 var chDownloadingVideos = videos.Count(v => v.Status == DownloadStatus.Downloading);
                 var chPendingVideos = videos.Count(v => v.Status == DownloadStatus.Pending);
-                
+                // Paused には issue #21 の「後でDL」対象 (キュー未投入のまま待機中) も含まれる
+                var chPausedVideos = videos.Count(v => v.Status == DownloadStatus.Paused);
+
                 var statusText = "";
                 if (chDownloadingVideos > 0)
                     statusText = $" 🔄{chDownloadingVideos}";
                 else if (chPendingVideos > 0)
                     statusText = $" ⏳{chPendingVideos}";
+                if (chPausedVideos > 0)
+                    statusText += $" ⏸️{chPausedVideos}";
                 
                 var nodeText = $"{(user.IsEnabled ? "📺" : "⬜")} {user.Username} [{chCompletedCount}/{videos.Count}]{statusText}";
                 var node = new TreeNode(nodeText)
@@ -1689,9 +1699,11 @@ namespace IwaraDownloader.Forms
 
             if (selectedNode?.Tag is SubscribedUser user)
             {
-                // チャンネルの全動画DL
+                // チャンネルの全動画DL。Paused (issue #21 の「後でDL」対象) は無条件で含む。
+                // Pending はキュー未投入 (孤立Pending。取得処理が中断した場合等) のみ含める
                 videos = _database.GetVideosBySubscribedUser(user.Id)
-                    .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                    .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                             && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                     .ToList();
 
                 foreach (var video in videos)
@@ -1705,7 +1717,8 @@ namespace IwaraDownloader.Forms
                 if (tag == NODE_NOT_DOWNLOADED)
                 {
                     videos = _database.GetAllVideos()
-                        .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                        .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                                 && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                         .ToList();
                 }
                 else if (tag == NODE_FAILED_VIDEOS)
@@ -1722,7 +1735,8 @@ namespace IwaraDownloader.Forms
                 else if (tag == NODE_SINGLE_VIDEOS)
                 {
                     videos = _database.GetAllVideos()
-                        .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                        .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                                 && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                         .ToList();
                 }
                 else
@@ -2001,10 +2015,14 @@ namespace IwaraDownloader.Forms
             bool hasFailed = selected.Any(v => v.Status == DownloadStatus.Failed);
             bool hasPaused = selected.Any(v => v.Status == DownloadStatus.Paused);
             bool hasSkipped = selected.Any(v => v.Status == DownloadStatus.Skipped);
+            // issue #21 の「後でDL」で追加した動画は Paused (常にダウンロード開始対象)。
+            // Pending は基本「既にキュー投入済み」の想定だが、取得処理の中断等でキュー未投入の
+            // まま Pending になるケースがあるため、GetTask が null ならそれ (孤立Pending) と
+            // 判断してダウンロード開始の対象に含める。
             bool canDownload = selected.Any(v =>
                 v.Status != DownloadStatus.Completed &&
                 v.Status != DownloadStatus.Downloading &&
-                v.Status != DownloadStatus.Pending);
+                (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null));
             bool canCancel = hasPending || hasDownloading || hasPaused;
             bool canRefreshInfo = selected.Any(v =>
                 string.IsNullOrEmpty(v.Title) || v.Title.StartsWith("Video "));
@@ -2086,7 +2104,13 @@ namespace IwaraDownloader.Forms
             
             foreach (var video in selectedVideos)
             {
-                if (video.Status != DownloadStatus.Downloading && video.Status != DownloadStatus.Completed && video.Status != DownloadStatus.Pending)
+                // issue #21 の「後でDL」対象 (Paused) は下の条件で無条件に含まれる。
+                // Pending でもキュー未投入 (孤立Pending。取得処理の中断等) ならここで開始する。
+                // 既にキュー投入済みなら EnqueueDownload 内の重複ガードで無害な no-op。
+                bool isOrphanPending = video.Status == DownloadStatus.Pending
+                    && _downloadManager.GetTask(video.VideoId) == null;
+                if (video.Status != DownloadStatus.Downloading && video.Status != DownloadStatus.Completed
+                    && (video.Status != DownloadStatus.Pending || isOrphanPending))
                 {
                     // 失敗時はリトライ回数をリセット
                     if (video.Status == DownloadStatus.Failed)
@@ -3547,6 +3571,21 @@ namespace IwaraDownloader.Forms
                 catch (Exception ex) { Debug.WriteLine($"Clipboard handler error: {ex.Message}"); }
             }
             base.WndProc(ref m);
+        }
+
+        /// <summary>
+        /// アーティスト/単発動画「追加」時に即ダウンロード開始するか ON/OFF トグル (issue #21)。
+        /// OFF でも定期的な新着チェックの自動DL設定 (AutoDownloadOnCheck) には影響しない。
+        /// </summary>
+        private void btnImmediateDownload_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = btnImmediateDownload.Checked;
+            btnImmediateDownload.Text = enabled ? L.T("MainForm_D189") : L.T("MainForm_D190");
+            btnImmediateDownload.BackColor = enabled ? SystemColors.Control : Color.LightSalmon;
+
+            var settings = SettingsManager.Instance.Settings;
+            settings.ImmediateDownloadOnAdd = enabled;
+            SettingsManager.Instance.Save();
         }
 
         /// <summary>

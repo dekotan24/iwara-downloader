@@ -141,6 +141,9 @@ Log in from the settings screen.</value>
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>From Clipboard</value>
   </data>
+  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
+    <value>Start downloading channel videos immediately</value>
+  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>Enter iwara.tv / iwara.ai video or channel URLs (one URL per line)</value>
   </data>
@@ -1214,6 +1217,15 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D187" xml:space="preserve">
     <value>Mapped local file to "{0}"</value>
   </data>
+  <data name="MainForm_D188" xml:space="preserve">
+    <value>Video "{0}" added (Pending, not downloading yet)</value>
+  </data>
+  <data name="MainForm_D189" xml:space="preserve">
+    <value>▶Auto-DL: ON</value>
+  </data>
+  <data name="MainForm_D190" xml:space="preserve">
+    <value>⏸Auto-DL: OFF</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1326,6 +1338,12 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_btnHelp" xml:space="preserve">
     <value>Help</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload" xml:space="preserve">
+    <value>▶Auto-DL: ON</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
+    <value>When OFF, newly added artists/videos stay Pending and are not downloaded automatically. You can start them later from the right-click "Download" menu. This does not affect auto-downloading from the periodic new-video check.</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>Log in</value>

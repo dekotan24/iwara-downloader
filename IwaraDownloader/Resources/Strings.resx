@@ -141,6 +141,9 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>クリップボードから</value>
   </data>
+  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
+    <value>チャンネルの動画を今すぐダウンロード開始する</value>
+  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>iwara.tv / iwara.ai の動画・チャンネルURLを入力してください(1行に1URL)</value>
   </data>
@@ -1218,6 +1221,15 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_D187" xml:space="preserve">
     <value>「{0}」にローカルファイルをマップしました</value>
   </data>
+  <data name="MainForm_D188" xml:space="preserve">
+    <value>動画「{0}」を追加しました (保留中、ダウンロードは開始していません)</value>
+  </data>
+  <data name="MainForm_D189" xml:space="preserve">
+    <value>▶即DL: ON</value>
+  </data>
+  <data name="MainForm_D190" xml:space="preserve">
+    <value>⏸即DL: OFF</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1330,6 +1342,12 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_btnHelp" xml:space="preserve">
     <value>ヘルプ</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload" xml:space="preserve">
+    <value>▶即DL: ON</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
+    <value>OFFにすると、追加したアーティスト/動画は保留 (Pending) のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>ログイン</value>
