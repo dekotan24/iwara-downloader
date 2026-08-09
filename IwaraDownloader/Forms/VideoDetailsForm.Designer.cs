@@ -45,6 +45,7 @@ namespace IwaraDownloader.Forms
             this.lblLocalFilePath = new Label();
             this.txtLocalFilePath = new TextBox();
             this.btnOpenFile = new Button();
+            this.btnRemapFile = new Button();
             this.lblRetry = new Label();
             this.txtRetry = new TextBox();
             this.lblLastError = new Label();
@@ -135,20 +136,26 @@ namespace IwaraDownloader.Forms
 
                 var fileRow = new TableLayoutPanel
                 {
-                    ColumnCount = 2,
+                    ColumnCount = 3,
                     RowCount = 1,
                     Dock = DockStyle.Fill,
                     Margin = new Padding(0)
                 };
                 fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
                 fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70F));
+                fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80F));
                 txtLocalFilePath.ReadOnly = true;
                 txtLocalFilePath.Dock = DockStyle.Fill;
                 btnOpenFile.Text = Utils.L.T("VideoDetailsForm_btnOpen");
                 btnOpenFile.Dock = DockStyle.Fill;
                 btnOpenFile.Click += btnOpenFile_Click;
+                // 再マップは常時有効 (状態を問わず、誤って紐付いたファイルの修正にも使えるように)
+                btnRemapFile.Text = Utils.L.T("VideoDetailsForm_btnRemap");
+                btnRemapFile.Dock = DockStyle.Fill;
+                btnRemapFile.Click += btnRemapFile_Click;
                 fileRow.Controls.Add(txtLocalFilePath, 0, 0);
                 fileRow.Controls.Add(btnOpenFile, 1, 0);
+                fileRow.Controls.Add(btnRemapFile, 2, 0);
 
                 tableLayout.Controls.Add(lblLocalFilePath);
                 tableLayout.Controls.Add(fileRow);
@@ -239,7 +246,7 @@ namespace IwaraDownloader.Forms
         private TextBox txtTitle, txtSource, txtAuthor, txtVideoId, txtFileUuid, txtStatus, txtDuration, txtFileSize;
         private TextBox txtPostedAt, txtDownloadedAt, txtCreatedAt, txtUrl, txtLocalFilePath, txtRetry, txtLastError;
         private TextBox txtTags, txtMemo;
-        private Button btnOpenUrl, btnOpenFile, btnSave, btnCancel;
+        private Button btnOpenUrl, btnOpenFile, btnRemapFile, btnSave, btnCancel;
         private TableLayoutPanel tableLayout;
     }
 }

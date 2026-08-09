@@ -1215,6 +1215,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 検索 (タイトル/アーティスト/タグ)...</value>
   </data>
+  <data name="MainForm_D187" xml:space="preserve">
+    <value>「{0}」にローカルファイルをマップしました</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1516,6 +1519,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ お気に入りに追加</value>
+  </data>
+  <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
+    <value>ローカルファイルをマップ...</value>
   </data>
   <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
     <value>投稿者のページを開く</value>
@@ -3066,6 +3072,44 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SvcIwaraApiService_D011" xml:space="preserve">
     <value>セットアップに失敗しました(詳細はログ参照)</value>
   </data>
+  <data name="SvcLocalFileMap_D001" xml:space="preserve">
+    <value>ローカルファイルを選択: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D002" xml:space="preserve">
+    <value>MP4 動画 (*.mp4)|*.mp4|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="SvcLocalFileMap_D003" xml:space="preserve">
+    <value>「{0}」に次のファイルを紐付けます:
+{1}
+
+よろしいですか?</value>
+  </data>
+  <data name="SvcLocalFileMap_D004" xml:space="preserve">
+    <value>
+
+(元のパスは削除されず残ります: {0})</value>
+  </data>
+  <data name="SvcLocalFileMap_D005" xml:space="preserve">
+    <value>ローカルファイルのマップ確認</value>
+  </data>
+  <data name="SvcLocalFileMap_D006" xml:space="preserve">
+    <value>マップに失敗しました: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D007" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="SvcLocalFileMap_D008" xml:space="preserve">
+    <value>選択したファイル:
+{0}
+
+このファイルは既に別の動画「{1}」の iwara タグが書き込まれています。
+このまま進めるとそちらのタグは上書きされ、元の動画側は紐付けが解除されたままになります。
+
+本当にこのファイルを使いますか?</value>
+  </data>
+  <data name="SvcLocalFileMap_D009" xml:space="preserve">
+    <value>別の動画のタグが検出されました</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>ダウンロード完了</value>
   </data>
@@ -3266,6 +3310,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
     <value>開く</value>
+  </data>
+  <data name="VideoDetailsForm_btnRemap" xml:space="preserve">
+    <value>再マップ...</value>
   </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>

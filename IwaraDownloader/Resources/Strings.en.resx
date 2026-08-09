@@ -1211,6 +1211,9 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 Search (title/artist/tags)...</value>
   </data>
+  <data name="MainForm_D187" xml:space="preserve">
+    <value>Mapped local file to "{0}"</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1512,6 +1515,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ Add to Favorites</value>
+  </data>
+  <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
+    <value>Map local file...</value>
   </data>
   <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
     <value>Open Author's Page</value>
@@ -3062,6 +3068,44 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SvcIwaraApiService_D011" xml:space="preserve">
     <value>Setup failed (see the log for details)</value>
   </data>
+  <data name="SvcLocalFileMap_D001" xml:space="preserve">
+    <value>Select local file: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D002" xml:space="preserve">
+    <value>MP4 video (*.mp4)|*.mp4|All files (*.*)|*.*</value>
+  </data>
+  <data name="SvcLocalFileMap_D003" xml:space="preserve">
+    <value>This will link "{0}" to the following file:
+{1}
+
+Continue?</value>
+  </data>
+  <data name="SvcLocalFileMap_D004" xml:space="preserve">
+    <value>
+
+(The old path will not be deleted: {0})</value>
+  </data>
+  <data name="SvcLocalFileMap_D005" xml:space="preserve">
+    <value>Confirm local file mapping</value>
+  </data>
+  <data name="SvcLocalFileMap_D006" xml:space="preserve">
+    <value>Failed to map: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D007" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="SvcLocalFileMap_D008" xml:space="preserve">
+    <value>Selected file:
+{0}
+
+This file already has iwara tags for a different video, "{1}".
+Proceeding will overwrite that tag, leaving the other video unlinked from any file.
+
+Use this file anyway?</value>
+  </data>
+  <data name="SvcLocalFileMap_D009" xml:space="preserve">
+    <value>Tags for a different video detected</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>Download complete</value>
   </data>
@@ -3262,6 +3306,9 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
     <value>Open</value>
+  </data>
+  <data name="VideoDetailsForm_btnRemap" xml:space="preserve">
+    <value>Remap...</value>
   </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>Save</value>

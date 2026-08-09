@@ -1977,6 +1977,7 @@ namespace IwaraDownloader.Forms
                 menuVidReDownload.Visible = false;
                 menuVidRefreshInfo.Visible = false;
                 menuVidCheckFileExists.Visible = false;
+                menuVidMapLocalFile.Visible = false;
                 menuVidPlay.Visible = false;
                 menuVidOpenFolder.Visible = false;
                 menuVidOpenPage.Visible = selected.Count == 1;   // iwara ページは開ける (本当に消えたか確認用)
@@ -2013,6 +2014,15 @@ namespace IwaraDownloader.Forms
                 && !string.IsNullOrEmpty(single!.LocalFilePath) && File.Exists(single.LocalFilePath);
             bool canOpenPage = isSingle && !string.IsNullOrEmpty(single!.Url);
             bool canOpenAuthor = isSingle && !string.IsNullOrEmpty(single!.AuthorUsername);
+            // ローカルファイルの手動マップ: ファイルが存在しない (Completed/Skipped でも実体が
+            // 消えていれば含む) / エラー(Failed) / 未DL(Pending) の1件選択時のみ
+            // (ダウンロード中・タグ書き込み中に横からファイルを差し替えると競合するため除外)
+            bool canMapLocalFile = isSingle
+                && single!.Status != DownloadStatus.Downloading
+                && single.Status != DownloadStatus.WritingTags
+                && (!single.LocalFileExists
+                    || single.Status == DownloadStatus.Failed
+                    || single.Status == DownloadStatus.Pending);
 
             menuVidDownload.Visible = canDownload;
             menuVidDownload.Text = hasFailed && !hasSkipped ? L.T("MainForm_D104") : L.T("MainForm_D105");
@@ -2021,6 +2031,7 @@ namespace IwaraDownloader.Forms
             menuVidReDownload.Visible = hasCompleted;
             menuVidRefreshInfo.Visible = canRefreshInfo;
             menuVidCheckFileExists.Visible = hasCompleted;
+            menuVidMapLocalFile.Visible = canMapLocalFile;
             menuVidPlay.Visible = canPlay;
             menuVidOpenFolder.Visible = canOpenFolder;
             menuVidOpenPage.Visible = canOpenPage;
@@ -2370,6 +2381,24 @@ namespace IwaraDownloader.Forms
         /// <summary>
         /// 動画を削除
         /// </summary>
+        /// <summary>
+        /// ローカルファイルの手動マップ (右クリックメニュー)。ファイルが存在しない/エラー/未DLの
+        /// 動画にだけ表示される (OnVideoContextMenuOpening)。外部ツールで既に手元にある mp4 を
+        /// 個別に紐付け直すための救済手段。
+        /// </summary>
+        private async void menuVidMapLocalFile_Click(object sender, EventArgs e)
+        {
+            var video = GetFirstSelectedVideo();
+            if (video == null) return;
+
+            var result = await Utils.LocalFileMapHelper.MapAsync(this, video, _downloadManager.IwaraApi, _database);
+            if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar(L.T("MainForm_D187", video.Title));
+        }
+
         private void menuVidDelete_Click(object sender, EventArgs e)
         {
             var selectedVideos = GetSelectedVideos();
@@ -2520,15 +2549,19 @@ namespace IwaraDownloader.Forms
             var video = GetFirstSelectedVideo();
             if (video == null) return;
 
-            using var form = new VideoDetailsForm(video, _database);
-            if (form.ShowDialog(this) == DialogResult.OK)
-            {
-                // タグ・メモ・お気に入り等の編集を反映 (該当行だけ再描画)
-                InvalidateVideoItem(video.VideoId);
-                // お気に入りのみ表示中なら一覧から外れる可能性 → 再フィルタ
-                if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
+            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi);
+            var dialogResult = form.ShowDialog(this);
+
+            // タグ・メモ・お気に入り等の編集は Save (OK) 時のみ DB 反映されるが、
+            // ローカルファイル再マップはダイアログ内で即DB反映される (Remapped で判別)。
+            // 該当行の再描画はどちらの場合も軽いので常時行い、ツリー再構築 (重め) は
+            // 実際に状態が変わったときだけに絞る。
+            InvalidateVideoItem(video.VideoId);
+            if (dialogResult == DialogResult.OK || form.Remapped) RefreshChannelTree();
+            // お気に入りのみ表示中なら一覧から外れる可能性 → 再フィルタ
+            if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
+            if (dialogResult == DialogResult.OK)
                 UpdateStatusBar(L.T("MainForm_D124", video.Title));
-            }
         }
 
         /// <summary>

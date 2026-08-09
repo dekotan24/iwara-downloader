@@ -995,6 +995,7 @@ namespace IwaraDownloader.Forms
             this.menuVidReDownload = new ToolStripMenuItem();
             this.menuVidRefreshInfo = new ToolStripMenuItem();
             this.menuVidCheckFileExists = new ToolStripMenuItem();
+            this.menuVidMapLocalFile = new ToolStripMenuItem();
             this.menuVidSep1 = new ToolStripSeparator();
             this.menuVidPlay = new ToolStripMenuItem();
             this.menuVidOpenFolder = new ToolStripMenuItem();
@@ -1017,6 +1018,7 @@ namespace IwaraDownloader.Forms
             {
                 this.menuVidDownload, this.menuVidCancel, this.menuVidRetryFailed,
                 this.menuVidReDownload, this.menuVidRefreshInfo, this.menuVidCheckFileExists,
+                this.menuVidMapLocalFile,
                 this.menuVidSep1,
                 this.menuVidPlay, this.menuVidOpenFolder,
                 this.menuVidSep2,
@@ -1045,6 +1047,8 @@ namespace IwaraDownloader.Forms
             this.menuVidRefreshInfo.Click += new EventHandler(this.menuVidRefreshInfo_Click);
             this.menuVidCheckFileExists.Text = "ファイル存在チェック";
             this.menuVidCheckFileExists.Click += new EventHandler(this.menuVidCheckFileExists_Click);
+            this.menuVidMapLocalFile.Text = "ローカルファイルをマップ...";
+            this.menuVidMapLocalFile.Click += new EventHandler(this.menuVidMapLocalFile_Click);
             this.menuVidPlay.Text = "再生";
             this.menuVidPlay.Click += new EventHandler(this.menuVidPlay_Click);
             this.menuVidOpenFolder.Text = "フォルダを開く";
@@ -1196,6 +1200,7 @@ namespace IwaraDownloader.Forms
         private ContextMenuStrip contextMenuVideo;
         private ToolStripMenuItem menuVidDownload, menuVidCancel, menuVidRetryFailed, menuVidReDownload;
         private ToolStripMenuItem menuVidRefreshInfo, menuVidCheckFileExists;
+        private ToolStripMenuItem menuVidMapLocalFile;
         private ToolStripSeparator menuVidSep1;
         private ToolStripMenuItem menuVidPlay, menuVidOpenFolder;
         private ToolStripSeparator menuVidSep2;

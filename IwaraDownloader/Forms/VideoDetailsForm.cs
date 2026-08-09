@@ -13,11 +13,19 @@ namespace IwaraDownloader.Forms
     {
         private readonly VideoInfo _video;
         private readonly DatabaseService _database;
+        private readonly IwaraApiService _api;
 
-        public VideoDetailsForm(VideoInfo video, DatabaseService database)
+        /// <summary>
+        /// ローカルファイル再マップが実行されたか (Save せずに閉じても DB は既に更新済みなので、
+        /// 呼び出し側はダイアログの DialogResult とは別にこれを見てチャンネルツリー等を再描画する)。
+        /// </summary>
+        public bool Remapped { get; private set; }
+
+        public VideoDetailsForm(VideoInfo video, DatabaseService database, IwaraApiService api)
         {
             _video = video;
             _database = database;
+            _api = api;
             InitializeComponent();
             Utils.Localizer.Apply(this);
             PopulateFields();
@@ -93,6 +101,20 @@ namespace IwaraDownloader.Forms
         {
             if (!string.IsNullOrEmpty(_video.LocalFilePath) && System.IO.File.Exists(_video.LocalFilePath))
                 Helpers.OpenFolderAndSelectFile(_video.LocalFilePath);
+        }
+
+        /// <summary>
+        /// ローカルファイルの再マップ。状態を問わず常時有効 (右クリックメニュー側と違い、
+        /// 既に紐付いているファイルが間違っていた場合の修正手段としても使えるように)。
+        /// </summary>
+        private async void btnRemapFile_Click(object? sender, EventArgs e)
+        {
+            var result = await Utils.LocalFileMapHelper.MapAsync(this, _video, _api, _database);
+            if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
+
+            Remapped = true;
+            // TitleMatchImporter が DB へは即反映済み。表示側も最新値に合わせる。
+            PopulateFields();
         }
 
         private void btnSave_Click(object? sender, EventArgs e)
