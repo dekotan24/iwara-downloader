@@ -4,7 +4,7 @@
 
 **Feature-rich video downloader & media server for iwara.tv / iwara.ai on Windows**
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-2.5.1-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -164,10 +164,12 @@ You can make mp4 files you already have (e.g. downloaded with an external tool) 
 | Method | Description |
 |--------|-------------|
 | Artist folder search | Explicitly designate one folder = one artist, then match only against that artist's videos (safest) |
-| Filename search | Matches against the entire local DB. Providing path hints via a `{id}` `{title}` `{artist}` template improves accuracy |
+| Filename search | Matches against the entire local DB. Providing path hints via a `{id}` `{title}` `{artist}` `{date}` template improves accuracy. `{date}` recognizes `yyyy-MM-dd`, `yyyy_MM_dd`, `yyyy.MM.dd`, and `yyyyMMdd` automatically |
 | Skip | Import nothing |
 
 Matching priority is: direct ID match → exact title match → substring match → prefix match. If a file has multiple candidates left after auto-matching, it's flagged for review in the grid, where you can pick the video to use from a dropdown.
+
+A date-like prefix at the start of a filename (e.g. `2024-06-15_Title.mp4`) and fullwidth/halfwidth punctuation mismatches between the DB and the actual file (`（）` vs `()`, etc.) are both handled automatically, even without specifying a template.
 
 </details>
 
@@ -250,6 +252,12 @@ dotnet build IwaraDownloader\IwaraDownloader.csproj -c Release
 ```
 
 Builds with Visual Studio 2022 / the .NET 10.0 SDK.
+
+Run the tests with:
+
+```powershell
+dotnet test IwaraDownloader.sln -c Debug
+```
 
 ## 🧩 Tech Stack
 

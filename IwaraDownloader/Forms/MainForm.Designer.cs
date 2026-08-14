@@ -27,6 +27,7 @@ namespace IwaraDownloader.Forms
             this.toolStrip = new ToolStrip();
             this.btnAddUser = new ToolStripButton();
             this.btnAddVideo = new ToolStripButton();
+            this.btnImmediateDownload = new ToolStripButton();
             this.toolStripSeparator1 = new ToolStripSeparator();
             this.btnCheckNow = new ToolStripButton();
             this.btnStartAll = new ToolStripButton();
@@ -463,6 +464,7 @@ namespace IwaraDownloader.Forms
             this.toolStrip.Items.AddRange(new ToolStripItem[] {
                 this.btnAddUser,
                 this.btnAddVideo,
+                this.btnImmediateDownload,
                 this.toolStripSeparator1,
                 this.btnCheckNow,
                 this.btnStartAll,
@@ -508,7 +510,19 @@ namespace IwaraDownloader.Forms
             this.btnAddVideo.ToolTipText = "動画URLを個別にキューへ追加";
             this.btnAddVideo.Click += new EventHandler(this.btnAddVideo_Click);
 
-            // 
+            //
+            // btnImmediateDownload (追加時に即DL開始するか ON/OFF)
+            //
+            this.btnImmediateDownload.AutoToolTip = true;
+            this.btnImmediateDownload.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            this.btnImmediateDownload.Name = "btnImmediateDownload";
+            this.btnImmediateDownload.Size = new Size(110, 22);
+            this.btnImmediateDownload.Text = "▶即DL: ON";
+            this.btnImmediateDownload.ToolTipText = "OFFにすると、追加したアーティスト/動画は保留 (Pending) のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。";
+            this.btnImmediateDownload.CheckOnClick = true;
+            this.btnImmediateDownload.CheckedChanged += new EventHandler(this.btnImmediateDownload_CheckedChanged);
+
+            //
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
@@ -995,6 +1009,7 @@ namespace IwaraDownloader.Forms
             this.menuVidReDownload = new ToolStripMenuItem();
             this.menuVidRefreshInfo = new ToolStripMenuItem();
             this.menuVidCheckFileExists = new ToolStripMenuItem();
+            this.menuVidMapLocalFile = new ToolStripMenuItem();
             this.menuVidSep1 = new ToolStripSeparator();
             this.menuVidPlay = new ToolStripMenuItem();
             this.menuVidOpenFolder = new ToolStripMenuItem();
@@ -1017,6 +1032,7 @@ namespace IwaraDownloader.Forms
             {
                 this.menuVidDownload, this.menuVidCancel, this.menuVidRetryFailed,
                 this.menuVidReDownload, this.menuVidRefreshInfo, this.menuVidCheckFileExists,
+                this.menuVidMapLocalFile,
                 this.menuVidSep1,
                 this.menuVidPlay, this.menuVidOpenFolder,
                 this.menuVidSep2,
@@ -1045,6 +1061,8 @@ namespace IwaraDownloader.Forms
             this.menuVidRefreshInfo.Click += new EventHandler(this.menuVidRefreshInfo_Click);
             this.menuVidCheckFileExists.Text = "ファイル存在チェック";
             this.menuVidCheckFileExists.Click += new EventHandler(this.menuVidCheckFileExists_Click);
+            this.menuVidMapLocalFile.Text = "ローカルファイルをマップ...";
+            this.menuVidMapLocalFile.Click += new EventHandler(this.menuVidMapLocalFile_Click);
             this.menuVidPlay.Text = "再生";
             this.menuVidPlay.Click += new EventHandler(this.menuVidPlay_Click);
             this.menuVidOpenFolder.Text = "フォルダを開く";
@@ -1126,6 +1144,7 @@ namespace IwaraDownloader.Forms
         private ToolStrip toolStrip;
         private ToolStripButton btnAddUser;
         private ToolStripButton btnAddVideo;
+        private ToolStripButton btnImmediateDownload;
         private ToolStripSeparator toolStripSeparator1;
         private ToolStripButton btnCheckNow;
         private ToolStripButton btnStartAll;
@@ -1196,6 +1215,7 @@ namespace IwaraDownloader.Forms
         private ContextMenuStrip contextMenuVideo;
         private ToolStripMenuItem menuVidDownload, menuVidCancel, menuVidRetryFailed, menuVidReDownload;
         private ToolStripMenuItem menuVidRefreshInfo, menuVidCheckFileExists;
+        private ToolStripMenuItem menuVidMapLocalFile;
         private ToolStripSeparator menuVidSep1;
         private ToolStripMenuItem menuVidPlay, menuVidOpenFolder;
         private ToolStripSeparator menuVidSep2;

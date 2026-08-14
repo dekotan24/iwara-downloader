@@ -195,6 +195,17 @@ namespace IwaraDownloader.Utils
                 }
 
                 var hits = CollectTitleHits(baseName, pool);
+
+                // baseName 先頭に日付らしきプレフィックスが残っている場合、それを除いた版でも
+                // 照合を試す (テンプレート未指定 / "{title}.mp4" のまま等で日付がタイトルに
+                // 紛れ込んだケースの救済。Issue #20: 日付プレフィックス付きファイル名の
+                // 短い CJK タイトルが MinFuzzyMatchLength の壁で一致しなかった問題)。
+                if (PathTemplate.TrySplitLeadingDate(baseName, out _, out var strippedBaseName)
+                    && !string.Equals(strippedBaseName, baseName, StringComparison.Ordinal))
+                {
+                    hits.AddRange(CollectTitleHits(strippedBaseName, pool));
+                }
+
                 if (hits.Count > 0) hitsByFile[f] = hits;
             }
 
@@ -250,19 +261,43 @@ namespace IwaraDownloader.Utils
             string baseName, List<VideoInfo> pool)
         {
             var hits = new List<(VideoInfo Video, TitleMatchTier Tier, string Title)>();
+            var normBaseName = NormalizeWidth(baseName);
             foreach (var v in pool)
             {
                 var title = Helpers.SanitizeFileName(v.Title ?? "");
-                if (string.Equals(baseName, title, StringComparison.OrdinalIgnoreCase))
+                var normTitle = NormalizeWidth(title);
+                if (string.Equals(normBaseName, normTitle, StringComparison.OrdinalIgnoreCase))
                     hits.Add((v, TitleMatchTier.Exact, title));
-                else if (Math.Min(baseName.Length, title.Length) >= MinFuzzyMatchLength
-                         && (baseName.Contains(title, StringComparison.OrdinalIgnoreCase)
-                             || title.Contains(baseName, StringComparison.OrdinalIgnoreCase)))
+                else if (Math.Min(normBaseName.Length, normTitle.Length) >= MinFuzzyMatchLength
+                         && (normBaseName.Contains(normTitle, StringComparison.OrdinalIgnoreCase)
+                             || normTitle.Contains(normBaseName, StringComparison.OrdinalIgnoreCase)))
                     hits.Add((v, TitleMatchTier.Substring, title));
-                else if (IsPrefixMatch(baseName, title))
+                else if (IsPrefixMatch(normBaseName, normTitle))
                     hits.Add((v, TitleMatchTier.Prefix, title));
             }
             return hits;
+        }
+
+        /// <summary>
+        /// 比較専用の正規化 (実際のタイトル文字列やファイル名そのものは書き換えない)。
+        /// 全角英数記号 (U+FF01-FF5E) を半角に、全角スペース (U+3000) を半角スペースに変換する。
+        /// 外部DLツールとDB側で全角/半角の丸括弧・記号表記が食い違う場合に一致しない問題
+        /// (Issue #20) の対策。
+        /// </summary>
+        private static string NormalizeWidth(string s)
+        {
+            var chars = new char[s.Length];
+            for (int i = 0; i < s.Length; i++)
+            {
+                var c = s[i];
+                if (c >= '！' && c <= '～')
+                    chars[i] = (char)(c - 0xFEE0);
+                else if (c == '　')
+                    chars[i] = ' ';
+                else
+                    chars[i] = c;
+            }
+            return new string(chars);
         }
 
         /// <summary>

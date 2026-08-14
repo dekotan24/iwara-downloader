@@ -31,6 +31,8 @@ namespace IwaraDownloader.Forms
         private void BulkImportForm_Load(object sender, EventArgs e)
         {
             UpdateStats();
+            // 既定値はツールバーの「即DL」トグルに合わせる (この画面限定で上書き可能)
+            chkImmediateDownload.Checked = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
         }
 
         /// <summary>
@@ -218,7 +220,9 @@ namespace IwaraDownloader.Forms
                                     Title = L.T("BulkImportForm_D015", v.Id),
                                     Url = v.Url,
                                     Site = v.Site,
-                                    Status = DownloadStatus.Pending,
+                                    // 即DLチェックOFFなら Paused で保存 (Pending だと次回起動時の
+                                    // レジュームで意図せず自動DLされてしまうため。issue #21)
+                                    Status = chkImmediateDownload.Checked ? DownloadStatus.Pending : DownloadStatus.Paused,
                                     CreatedAt = DateTime.Now
                                 });
                             }
@@ -236,7 +240,7 @@ namespace IwaraDownloader.Forms
                 {
                     foreach (var profileUrl in profiles)
                     {
-                        if (_downloadManager.EnqueueSubscribedUser(profileUrl))
+                        if (_downloadManager.EnqueueSubscribedUser(profileUrl, chkImmediateDownload.Checked))
                             addedChannels++;
                         else
                             channelFailed++;

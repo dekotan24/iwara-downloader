@@ -141,6 +141,9 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>クリップボードから</value>
   </data>
+  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
+    <value>チャンネルの動画を今すぐダウンロード開始する</value>
+  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>iwara.tv / iwara.ai の動画・チャンネルURLを入力してください(1行に1URL)</value>
   </data>
@@ -1215,6 +1218,18 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 検索 (タイトル/アーティスト/タグ)...</value>
   </data>
+  <data name="MainForm_D187" xml:space="preserve">
+    <value>「{0}」にローカルファイルをマップしました</value>
+  </data>
+  <data name="MainForm_D188" xml:space="preserve">
+    <value>動画「{0}」を追加しました (保留中、ダウンロードは開始していません)</value>
+  </data>
+  <data name="MainForm_D189" xml:space="preserve">
+    <value>▶即DL: ON</value>
+  </data>
+  <data name="MainForm_D190" xml:space="preserve">
+    <value>⏸即DL: OFF</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1327,6 +1342,12 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_btnHelp" xml:space="preserve">
     <value>ヘルプ</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload" xml:space="preserve">
+    <value>▶即DL: ON</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
+    <value>OFFにすると、追加したアーティスト/動画は保留状態のまま自動でダウンロードを開始しません。後で右クリック「ダウンロード」から手動開始できます。定期的な新着チェックの自動ダウンロードには影響しません。</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>ログイン</value>
@@ -1516,6 +1537,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ お気に入りに追加</value>
+  </data>
+  <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
+    <value>ローカルファイルをマップ...</value>
   </data>
   <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
     <value>投稿者のページを開く</value>
@@ -3066,6 +3090,55 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SvcIwaraApiService_D011" xml:space="preserve">
     <value>セットアップに失敗しました(詳細はログ参照)</value>
   </data>
+  <data name="SvcLocalFileMap_D001" xml:space="preserve">
+    <value>ローカルファイルを選択: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D002" xml:space="preserve">
+    <value>MP4 動画 (*.mp4)|*.mp4|すべてのファイル (*.*)|*.*</value>
+  </data>
+  <data name="SvcLocalFileMap_D003" xml:space="preserve">
+    <value>「{0}」に次のファイルを紐付けます:
+{1}
+
+よろしいですか?</value>
+  </data>
+  <data name="SvcLocalFileMap_D004" xml:space="preserve">
+    <value>
+
+(元のパスは削除されず残ります: {0})</value>
+  </data>
+  <data name="SvcLocalFileMap_D005" xml:space="preserve">
+    <value>ローカルファイルのマップ確認</value>
+  </data>
+  <data name="SvcLocalFileMap_D006" xml:space="preserve">
+    <value>マップに失敗しました: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D007" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="SvcLocalFileMap_D008" xml:space="preserve">
+    <value>選択したファイル:
+{0}
+
+このファイルは既に別の動画「{1}」の iwara タグが書き込まれています。
+このまま進めるとそちらのタグは上書きされ、元の動画側は紐付けが解除されたままになります。
+
+本当にこのファイルを使いますか?</value>
+  </data>
+  <data name="SvcLocalFileMap_D009" xml:space="preserve">
+    <value>別の動画のタグが検出されました</value>
+  </data>
+  <data name="SvcLocalFileMap_D010" xml:space="preserve">
+    <value>「{0}」のローカルファイルのマッピングを解除します:
+{1}
+
+ファイル自体は削除されません。ステータスは「一時停止」に戻ります (自動ダウンロードはされません。手動でダウンロード開始するか、再度マップしてください)。
+
+よろしいですか?</value>
+  </data>
+  <data name="SvcLocalFileMap_D011" xml:space="preserve">
+    <value>マッピング解除の確認</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>ダウンロード完了</value>
   </data>
@@ -3085,7 +3158,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>タグの無いファイルが {0} 件見つかりました。検索方法を選んでください。</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
-    <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
+    <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
   </data>
   <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
     <value>アーティストのフォルダを選択</value>
@@ -3173,8 +3246,8 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ファイル名テンプレート:</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
-    <value>{id} = 動画ID / {title} = タイトル。このアーティストの動画とだけ照合するので {artist} は不要です。
-例: "{id}_{title}.mp4" / "{title}.mp4"</value>
+    <value>{id}=動画ID / {title}=タイトル / {date}=日付 (yyyy-MM-dd・yyyy_MM_dd・yyyyMMdd等)
+例: "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>ローカルDB全体を対象にファイル名だけで照合します。既存のDB登録済み動画への照合のみ (新規追加はしません)。</value>
@@ -3183,8 +3256,8 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>パス構成のヒント (任意):</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
-    <value>{id} = 動画ID / {title} = タイトル / {artist} (または {author}) = 作者名。
-例: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
+    <value>{id}=動画ID / {title}=タイトル / {artist}=作者 / {date}=日付
+例: "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>タグの無いファイルはこのアプリに取り込みません。</value>
@@ -3267,8 +3340,14 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
     <value>開く</value>
   </data>
+  <data name="VideoDetailsForm_btnRemap" xml:space="preserve">
+    <value>再マップ...</value>
+  </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>
+  </data>
+  <data name="VideoDetailsForm_btnUnmap" xml:space="preserve">
+    <value>マッピング解除...</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ お気に入りに登録</value>

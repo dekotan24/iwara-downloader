@@ -138,6 +138,10 @@ namespace IwaraDownloader.Forms
             SetNsfwFilter(settings.NsfwFilterMode);
             btnViewMode.Checked = settings.VideoListViewMode == 1;
             btnClipMonitor.Checked = settings.EnableClipboardMonitor;
+            // Checked への代入は「デフォルト値(false)と一致」だと CheckedChanged が発火しないため、
+            // 表示(Text/BackColor)を確実に同期させるためハンドラを明示的にも呼ぶ。
+            btnImmediateDownload.Checked = settings.ImmediateDownloadOnAdd;
+            btnImmediateDownload_CheckedChanged(this, EventArgs.Empty);
 
             // ダウンロードマネージャー開始
             SplashForm.UpdateStatus(L.T("MainForm_D010"), 80);
@@ -695,13 +699,15 @@ namespace IwaraDownloader.Forms
                 }
 
                 var progress = new Progress<string>(msg => UpdateStatusBar(msg));
-                var task = await _downloadManager.AddSingleVideoAsync(url, progress);
+                var addedVideo = await _downloadManager.AddSingleVideoAsync(url, progress);
 
-                if (task != null)
+                if (addedVideo != null)
                 {
                     RefreshChannelTree();
                     RefreshVideoList();
-                    UpdateStatusBar(L.T("MainForm_D055", task.Video.Title));
+                    var statusKey = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd
+                        ? "MainForm_D055" : "MainForm_D188";
+                    UpdateStatusBar(L.T(statusKey, addedVideo.Title));
                 }
                 else
                 {
@@ -865,11 +871,13 @@ namespace IwaraDownloader.Forms
             if (IsDisposed) return;
 
             // DB クエリをバックグラウンドスレッドで実行 (DatabaseService は接続毎使い捨てでスレッドセーフ)
-            List<VideoInfo> allVideos;
+            // 件数は SQL 側の GROUP BY で集計する (全動画を GetAllVideos() でロードして LINQ 集計すると
+            // 動画数万件規模で RefreshChannelTree のたびに重くなるため)
+            VideoTreeCounts counts;
             List<SubscribedUser> users;
             try
             {
-                allVideos = await Task.Run(() => _database.GetAllVideos());
+                counts = await Task.Run(() => _database.GetVideoTreeCounts());
                 users = await Task.Run(() => _database.GetAllSubscribedUsers());
             }
             catch (Exception ex)
@@ -887,13 +895,12 @@ namespace IwaraDownloader.Forms
 
             treeViewChannels.Nodes.Clear();
 
-            var totalCount = allVideos.Count;
-            var completedCount = allVideos.Count(v => v.Status == DownloadStatus.Completed);
-            var failedCount = allVideos.Count(v => v.Status == DownloadStatus.Failed);
-            var skippedCount = allVideos.Count(v => v.Status == DownloadStatus.Skipped);
+            var totalCount = counts.Total;
+            var completedCount = counts.Completed;
+            var failedCount = counts.Failed;
+            var skippedCount = counts.Skipped;
             // 未DL: Completed / Skipped を除外したもの (Pending/Failed/Downloading等)
-            var notDownloadedCount = allVideos.Count(v =>
-                v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Skipped);
+            var notDownloadedCount = counts.NotDownloaded;
 
             // DL中/タグ書込中/待機中は DownloadManager のアクティブなタスクから取得(リアルタイム同期)
             var downloadingCount = _downloadManager.DownloadingCount;
@@ -909,7 +916,7 @@ namespace IwaraDownloader.Forms
             treeViewChannels.Nodes.Add(allVideosNode);
 
             // 「お気に入り」ノード (0件でも常時表示して機能を見つけやすくする)
-            var favoriteCount = allVideos.Count(v => v.IsFavorite);
+            var favoriteCount = counts.Favorite;
             var favoritesNode = new TreeNode(L.T("MainForm_D178", favoriteCount))
             {
                 Tag = NODE_FAVORITES,
@@ -979,10 +986,9 @@ namespace IwaraDownloader.Forms
             }
 
             // 「単発動画」ノード
-            var singleVideos = allVideos.Where(v => !v.SubscribedUserId.HasValue).ToList();
-            if (singleVideos.Any())
+            if (counts.SingleVideos > 0)
             {
-                var singleNode = new TreeNode(L.T("MainForm_D184", singleVideos.Count))
+                var singleNode = new TreeNode(L.T("MainForm_D184", counts.SingleVideos))
                 {
                     Tag = NODE_SINGLE_VIDEOS
                 };
@@ -1004,18 +1010,23 @@ namespace IwaraDownloader.Forms
             // 登録チャンネル (users は await で取得済み)
             foreach (var user in users)
             {
-                var videos = allVideos.Where(v => v.SubscribedUserId == user.Id).ToList();
-                var chCompletedCount = videos.Count(v => v.Status == DownloadStatus.Completed);
-                var chDownloadingVideos = videos.Count(v => v.Status == DownloadStatus.Downloading);
-                var chPendingVideos = videos.Count(v => v.Status == DownloadStatus.Pending);
-                
+                counts.ByChannel.TryGetValue(user.Id, out var ch);
+                var chTotal = ch?.Total ?? 0;
+                var chCompletedCount = ch?.Completed ?? 0;
+                var chDownloadingVideos = ch?.Downloading ?? 0;
+                var chPendingVideos = ch?.Pending ?? 0;
+                // Paused には issue #21 の「後でDL」対象 (キュー未投入のまま待機中) も含まれる
+                var chPausedVideos = ch?.Paused ?? 0;
+
                 var statusText = "";
                 if (chDownloadingVideos > 0)
                     statusText = $" 🔄{chDownloadingVideos}";
                 else if (chPendingVideos > 0)
                     statusText = $" ⏳{chPendingVideos}";
-                
-                var nodeText = $"{(user.IsEnabled ? "📺" : "⬜")} {user.Username} [{chCompletedCount}/{videos.Count}]{statusText}";
+                if (chPausedVideos > 0)
+                    statusText += $" ⏸️{chPausedVideos}";
+
+                var nodeText = $"{(user.IsEnabled ? "📺" : "⬜")} {user.Username} [{chCompletedCount}/{chTotal}]{statusText}";
                 var node = new TreeNode(nodeText)
                 {
                     Tag = user,
@@ -1137,16 +1148,12 @@ namespace IwaraDownloader.Forms
                             NODE_ALL_VIDEOS => _database.GetAllVideos(),
                             NODE_ALL_DOWNLOADS => _database.GetVideosByStatus(DownloadStatus.Downloading)
                                 .Concat(_database.GetVideosByStatus(DownloadStatus.Pending)).ToList(),
-                            NODE_NOT_DOWNLOADED => _database.GetAllVideos()
-                                .Where(v => v.Status != DownloadStatus.Completed
-                                         && v.Status != DownloadStatus.Skipped).ToList(),
+                            NODE_NOT_DOWNLOADED => _database.GetNotDownloadedVideos(),
                             NODE_DOWNLOADED => _database.GetVideosByStatus(DownloadStatus.Completed),
                             NODE_SKIPPED => _database.GetVideosByStatus(DownloadStatus.Skipped),
                             NODE_FAILED_VIDEOS => _database.GetVideosByStatus(DownloadStatus.Failed),
-                            NODE_SINGLE_VIDEOS => _database.GetAllVideos()
-                                .Where(v => !v.SubscribedUserId.HasValue).ToList(),
-                            NODE_FAVORITES => _database.GetAllVideos()
-                                .Where(v => v.IsFavorite).ToList(),
+                            NODE_SINGLE_VIDEOS => _database.GetSingleVideos(),
+                            NODE_FAVORITES => _database.GetFavoriteVideos(),
                             NODE_EXCLUDED => _database.GetExcludedVideos(),
                             _ => new List<VideoInfo>(),
                         };
@@ -1689,9 +1696,11 @@ namespace IwaraDownloader.Forms
 
             if (selectedNode?.Tag is SubscribedUser user)
             {
-                // チャンネルの全動画DL
+                // チャンネルの全動画DL。Paused (issue #21 の「後でDL」対象) は無条件で含む。
+                // Pending はキュー未投入 (孤立Pending。取得処理が中断した場合等) のみ含める
                 videos = _database.GetVideosBySubscribedUser(user.Id)
-                    .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                    .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                             && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                     .ToList();
 
                 foreach (var video in videos)
@@ -1705,7 +1714,8 @@ namespace IwaraDownloader.Forms
                 if (tag == NODE_NOT_DOWNLOADED)
                 {
                     videos = _database.GetAllVideos()
-                        .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                        .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                                 && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                         .ToList();
                 }
                 else if (tag == NODE_FAILED_VIDEOS)
@@ -1722,7 +1732,8 @@ namespace IwaraDownloader.Forms
                 else if (tag == NODE_SINGLE_VIDEOS)
                 {
                     videos = _database.GetAllVideos()
-                        .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading && v.Status != DownloadStatus.Pending)
+                        .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                                 && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                         .ToList();
                 }
                 else
@@ -1977,6 +1988,7 @@ namespace IwaraDownloader.Forms
                 menuVidReDownload.Visible = false;
                 menuVidRefreshInfo.Visible = false;
                 menuVidCheckFileExists.Visible = false;
+                menuVidMapLocalFile.Visible = false;
                 menuVidPlay.Visible = false;
                 menuVidOpenFolder.Visible = false;
                 menuVidOpenPage.Visible = selected.Count == 1;   // iwara ページは開ける (本当に消えたか確認用)
@@ -2000,10 +2012,14 @@ namespace IwaraDownloader.Forms
             bool hasFailed = selected.Any(v => v.Status == DownloadStatus.Failed);
             bool hasPaused = selected.Any(v => v.Status == DownloadStatus.Paused);
             bool hasSkipped = selected.Any(v => v.Status == DownloadStatus.Skipped);
+            // issue #21 の「後でDL」で追加した動画は Paused (常にダウンロード開始対象)。
+            // Pending は基本「既にキュー投入済み」の想定だが、取得処理の中断等でキュー未投入の
+            // まま Pending になるケースがあるため、GetTask が null ならそれ (孤立Pending) と
+            // 判断してダウンロード開始の対象に含める。
             bool canDownload = selected.Any(v =>
                 v.Status != DownloadStatus.Completed &&
                 v.Status != DownloadStatus.Downloading &&
-                v.Status != DownloadStatus.Pending);
+                (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null));
             bool canCancel = hasPending || hasDownloading || hasPaused;
             bool canRefreshInfo = selected.Any(v =>
                 string.IsNullOrEmpty(v.Title) || v.Title.StartsWith("Video "));
@@ -2013,6 +2029,15 @@ namespace IwaraDownloader.Forms
                 && !string.IsNullOrEmpty(single!.LocalFilePath) && File.Exists(single.LocalFilePath);
             bool canOpenPage = isSingle && !string.IsNullOrEmpty(single!.Url);
             bool canOpenAuthor = isSingle && !string.IsNullOrEmpty(single!.AuthorUsername);
+            // ローカルファイルの手動マップ: ファイルが存在しない (Completed/Skipped でも実体が
+            // 消えていれば含む) / エラー(Failed) / 未DL(Pending) の1件選択時のみ
+            // (ダウンロード中・タグ書き込み中に横からファイルを差し替えると競合するため除外)
+            bool canMapLocalFile = isSingle
+                && single!.Status != DownloadStatus.Downloading
+                && single.Status != DownloadStatus.WritingTags
+                && (!single.LocalFileExists
+                    || single.Status == DownloadStatus.Failed
+                    || single.Status == DownloadStatus.Pending);
 
             menuVidDownload.Visible = canDownload;
             menuVidDownload.Text = hasFailed && !hasSkipped ? L.T("MainForm_D104") : L.T("MainForm_D105");
@@ -2021,6 +2046,7 @@ namespace IwaraDownloader.Forms
             menuVidReDownload.Visible = hasCompleted;
             menuVidRefreshInfo.Visible = canRefreshInfo;
             menuVidCheckFileExists.Visible = hasCompleted;
+            menuVidMapLocalFile.Visible = canMapLocalFile;
             menuVidPlay.Visible = canPlay;
             menuVidOpenFolder.Visible = canOpenFolder;
             menuVidOpenPage.Visible = canOpenPage;
@@ -2075,7 +2101,13 @@ namespace IwaraDownloader.Forms
             
             foreach (var video in selectedVideos)
             {
-                if (video.Status != DownloadStatus.Downloading && video.Status != DownloadStatus.Completed && video.Status != DownloadStatus.Pending)
+                // issue #21 の「後でDL」対象 (Paused) は下の条件で無条件に含まれる。
+                // Pending でもキュー未投入 (孤立Pending。取得処理の中断等) ならここで開始する。
+                // 既にキュー投入済みなら EnqueueDownload 内の重複ガードで無害な no-op。
+                bool isOrphanPending = video.Status == DownloadStatus.Pending
+                    && _downloadManager.GetTask(video.VideoId) == null;
+                if (video.Status != DownloadStatus.Downloading && video.Status != DownloadStatus.Completed
+                    && (video.Status != DownloadStatus.Pending || isOrphanPending))
                 {
                     // 失敗時はリトライ回数をリセット
                     if (video.Status == DownloadStatus.Failed)
@@ -2370,6 +2402,24 @@ namespace IwaraDownloader.Forms
         /// <summary>
         /// 動画を削除
         /// </summary>
+        /// <summary>
+        /// ローカルファイルの手動マップ (右クリックメニュー)。ファイルが存在しない/エラー/未DLの
+        /// 動画にだけ表示される (OnVideoContextMenuOpening)。外部ツールで既に手元にある mp4 を
+        /// 個別に紐付け直すための救済手段。
+        /// </summary>
+        private async void menuVidMapLocalFile_Click(object sender, EventArgs e)
+        {
+            var video = GetFirstSelectedVideo();
+            if (video == null) return;
+
+            var result = await Utils.LocalFileMapHelper.MapAsync(this, video, _downloadManager.IwaraApi, _database, _downloadManager);
+            if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
+
+            RefreshChannelTree();
+            RefreshVideoList();
+            UpdateStatusBar(L.T("MainForm_D187", video.Title));
+        }
+
         private void menuVidDelete_Click(object sender, EventArgs e)
         {
             var selectedVideos = GetSelectedVideos();
@@ -2520,15 +2570,19 @@ namespace IwaraDownloader.Forms
             var video = GetFirstSelectedVideo();
             if (video == null) return;
 
-            using var form = new VideoDetailsForm(video, _database);
-            if (form.ShowDialog(this) == DialogResult.OK)
-            {
-                // タグ・メモ・お気に入り等の編集を反映 (該当行だけ再描画)
-                InvalidateVideoItem(video.VideoId);
-                // お気に入りのみ表示中なら一覧から外れる可能性 → 再フィルタ
-                if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
+            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi, _downloadManager);
+            var dialogResult = form.ShowDialog(this);
+
+            // タグ・メモ・お気に入り等の編集は Save (OK) 時のみ DB 反映されるが、
+            // ローカルファイル再マップはダイアログ内で即DB反映される (Remapped で判別)。
+            // 該当行の再描画はどちらの場合も軽いので常時行い、ツリー再構築 (重め) は
+            // 実際に状態が変わったときだけに絞る。
+            InvalidateVideoItem(video.VideoId);
+            if (dialogResult == DialogResult.OK || form.Remapped) RefreshChannelTree();
+            // お気に入りのみ表示中なら一覧から外れる可能性 → 再フィルタ
+            if (chkFavOnly != null && chkFavOnly.Checked) ApplyVideoFilter();
+            if (dialogResult == DialogResult.OK)
                 UpdateStatusBar(L.T("MainForm_D124", video.Title));
-            }
         }
 
         /// <summary>
@@ -3514,6 +3568,21 @@ namespace IwaraDownloader.Forms
                 catch (Exception ex) { Debug.WriteLine($"Clipboard handler error: {ex.Message}"); }
             }
             base.WndProc(ref m);
+        }
+
+        /// <summary>
+        /// アーティスト/単発動画「追加」時に即ダウンロード開始するか ON/OFF トグル (issue #21)。
+        /// OFF でも定期的な新着チェックの自動DL設定 (AutoDownloadOnCheck) には影響しない。
+        /// </summary>
+        private void btnImmediateDownload_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = btnImmediateDownload.Checked;
+            btnImmediateDownload.Text = enabled ? L.T("MainForm_D189") : L.T("MainForm_D190");
+            btnImmediateDownload.BackColor = enabled ? SystemColors.Control : Color.LightSalmon;
+
+            var settings = SettingsManager.Instance.Settings;
+            settings.ImmediateDownloadOnAdd = enabled;
+            SettingsManager.Instance.Save();
         }
 
         /// <summary>

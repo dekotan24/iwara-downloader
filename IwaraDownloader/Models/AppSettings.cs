@@ -84,6 +84,13 @@ namespace IwaraDownloader.Models
         /// <summary>チェック時に自動でダウンロードを開始</summary>
         public bool AutoDownloadOnCheck { get; set; } = true;
 
+        /// <summary>
+        /// アーティスト/単発動画の「追加」時に見つかった動画を即ダウンロード開始するか。
+        /// OFF でも DB には Pending として登録され、後で右クリック「ダウンロード」から手動開始できる。
+        /// AutoDownloadOnCheck (定期的な新着チェック) とは独立した設定 (issue #21)。
+        /// </summary>
+        public bool ImmediateDownloadOnAdd { get; set; } = true;
+
         /// <summary>iwara外動画(YouTube埋め込み等)をデフォルトでDLするか(チャンネル個別設定で上書き可能)</summary>
         public bool DownloadExternalVideosDefault { get; set; } = false;
 

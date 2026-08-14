@@ -4,7 +4,7 @@
 
 **iwara.tv / iwara.ai 対応の高機能動画ダウンローダー & メディアサーバー for Windows**
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-2.5.1-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -164,10 +164,12 @@ URL 入力欄にユーザー名またはプロフィール URL（`https://www.iw
 | 方法 | 内容 |
 |------|------|
 | アーティストフォルダ選択検索 | フォルダ = 1 アーティストを明示指定し、そのアーティストの動画一覧だけを対象に照合（最も安全） |
-| ファイル名による検索 | ローカル DB 全体を対象に照合。`{id}` `{title}` `{artist}` テンプレートでパス構成のヒントを与えると精度が上がる |
+| ファイル名による検索 | ローカル DB 全体を対象に照合。`{id}` `{title}` `{artist}` `{date}` テンプレートでパス構成のヒントを与えると精度が上がる。`{date}` は `yyyy-MM-dd` / `yyyy_MM_dd` / `yyyy.MM.dd` / `yyyyMMdd` を自動認識 |
 | スキップ | 何も取り込まない |
 
 照合優先順位は「ID 直接一致 → タイトル完全一致 → 部分一致 → 接頭辞一致」。1 ファイルに複数候補が残って自動確定できない場合は要確認としてグリッドに表示され、ドロップダウンから採用する動画を選び直せます。
+
+ファイル名先頭の日付らしきプレフィックス（`2024-06-15_タイトル.mp4` 等）と、DB 側と実ファイル側で全角/半角が食い違う記号（`（）` と `()` 等）は、テンプレートを指定しなくても自動的に吸収されます。
 
 </details>
 
@@ -250,6 +252,12 @@ dotnet build IwaraDownloader\IwaraDownloader.csproj -c Release
 ```
 
 Visual Studio 2022 / .NET 10.0 SDK でビルドできます。
+
+テストは次のコマンドで実行できます。
+
+```powershell
+dotnet test IwaraDownloader.sln -c Debug
+```
 
 ## 🧩 技術スタック
 

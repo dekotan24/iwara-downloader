@@ -106,8 +106,12 @@ namespace IwaraDownloader.Services
         /// <summary>取得理由。Add=チャンネル新規追加 (完了で VideosLoaded=true)、Check=新着チェック</summary>
         private enum FetchReason { Add, Check }
 
-        /// <summary>取得キューの 1 項目。Attempt はタイムアウト時のリトライ回数 (エクスポネンシャル)</summary>
-        private sealed record FetchRequest(string UserId, FetchReason Reason, int Attempt = 0);
+        /// <summary>
+        /// 取得キューの 1 項目。Attempt はタイムアウト時のリトライ回数 (エクスポネンシャル)。
+        /// ImmediateDownload は Reason=Add のときだけ意味を持つ (Check は常に AutoDownloadOnCheck 設定に従う)。
+        /// リトライ再投入 (req with { Attempt = ... }) では自動的に引き継がれる。
+        /// </summary>
+        private sealed record FetchRequest(string UserId, FetchReason Reason, int Attempt = 0, bool ImmediateDownload = true);
 
         private readonly Channel<FetchRequest> _fetchQueue =
             Channel.CreateUnbounded<FetchRequest>(new UnboundedChannelOptions { SingleReader = true });
@@ -152,7 +156,8 @@ namespace IwaraDownloader.Services
                 lock (_pendingUserIds)
                     added = _pendingUserIds.Add(u.UserId);
                 if (added)
-                    _fetchQueue.Writer.TryWrite(new FetchRequest(u.UserId, FetchReason.Add));
+                    _fetchQueue.Writer.TryWrite(new FetchRequest(u.UserId, FetchReason.Add,
+                        ImmediateDownload: SettingsManager.Instance.Settings.ImmediateDownloadOnAdd));
             }
             if (notLoaded.Count > 0)
                 _logger.Info($"起動時再キュー: {notLoaded.Count} チャンネルの動画一覧未取得を検出");
@@ -1375,9 +1380,16 @@ namespace IwaraDownloader.Services
         /// エンキュー時点で DB に仮登録 (VideosLoaded=false) するので、
         /// アプリを終了しても起動時に自動再キューされる。
         /// </summary>
+        /// <param name="input">プロフィール URL または username</param>
+        /// <param name="immediateDownload">
+        /// 見つかった動画を即ダウンロード開始するか。null なら設定 (ImmediateDownloadOnAdd) に従う。
+        /// 一括インポート等、呼び出し側で個別に選ばせたい場合に明示指定する。
+        /// </param>
         /// <returns>キューに追加できた場合 true</returns>
-        public bool EnqueueSubscribedUser(string input)
+        public bool EnqueueSubscribedUser(string input, bool? immediateDownload = null)
         {
+            var effectiveImmediateDownload = immediateDownload ?? SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
+
             var username = Helpers.IsUserProfileUrl(input)
                 ? Helpers.ExtractUsernameFromUrl(input)
                 : input.Trim();
@@ -1429,7 +1441,8 @@ namespace IwaraDownloader.Services
                 }
 
                 // キューが既に閉じている (Dispose 後) 場合は仮登録だけ残し、巻き戻す
-                if (!_fetchQueue.Writer.TryWrite(new FetchRequest(username, FetchReason.Add)))
+                if (!_fetchQueue.Writer.TryWrite(new FetchRequest(username, FetchReason.Add,
+                        ImmediateDownload: effectiveImmediateDownload)))
                 {
                     lock (_pendingUserIds)
                         _pendingUserIds.Remove(username);
@@ -1557,8 +1570,20 @@ namespace IwaraDownloader.Services
                 var siteHost = string.IsNullOrEmpty(user.Site) ? Helpers.SiteTv : user.Site;
                 var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
 
+                // Add (追加時) は req.ImmediateDownload (呼び出し側の選択、既定は設定値)、
+                // Check (定期新着チェック) は AutoDownloadOnCheck 設定 — 常に今まで通り。
+                // 追加時に「後で」を選んでも、以後の新着チェックでの自動DLには影響しない (issue #21)。
+                bool autoDownloadThisFetch = req.Reason == FetchReason.Add
+                    ? req.ImmediateDownload
+                    : SettingsManager.Instance.Settings.AutoDownloadOnCheck;
+
                 // --- Add/Check 共通: 動画を先に保存してから VideosLoaded=true にする ---
                 // (保存前に中断すると動画一覧が欠損するため。保存は VideoExists で重複スキップ)
+                // 自動DL対象外 (「後で」選択 / AutoDownloadOnCheck OFF) は Pending ではなく Paused
+                // で保存する。Pending は「起動時レジューム対象」の意味を持つため、Pending のままだと
+                // 次回アプリ起動時に ResumeIncompleteDownloadsCore に拾われて意図せず自動DLされて
+                // しまう (issue #21)。Paused なら起動時レジュームや EnqueuePendingVideosForUser の
+                // 対象から自然に外れ、右クリック「ダウンロード」等の手動操作でのみ開始される。
                 var newVideos = new List<VideoInfo>();
                 foreach (var video in videos)
                 {
@@ -1571,7 +1596,7 @@ namespace IwaraDownloader.Services
                         video.SubscribedUserId = user.Id;
                         if (string.IsNullOrEmpty(video.Site))
                             video.Site = user.Site;
-                        video.Status = DownloadStatus.Pending;
+                        video.Status = autoDownloadThisFetch ? DownloadStatus.Pending : DownloadStatus.Paused;
                         video.Id = _database.AddVideo(video);
                         newVideos.Add(video);
                     }
@@ -1594,7 +1619,7 @@ namespace IwaraDownloader.Services
                 if (newVideos.Count > 0)
                 {
                     NewVideosFound?.Invoke(this, (user, newVideos));
-                    if (SettingsManager.Instance.Settings.AutoDownloadOnCheck)
+                    if (autoDownloadThisFetch)
                         foreach (var v in newVideos)
                             EnqueueDownload(v, true, user);
                     // 通知は新着チェック時のみ (追加直後は全件が「新着」になり大量通知になるため抑制)
@@ -1602,7 +1627,15 @@ namespace IwaraDownloader.Services
                         NotificationService.Instance.NotifyNewVideosFound(user.Username, newVideos.Count);
                 }
 
-                EnqueuePendingVideosForUser(user);
+                // EnqueuePendingVideosForUser はこのユーザーの「Pending だがキュー未投入」動画を
+                // 手当たり次第拾って再キューする (元々はクラッシュ等での取りこぼし救済用)。
+                // 「後で」選択 / AutoDownloadOnCheck OFF で保存された動画は Pending ではなく Paused
+                // なので、このクエリ (Status==Pending) には元々引っかからず「後で」の意図は保たれる。
+                // それでも Add では呼ばない (「即時」選択時に多段リトライで一部だけ取りこぼした場合の
+                // 即時回収が失われるだけで、動画情報自体はDBに残るため次の新着チェックか手動操作で拾える)。
+                // Check (定期新着チェック) では従来通り呼ぶ。
+                if (req.Reason == FetchReason.Check)
+                    EnqueuePendingVideosForUser(user);
 
                 lock (_pendingUserIds) _pendingUserIds.Remove(username);
             }
@@ -1666,10 +1699,16 @@ namespace IwaraDownloader.Services
         // 旧 AddSubscribedUserAsync は EnqueueSubscribedUser (仮登録 → キュー → ProcessFetchRequestAsync) に置換した。
 
         /// <summary>
-        /// 単一動画をダウンロードキューに追加
+        /// 単一動画を DB に追加する。immediateDownload (既定は設定値 ImmediateDownloadOnAdd) が
+        /// true ならそのままダウンロードキューにも投入する。false なら Pending のまま
+        /// キュー未投入で残し、後で右クリック「ダウンロード」等から手動開始できる (issue #21)。
+        /// 戻り値は追加された VideoInfo (キュー投入の有無に関わらず)。呼び出し側はタイトル表示等に使う。
         /// </summary>
-        public async Task<DownloadTask?> AddSingleVideoAsync(string url, IProgress<string>? progress = null)
+        public async Task<VideoInfo?> AddSingleVideoAsync(
+            string url, IProgress<string>? progress = null, bool? immediateDownload = null)
         {
+            var effectiveImmediateDownload = immediateDownload ?? SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
+
             if (!Helpers.IsVideoUrl(url))
             {
                 return null;
@@ -1694,7 +1733,8 @@ namespace IwaraDownloader.Services
                     existing.Site = siteHost;
                     _database.UpdateVideo(existing);
                 }
-                return EnqueueDownload(existing, false);
+                if (effectiveImmediateDownload) EnqueueDownload(existing, false);
+                return existing;
             }
 
             // IwaraApiServiceでダウンロードURL取得(動画情報確認)
@@ -1738,12 +1778,14 @@ namespace IwaraDownloader.Services
                 AuthorUsername = urlInfo.AuthorUsername ?? "",
                 FileUuid = urlInfo.FileUuid ?? "",
                 Site = siteHost,
-                Status = DownloadStatus.Pending
+                // 「後で」選択時は Paused で保存 (Pending は起動時レジューム対象のため。issue #21)
+                Status = effectiveImmediateDownload ? DownloadStatus.Pending : DownloadStatus.Paused
             };
 
             video.Id = _database.AddVideo(video);
 
-            return EnqueueDownload(video, false);
+            if (effectiveImmediateDownload) EnqueueDownload(video, false);
+            return video;
         }
 
         /// <summary>

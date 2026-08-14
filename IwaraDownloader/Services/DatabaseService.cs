@@ -819,6 +819,67 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// チャンネルツリー表示用の件数集計を SQL 側の GROUP BY で取得する。
+        /// GetAllVideos() の全件ロード + LINQ 集計 (動画数万件でRefreshChannelTreeのたびに重くなる) の代替。
+        /// </summary>
+        public VideoTreeCounts GetVideoTreeCounts()
+        {
+            var result = new VideoTreeCounts();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT SubscribedUserId, Status, IsFavorite, COUNT(*)
+                FROM Videos
+                GROUP BY SubscribedUserId, Status, IsFavorite";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                int? subId = reader.IsDBNull(0) ? null : reader.GetInt32(0);
+                // Status/IsFavorite は NOT NULL 制約が無く ALTER TABLE ADD COLUMN の DEFAULT 0 のみで保護されている列。
+                // NULL 行が万一あっても GetInt32 で例外を投げてツリー更新が永久に止まらないようにガードする。
+                var status = (DownloadStatus)(reader.IsDBNull(1) ? 0 : reader.GetInt32(1));
+                bool isFavorite = !reader.IsDBNull(2) && reader.GetInt32(2) != 0;
+                int count = reader.GetInt32(3);
+
+                result.Total += count;
+                if (isFavorite) result.Favorite += count;
+
+                switch (status)
+                {
+                    case DownloadStatus.Completed: result.Completed += count; break;
+                    case DownloadStatus.Failed: result.Failed += count; break;
+                    case DownloadStatus.Skipped: result.Skipped += count; break;
+                }
+                if (status != DownloadStatus.Completed && status != DownloadStatus.Skipped)
+                    result.NotDownloaded += count;
+
+                if (subId == null)
+                {
+                    result.SingleVideos += count;
+                    continue;
+                }
+
+                if (!result.ByChannel.TryGetValue(subId.Value, out var ch))
+                {
+                    ch = new ChannelVideoCounts();
+                    result.ByChannel[subId.Value] = ch;
+                }
+                ch.Total += count;
+                switch (status)
+                {
+                    case DownloadStatus.Completed: ch.Completed += count; break;
+                    case DownloadStatus.Downloading: ch.Downloading += count; break;
+                    case DownloadStatus.Pending: ch.Pending += count; break;
+                    case DownloadStatus.Paused: ch.Paused += count; break;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
         /// 購読ユーザーの動画を取得
         /// </summary>
         public List<VideoInfo> GetVideosBySubscribedUser(int subscribedUserId)
@@ -830,6 +891,68 @@ namespace IwaraDownloader.Services
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId = @SubscribedUserId ORDER BY PostedAt DESC";
             command.Parameters.AddWithValue("@SubscribedUserId", subscribedUserId);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                videos.Add(ReadVideo(reader));
+            }
+            return videos;
+        }
+
+        /// <summary>
+        /// 未DL (Completed / Skipped を除く) の動画を取得
+        /// </summary>
+        public List<VideoInfo> GetNotDownloadedVideos()
+        {
+            var videos = new List<VideoInfo>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM Videos WHERE Status != @Completed AND Status != @Skipped ORDER BY CreatedAt DESC";
+            command.Parameters.AddWithValue("@Completed", (int)DownloadStatus.Completed);
+            command.Parameters.AddWithValue("@Skipped", (int)DownloadStatus.Skipped);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                videos.Add(ReadVideo(reader));
+            }
+            return videos;
+        }
+
+        /// <summary>
+        /// 購読外(単発追加)の動画を取得
+        /// </summary>
+        public List<VideoInfo> GetSingleVideos()
+        {
+            var videos = new List<VideoInfo>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId IS NULL ORDER BY CreatedAt DESC";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                videos.Add(ReadVideo(reader));
+            }
+            return videos;
+        }
+
+        /// <summary>
+        /// お気に入り動画を取得
+        /// </summary>
+        public List<VideoInfo> GetFavoriteVideos()
+        {
+            var videos = new List<VideoInfo>();
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM Videos WHERE IsFavorite = 1 ORDER BY CreatedAt DESC";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())

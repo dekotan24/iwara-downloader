@@ -141,6 +141,9 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>从剪贴板</value>
   </data>
+  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
+    <value>立即开始下载频道的视频</value>
+  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>请输入 iwara.tv / iwara.ai 的视频或频道URL（每行一个URL）</value>
   </data>
@@ -1211,6 +1214,18 @@ videoId 后导入数据库。
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 搜索（标题/作者/标签）...</value>
   </data>
+  <data name="MainForm_D187" xml:space="preserve">
+    <value>已将本地文件映射到「{0}」</value>
+  </data>
+  <data name="MainForm_D188" xml:space="preserve">
+    <value>已添加视频「{0}」(待机中，尚未开始下载)</value>
+  </data>
+  <data name="MainForm_D189" xml:space="preserve">
+    <value>▶立即DL：开</value>
+  </data>
+  <data name="MainForm_D190" xml:space="preserve">
+    <value>⏸立即DL：关</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1323,6 +1338,12 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_btnHelp" xml:space="preserve">
     <value>帮助</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload" xml:space="preserve">
+    <value>▶立即DL：开</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
+    <value>关闭后，新添加的作者/视频将保持待机状态，不会自动开始下载。可以稍后通过右键菜单的「下载」手动开始。不影响定期新作检查的自动下载。</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>登录</value>
@@ -1512,6 +1533,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ 添加到收藏</value>
+  </data>
+  <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
+    <value>映射本地文件...</value>
   </data>
   <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
     <value>打开作者页面</value>
@@ -3062,6 +3086,55 @@ videoId 后导入数据库。
   <data name="SvcIwaraApiService_D011" xml:space="preserve">
     <value>设置失败（详情请查看日志）</value>
   </data>
+  <data name="SvcLocalFileMap_D001" xml:space="preserve">
+    <value>选择本地文件: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D002" xml:space="preserve">
+    <value>MP4 视频 (*.mp4)|*.mp4|所有文件 (*.*)|*.*</value>
+  </data>
+  <data name="SvcLocalFileMap_D003" xml:space="preserve">
+    <value>将把「{0}」与以下文件关联:
+{1}
+
+确定吗?</value>
+  </data>
+  <data name="SvcLocalFileMap_D004" xml:space="preserve">
+    <value>
+
+(原路径不会被删除，仍会保留: {0})</value>
+  </data>
+  <data name="SvcLocalFileMap_D005" xml:space="preserve">
+    <value>确认本地文件映射</value>
+  </data>
+  <data name="SvcLocalFileMap_D006" xml:space="preserve">
+    <value>映射失败: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D007" xml:space="preserve">
+    <value>错误</value>
+  </data>
+  <data name="SvcLocalFileMap_D008" xml:space="preserve">
+    <value>选择的文件:
+{0}
+
+此文件已写入了另一个视频「{1}」的 iwara 标签。
+继续操作会覆盖该标签，导致原视频失去与任何文件的关联。
+
+确定要使用这个文件吗?</value>
+  </data>
+  <data name="SvcLocalFileMap_D009" xml:space="preserve">
+    <value>检测到另一个视频的标签</value>
+  </data>
+  <data name="SvcLocalFileMap_D010" xml:space="preserve">
+    <value>将取消「{0}」与以下本地文件的映射:
+{1}
+
+文件本身不会被删除。状态将变为「暂停」(不会自动下载，可手动开始下载或稍后重新映射)。
+
+确定吗?</value>
+  </data>
+  <data name="SvcLocalFileMap_D011" xml:space="preserve">
+    <value>确认取消映射</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>下载完成</value>
   </data>
@@ -3081,7 +3154,7 @@ videoId 后导入数据库。
     <value>发现 {0} 个没有标签的文件。请选择搜索方式。</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
-    <value>例如: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
+    <value>例如: "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
   </data>
   <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
     <value>选择作者的文件夹</value>
@@ -3169,8 +3242,8 @@ videoId 后导入数据库。
     <value>文件名模板:</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
-    <value>{id} = 视频ID / {title} = 标题。此模式只匹配这一位作者的视频，因此不需要 {artist}。
-例如: "{id}_{title}.mp4" / "{title}.mp4"</value>
+    <value>{id}=视频ID / {title}=标题 / {date}=日期 (yyyy-MM-dd、yyyy_MM_dd、yyyyMMdd等)
+例如: "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>以文件名为线索，面向整个本地数据库进行匹配。仅匹配数据库中已有的记录(不会新增视频)。</value>
@@ -3179,8 +3252,8 @@ videoId 后导入数据库。
     <value>路径结构提示(可选):</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
-    <value>{id} = 视频ID / {title} = 标题 / {artist} (或 {author}) = 作者名。
-例如: "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (留空则使用无提示的全局启发式搜索)</value>
+    <value>{id}=视频ID / {title}=标题 / {artist}=作者 / {date}=日期
+例如: "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>无标签文件不会被导入此应用。</value>
@@ -3263,8 +3336,14 @@ videoId 后导入数据库。
   <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
     <value>打开</value>
   </data>
+  <data name="VideoDetailsForm_btnRemap" xml:space="preserve">
+    <value>重新映射...</value>
+  </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>
+  </data>
+  <data name="VideoDetailsForm_btnUnmap" xml:space="preserve">
+    <value>取消映射...</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ 添加到收藏</value>

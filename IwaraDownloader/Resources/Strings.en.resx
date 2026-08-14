@@ -141,6 +141,9 @@ Log in from the settings screen.</value>
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>From Clipboard</value>
   </data>
+  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
+    <value>Start downloading channel videos immediately</value>
+  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>Enter iwara.tv / iwara.ai video or channel URLs (one URL per line)</value>
   </data>
@@ -1211,6 +1214,18 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D186" xml:space="preserve">
     <value>🔍 Search (title/artist/tags)...</value>
   </data>
+  <data name="MainForm_D187" xml:space="preserve">
+    <value>Mapped local file to "{0}"</value>
+  </data>
+  <data name="MainForm_D188" xml:space="preserve">
+    <value>Video "{0}" added (on hold, not downloading yet)</value>
+  </data>
+  <data name="MainForm_D189" xml:space="preserve">
+    <value>▶Auto-DL: ON</value>
+  </data>
+  <data name="MainForm_D190" xml:space="preserve">
+    <value>⏸Auto-DL: OFF</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1323,6 +1338,12 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_btnHelp" xml:space="preserve">
     <value>Help</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload" xml:space="preserve">
+    <value>▶Auto-DL: ON</value>
+  </data>
+  <data name="MainForm_btnImmediateDownload_Tip" xml:space="preserve">
+    <value>When OFF, newly added artists/videos stay on hold and are not downloaded automatically. You can start them later from the right-click "Download" menu. This does not affect auto-downloading from the periodic new-video check.</value>
   </data>
   <data name="MainForm_btnLogin" xml:space="preserve">
     <value>Log in</value>
@@ -1512,6 +1533,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ Add to Favorites</value>
+  </data>
+  <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
+    <value>Map local file...</value>
   </data>
   <data name="MainForm_menuVidOpenAuthor" xml:space="preserve">
     <value>Open Author's Page</value>
@@ -3062,6 +3086,55 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SvcIwaraApiService_D011" xml:space="preserve">
     <value>Setup failed (see the log for details)</value>
   </data>
+  <data name="SvcLocalFileMap_D001" xml:space="preserve">
+    <value>Select local file: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D002" xml:space="preserve">
+    <value>MP4 video (*.mp4)|*.mp4|All files (*.*)|*.*</value>
+  </data>
+  <data name="SvcLocalFileMap_D003" xml:space="preserve">
+    <value>This will link "{0}" to the following file:
+{1}
+
+Continue?</value>
+  </data>
+  <data name="SvcLocalFileMap_D004" xml:space="preserve">
+    <value>
+
+(The old path will not be deleted: {0})</value>
+  </data>
+  <data name="SvcLocalFileMap_D005" xml:space="preserve">
+    <value>Confirm local file mapping</value>
+  </data>
+  <data name="SvcLocalFileMap_D006" xml:space="preserve">
+    <value>Failed to map: {0}</value>
+  </data>
+  <data name="SvcLocalFileMap_D007" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="SvcLocalFileMap_D008" xml:space="preserve">
+    <value>Selected file:
+{0}
+
+This file already has iwara tags for a different video, "{1}".
+Proceeding will overwrite that tag, leaving the other video unlinked from any file.
+
+Use this file anyway?</value>
+  </data>
+  <data name="SvcLocalFileMap_D009" xml:space="preserve">
+    <value>Tags for a different video detected</value>
+  </data>
+  <data name="SvcLocalFileMap_D010" xml:space="preserve">
+    <value>This will unmap the local file from "{0}":
+{1}
+
+The file itself will not be deleted. The status will be set to Paused (it will not be downloaded automatically; start the download manually or map it again later).
+
+Continue?</value>
+  </data>
+  <data name="SvcLocalFileMap_D011" xml:space="preserve">
+    <value>Confirm unmap</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>Download complete</value>
   </data>
@@ -3081,7 +3154,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Found {0} file(s) without a tag. Choose how to search for matches.</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
-    <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
+    <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
   </data>
   <data name="UntaggedFileMatchForm_D003" xml:space="preserve">
     <value>Select the artist's folder</value>
@@ -3169,8 +3242,8 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Filename template:</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistTemplateHint" xml:space="preserve">
-    <value>{id} = video ID / {title} = title. {artist} is not needed since this mode already targets one artist.
-e.g. "{id}_{title}.mp4" / "{title}.mp4"</value>
+    <value>{id}=video ID / {title}=title / {date}=date (yyyy-MM-dd, yyyy_MM_dd, yyyyMMdd, etc.)
+e.g. "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>Matches by filename against the whole local DB. Only matches existing DB entries (never adds new videos).</value>
@@ -3179,8 +3252,8 @@ e.g. "{id}_{title}.mp4" / "{title}.mp4"</value>
     <value>Path structure hint (optional):</value>
   </data>
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
-    <value>{id} = video ID / {title} = title / {artist} (or {author}) = artist name.
-e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
+    <value>{id}=video ID / {title}=title / {artist}=artist / {date}=date
+e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>Untagged files will not be imported into this app.</value>
@@ -3263,8 +3336,14 @@ e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank f
   <data name="VideoDetailsForm_btnOpen" xml:space="preserve">
     <value>Open</value>
   </data>
+  <data name="VideoDetailsForm_btnRemap" xml:space="preserve">
+    <value>Remap...</value>
+  </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>Save</value>
+  </data>
+  <data name="VideoDetailsForm_btnUnmap" xml:space="preserve">
+    <value>Unmap...</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ Add to favorites</value>
