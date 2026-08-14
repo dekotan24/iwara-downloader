@@ -5,6 +5,8 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- WPF段階移行 (strangler-fig方式): WinFormsと恒久的に共存させる。理由はメモ参照 -->
+    <UseWPF>true</UseWPF>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
@@ -23,7 +25,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DebugType>none</DebugType>
+    <!-- WPF移行中はXAMLバインディング/null参照系のスタックトレースに行番号が要るため portable に変更 -->
+    <DebugType>portable</DebugType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -32,6 +35,13 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- UseWPF+UseWindowsForms併用でSDKの既定ImplicitUsings一覧からSystem.IO/System.Net.Httpが
+         抜け落ちる既知の挙動があるため、プロジェクト全体へ明示的に復元する -->
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
   </ItemGroup>
 
   <ItemGroup>
@@ -77,6 +87,9 @@
 
     <!-- TagLib# for mp4 metadata (UUID tagging) -->
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+
+    <!-- WPF移行用 MVVM ツールキット (ソースジェネレータ、公式) -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 
   <ItemGroup>
