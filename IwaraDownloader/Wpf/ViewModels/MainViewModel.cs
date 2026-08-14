@@ -694,10 +694,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             var video = SelectedVideo?.Video;
             if (video == null) return;
 
-            var owner = OwnerWindow != null
-                ? new Win32WindowWrapper(new System.Windows.Interop.WindowInteropHelper(OwnerWindow).Handle)
-                : new Win32WindowWrapper(IntPtr.Zero);
-            var result = await Utils.LocalFileMapHelper.MapAsync(owner, video, _downloadManager.IwaraApi, _database, _downloadManager);
+            var result = await Utils.LocalFileMapHelper.MapAsync(GetOwnerWin32Window(), video, _downloadManager.IwaraApi, _database, _downloadManager);
             if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
 
             RefreshTree();
@@ -775,7 +772,54 @@ namespace IwaraDownloader.Wpf.ViewModels
 
         #endregion
 
-        #region チャンネルコンテキストメニュー (Phase4f)
+        #region チャンネルコンテキストメニュー (Phase4f, Phase8a-2でパリティ閉じ)
+
+        [ObservableProperty] private bool _isUserNodeSelected;
+        [ObservableProperty] private bool _canEnableChannel;
+        [ObservableProperty] private bool _canDisableChannel;
+        [ObservableProperty] private bool _checkChannelNowEnabled;
+        [ObservableProperty] private string _checkChannelNowText = "";
+        [ObservableProperty] private bool _canDownloadAllChannel;
+        [ObservableProperty] private bool _canCheckChannelFiles;
+        [ObservableProperty] private bool _canDeleteNotFoundChannel;
+        [ObservableProperty] private string _channelSavePathText = "";
+        [ObservableProperty] private bool _channelExternalDLInheritChecked;
+        [ObservableProperty] private bool _channelExternalDLOnChecked;
+        [ObservableProperty] private bool _channelExternalDLOffChecked;
+        [ObservableProperty] private string _channelExternalDLInheritText = "";
+
+        /// <summary>
+        /// チャンネルコンテキストメニューを開く直前に呼ぶ。旧WinForms版contextMenuChannel_Openingに相当。
+        /// </summary>
+        public void RefreshChannelContextMenuState()
+        {
+            var node = SelectedTreeNode;
+            IsUserNodeSelected = node?.Kind == TreeNodeKind.Channel;
+            CanCheckChannelFiles = IsUserNodeSelected || node?.Kind == TreeNodeKind.Downloaded;
+            CanDownloadAllChannel = IsUserNodeSelected
+                || node?.Kind is TreeNodeKind.NotDownloaded or TreeNodeKind.FailedVideos or TreeNodeKind.SingleVideos;
+            CanDeleteNotFoundChannel = node?.Kind == TreeNodeKind.FailedVideos;
+
+            var user = node?.Channel;
+            if (user == null)
+            {
+                CanEnableChannel = false;
+                CanDisableChannel = false;
+                CheckChannelNowEnabled = false;
+                return;
+            }
+
+            CanEnableChannel = !user.IsEnabled;
+            CanDisableChannel = user.IsEnabled;
+            CheckChannelNowEnabled = user.IsEnabled;
+            CheckChannelNowText = user.IsEnabled ? L.T("MainForm_D082") : L.T("MainForm_D083");
+            ChannelSavePathText = string.IsNullOrEmpty(user.CustomSavePath) ? L.T("MainForm_D085") : L.T("MainForm_D086");
+            ChannelExternalDLInheritChecked = !user.DownloadExternalVideosOverride.HasValue;
+            ChannelExternalDLOnChecked = user.DownloadExternalVideosOverride == true;
+            ChannelExternalDLOffChecked = user.DownloadExternalVideosOverride == false;
+            var globalDefault = SettingsManager.Instance.Settings.DownloadExternalVideosDefault;
+            ChannelExternalDLInheritText = L.T("MainForm_D084", globalDefault ? "ON" : "OFF");
+        }
 
         [RelayCommand]
         private void EnableChannel()
@@ -803,6 +847,257 @@ namespace IwaraDownloader.Wpf.ViewModels
             var user = SelectedTreeNode?.Channel;
             if (user == null) return;
             _downloadManager.EnqueueUserForCheck(user, priority: true);
+            StatusMessage = L.T("MainForm_D087", user.Username);
+        }
+
+        [RelayCommand]
+        private void OpenChannelPage()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user != null) Helpers.OpenUrl(user.ProfileUrl);
+        }
+
+        [RelayCommand]
+        private void DownloadAllChannel()
+        {
+            var node = SelectedTreeNode;
+            List<VideoInfo> videos;
+
+            if (node?.Channel is SubscribedUser user)
+            {
+                videos = _database.GetVideosBySubscribedUser(user.Id)
+                    .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                             && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
+                    .ToList();
+                foreach (var video in videos) _downloadManager.EnqueueDownload(video, true, user);
+            }
+            else if (node?.Kind == TreeNodeKind.NotDownloaded)
+            {
+                videos = _database.GetAllVideos()
+                    .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                             && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
+                    .ToList();
+                EnqueueEach(videos);
+            }
+            else if (node?.Kind == TreeNodeKind.FailedVideos)
+            {
+                videos = _database.GetVideosByStatus(DownloadStatus.Failed).ToList();
+                foreach (var video in videos)
+                {
+                    video.RetryCount = 0;
+                    video.LastErrorMessage = null;
+                    _database.UpdateVideo(video);
+                }
+                EnqueueEach(videos);
+            }
+            else if (node?.Kind == TreeNodeKind.SingleVideos)
+            {
+                videos = _database.GetAllVideos()
+                    .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                             && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
+                    .ToList();
+                EnqueueEach(videos);
+            }
+            else
+            {
+                return;
+            }
+
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D088", videos.Count);
+
+            void EnqueueEach(List<VideoInfo> list)
+            {
+                foreach (var video in list)
+                {
+                    var videoUser = video.SubscribedUserId.HasValue ? _database.GetSubscribedUserById(video.SubscribedUserId.Value) : null;
+                    _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, videoUser);
+                }
+            }
+        }
+
+        [RelayCommand]
+        private async Task CheckChannelFiles()
+        {
+            var node = SelectedTreeNode;
+            List<VideoInfo> videos;
+            string noTargetMessage;
+
+            if (node?.Channel is SubscribedUser user)
+            {
+                videos = _database.GetVideosBySubscribedUser(user.Id);
+                if (videos.Count == 0) { StatusMessage = L.T("MainForm_D118", user.Username); return; }
+                noTargetMessage = L.T("MainForm_NoDownloadedInChannel", user.Username);
+            }
+            else if (node?.Kind == TreeNodeKind.Downloaded)
+            {
+                videos = _database.GetVideosByStatus(DownloadStatus.Completed);
+                if (videos.Count == 0) { StatusMessage = L.T("MainForm_D119"); return; }
+                noTargetMessage = L.T("MainForm_D119");
+            }
+            else
+            {
+                return;
+            }
+
+            await CheckFilesExistenceAsync(videos, noTargetMessage);
+        }
+
+        /// <summary>
+        /// 完了扱いのファイルが実在するか確認し、消えていればPendingへ戻して再キューする。
+        /// 旧WinForms版CheckFilesExistenceに相当(動画コンテキストメニュー/チャンネルメニュー共用)。
+        /// </summary>
+        private async Task CheckFilesExistenceAsync(IList<VideoInfo> videos, string noTargetMessage)
+        {
+            StatusMessage = L.T("MainForm_D114", videos.Count);
+            var (checkedCount, missing) = await Task.Run(() =>
+            {
+                int cnt = 0;
+                var miss = new List<VideoInfo>();
+                foreach (var video in videos)
+                {
+                    if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath))
+                    {
+                        cnt++;
+                        if (!File.Exists(video.LocalFilePath))
+                        {
+                            video.Status = DownloadStatus.Pending;
+                            video.LocalFilePath = string.Empty;
+                            video.DownloadedAt = null;
+                            video.RetryCount = 0;
+                            video.LastErrorMessage = null;
+                            _database.UpdateVideo(video);
+                            miss.Add(video);
+                        }
+                    }
+                }
+                return (cnt, miss);
+            });
+
+            foreach (var video in missing)
+            {
+                var user = video.SubscribedUserId.HasValue ? _database.GetSubscribedUserById(video.SubscribedUserId.Value) : null;
+                _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+            }
+
+            RefreshTree();
+            LoadVideos();
+
+            StatusMessage = checkedCount == 0 ? noTargetMessage
+                : missing.Count == 0 ? L.T("MainForm_D115", checkedCount)
+                : L.T("MainForm_D116", checkedCount, missing.Count);
+        }
+
+        [RelayCommand]
+        private void DeleteNotFoundChannel()
+        {
+            var errors = _database.GetVideosByStatus(DownloadStatus.Failed);
+            var notFound = errors.Where(v =>
+                v.LastErrorMessage != null &&
+                (v.LastErrorMessage.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+                 v.LastErrorMessage.Contains("404", StringComparison.OrdinalIgnoreCase) ||
+                 v.LastErrorMessage.Contains("deleted", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (notFound.Count == 0)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D089"), L.T("MainForm_D090"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            var result = System.Windows.MessageBox.Show(
+                L.T("MainForm_D091", notFound.Count), L.T("MainForm_D092"),
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
+            int deleted = _downloadManager.ExcludeVideos(notFound);
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D093", deleted);
+        }
+
+        [RelayCommand]
+        private void SetChannelSavePath()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+
+            var owner = GetOwnerWin32Window();
+            var defaultDownloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var oldSavePath = user.GetSavePath(defaultDownloadFolder);
+
+            using var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = L.T("MainForm_D094", user.Username),
+                UseDescriptionForTitle = true,
+                SelectedPath = oldSavePath,
+            };
+            if (dialog.ShowDialog(owner) != System.Windows.Forms.DialogResult.OK) return;
+
+            var newSavePath = dialog.SelectedPath;
+            if (string.Equals(
+                    Path.GetFullPath(newSavePath).TrimEnd('\\'),
+                    Path.GetFullPath(oldSavePath).TrimEnd('\\'),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var allUserVideos = _database.GetVideosBySubscribedUser(user.Id);
+            var movableFiles = FileMoveHelper.GetMovableFiles(allUserVideos, oldSavePath);
+            var decision = FileMoveHelper.ConfirmMove(owner, L.T("MainForm_MoveTitle", user.Username), movableFiles, oldSavePath, newSavePath);
+            if (decision == FileMoveHelper.MoveDecision.Cancel) return;
+
+            user.CustomSavePath = newSavePath;
+            _database.UpdateSubscribedUser(user);
+            StatusMessage = L.T("MainForm_D095", newSavePath);
+
+            if (decision == FileMoveHelper.MoveDecision.Move && movableFiles.Count > 0)
+            {
+                var items = FileMoveHelper.BuildMovePlan(movableFiles, oldSavePath, newSavePath);
+                using var progressForm = new FileMoveProgressForm(items, _database);
+                progressForm.ShowDialog(owner);
+
+                IndexCacheService.Invalidate(oldSavePath);
+                IndexCacheService.Invalidate(newSavePath);
+                FileMoveHelper.CleanupEmptyDirectories(oldSavePath);
+                RefreshTree();
+                LoadVideos();
+
+                StatusMessage = L.T("MainForm_D096", progressForm.MovedCount, progressForm.FailedCount);
+                if (progressForm.FailedCount > 0)
+                {
+                    System.Windows.MessageBox.Show(
+                        L.T("MainForm_D097", progressForm.FailedCount) + L.T("MainForm_D098") + L.T("MainForm_D099"),
+                        L.T("MainForm_D100"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void SetChannelExternalDLInherit() => SetChannelExternalOverride(null);
+
+        [RelayCommand]
+        private void SetChannelExternalDLOn() => SetChannelExternalOverride(true);
+
+        [RelayCommand]
+        private void SetChannelExternalDLOff() => SetChannelExternalOverride(false);
+
+        private void SetChannelExternalOverride(bool? value)
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+            user.DownloadExternalVideosOverride = value;
+            _database.UpdateSubscribedUser(user);
+            var label = value switch
+            {
+                true => L.T("MainForm_menuChExternalDLOn"),
+                false => L.T("MainForm_menuChExternalDLOff"),
+                null => L.T("MainForm_menuChExternalDLInherit"),
+            };
+            StatusMessage = L.T("MainForm_D101", user.Username, label);
         }
 
         [RelayCommand]
@@ -819,6 +1114,10 @@ namespace IwaraDownloader.Wpf.ViewModels
             _database.DeleteSubscribedUser(user.Id);
             RefreshTree();
         }
+
+        private System.Windows.Forms.IWin32Window GetOwnerWin32Window() => OwnerWindow != null
+            ? new Win32WindowWrapper(new System.Windows.Interop.WindowInteropHelper(OwnerWindow).Handle)
+            : new Win32WindowWrapper(IntPtr.Zero);
 
         #endregion
 

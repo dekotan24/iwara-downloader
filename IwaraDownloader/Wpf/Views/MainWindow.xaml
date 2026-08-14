@@ -96,19 +96,48 @@
                 <ListBox ItemsSource="{Binding TreeNodes}"
                          SelectedItem="{Binding SelectedTreeNode}"
                          Background="Transparent" BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ContextMenuOpening="ChannelTree_ContextMenuOpening">
                     <ListBox.ContextMenu>
                         <!--
                             ContextMenuはPopupの別ツリーに属しDataContextを継承しないため、
                             PlacementTarget(=このListBox)のDataContext(=MainViewModel)を
                             明示的に引き継がせる。これで配下のMenuItemは通常通り{Binding XCommand}で書ける。
+                            各項目のVisibilityはMainViewModel.RefreshChannelContextMenuState()が
+                            開く直前(ContextMenuOpening)に計算する(旧WinForms版contextMenuChannel_Openingに相当)。
                         -->
                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="{loc:T MainForm_menuChCheckNow}" Command="{Binding CheckChannelNowCommand}" />
-                            <MenuItem Header="{loc:T MainForm_menuChEnable}" Command="{Binding EnableChannelCommand}" />
-                            <MenuItem Header="{loc:T MainForm_menuChDisable}" Command="{Binding DisableChannelCommand}" />
-                            <Separator />
-                            <MenuItem Header="{loc:T MainForm_menuChDelete}" Command="{Binding DeleteChannelCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuChOpen}" Command="{Binding OpenChannelPageCommand}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{Binding CheckChannelNowText}" Command="{Binding CheckChannelNowCommand}"
+                                      IsEnabled="{Binding CheckChannelNowEnabled}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDownloadAll}" Command="{Binding DownloadAllChannelCommand}"
+                                      Visibility="{Binding CanDownloadAllChannel, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChCheckFiles}" Command="{Binding CheckChannelFilesCommand}"
+                                      Visibility="{Binding CanCheckChannelFiles, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDeleteNotFound}" Command="{Binding DeleteNotFoundChannelCommand}"
+                                      Visibility="{Binding CanDeleteNotFoundChannel, Converter={StaticResource BoolToVis}}" />
+                            <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{Binding ChannelSavePathText}" Command="{Binding SetChannelSavePathCommand}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChExternalDL}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem Header="{Binding ChannelExternalDLInheritText}" Command="{Binding SetChannelExternalDLInheritCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelExternalDLInheritChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuChExternalDLOn}" Command="{Binding SetChannelExternalDLOnCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelExternalDLOnChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuChExternalDLOff}" Command="{Binding SetChannelExternalDLOffCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelExternalDLOffChecked, Mode=OneWay}" />
+                            </MenuItem>
+                            <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChEnable}" Command="{Binding EnableChannelCommand}"
+                                      Visibility="{Binding CanEnableChannel, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDisable}" Command="{Binding DisableChannelCommand}"
+                                      Visibility="{Binding CanDisableChannel, Converter={StaticResource BoolToVis}}" />
+                            <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDelete}" Command="{Binding DeleteChannelCommand}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListBox.ItemContainerStyle>

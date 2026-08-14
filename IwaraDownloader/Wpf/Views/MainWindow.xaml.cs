@@ -22,5 +22,10 @@ namespace IwaraDownloader.Wpf.Views
         {
             (DataContext as MainViewModel)?.RefreshVideoContextMenuState();
         }
+
+        private void ChannelTree_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+        {
+            (DataContext as MainViewModel)?.RefreshChannelContextMenuState();
+        }
     }
 }
