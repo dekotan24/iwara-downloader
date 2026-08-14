@@ -74,7 +74,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             return L.T("MainForm_SourceExternal");
         }
 
-        private static string GetStatusText(DownloadStatus status) => status switch
+        internal static string GetStatusText(DownloadStatus status) => status switch
         {
             DownloadStatus.Pending => L.T("MainForm_D074"),
             DownloadStatus.Downloading => L.T("MainForm_D075"),

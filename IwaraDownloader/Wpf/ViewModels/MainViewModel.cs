@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using IwaraDownloader.Forms;
 using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 using IwaraDownloader.Utils;
@@ -24,9 +26,195 @@ namespace IwaraDownloader.Wpf.ViewModels
         [ObservableProperty]
         private ChannelTreeNodeViewModel? _selectedTreeNode;
 
+        [ObservableProperty]
+        private string _urlInput = "";
+
+        [ObservableProperty]
+        private string _statusMessage = "";
+
         public MainViewModel()
         {
             RefreshTree();
+        }
+
+        [RelayCommand]
+        private void CheckNow() => _downloadManager.EnqueueAllUsersForCheck();
+
+        [RelayCommand]
+        private void StartAll()
+        {
+            _downloadManager.Start();
+            StatusMessage = L.T("MainForm_D044");
+        }
+
+        [RelayCommand]
+        private void StopAll()
+        {
+            _downloadManager.CancelAllTasks();
+            StatusMessage = L.T("MainForm_D045");
+            RefreshTree();
+            LoadVideos();
+        }
+
+        /// <summary>
+        /// URL入力行の「貼り付けて追加」相当。旧WinForms版ProcessUrlInput/AddVideoAsyncに対応する
+        /// 分岐(動画URL/プロフィールURL/ユーザー名/不正入力)を再現する。
+        /// </summary>
+        [RelayCommand]
+        private async Task AddFromUrlAsync()
+        {
+            var input = UrlInput.Trim();
+            if (string.IsNullOrEmpty(input)) return;
+            UrlInput = "";
+
+            var isUrl = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                     || input.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+            if (Helpers.IsVideoUrl(input))
+            {
+                await AddVideoAsync(input);
+            }
+            else if (Helpers.IsUserProfileUrl(input))
+            {
+                _downloadManager.EnqueueSubscribedUser(input);
+                RefreshTree();
+            }
+            else if (isUrl)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D046"), L.T("MainForm_D040"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            }
+            else if (!Helpers.IsValidUsername(input))
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D041"), L.T("MainForm_D042"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            }
+            else
+            {
+                _downloadManager.EnqueueSubscribedUser(input);
+                RefreshTree();
+            }
+        }
+
+        private async Task AddVideoAsync(string url)
+        {
+            StatusMessage = L.T("MainForm_D047");
+            try
+            {
+                var videoId = Helpers.ExtractVideoIdFromUrl(url);
+                if (!string.IsNullOrEmpty(videoId))
+                {
+                    var existingVideo = _database.GetVideoByVideoId(videoId);
+                    if (existingVideo != null)
+                    {
+                        var statusText = VideoListItemViewModel.GetStatusText(existingVideo.Status);
+                        var result = System.Windows.MessageBox.Show(
+                            L.T("MainForm_D048") + L.T("MainForm_D049", existingVideo.Title) +
+                            L.T("MainForm_D050", statusText) + L.T("MainForm_D051"),
+                            L.T("MainForm_D052"),
+                            System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+
+                        if (result == System.Windows.MessageBoxResult.Yes)
+                        {
+                            SubscribedUser? user = existingVideo.SubscribedUserId.HasValue
+                                ? _database.GetSubscribedUserById(existingVideo.SubscribedUserId.Value)
+                                : null;
+                            _downloadManager.EnqueueDownload(existingVideo, existingVideo.SubscribedUserId.HasValue, user);
+                            RefreshTree();
+                            LoadVideos();
+                            StatusMessage = L.T("MainForm_D053", existingVideo.Title);
+                        }
+                        else
+                        {
+                            StatusMessage = L.T("MainForm_D054");
+                        }
+                        return;
+                    }
+                }
+
+                var progress = new Progress<string>(msg => StatusMessage = msg);
+                var addedVideo = await _downloadManager.AddSingleVideoAsync(url, progress);
+
+                if (addedVideo != null)
+                {
+                    RefreshTree();
+                    LoadVideos();
+                    var statusKey = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd
+                        ? "MainForm_D055" : "MainForm_D188";
+                    StatusMessage = L.T(statusKey, addedVideo.Title);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(L.T("MainForm_D056"), L.T("MainForm_D029"),
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    StatusMessage = L.T("MainForm_D057");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D058", ex.Message), L.T("MainForm_D029"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                StatusMessage = L.T("MainForm_D029");
+            }
+        }
+
+        [RelayCommand]
+        private void OpenSettings()
+        {
+            using var form = new SettingsForm(_downloadManager);
+            if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                _downloadManager.UpdateAutoCheckTimer();
+                _downloadManager.NotifyConcurrentLimitChanged();
+                LoadVideos();
+            }
+        }
+
+        // 以下、Phase6でWPF版に置き換えるまでの間、既存WinFormsダイアログをそのまま起動するブリッジ。
+        // WinForms/WPFはstrangler-fig方式で共存させる方針(memory: project_iwara_downloader_wpf_migration)。
+
+        [RelayCommand]
+        private void OpenAbout() => new Wpf.Views.AboutWindow().ShowDialog();
+
+        [RelayCommand]
+        private void OpenBulkImport()
+        {
+            using var form = new BulkImportForm(_downloadManager);
+            if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                RefreshTree();
+                LoadVideos();
+            }
+        }
+
+        [RelayCommand]
+        private void OpenSearchImport()
+        {
+            using var form = new SearchImportForm(_downloadManager);
+            if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                RefreshTree();
+                LoadVideos();
+            }
+        }
+
+        [RelayCommand]
+        private void OpenImportFromFolder() => ImportFromFolderWizard.ShowOrActivate(null, _downloadManager);
+
+        [RelayCommand]
+        private void OpenDuplicateCheck()
+        {
+            using var form = new DuplicateCheckForm();
+            form.ShowDialog();
+            RefreshTree();
+            LoadVideos();
+        }
+
+        [RelayCommand]
+        private void OpenStatistics()
+        {
+            using var form = new StatisticsForm();
+            form.ShowDialog();
         }
 
         partial void OnSelectedTreeNodeChanged(ChannelTreeNodeViewModel? value) => LoadVideos();
