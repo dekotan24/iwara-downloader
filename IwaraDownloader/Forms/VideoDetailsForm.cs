@@ -16,8 +16,9 @@ namespace IwaraDownloader.Forms
         private readonly IwaraApiService _api;
 
         /// <summary>
-        /// ローカルファイル再マップが実行されたか (Save せずに閉じても DB は既に更新済みなので、
-        /// 呼び出し側はダイアログの DialogResult とは別にこれを見てチャンネルツリー等を再描画する)。
+        /// ローカルファイルの再マップ/マッピング解除が実行されたか (Save せずに閉じても DB は
+        /// 既に更新済みなので、呼び出し側はダイアログの DialogResult とは別にこれを見て
+        /// チャンネルツリー等を再描画する)。
         /// </summary>
         public bool Remapped { get; private set; }
 
@@ -56,6 +57,13 @@ namespace IwaraDownloader.Forms
             btnOpenUrl.Enabled = !string.IsNullOrEmpty(_video.Url);
             btnOpenFile.Enabled = !string.IsNullOrEmpty(_video.LocalFilePath)
                                 && System.IO.File.Exists(_video.LocalFilePath);
+
+            // マッピング解除: DB上でファイルが紐付いている場合のみ (実体の有無は問わない。
+            // 実体が消えていて DB のパスだけ残っている状態こそ解除したいケースのため)。
+            // DL処理中に横から切り離すと競合するため、その間は無効化。
+            btnUnmapFile.Enabled = !string.IsNullOrEmpty(_video.LocalFilePath)
+                                 && _video.Status != DownloadStatus.Downloading
+                                 && _video.Status != DownloadStatus.WritingTags;
         }
 
         /// <summary>
@@ -114,6 +122,19 @@ namespace IwaraDownloader.Forms
 
             Remapped = true;
             // TitleMatchImporter が DB へは即反映済み。表示側も最新値に合わせる。
+            PopulateFields();
+        }
+
+        /// <summary>
+        /// ローカルファイルとの紐付けを解除する (マップ済みの動画のみ)。
+        /// 実ファイルは削除しない。ステータスは Paused に戻る。
+        /// </summary>
+        private void btnUnmapFile_Click(object? sender, EventArgs e)
+        {
+            var result = Utils.LocalFileMapHelper.Unmap(this, _video, _database);
+            if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
+
+            Remapped = true;
             PopulateFields();
         }
 

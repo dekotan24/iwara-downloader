@@ -96,5 +96,34 @@ namespace IwaraDownloader.Utils
             if (!string.IsNullOrEmpty(dir))
                 IndexCacheService.Invalidate(dir);
         }
+
+        /// <summary>
+        /// 確認 → ローカルファイルとの紐付けを解除する (マップの逆操作)。
+        /// 実ファイル・mp4 に書き込んだタグは一切触らない (ユーザーが後で元に戻せるように)。
+        /// FileUuid は維持する (再マップ時に download-url API の再解決を避けるため)。
+        /// Status は自動DLに拾われない Paused に戻す (Pending だと解除直後に自動DLが走ってしまう)。
+        /// </summary>
+        public static MapResult Unmap(IWin32Window owner, VideoInfo video, DatabaseService database)
+        {
+            var oldPath = video.LocalFilePath;
+            if (string.IsNullOrEmpty(oldPath))
+                return MapResult.Cancelled;
+
+            var confirm = MessageBox.Show(owner,
+                L.T("SvcLocalFileMap_D010", video.Title, oldPath),
+                L.T("SvcLocalFileMap_D011"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes)
+                return MapResult.Cancelled;
+
+            video.LocalFilePath = string.Empty;
+            video.FileSize = 0;
+            video.DownloadedAt = null;
+            video.Status = DownloadStatus.Paused;
+            database.UpdateVideo(video);
+
+            InvalidateDir(oldPath);
+
+            return MapResult.Mapped;
+        }
     }
 }

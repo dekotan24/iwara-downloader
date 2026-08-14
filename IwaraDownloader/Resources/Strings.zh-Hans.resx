@@ -3124,6 +3124,17 @@ videoId 后导入数据库。
   <data name="SvcLocalFileMap_D009" xml:space="preserve">
     <value>检测到另一个视频的标签</value>
   </data>
+  <data name="SvcLocalFileMap_D010" xml:space="preserve">
+    <value>将取消「{0}」与以下本地文件的映射:
+{1}
+
+文件本身不会被删除。状态将变为「暂停」(不会自动下载，可手动开始下载或稍后重新映射)。
+
+确定吗?</value>
+  </data>
+  <data name="SvcLocalFileMap_D011" xml:space="preserve">
+    <value>确认取消映射</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>下载完成</value>
   </data>
@@ -3330,6 +3341,9 @@ videoId 后导入数据库。
   </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>
+  </data>
+  <data name="VideoDetailsForm_btnUnmap" xml:space="preserve">
+    <value>取消映射...</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ 添加到收藏</value>

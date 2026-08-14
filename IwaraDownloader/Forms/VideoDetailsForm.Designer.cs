@@ -46,6 +46,7 @@ namespace IwaraDownloader.Forms
             this.txtLocalFilePath = new TextBox();
             this.btnOpenFile = new Button();
             this.btnRemapFile = new Button();
+            this.btnUnmapFile = new Button();
             this.lblRetry = new Label();
             this.txtRetry = new TextBox();
             this.lblLastError = new Label();
@@ -136,7 +137,7 @@ namespace IwaraDownloader.Forms
 
                 var fileRow = new TableLayoutPanel
                 {
-                    ColumnCount = 3,
+                    ColumnCount = 4,
                     RowCount = 1,
                     Dock = DockStyle.Fill,
                     Margin = new Padding(0)
@@ -144,18 +145,25 @@ namespace IwaraDownloader.Forms
                 fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
                 fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70F));
                 fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80F));
+                fileRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
                 txtLocalFilePath.ReadOnly = true;
                 txtLocalFilePath.Dock = DockStyle.Fill;
                 btnOpenFile.Text = Utils.L.T("VideoDetailsForm_btnOpen");
                 btnOpenFile.Dock = DockStyle.Fill;
                 btnOpenFile.Click += btnOpenFile_Click;
-                // 再マップは常時有効 (状態を問わず、誤って紐付いたファイルの修正にも使えるように)
+                // マップ/再マップは常時有効 (状態を問わず、未マップ動画への新規マップにも
+                // 誤って紐付いたファイルの修正にも使えるように)
                 btnRemapFile.Text = Utils.L.T("VideoDetailsForm_btnRemap");
                 btnRemapFile.Dock = DockStyle.Fill;
                 btnRemapFile.Click += btnRemapFile_Click;
+                // マッピング解除は LocalFilePath が設定されている場合のみ有効 (PopulateFields で判定)
+                btnUnmapFile.Text = Utils.L.T("VideoDetailsForm_btnUnmap");
+                btnUnmapFile.Dock = DockStyle.Fill;
+                btnUnmapFile.Click += btnUnmapFile_Click;
                 fileRow.Controls.Add(txtLocalFilePath, 0, 0);
                 fileRow.Controls.Add(btnOpenFile, 1, 0);
                 fileRow.Controls.Add(btnRemapFile, 2, 0);
+                fileRow.Controls.Add(btnUnmapFile, 3, 0);
 
                 tableLayout.Controls.Add(lblLocalFilePath);
                 tableLayout.Controls.Add(fileRow);
@@ -246,7 +254,7 @@ namespace IwaraDownloader.Forms
         private TextBox txtTitle, txtSource, txtAuthor, txtVideoId, txtFileUuid, txtStatus, txtDuration, txtFileSize;
         private TextBox txtPostedAt, txtDownloadedAt, txtCreatedAt, txtUrl, txtLocalFilePath, txtRetry, txtLastError;
         private TextBox txtTags, txtMemo;
-        private Button btnOpenUrl, btnOpenFile, btnRemapFile, btnSave, btnCancel;
+        private Button btnOpenUrl, btnOpenFile, btnRemapFile, btnUnmapFile, btnSave, btnCancel;
         private TableLayoutPanel tableLayout;
     }
 }

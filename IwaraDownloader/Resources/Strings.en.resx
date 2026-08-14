@@ -3124,6 +3124,17 @@ Use this file anyway?</value>
   <data name="SvcLocalFileMap_D009" xml:space="preserve">
     <value>Tags for a different video detected</value>
   </data>
+  <data name="SvcLocalFileMap_D010" xml:space="preserve">
+    <value>This will unmap the local file from "{0}":
+{1}
+
+The file itself will not be deleted. The status will be set to Paused (it will not be downloaded automatically; start the download manually or map it again later).
+
+Continue?</value>
+  </data>
+  <data name="SvcLocalFileMap_D011" xml:space="preserve">
+    <value>Confirm unmap</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>Download complete</value>
   </data>
@@ -3330,6 +3341,9 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>Save</value>
+  </data>
+  <data name="VideoDetailsForm_btnUnmap" xml:space="preserve">
+    <value>Unmap...</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ Add to favorites</value>

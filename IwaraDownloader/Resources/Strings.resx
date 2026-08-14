@@ -3128,6 +3128,17 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SvcLocalFileMap_D009" xml:space="preserve">
     <value>別の動画のタグが検出されました</value>
   </data>
+  <data name="SvcLocalFileMap_D010" xml:space="preserve">
+    <value>「{0}」のローカルファイルのマッピングを解除します:
+{1}
+
+ファイル自体は削除されません。ステータスは「一時停止」に戻ります (自動ダウンロードはされません。手動でダウンロード開始するか、再度マップしてください)。
+
+よろしいですか?</value>
+  </data>
+  <data name="SvcLocalFileMap_D011" xml:space="preserve">
+    <value>マッピング解除の確認</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>ダウンロード完了</value>
   </data>
@@ -3334,6 +3345,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="VideoDetailsForm_btnSave" xml:space="preserve">
     <value>保存</value>
+  </data>
+  <data name="VideoDetailsForm_btnUnmap" xml:space="preserve">
+    <value>マッピング解除...</value>
   </data>
   <data name="VideoDetailsForm_chkFavorite" xml:space="preserve">
     <value>★ お気に入りに登録</value>
