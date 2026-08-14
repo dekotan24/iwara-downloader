@@ -14,10 +14,15 @@ namespace IwaraDownloader
             // UI言語の適用。フォーム生成前(=文言が読まれる前)に必ず行う
             ApplyUiLanguage();
 
-            // WPF移行 Phase1 検証用の一時的な起動フラグ。Phase8カットオーバーまでに削除すること。
+            // WPF移行 検証用の一時的な起動フラグ。Phase8カットオーバーまでに削除すること。
             if (args.Contains("--wpf-styleguide"))
             {
                 new Wpf.Views.StyleGuideWindow().ShowDialog();
+                return;
+            }
+            if (args.Contains("--wpf-about"))
+            {
+                new Wpf.Views.AboutWindow().ShowDialog();
                 return;
             }
 
