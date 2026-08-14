@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ライトパレット。Palette.Dark.xaml と同じキー名を持つこと。 -->
+
+    <Color x:Key="Color.Background">#FFF7F7F8</Color>
+    <Color x:Key="Color.BackgroundElevated">#FFFFFFFF</Color>
+    <Color x:Key="Color.BackgroundHover">#FFEBEBEE</Color>
+    <Color x:Key="Color.Border">#FFDCDCE1</Color>
+
+    <Color x:Key="Color.Text">#FF1C1C1F</Color>
+    <Color x:Key="Color.TextSecondary">#FF5B5B63</Color>
+    <Color x:Key="Color.TextDisabled">#FFA5A5AD</Color>
+
+    <Color x:Key="Color.Accent">#FF3D63E0</Color>
+    <Color x:Key="Color.AccentHover">#FF2C4FC4</Color>
+    <Color x:Key="Color.OnAccent">#FFFFFFFF</Color>
+
+    <Color x:Key="Color.Success">#FF2E9A4C</Color>
+    <Color x:Key="Color.Warning">#FFC17A24</Color>
+    <Color x:Key="Color.Danger">#FFC7382D</Color>
+    <Color x:Key="Color.Favorite">#FFA9800F</Color>
+
+    <SolidColorBrush x:Key="Brush.Background" Color="{StaticResource Color.Background}" />
+    <SolidColorBrush x:Key="Brush.BackgroundElevated" Color="{StaticResource Color.BackgroundElevated}" />
+    <SolidColorBrush x:Key="Brush.BackgroundHover" Color="{StaticResource Color.BackgroundHover}" />
+    <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource Color.Border}" />
+
+    <SolidColorBrush x:Key="Brush.Text" Color="{StaticResource Color.Text}" />
+    <SolidColorBrush x:Key="Brush.TextSecondary" Color="{StaticResource Color.TextSecondary}" />
+    <SolidColorBrush x:Key="Brush.TextDisabled" Color="{StaticResource Color.TextDisabled}" />
+
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}" />
+    <SolidColorBrush x:Key="Brush.AccentHover" Color="{StaticResource Color.AccentHover}" />
+    <SolidColorBrush x:Key="Brush.OnAccent" Color="{StaticResource Color.OnAccent}" />
+
+    <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}" />
+    <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}" />
+    <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}" />
+    <SolidColorBrush x:Key="Brush.Favorite" Color="{StaticResource Color.Favorite}" />
+
+</ResourceDictionary>

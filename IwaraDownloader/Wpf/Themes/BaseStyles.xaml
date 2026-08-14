@@ -1,0 +1,26 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        パレット非依存の共通スタイル。個々のコントロール(Button/TextBox等)の詳細スタイルは
+        スタイルガイド用テストウィンドウ(Phase1)で確定させるため、ここではWindow全体の
+        最低限の見た目(背景/文字色/フォント)だけを用意する。
+    -->
+
+    <CornerRadius x:Key="CornerRadius.Default">6</CornerRadius>
+    <CornerRadius x:Key="CornerRadius.Small">4</CornerRadius>
+
+    <Style TargetType="{x:Type Window}">
+        <Setter Property="Background" Value="{DynamicResource Brush.Background}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+        <Setter Property="FontFamily" Value="Yu Gothic UI, Segoe UI, sans-serif" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+    </Style>
+
+</ResourceDictionary>

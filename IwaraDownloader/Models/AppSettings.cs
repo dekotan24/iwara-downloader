@@ -181,6 +181,12 @@ namespace IwaraDownloader.Models
         /// </summary>
         public string Language { get; set; } = "auto";
 
+        /// <summary>
+        /// WPF画面のテーマ: "dark" / "light"。既定はダーク(2026年のデザイン方針に基づく)。
+        /// 変更はウィンドウ再表示で反映(アプリ全体の再起動は不要)。
+        /// </summary>
+        public string Theme { get; set; } = "dark";
+
         /// <summary>設定ファイルのパス</summary>
         [JsonIgnore]
         public static string ConfigFilePath => Path.Combine(
