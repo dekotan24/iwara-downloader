@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IwaraDownloader.Forms;
@@ -7,6 +8,7 @@ using IwaraDownloader.Services;
 using IwaraDownloader.Utils;
 using IwaraDownloader.Wpf.Models;
 using IwaraDownloader.Wpf.Theme;
+using Brush = System.Windows.Media.Brush;
 
 namespace IwaraDownloader.Wpf.ViewModels
 {
@@ -32,9 +34,81 @@ namespace IwaraDownloader.Wpf.ViewModels
         [ObservableProperty]
         private string _statusMessage = "";
 
+        [ObservableProperty]
+        private string _freeSpaceText = "";
+
+        [ObservableProperty]
+        private Brush _freeSpaceForeground = ThemeManager.GetBrush("Brush.TextSecondary");
+
+        [ObservableProperty]
+        private string _downloadCountText = "";
+
+        [ObservableProperty]
+        private int _progressBarValue;
+
+        private readonly DispatcherTimer _freeSpaceTimer;
+
         public MainViewModel()
         {
             RefreshTree();
+            RefreshFreeSpace();
+            RefreshDownloadCount();
+
+            // 旧WinForms版StartFreeSpaceMonitorに対応(1分間隔)。DL件数/進捗のライブ更新は
+            // Phase7でDownloadManagerイベント購読に置き換える(ここでは初期表示のみ)。
+            _freeSpaceTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            _freeSpaceTimer.Tick += (_, _) => RefreshFreeSpace();
+            _freeSpaceTimer.Start();
+        }
+
+        /// <summary>DL先ドライブの空き容量をステータスバー用に更新する</summary>
+        private void RefreshFreeSpace()
+        {
+            try
+            {
+                var settings = SettingsManager.Instance.Settings;
+                var root = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
+                if (string.IsNullOrEmpty(root)) return;
+
+                var free = new DriveInfo(root).AvailableFreeSpace;
+                var text = L.T("MainForm_FreeSpace", FileMoveHelper.FormatSize(free), root.TrimEnd('\\'));
+                var isLow = settings.MinFreeSpaceGb > 0 && free < settings.MinFreeSpaceGb * 1024L * 1024 * 1024;
+                if (isLow) text += " ⚠";
+
+                FreeSpaceText = text;
+                FreeSpaceForeground = isLow ? ThemeManager.GetBrush("Brush.Danger") : ThemeManager.GetBrush("Brush.TextSecondary");
+            }
+            catch { /* フォルダ未作成・ドライブ情報取得不可の場合は非表示のまま */ }
+        }
+
+        /// <summary>DL中/待機中/完了件数とキュー進捗をステータスバー用に更新する</summary>
+        private void RefreshDownloadCount()
+        {
+            var downloading = _database.GetVideosByStatus(DownloadStatus.Downloading).Count;
+            var pending = _database.GetVideosByStatus(DownloadStatus.Pending).Count;
+            var allVideos = _database.GetAllVideos();
+            var completed = allVideos.Count(v => v.Status == DownloadStatus.Completed);
+            var totalSize = allVideos.Where(v => v.Status == DownloadStatus.Completed).Sum(v => v.FileSize);
+            var totalSizeStr = FileMoveHelper.FormatSize(totalSize);
+
+            var activeTasks = _downloadManager.GetActiveTasks();
+            var dlTasks = activeTasks.Where(t => t.Status == DownloadStatus.Downloading).ToList();
+            int progressValue = 0;
+            string queueText = "";
+
+            if (dlTasks.Count > 0)
+            {
+                double avgInProgress = dlTasks.Average(t => t.Progress);
+                progressValue = Math.Clamp((int)avgInProgress, 0, 100);
+                queueText = L.T("MainForm_QueueSummaryFull", dlTasks.Count, avgInProgress.ToString("F0"), pending);
+            }
+            else if (pending > 0)
+            {
+                queueText = L.T("MainForm_QueueSummaryPending", pending);
+            }
+
+            DownloadCountText = L.T("MainForm_D127", downloading, pending, completed, totalSizeStr, queueText);
+            ProgressBarValue = progressValue;
         }
 
         [RelayCommand]
@@ -54,6 +128,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             StatusMessage = L.T("MainForm_D045");
             RefreshTree();
             LoadVideos();
+            RefreshDownloadCount();
         }
 
         /// <summary>
