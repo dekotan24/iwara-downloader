@@ -14,8 +14,12 @@ namespace IwaraDownloader.Wpf.ViewModels
     public partial class MainViewModel : ObservableObject
     {
         private readonly DatabaseService _database = DatabaseService.Instance;
+        // Phase8カットオーバーまではWinForms版MainFormも別途DownloadManagerを持つ (二重インスタンス)。
+        // アプリ全体で1個に統合するのはカットオーバー時の作業とする。
+        private readonly DownloadManager _downloadManager = new();
 
         public ObservableCollection<ChannelTreeNodeViewModel> TreeNodes { get; } = new();
+        public ObservableCollection<VideoListItemViewModel> Videos { get; } = new();
 
         [ObservableProperty]
         private ChannelTreeNodeViewModel? _selectedTreeNode;
@@ -23,6 +27,47 @@ namespace IwaraDownloader.Wpf.ViewModels
         public MainViewModel()
         {
             RefreshTree();
+        }
+
+        partial void OnSelectedTreeNodeChanged(ChannelTreeNodeViewModel? value) => LoadVideos();
+
+        /// <summary>
+        /// 選択中ノードに応じた動画一覧を読み込む。旧WinForms版RefreshVideoListCoreAsyncに対応。
+        /// ツリー選択が変わった時にのみ実行する(状態変化のたびに毎回全件再取得はしない)。
+        /// 個別動画の進捗/状態のライブ更新はPhase7でDownloadManagerイベント経由の差分更新にする。
+        /// </summary>
+        public void LoadVideos()
+        {
+            Videos.Clear();
+            var node = SelectedTreeNode;
+            if (node == null) return;
+
+            List<VideoInfo> videos = node.Kind switch
+            {
+                TreeNodeKind.Channel when node.Channel != null => _database.GetVideosBySubscribedUser(node.Channel.Id),
+                TreeNodeKind.AllVideos => _database.GetAllVideos(),
+                TreeNodeKind.AllDownloads => _database.GetVideosByStatus(DownloadStatus.Downloading)
+                    .Concat(_database.GetVideosByStatus(DownloadStatus.Pending)).ToList(),
+                TreeNodeKind.NotDownloaded => _database.GetNotDownloadedVideos(),
+                TreeNodeKind.Downloaded => _database.GetVideosByStatus(DownloadStatus.Completed),
+                TreeNodeKind.Skipped => _database.GetVideosByStatus(DownloadStatus.Skipped),
+                TreeNodeKind.FailedVideos => _database.GetVideosByStatus(DownloadStatus.Failed),
+                TreeNodeKind.SingleVideos => _database.GetSingleVideos(),
+                TreeNodeKind.Favorites => _database.GetFavoriteVideos(),
+                TreeNodeKind.Excluded => _database.GetExcludedVideos(),
+                _ => new List<VideoInfo>(),
+            };
+
+            // 各DatabaseServiceメソッドが既にSQL側でCreatedAt DESC順に返す(GetVideosByStatusのConcatは
+            // 旧WinForms版と同じ挙動: 個々にソート済みだが連結後の全体ソートはしない)ため、ここでは
+            // 追加のソートをしない(4万件規模の再ソートを避ける)。
+            foreach (var video in videos)
+            {
+                var task = _downloadManager.GetTask(video.VideoId);
+                var item = new VideoListItemViewModel(video);
+                item.Refresh(task);
+                Videos.Add(item);
+            }
         }
 
         /// <summary>

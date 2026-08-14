@@ -112,9 +112,33 @@
 
             <Border Grid.Column="2" x:Name="VideoListHost"
                     Background="{DynamicResource Brush.Background}">
-                <TextBlock Text="[動画一覧: Phase4c で実装]"
-                           Foreground="{DynamicResource Brush.TextDisabled}"
-                           TextWrapping="Wrap" Margin="8" />
+                <!--
+                    動画一覧: ListViewの既定パネルはVirtualizingStackPanelのため、
+                    IsVirtualizing/VirtualizationMode を明示しなくても4万件規模で
+                    可視行のみUI要素化される(旧WinForms版のVirtualModeに相当)。
+                -->
+                <ListView ItemsSource="{Binding Videos}"
+                          Background="Transparent" BorderThickness="0"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Pixel">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="タイトル" Width="400" DisplayMemberBinding="{Binding Title}" />
+                            <GridViewColumn Header="ソース" Width="80" DisplayMemberBinding="{Binding Source}" />
+                            <GridViewColumn Header="状態" Width="90">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusForeground}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="進捗" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
+                            <GridViewColumn Header="サイズ" Width="90" DisplayMemberBinding="{Binding FileSize}" />
+                            <GridViewColumn Header="追加日時" Width="140" DisplayMemberBinding="{Binding CreatedAt}" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
             </Border>
         </Grid>
 
