@@ -25,6 +25,11 @@ namespace IwaraDownloader
                 new Wpf.Views.AboutWindow().ShowDialog();
                 return;
             }
+            if (args.Contains("--thumbcache-selftest"))
+            {
+                RunThumbnailCacheSelfTest();
+                return;
+            }
 
             // 多重起動防止
             using var mutex = new Mutex(true, "IwaraDownloader_SingleInstance", out bool createdNew);
@@ -73,6 +78,64 @@ namespace IwaraDownloader
                 // ログサービス終了
                 logger.Dispose();
             }
+        }
+
+        /// <summary>
+        /// WPF移行 Phase3 検証用の一時的な自己診断。ThumbnailCacheServiceのbyte[]化改修が
+        /// 実際のキャッシュ済みファイルに対して正しく動くかを確認する。Phase8までに削除すること。
+        /// </summary>
+        private static void RunThumbnailCacheSelfTest()
+        {
+            var resultPath = Path.Combine(Path.GetTempPath(), "thumbcache_selftest_result.txt");
+            var lines = new List<string>();
+            try
+            {
+                var dir = Services.ThumbnailCacheService.ResolveCacheDir();
+                var file = Directory.EnumerateFiles(dir, "*.jpg").FirstOrDefault();
+                if (file == null)
+                {
+                    lines.Add("NO_CACHE_FILE_FOUND");
+                }
+                else
+                {
+                    var videoId = Path.GetFileNameWithoutExtension(file);
+                    var svc = Services.ThumbnailCacheService.Instance;
+
+                    var diskImg = svc.TryGetCached(videoId);
+                    lines.Add($"TryGetCached (disk->mem promote): {(diskImg != null ? $"OK {diskImg.Width}x{diskImg.Height}" : "NULL")}");
+                    diskImg?.Dispose();
+
+                    var memImg = svc.TryGetMemoryCached(videoId);
+                    lines.Add($"TryGetMemoryCached (mem hit): {(memImg != null ? $"OK {memImg.Width}x{memImg.Height}" : "NULL")}");
+                    memImg?.Dispose();
+
+                    var bytes = svc.TryGetMemoryCachedBytes(videoId);
+                    lines.Add($"TryGetMemoryCachedBytes: {(bytes != null ? $"OK {bytes.Length} bytes" : "NULL")}");
+
+                    if (bytes != null)
+                    {
+                        try
+                        {
+                            using var ms = new MemoryStream(bytes);
+                            using var decoded = Image.FromStream(ms);
+                            lines.Add($"WPF-side decode simulation (Image.FromStream on cached bytes): OK {decoded.Width}x{decoded.Height}");
+                        }
+                        catch (Exception ex)
+                        {
+                            lines.Add($"WPF-side decode simulation: FAILED {ex.Message}");
+                        }
+                    }
+
+                    // 別のvideoIdでミス確認 (キャッシュに無いキーはnullを返すこと)
+                    var missBytes = svc.TryGetMemoryCachedBytes("__nonexistent__");
+                    lines.Add($"Miss case (non-cached id): {(missBytes == null ? "OK (null)" : "UNEXPECTED NON-NULL")}");
+                }
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"EXCEPTION: {ex}");
+            }
+            File.WriteAllLines(resultPath, lines, System.Text.Encoding.UTF8);
         }
 
         /// <summary>
