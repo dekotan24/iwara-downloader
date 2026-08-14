@@ -30,6 +30,11 @@ namespace IwaraDownloader
                 RunThumbnailCacheSelfTest();
                 return;
             }
+            if (args.Contains("--wpf-main"))
+            {
+                new Wpf.Views.MainWindow().ShowDialog();
+                return;
+            }
 
             // 多重起動防止
             using var mutex = new Mutex(true, "IwaraDownloader_SingleInstance", out bool createdNew);
