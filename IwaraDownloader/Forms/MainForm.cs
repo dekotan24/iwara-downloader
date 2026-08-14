@@ -871,11 +871,13 @@ namespace IwaraDownloader.Forms
             if (IsDisposed) return;
 
             // DB クエリをバックグラウンドスレッドで実行 (DatabaseService は接続毎使い捨てでスレッドセーフ)
-            List<VideoInfo> allVideos;
+            // 件数は SQL 側の GROUP BY で集計する (全動画を GetAllVideos() でロードして LINQ 集計すると
+            // 動画数万件規模で RefreshChannelTree のたびに重くなるため)
+            VideoTreeCounts counts;
             List<SubscribedUser> users;
             try
             {
-                allVideos = await Task.Run(() => _database.GetAllVideos());
+                counts = await Task.Run(() => _database.GetVideoTreeCounts());
                 users = await Task.Run(() => _database.GetAllSubscribedUsers());
             }
             catch (Exception ex)
@@ -893,13 +895,12 @@ namespace IwaraDownloader.Forms
 
             treeViewChannels.Nodes.Clear();
 
-            var totalCount = allVideos.Count;
-            var completedCount = allVideos.Count(v => v.Status == DownloadStatus.Completed);
-            var failedCount = allVideos.Count(v => v.Status == DownloadStatus.Failed);
-            var skippedCount = allVideos.Count(v => v.Status == DownloadStatus.Skipped);
+            var totalCount = counts.Total;
+            var completedCount = counts.Completed;
+            var failedCount = counts.Failed;
+            var skippedCount = counts.Skipped;
             // 未DL: Completed / Skipped を除外したもの (Pending/Failed/Downloading等)
-            var notDownloadedCount = allVideos.Count(v =>
-                v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Skipped);
+            var notDownloadedCount = counts.NotDownloaded;
 
             // DL中/タグ書込中/待機中は DownloadManager のアクティブなタスクから取得(リアルタイム同期)
             var downloadingCount = _downloadManager.DownloadingCount;
@@ -915,7 +916,7 @@ namespace IwaraDownloader.Forms
             treeViewChannels.Nodes.Add(allVideosNode);
 
             // 「お気に入り」ノード (0件でも常時表示して機能を見つけやすくする)
-            var favoriteCount = allVideos.Count(v => v.IsFavorite);
+            var favoriteCount = counts.Favorite;
             var favoritesNode = new TreeNode(L.T("MainForm_D178", favoriteCount))
             {
                 Tag = NODE_FAVORITES,
@@ -985,10 +986,9 @@ namespace IwaraDownloader.Forms
             }
 
             // 「単発動画」ノード
-            var singleVideos = allVideos.Where(v => !v.SubscribedUserId.HasValue).ToList();
-            if (singleVideos.Any())
+            if (counts.SingleVideos > 0)
             {
-                var singleNode = new TreeNode(L.T("MainForm_D184", singleVideos.Count))
+                var singleNode = new TreeNode(L.T("MainForm_D184", counts.SingleVideos))
                 {
                     Tag = NODE_SINGLE_VIDEOS
                 };
@@ -1010,12 +1010,13 @@ namespace IwaraDownloader.Forms
             // 登録チャンネル (users は await で取得済み)
             foreach (var user in users)
             {
-                var videos = allVideos.Where(v => v.SubscribedUserId == user.Id).ToList();
-                var chCompletedCount = videos.Count(v => v.Status == DownloadStatus.Completed);
-                var chDownloadingVideos = videos.Count(v => v.Status == DownloadStatus.Downloading);
-                var chPendingVideos = videos.Count(v => v.Status == DownloadStatus.Pending);
+                counts.ByChannel.TryGetValue(user.Id, out var ch);
+                var chTotal = ch?.Total ?? 0;
+                var chCompletedCount = ch?.Completed ?? 0;
+                var chDownloadingVideos = ch?.Downloading ?? 0;
+                var chPendingVideos = ch?.Pending ?? 0;
                 // Paused には issue #21 の「後でDL」対象 (キュー未投入のまま待機中) も含まれる
-                var chPausedVideos = videos.Count(v => v.Status == DownloadStatus.Paused);
+                var chPausedVideos = ch?.Paused ?? 0;
 
                 var statusText = "";
                 if (chDownloadingVideos > 0)
@@ -1024,8 +1025,8 @@ namespace IwaraDownloader.Forms
                     statusText = $" ⏳{chPendingVideos}";
                 if (chPausedVideos > 0)
                     statusText += $" ⏸️{chPausedVideos}";
-                
-                var nodeText = $"{(user.IsEnabled ? "📺" : "⬜")} {user.Username} [{chCompletedCount}/{videos.Count}]{statusText}";
+
+                var nodeText = $"{(user.IsEnabled ? "📺" : "⬜")} {user.Username} [{chCompletedCount}/{chTotal}]{statusText}";
                 var node = new TreeNode(nodeText)
                 {
                     Tag = user,
@@ -1147,16 +1148,12 @@ namespace IwaraDownloader.Forms
                             NODE_ALL_VIDEOS => _database.GetAllVideos(),
                             NODE_ALL_DOWNLOADS => _database.GetVideosByStatus(DownloadStatus.Downloading)
                                 .Concat(_database.GetVideosByStatus(DownloadStatus.Pending)).ToList(),
-                            NODE_NOT_DOWNLOADED => _database.GetAllVideos()
-                                .Where(v => v.Status != DownloadStatus.Completed
-                                         && v.Status != DownloadStatus.Skipped).ToList(),
+                            NODE_NOT_DOWNLOADED => _database.GetNotDownloadedVideos(),
                             NODE_DOWNLOADED => _database.GetVideosByStatus(DownloadStatus.Completed),
                             NODE_SKIPPED => _database.GetVideosByStatus(DownloadStatus.Skipped),
                             NODE_FAILED_VIDEOS => _database.GetVideosByStatus(DownloadStatus.Failed),
-                            NODE_SINGLE_VIDEOS => _database.GetAllVideos()
-                                .Where(v => !v.SubscribedUserId.HasValue).ToList(),
-                            NODE_FAVORITES => _database.GetAllVideos()
-                                .Where(v => v.IsFavorite).ToList(),
+                            NODE_SINGLE_VIDEOS => _database.GetSingleVideos(),
+                            NODE_FAVORITES => _database.GetFavoriteVideos(),
                             NODE_EXCLUDED => _database.GetExcludedVideos(),
                             _ => new List<VideoInfo>(),
                         };
