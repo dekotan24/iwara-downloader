@@ -1,4 +1,10 @@
 {
+  "StyleGuide_Title": "WPFスタイルガイド (開発用)",
+  "StyleGuide_Heading": "コントロールスタイル確認",
+  "StyleGuide_Description": "WPF移行の基盤(テーマ・i18n・MVVM)が正しく動作するかを確認するための開発用ウィンドウです。",
+  "StyleGuide_ButtonSample": "サンプルボタン",
+  "StyleGuide_ToggleTheme": "ダーク/ライト切替",
+  "StyleGuide_TextBoxLabel": "テキスト入力サンプル",
   "AboutForm_lblDescription": "iwara.tv から動画をダウンロードするためのデスクトップアプリケーションです。",
   "AboutForm_btnCheckUpdate": "更新を確認",
   "AboutForm_Title": "バージョン情報",

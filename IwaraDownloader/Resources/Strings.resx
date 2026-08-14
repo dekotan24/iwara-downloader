@@ -2830,6 +2830,24 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>月別推移</value>
   </data>
+  <data name="StyleGuide_ButtonSample" xml:space="preserve">
+    <value>サンプルボタン</value>
+  </data>
+  <data name="StyleGuide_Description" xml:space="preserve">
+    <value>WPF移行の基盤(テーマ・i18n・MVVM)が正しく動作するかを確認するための開発用ウィンドウです。</value>
+  </data>
+  <data name="StyleGuide_Heading" xml:space="preserve">
+    <value>コントロールスタイル確認</value>
+  </data>
+  <data name="StyleGuide_TextBoxLabel" xml:space="preserve">
+    <value>テキスト入力サンプル</value>
+  </data>
+  <data name="StyleGuide_Title" xml:space="preserve">
+    <value>WPFスタイルガイド (開発用)</value>
+  </data>
+  <data name="StyleGuide_ToggleTheme" xml:space="preserve">
+    <value>ダーク/ライト切替</value>
+  </data>
   <data name="SvcDownloadManager_D001" xml:space="preserve">
     <value>外部動画DL設定がOFFのためスキップ</value>
   </data>

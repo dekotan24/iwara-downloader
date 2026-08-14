@@ -2826,6 +2826,24 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>Monthly</value>
   </data>
+  <data name="StyleGuide_ButtonSample" xml:space="preserve">
+    <value>Sample Button</value>
+  </data>
+  <data name="StyleGuide_Description" xml:space="preserve">
+    <value>A development window to verify the WPF migration foundation (theming, i18n, MVVM) works correctly.</value>
+  </data>
+  <data name="StyleGuide_Heading" xml:space="preserve">
+    <value>Control Style Check</value>
+  </data>
+  <data name="StyleGuide_TextBoxLabel" xml:space="preserve">
+    <value>Text Input Sample</value>
+  </data>
+  <data name="StyleGuide_Title" xml:space="preserve">
+    <value>WPF Style Guide (Dev)</value>
+  </data>
+  <data name="StyleGuide_ToggleTheme" xml:space="preserve">
+    <value>Toggle Dark/Light</value>
+  </data>
   <data name="SvcDownloadManager_D001" xml:space="preserve">
     <value>Skipped: external video DL is off</value>
   </data>

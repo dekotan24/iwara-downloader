@@ -9,10 +9,17 @@ namespace IwaraDownloader
         /// アプリケーションのメインエントリーポイント
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             // UI言語の適用。フォーム生成前(=文言が読まれる前)に必ず行う
             ApplyUiLanguage();
+
+            // WPF移行 Phase1 検証用の一時的な起動フラグ。Phase8カットオーバーまでに削除すること。
+            if (args.Contains("--wpf-styleguide"))
+            {
+                new Wpf.Views.StyleGuideWindow().ShowDialog();
+                return;
+            }
 
             // 多重起動防止
             using var mutex = new Mutex(true, "IwaraDownloader_SingleInstance", out bool createdNew);

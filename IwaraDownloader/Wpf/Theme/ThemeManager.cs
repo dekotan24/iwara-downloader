@@ -45,6 +45,12 @@ namespace IwaraDownloader.Wpf.Theme
             {
                 window.Resources.MergedDictionaries.Add(rd);
             }
+
+            // App.xaml(System.Windows.Application)を起動しない構成では、暗黙の
+            // Style TargetType={x:Type Window} がウィンドウ自身には安定して適用されない
+            // ことを実機確認済みのため、Background/Foregroundは明示的にリソース参照させる。
+            window.SetResourceReference(Window.BackgroundProperty, "Brush.Background");
+            window.SetResourceReference(Window.ForegroundProperty, "Brush.Text");
         }
 
         /// <summary>テーマを切り替えて設定に保存する。既に開いているウィンドウへの再適用は呼び出し側の責務</summary>

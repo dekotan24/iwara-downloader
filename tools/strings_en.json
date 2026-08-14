@@ -1,4 +1,10 @@
 {
+  "StyleGuide_Title": "WPF Style Guide (Dev)",
+  "StyleGuide_Heading": "Control Style Check",
+  "StyleGuide_Description": "A development window to verify the WPF migration foundation (theming, i18n, MVVM) works correctly.",
+  "StyleGuide_ButtonSample": "Sample Button",
+  "StyleGuide_ToggleTheme": "Toggle Dark/Light",
+  "StyleGuide_TextBoxLabel": "Text Input Sample",
   "AboutForm_lblDescription": "A desktop application for downloading videos from iwara.tv.",
   "AboutForm_btnCheckUpdate": "Check for Updates",
   "AboutForm_Title": "About",

@@ -1,4 +1,10 @@
 {
+  "StyleGuide_Title": "WPF 样式指南 (开发用)",
+  "StyleGuide_Heading": "控件样式确认",
+  "StyleGuide_Description": "用于确认WPF迁移基础(主题、多语言、MVVM)是否正常工作的开发用窗口。",
+  "StyleGuide_ButtonSample": "示例按钮",
+  "StyleGuide_ToggleTheme": "切换深色/浅色",
+  "StyleGuide_TextBoxLabel": "文本输入示例",
   "AboutForm_lblDescription": "用于从 iwara.tv 下载视频的桌面应用程序。",
   "AboutForm_btnCheckUpdate": "检查更新",
   "AboutForm_Title": "关于",
