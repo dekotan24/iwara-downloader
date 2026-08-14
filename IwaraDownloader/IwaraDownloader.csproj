@@ -50,7 +50,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="icon.ico" />
+    <!-- WPF側でpack://siteoforigin:,,,/icon.ico として実行フォルダから読むため出力へコピーする
+         (元々はApplicationIconとしてexeへの埋め込み専用で、出力フォルダへのコピー指定が無かった) -->
+    <Content Include="icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="WebUI\**" CopyToOutputDirectory="PreserveNewest" LinkBase="WebUI" />
   </ItemGroup>
 

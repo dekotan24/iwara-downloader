@@ -3,64 +3,103 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:IwaraDownloader.Wpf.Markup"
         Title="{loc:T AboutForm_Title}"
+        Icon="pack://siteoforigin:,,,/icon.ico"
         Width="420" Height="290"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+    <!--
+        遊び心: ウィンドウ内枠に1pxの虹色アニメーション境界(デコ発案、2026-08-14)。
+        LinearGradientBrushのRelativeTransform(RotateTransform)をぐるぐる回すことで
+        グラデーションが流れているように見せている。真面目な機能ではないので
+        AboutWindow限定(他ウィンドウに波及させない)。
+    -->
+    <Border BorderThickness="1" Padding="1">
+        <Border.BorderBrush>
+            <LinearGradientBrush x:Name="RainbowBrush" StartPoint="0,0" EndPoint="1,1">
+                <LinearGradientBrush.RelativeTransform>
+                    <RotateTransform x:Name="RainbowRotate" CenterX="0.5" CenterY="0.5" Angle="0" />
+                </LinearGradientBrush.RelativeTransform>
+                <GradientStop Color="#FF0000" Offset="0.0" />
+                <GradientStop Color="#FF8000" Offset="0.14" />
+                <GradientStop Color="#FFFF00" Offset="0.28" />
+                <GradientStop Color="#00FF40" Offset="0.42" />
+                <GradientStop Color="#00C0FF" Offset="0.57" />
+                <GradientStop Color="#4040FF" Offset="0.71" />
+                <GradientStop Color="#C000FF" Offset="0.86" />
+                <GradientStop Color="#FF0000" Offset="1.0" />
+            </LinearGradientBrush>
+        </Border.BorderBrush>
+        <Border.Triggers>
+            <EventTrigger RoutedEvent="Border.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="RainbowRotate"
+                                         Storyboard.TargetProperty="Angle"
+                                         From="0" To="360" Duration="0:0:6"
+                                         RepeatBehavior="Forever" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Border.Triggers>
 
-        <Image Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-               Source="pack://siteoforigin:,,,/icon.ico"
-               Width="56" Height="56" Margin="0,0,16,0"
-               VerticalAlignment="Top" />
+        <Border Background="{DynamicResource Brush.Background}">
+            <Grid Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="1" Text="IwaraDownloader"
-                   FontSize="20" FontWeight="Bold" />
-        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VersionText}"
-                   Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,2,0,0" />
+                <Image Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                       Source="pack://siteoforigin:,,,/icon.ico"
+                       Width="56" Height="56" Margin="0,0,16,0"
+                       VerticalAlignment="Top" />
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding DescriptionText}"
-                   TextWrapping="Wrap" Margin="0,16,0,8" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="IwaraDownloader"
+                           FontSize="20" FontWeight="Bold" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VersionText}"
+                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,2,0,0" />
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,4">
-            <Hyperlink Command="{Binding OpenGitHubCommand}">
-                <Run Text="https://github.com/dekotan24/iwara-downloader" />
-            </Hyperlink>
-        </TextBlock>
+                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding DescriptionText}"
+                           TextWrapping="Wrap" Margin="0,16,0,8" />
 
-        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
-            <TextBlock Text="{Binding CopyrightText}"
-                       Foreground="{DynamicResource Brush.TextSecondary}" FontSize="11" Margin="0,0,0,12" />
-            <StackPanel Orientation="Horizontal">
-                <Button Content="{loc:T AboutForm_btnCheckUpdate}"
-                        Command="{Binding CheckUpdateCommand}"
-                        Padding="10,5"
-                        Background="{DynamicResource Brush.BackgroundHover}"
-                        Foreground="{DynamicResource Brush.Text}"
-                        BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
-                <TextBlock Text="{Binding UpdateStatusText}"
-                           Foreground="{DynamicResource Brush.TextSecondary}"
-                           VerticalAlignment="Center" Margin="10,0,0,0" />
-            </StackPanel>
-        </StackPanel>
+                <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,4">
+                    <Hyperlink Command="{Binding OpenGitHubCommand}">
+                        <Run Text="https://github.com/dekotan24/iwara-downloader" />
+                    </Hyperlink>
+                </TextBlock>
 
-        <Button Grid.Row="5" Grid.Column="1" Content="OK"
-                Click="OnOkClick" IsDefault="True"
-                Width="80" Padding="10,5" HorizontalAlignment="Right"
-                Background="{DynamicResource Brush.Accent}"
-                Foreground="{DynamicResource Brush.OnAccent}"
-                BorderThickness="0" />
-    </Grid>
+                <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding CopyrightText}"
+                               Foreground="{DynamicResource Brush.TextSecondary}" FontSize="11" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="{loc:T AboutForm_btnCheckUpdate}"
+                                Command="{Binding CheckUpdateCommand}"
+                                Padding="10,5"
+                                Background="{DynamicResource Brush.BackgroundHover}"
+                                Foreground="{DynamicResource Brush.Text}"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
+                        <TextBlock Text="{Binding UpdateStatusText}"
+                                   Foreground="{DynamicResource Brush.TextSecondary}"
+                                   VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Grid.Row="5" Grid.Column="1" Content="OK"
+                        Click="OnOkClick" IsDefault="True"
+                        Width="80" Padding="10,5" HorizontalAlignment="Right"
+                        Background="{DynamicResource Brush.Accent}"
+                        Foreground="{DynamicResource Brush.OnAccent}"
+                        BorderThickness="0" />
+            </Grid>
+        </Border>
+    </Border>
 </Window>

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:IwaraDownloader.Wpf.Markup"
         Title="{loc:T StyleGuide_Title}"
+        Icon="pack://siteoforigin:,,,/icon.ico"
         Width="520" Height="480"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="20">
