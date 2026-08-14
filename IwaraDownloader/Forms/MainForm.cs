@@ -2412,7 +2412,7 @@ namespace IwaraDownloader.Forms
             var video = GetFirstSelectedVideo();
             if (video == null) return;
 
-            var result = await Utils.LocalFileMapHelper.MapAsync(this, video, _downloadManager.IwaraApi, _database);
+            var result = await Utils.LocalFileMapHelper.MapAsync(this, video, _downloadManager.IwaraApi, _database, _downloadManager);
             if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
 
             RefreshChannelTree();
@@ -2570,7 +2570,7 @@ namespace IwaraDownloader.Forms
             var video = GetFirstSelectedVideo();
             if (video == null) return;
 
-            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi);
+            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi, _downloadManager);
             var dialogResult = form.ShowDialog(this);
 
             // タグ・メモ・お気に入り等の編集は Save (OK) 時のみ DB 反映されるが、

@@ -24,7 +24,8 @@ namespace IwaraDownloader.Utils
         /// (LocalFilePath / Status / FileSize / FileUuid 等)。DBへの反映も内部で完了する。
         /// </summary>
         public static async Task<MapResult> MapAsync(
-            IWin32Window owner, VideoInfo video, IwaraApiService api, DatabaseService database)
+            IWin32Window owner, VideoInfo video, IwaraApiService api, DatabaseService database,
+            DownloadManager downloadManager)
         {
             using var dialog = new OpenFileDialog
             {
@@ -70,6 +71,14 @@ namespace IwaraDownloader.Utils
             if (confirm != DialogResult.Yes)
                 return MapResult.Cancelled;
 
+            // 未DL/待機中の動画にはダウンロードキューへ投入済みの DownloadTask が残っている
+            // ことがある。マップ後もタスクが Pending/Active のままだと、一覧の「状態」列が
+            // (video.Status ではなく task.Status を優先するため) 「待機中」のまま化けたり、
+            // 最悪キュー処理が拾って上書きダウンロードを始めてしまう。ImportOneAsync が
+            // Status=Completed を書き込む前に、まずタスクをキャンセルして最終的な DB 書き込みが
+            // 必ず ImportOneAsync 側 (Completed) で決着するようにする。
+            downloadManager.CancelTask(video.VideoId);
+
             try
             {
                 await TitleMatchImporter.ImportOneAsync(video, selectedPath, api, database);
@@ -103,7 +112,8 @@ namespace IwaraDownloader.Utils
         /// FileUuid は維持する (再マップ時に download-url API の再解決を避けるため)。
         /// Status は自動DLに拾われない Paused に戻す (Pending だと解除直後に自動DLが走ってしまう)。
         /// </summary>
-        public static MapResult Unmap(IWin32Window owner, VideoInfo video, DatabaseService database)
+        public static MapResult Unmap(
+            IWin32Window owner, VideoInfo video, DatabaseService database, DownloadManager downloadManager)
         {
             var oldPath = video.LocalFilePath;
             if (string.IsNullOrEmpty(oldPath))
@@ -114,6 +124,10 @@ namespace IwaraDownloader.Utils
                 L.T("SvcLocalFileMap_D011"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes)
                 return MapResult.Cancelled;
+
+            // マップ解除中にキュー投入済みのタスクが残っていると、直後に書き込む Status=Paused が
+            // 古いタスクの完了/失敗ハンドラに上書きされることがあるため、先にキャンセルしておく。
+            downloadManager.CancelTask(video.VideoId);
 
             video.LocalFilePath = string.Empty;
             video.FileSize = 0;

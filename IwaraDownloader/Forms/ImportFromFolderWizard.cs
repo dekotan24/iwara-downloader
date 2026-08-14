@@ -951,6 +951,11 @@ namespace IwaraDownloader.Forms
                     }
 
                     bool neededApiResolve = string.IsNullOrEmpty(video.FileUuid);
+                    // LocalFileMapHelper.MapAsync と同じ理由: 取込先の動画がダウンロードキューに
+                    // 投入済み(Pending/Active)だと、一覧の状態列が古いタスクの Status を優先表示して
+                    // 「進捗100%なのに待機中」のまま化ける。ImportOneAsync の Completed 書き込みより
+                    // 先にキャンセルしておく。
+                    _downloadManager.CancelTask(video.VideoId);
                     var outcome = await Utils.TitleMatchImporter.ImportOneAsync(
                         video, candidate.FilePath, _downloadManager.IwaraApi, _database, item.SubUser);
 
