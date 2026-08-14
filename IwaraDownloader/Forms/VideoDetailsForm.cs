@@ -14,6 +14,7 @@ namespace IwaraDownloader.Forms
         private readonly VideoInfo _video;
         private readonly DatabaseService _database;
         private readonly IwaraApiService _api;
+        private readonly DownloadManager _downloadManager;
 
         /// <summary>
         /// ローカルファイルの再マップ/マッピング解除が実行されたか (Save せずに閉じても DB は
@@ -22,11 +23,12 @@ namespace IwaraDownloader.Forms
         /// </summary>
         public bool Remapped { get; private set; }
 
-        public VideoDetailsForm(VideoInfo video, DatabaseService database, IwaraApiService api)
+        public VideoDetailsForm(VideoInfo video, DatabaseService database, IwaraApiService api, DownloadManager downloadManager)
         {
             _video = video;
             _database = database;
             _api = api;
+            _downloadManager = downloadManager;
             InitializeComponent();
             Utils.Localizer.Apply(this);
             PopulateFields();
@@ -117,7 +119,7 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private async void btnRemapFile_Click(object? sender, EventArgs e)
         {
-            var result = await Utils.LocalFileMapHelper.MapAsync(this, _video, _api, _database);
+            var result = await Utils.LocalFileMapHelper.MapAsync(this, _video, _api, _database, _downloadManager);
             if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
 
             Remapped = true;
@@ -131,7 +133,7 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private void btnUnmapFile_Click(object? sender, EventArgs e)
         {
-            var result = Utils.LocalFileMapHelper.Unmap(this, _video, _database);
+            var result = Utils.LocalFileMapHelper.Unmap(this, _video, _database, _downloadManager);
             if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
 
             Remapped = true;
