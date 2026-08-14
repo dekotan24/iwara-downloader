@@ -1534,9 +1534,6 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ Add to Favorites</value>
   </data>
-  <data name="MainForm_menuVidFavoriteToggle" xml:space="preserve">
-    <value>Toggle Favorite</value>
-  </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>Map local file...</value>
   </data>

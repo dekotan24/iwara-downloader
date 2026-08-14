@@ -31,6 +31,19 @@ namespace IwaraDownloader.Wpf.ViewModels
         private DispatcherTimer? _videoListRefreshTimer;
         private DispatcherTimer? _downloadCountTimer;
 
+        /// <summary>
+        /// ファイル選択ダイアログ(LocalFileMapHelper.MapAsync)の親ウィンドウ指定用。
+        /// MainWindow.xaml.csのコンストラクタから設定される(MVVM上は妥協だが、
+        /// IWin32Windowを要求する既存WinForms UtilsをWPFから呼ぶ以上ハンドルが必要)。
+        /// </summary>
+        public System.Windows.Window? OwnerWindow { get; set; }
+
+        private sealed class Win32WindowWrapper : System.Windows.Forms.IWin32Window
+        {
+            public IntPtr Handle { get; }
+            public Win32WindowWrapper(IntPtr handle) => Handle = handle;
+        }
+
         public ObservableCollection<ChannelTreeNodeViewModel> TreeNodes { get; } = new();
         public ObservableCollection<VideoListItemViewModel> Videos { get; } = new();
 
@@ -421,8 +434,65 @@ namespace IwaraDownloader.Wpf.ViewModels
             form.ShowDialog();
         }
 
-        #region 動画コンテキストメニュー (Phase4f)
-        // 現時点は単一選択(SelectedVideo)のみ対応。複数選択の一括操作はPhase7以降で拡張検討。
+        #region 動画コンテキストメニュー (Phase4f, Phase8a-1でパリティ閉じ)
+        // 現時点は単一選択(SelectedVideo)のみ対応。複数選択の一括操作はPhase8a-5で対応。
+
+        [ObservableProperty] private bool _isExcludedNodeSelected;
+        [ObservableProperty] private bool _isNormalNodeSelected = true;
+        [ObservableProperty] private bool _canDownloadSelectedVideo;
+        [ObservableProperty] private string _downloadMenuText = "";
+        [ObservableProperty] private bool _canCancelSelectedVideo;
+        [ObservableProperty] private bool _canRetryFailedSelectedVideo;
+        [ObservableProperty] private bool _canReDownloadSelectedVideo;
+        [ObservableProperty] private bool _canRefreshInfoSelectedVideo;
+        [ObservableProperty] private bool _canCheckFileExistsSelectedVideo;
+        [ObservableProperty] private bool _canMapLocalFileSelectedVideo;
+        [ObservableProperty] private bool _canOpenAuthorSelectedVideo;
+        [ObservableProperty] private bool _canPlaySelectedVideo;
+        [ObservableProperty] private bool _canOpenFolderSelectedVideo;
+        [ObservableProperty] private string _favoriteMenuText = "";
+
+        /// <summary>
+        /// 動画コンテキストメニューを開く直前に呼ぶ。旧WinForms版menuVideoContext_Openingに相当
+        /// (表示直前に選択中動画のステータスから各項目のVisibleを再計算する方式を踏襲)。
+        /// </summary>
+        public void RefreshVideoContextMenuState()
+        {
+            IsExcludedNodeSelected = SelectedTreeNode?.Kind == TreeNodeKind.Excluded;
+            IsNormalNodeSelected = !IsExcludedNodeSelected;
+            var video = SelectedVideo?.Video;
+            if (video == null || IsExcludedNodeSelected)
+            {
+                // 除外(ゴミ箱)ノードでは通常の操作項目を全て隠す(旧WinForms版と同じ)
+                CanDownloadSelectedVideo = false;
+                CanCancelSelectedVideo = false;
+                CanRetryFailedSelectedVideo = false;
+                CanReDownloadSelectedVideo = false;
+                CanRefreshInfoSelectedVideo = false;
+                CanCheckFileExistsSelectedVideo = false;
+                CanMapLocalFileSelectedVideo = false;
+                CanOpenAuthorSelectedVideo = false;
+                CanPlaySelectedVideo = false;
+                CanOpenFolderSelectedVideo = false;
+                return;
+            }
+
+            bool isOrphanPending = video.Status == DownloadStatus.Pending && _downloadManager.GetTask(video.VideoId) == null;
+            CanDownloadSelectedVideo = video.Status != DownloadStatus.Downloading && video.Status != DownloadStatus.Completed
+                && (video.Status != DownloadStatus.Pending || isOrphanPending);
+            DownloadMenuText = video.Status == DownloadStatus.Failed ? L.T("MainForm_D104") : L.T("MainForm_D105");
+            CanCancelSelectedVideo = video.Status == DownloadStatus.Pending || video.Status == DownloadStatus.Downloading || video.Status == DownloadStatus.Paused;
+            CanRetryFailedSelectedVideo = video.Status == DownloadStatus.Failed;
+            CanReDownloadSelectedVideo = video.Status == DownloadStatus.Completed;
+            CanRefreshInfoSelectedVideo = string.IsNullOrEmpty(video.Title) || video.Title.StartsWith("Video ");
+            CanCheckFileExistsSelectedVideo = video.Status == DownloadStatus.Completed;
+            CanPlaySelectedVideo = video.Status == DownloadStatus.Completed && video.LocalFileExists;
+            CanOpenFolderSelectedVideo = video.LocalFileExists;
+            CanMapLocalFileSelectedVideo = video.Status != DownloadStatus.Downloading && video.Status != DownloadStatus.WritingTags
+                && (!video.LocalFileExists || video.Status == DownloadStatus.Failed || video.Status == DownloadStatus.Pending);
+            CanOpenAuthorSelectedVideo = !string.IsNullOrEmpty(video.AuthorUsername);
+            FavoriteMenuText = video.IsFavorite ? L.T("MainForm_D106") : L.T("MainForm_D107");
+        }
 
         [RelayCommand]
         private void PlayVideo()
@@ -531,6 +601,176 @@ namespace IwaraDownloader.Wpf.ViewModels
             RefreshTree();
             LoadVideos();
             StatusMessage = L.T("MainForm_RestoredStatus", restored);
+        }
+
+        [RelayCommand]
+        private void DownloadVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+
+            if (video.Status == DownloadStatus.Failed)
+            {
+                video.RetryCount = 0;
+                video.LastErrorMessage = null;
+                _database.UpdateVideo(video);
+            }
+
+            var user = video.SubscribedUserId.HasValue ? _database.GetSubscribedUserById(video.SubscribedUserId.Value) : null;
+            _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+            RefreshTree();
+            LoadVideos();
+        }
+
+        [RelayCommand]
+        private void CancelVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+            _downloadManager.CancelTask(video.VideoId);
+            RefreshTree();
+            LoadVideos();
+        }
+
+        [RelayCommand]
+        private void RetryFailedVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null || video.Status != DownloadStatus.Failed) return;
+
+            video.RetryCount = 0;
+            video.LastErrorMessage = null;
+            _database.UpdateVideo(video);
+
+            var user = video.SubscribedUserId.HasValue ? _database.GetSubscribedUserById(video.SubscribedUserId.Value) : null;
+            _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D108", 1);
+        }
+
+        [RelayCommand]
+        private async Task RefreshVideoInfo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+            if (!(string.IsNullOrEmpty(video.Title) || video.Title.StartsWith("Video "))) return;
+
+            var progress = new Progress<string>(msg => StatusMessage = msg);
+            var success = await _downloadManager.RefreshVideoInfoAsync(video, progress);
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D110", success ? 1 : 0);
+        }
+
+        [RelayCommand]
+        private void CheckFileExistsForSelectedVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null || video.Status != DownloadStatus.Completed || string.IsNullOrEmpty(video.LocalFilePath)) return;
+
+            if (File.Exists(video.LocalFilePath))
+            {
+                StatusMessage = L.T("MainForm_D115", 1);
+                return;
+            }
+
+            video.Status = DownloadStatus.Pending;
+            video.LocalFilePath = string.Empty;
+            video.DownloadedAt = null;
+            video.RetryCount = 0;
+            video.LastErrorMessage = null;
+            _database.UpdateVideo(video);
+
+            var user = video.SubscribedUserId.HasValue ? _database.GetSubscribedUserById(video.SubscribedUserId.Value) : null;
+            _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D116", 1, 1);
+        }
+
+        [RelayCommand]
+        private async Task MapLocalFile()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+
+            var owner = OwnerWindow != null
+                ? new Win32WindowWrapper(new System.Windows.Interop.WindowInteropHelper(OwnerWindow).Handle)
+                : new Win32WindowWrapper(IntPtr.Zero);
+            var result = await Utils.LocalFileMapHelper.MapAsync(owner, video, _downloadManager.IwaraApi, _database, _downloadManager);
+            if (result != Utils.LocalFileMapHelper.MapResult.Mapped) return;
+
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D187", video.Title);
+        }
+
+        [RelayCommand]
+        private void OpenVideoAuthorPage()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null || string.IsNullOrEmpty(video.AuthorUsername)) return;
+            Helpers.OpenUrl($"https://www.iwara.tv/profile/{video.AuthorUsername}");
+        }
+
+        [RelayCommand]
+        private void ReDownloadVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null || video.Status != DownloadStatus.Completed) return;
+
+            var result = System.Windows.MessageBox.Show(
+                L.T("MainForm_ConfirmRedlOne", video.Title),
+                L.T("MainForm_D122"),
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
+            if (!string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
+            {
+                try { File.Delete(video.LocalFilePath); } catch { /* 削除失敗してもDBリセットは続行 */ }
+            }
+            if (!string.IsNullOrEmpty(video.LocalFilePath))
+            {
+                var metaPath = Path.ChangeExtension(video.LocalFilePath, ".json");
+                if (File.Exists(metaPath))
+                {
+                    try { File.Delete(metaPath); } catch { }
+                }
+                var dir = Path.GetDirectoryName(video.LocalFilePath);
+                if (!string.IsNullOrEmpty(dir)) IndexCacheService.Invalidate(dir);
+            }
+
+            video.LocalFilePath = string.Empty;
+            video.FileSize = 0;
+            video.Status = DownloadStatus.Pending;
+            video.DownloadedAt = null;
+            video.RetryCount = 0;
+            video.LastErrorMessage = null;
+            _database.UpdateVideo(video);
+
+            var user = video.SubscribedUserId.HasValue ? _database.GetSubscribedUserById(video.SubscribedUserId.Value) : null;
+            _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D123", 1);
+        }
+
+        [RelayCommand]
+        private void PermanentDeleteVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+
+            var result = System.Windows.MessageBox.Show(
+                L.T("MainForm_ConfirmPurgeOne", video.Title), L.T("MainForm_D103"),
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
+            int deleted = _database.DeleteExcludedPermanent(new[] { video.VideoId });
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_PurgedStatus", deleted);
         }
 
         #endregion

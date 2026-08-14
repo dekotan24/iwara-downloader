@@ -1534,9 +1534,6 @@ videoId 后导入数据库。
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ 添加到收藏</value>
   </data>
-  <data name="MainForm_menuVidFavoriteToggle" xml:space="preserve">
-    <value>切换收藏</value>
-  </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>映射本地文件...</value>
   </data>

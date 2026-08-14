@@ -13,7 +13,14 @@ namespace IwaraDownloader.Wpf.Views
         {
             InitializeComponent();
             ThemeManager.Apply(this);
-            DataContext = new MainViewModel();
+            var viewModel = new MainViewModel { OwnerWindow = this };
+            DataContext = viewModel;
+            Closed += (_, _) => viewModel.Dispose();
+        }
+
+        private void VideoList_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+        {
+            (DataContext as MainViewModel)?.RefreshVideoContextMenuState();
         }
     }
 }

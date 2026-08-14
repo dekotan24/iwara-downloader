@@ -6,6 +6,9 @@
         Icon="pack://siteoforigin:,,,/icon.ico"
         Width="1200" Height="750"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
     <!--
         Phase4a: レイアウトシェルのみ。中身(チャンネルツリー/動画一覧/ツールバー等)は
         Phase4b〜4fで順次埋める。旧WinForms版の構造(MainForm.Designer.cs)に対応:
@@ -166,21 +169,53 @@
                           Background="Transparent" BorderThickness="0"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
-                          VirtualizingPanel.ScrollUnit="Pixel">
+                          VirtualizingPanel.ScrollUnit="Pixel"
+                          ContextMenuOpening="VideoList_ContextMenuOpening">
+                    <!--
+                        各MenuItemのVisibilityはMainViewModel.RefreshVideoContextMenuState()が
+                        メニューを開く直前(ContextMenuOpening)に計算するCanXxxSelectedVideo系の
+                        プロパティにバインドする(旧WinForms版menuVideoContext_Openingに相当)。
+                    -->
                     <ListView.ContextMenu>
                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}" />
-                            <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}" />
+                            <MenuItem Header="{Binding DownloadMenuText}" Command="{Binding DownloadVideoCommand}"
+                                      Visibility="{Binding CanDownloadSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidCancel}" Command="{Binding CancelVideoCommand}"
+                                      Visibility="{Binding CanCancelSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidRetryFailed}" Command="{Binding RetryFailedVideoCommand}"
+                                      Visibility="{Binding CanRetryFailedSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidReDownload}" Command="{Binding ReDownloadVideoCommand}"
+                                      Visibility="{Binding CanReDownloadSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidRefreshInfo}" Command="{Binding RefreshVideoInfoCommand}"
+                                      Visibility="{Binding CanRefreshInfoSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidCheckFileExists}" Command="{Binding CheckFileExistsForSelectedVideoCommand}"
+                                      Visibility="{Binding CanCheckFileExistsSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidMapLocalFile}" Command="{Binding MapLocalFileCommand}"
+                                      Visibility="{Binding CanMapLocalFileSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <Separator />
+                            <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}"
+                                      Visibility="{Binding CanPlaySelectedVideo, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}"
+                                      Visibility="{Binding CanOpenFolderSelectedVideo, Converter={StaticResource BoolToVis}}" />
                             <Separator />
                             <MenuItem Header="{loc:T MainForm_menuVidOpenPage}" Command="{Binding OpenVideoPageCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidOpenAuthor}" Command="{Binding OpenVideoAuthorPageCommand}"
+                                      Visibility="{Binding CanOpenAuthorSelectedVideo, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}" />
                             <MenuItem Header="{loc:T MainForm_menuVidCopyTitle}" Command="{Binding CopyVideoTitleCommand}" />
                             <Separator />
-                            <MenuItem Header="{loc:T MainForm_menuVidFavoriteToggle}" Command="{Binding ToggleFavoriteCommand}" />
-                            <MenuItem Header="{loc:T MainForm_menuVidDetails}" Command="{Binding OpenVideoDetailsCommand}" />
+                            <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}"
+                                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidDetails}" Command="{Binding OpenVideoDetailsCommand}"
+                                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
                             <Separator />
-                            <MenuItem Header="{loc:T MainForm_menuVidDelete}" Command="{Binding DeleteVideoCommand}" />
-                            <MenuItem Header="{loc:T MainForm_menuVidRestore}" Command="{Binding RestoreVideoCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidDelete}" Command="{Binding DeleteVideoCommand}"
+                                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <Separator Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidRestore}" Command="{Binding RestoreVideoCommand}"
+                                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidPermanentDelete}" Command="{Binding PermanentDeleteVideoCommand}"
+                                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}" />
                         </ContextMenu>
                     </ListView.ContextMenu>
                     <ListView.View>
