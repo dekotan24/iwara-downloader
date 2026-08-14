@@ -101,11 +101,11 @@
                             明示的に引き継がせる。これで配下のMenuItemは通常通り{Binding XCommand}で書ける。
                         -->
                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="今すぐ確認" Command="{Binding CheckChannelNowCommand}" />
-                            <MenuItem Header="有効にする" Command="{Binding EnableChannelCommand}" />
-                            <MenuItem Header="無効にする" Command="{Binding DisableChannelCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuChCheckNow}" Command="{Binding CheckChannelNowCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuChEnable}" Command="{Binding EnableChannelCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDisable}" Command="{Binding DisableChannelCommand}" />
                             <Separator />
-                            <MenuItem Header="削除" Command="{Binding DeleteChannelCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDelete}" Command="{Binding DeleteChannelCommand}" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListBox.ItemContainerStyle>
@@ -169,34 +169,34 @@
                           VirtualizingPanel.ScrollUnit="Pixel">
                     <ListView.ContextMenu>
                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="再生" Command="{Binding PlayVideoCommand}" />
-                            <MenuItem Header="フォルダを開く" Command="{Binding OpenVideoFolderCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}" />
                             <Separator />
-                            <MenuItem Header="ページを開く" Command="{Binding OpenVideoPageCommand}" />
-                            <MenuItem Header="URLをコピー" Command="{Binding CopyVideoUrlCommand}" />
-                            <MenuItem Header="タイトルをコピー" Command="{Binding CopyVideoTitleCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidOpenPage}" Command="{Binding OpenVideoPageCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidCopyTitle}" Command="{Binding CopyVideoTitleCommand}" />
                             <Separator />
-                            <MenuItem Header="お気に入り切替" Command="{Binding ToggleFavoriteCommand}" />
-                            <MenuItem Header="詳細..." Command="{Binding OpenVideoDetailsCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidFavoriteToggle}" Command="{Binding ToggleFavoriteCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidDetails}" Command="{Binding OpenVideoDetailsCommand}" />
                             <Separator />
-                            <MenuItem Header="削除" Command="{Binding DeleteVideoCommand}" />
-                            <MenuItem Header="復元" Command="{Binding RestoreVideoCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidDelete}" Command="{Binding DeleteVideoCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidRestore}" Command="{Binding RestoreVideoCommand}" />
                         </ContextMenu>
                     </ListView.ContextMenu>
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="タイトル" Width="400" DisplayMemberBinding="{Binding Title}" />
-                            <GridViewColumn Header="ソース" Width="80" DisplayMemberBinding="{Binding Source}" />
-                            <GridViewColumn Header="状態" Width="90">
+                            <GridViewColumn Header="{loc:T MainForm_colVideoTitle}" Width="400" DisplayMemberBinding="{Binding Title}" />
+                            <GridViewColumn Header="{loc:T MainForm_colVideoSource}" Width="80" DisplayMemberBinding="{Binding Source}" />
+                            <GridViewColumn Header="{loc:T MainForm_colVideoStatus}" Width="90">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusForeground}" />
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="進捗" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
-                            <GridViewColumn Header="サイズ" Width="90" DisplayMemberBinding="{Binding FileSize}" />
-                            <GridViewColumn Header="追加日時" Width="140" DisplayMemberBinding="{Binding CreatedAt}" />
+                            <GridViewColumn Header="{loc:T MainForm_colVideoProgress}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
+                            <GridViewColumn Header="{loc:T MainForm_colVideoSize}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
+                            <GridViewColumn Header="{loc:T MainForm_colVideoDate}" Width="140" DisplayMemberBinding="{Binding CreatedAt}" />
                         </GridView>
                     </ListView.View>
                 </ListView>

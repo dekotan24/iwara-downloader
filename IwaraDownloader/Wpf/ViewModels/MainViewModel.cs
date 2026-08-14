@@ -87,11 +87,7 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// <summary>DL中/待機中/完了件数とキュー進捗をステータスバー用に更新する</summary>
         private void RefreshDownloadCount()
         {
-            var downloading = _database.GetVideosByStatus(DownloadStatus.Downloading).Count;
-            var pending = _database.GetVideosByStatus(DownloadStatus.Pending).Count;
-            var allVideos = _database.GetAllVideos();
-            var completed = allVideos.Count(v => v.Status == DownloadStatus.Completed);
-            var totalSize = allVideos.Where(v => v.Status == DownloadStatus.Completed).Sum(v => v.FileSize);
+            var (downloading, pending, completed, totalSize) = _database.GetDownloadCountSummary();
             var totalSizeStr = FileMoveHelper.FormatSize(totalSize);
 
             var activeTasks = _downloadManager.GetActiveTasks();
@@ -372,9 +368,7 @@ namespace IwaraDownloader.Wpf.ViewModels
         {
             var video = SelectedVideo?.Video;
             if (video == null) return;
-            // TODO: dev側のCancelTask修正(feature/wpf-migration分岐後にdevへ入った)がマージされたら
-            // 4引数版(downloadManagerを渡す)に合わせること。
-            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi);
+            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi, _downloadManager);
             form.ShowDialog();
             RefreshTree();
             LoadVideos();

@@ -1538,6 +1538,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
     <value>★ お気に入りに追加</value>
   </data>
+  <data name="MainForm_menuVidFavoriteToggle" xml:space="preserve">
+    <value>お気に入り切替</value>
+  </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>ローカルファイルをマップ...</value>
   </data>

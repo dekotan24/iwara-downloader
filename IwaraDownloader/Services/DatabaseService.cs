@@ -880,6 +880,39 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// ステータスバー表示用の件数集計をSQL側で取得する。
+        /// GetAllVideos()の全件ロード + LINQ集計の代替(動画数万件で頻繁に呼ばれると重い)。
+        /// </summary>
+        public (int Downloading, int Pending, int Completed, long CompletedSize) GetDownloadCountSummary()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT
+                    SUM(CASE WHEN Status = @Downloading THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN Status = @Pending THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN Status = @Completed THEN 1 ELSE 0 END),
+                    COALESCE(SUM(CASE WHEN Status = @Completed THEN FileSize ELSE 0 END), 0)
+                FROM Videos";
+            command.Parameters.AddWithValue("@Downloading", (int)DownloadStatus.Downloading);
+            command.Parameters.AddWithValue("@Pending", (int)DownloadStatus.Pending);
+            command.Parameters.AddWithValue("@Completed", (int)DownloadStatus.Completed);
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                int downloading = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+                int pending = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                int completed = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
+                long completedSize = reader.IsDBNull(3) ? 0L : reader.GetInt64(3);
+                return (downloading, pending, completed, completedSize);
+            }
+            return (0, 0, 0, 0L);
+        }
+
+        /// <summary>
         /// 購読ユーザーの動画を取得
         /// </summary>
         public List<VideoInfo> GetVideosBySubscribedUser(int subscribedUserId)
