@@ -15,12 +15,21 @@ namespace IwaraDownloader.Wpf.ViewModels
     /// <summary>
     /// MainWindow用ViewModel。Phase4bでチャンネルツリーの読み込みを実装。
     /// </summary>
-    public partial class MainViewModel : ObservableObject
+    public partial class MainViewModel : ObservableObject, IDisposable
     {
+        private const int TreeRefreshDebounceMs = 200;
+        private const int VideoListRefreshDebounceMs = 200;
+        private const int DownloadCountDebounceMs = 500;
+
         private readonly DatabaseService _database = DatabaseService.Instance;
         // Phase8カットオーバーまではWinForms版MainFormも別途DownloadManagerを持つ (二重インスタンス)。
         // アプリ全体で1個に統合するのはカットオーバー時の作業とする。
         private readonly DownloadManager _downloadManager = new();
+        private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
+
+        private DispatcherTimer? _treeRefreshTimer;
+        private DispatcherTimer? _videoListRefreshTimer;
+        private DispatcherTimer? _downloadCountTimer;
 
         public ObservableCollection<ChannelTreeNodeViewModel> TreeNodes { get; } = new();
         public ObservableCollection<VideoListItemViewModel> Videos { get; } = new();
@@ -57,11 +66,132 @@ namespace IwaraDownloader.Wpf.ViewModels
             RefreshFreeSpace();
             RefreshDownloadCount();
 
-            // 旧WinForms版StartFreeSpaceMonitorに対応(1分間隔)。DL件数/進捗のライブ更新は
-            // Phase7でDownloadManagerイベント購読に置き換える(ここでは初期表示のみ)。
+            // 旧WinForms版StartFreeSpaceMonitorに対応(1分間隔)。
             _freeSpaceTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
             _freeSpaceTimer.Tick += (_, _) => RefreshFreeSpace();
             _freeSpaceTimer.Start();
+
+            // Phase7: DownloadManagerのイベントをUIスレッドへ結線(旧WinForms版PostToUiパターンに対応)。
+            _downloadManager.TaskProgressChanged += OnTaskProgressChanged;
+            _downloadManager.TaskStatusChanged += OnTaskStatusChanged;
+            _downloadManager.NewVideosFound += OnNewVideosFound;
+            _downloadManager.AutoCheckCompleted += OnAutoCheckCompleted;
+            _downloadManager.BackgroundTaskProgress += OnBackgroundTaskProgress;
+            _downloadManager.BackgroundTaskCompleted += OnBackgroundTaskCompleted;
+            _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => StatusMessage = msg);
+            _downloadManager.UserAdded += (_, _) => PostToUi(ScheduleTreeRefresh);
+            _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() => StatusMessage = L.T("MainForm_D004", count));
+        }
+
+        public void Dispose()
+        {
+            _freeSpaceTimer.Stop();
+            _treeRefreshTimer?.Stop();
+            _videoListRefreshTimer?.Stop();
+            _downloadCountTimer?.Stop();
+
+            _downloadManager.TaskProgressChanged -= OnTaskProgressChanged;
+            _downloadManager.TaskStatusChanged -= OnTaskStatusChanged;
+            _downloadManager.NewVideosFound -= OnNewVideosFound;
+            _downloadManager.AutoCheckCompleted -= OnAutoCheckCompleted;
+            _downloadManager.BackgroundTaskProgress -= OnBackgroundTaskProgress;
+            _downloadManager.BackgroundTaskCompleted -= OnBackgroundTaskCompleted;
+        }
+
+        /// <summary>
+        /// DownloadManagerイベント(バックグラウンドスレッド発火)をUIスレッドへ橋渡しする。
+        /// 旧WinForms版PostToUi(InvokeRequired + BeginInvoke)に相当。
+        /// </summary>
+        private void PostToUi(Action action)
+        {
+            if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished) return;
+            if (_dispatcher.CheckAccess()) action();
+            else _dispatcher.BeginInvoke(action);
+        }
+
+        private void OnTaskProgressChanged(object? sender, DownloadTask task) => PostToUi(() =>
+        {
+            UpdateVideoItem(task);
+            ScheduleDownloadCountRefresh();
+        });
+
+        private void OnTaskStatusChanged(object? sender, DownloadTask task) => PostToUi(() =>
+        {
+            UpdateVideoItem(task);
+            ScheduleDownloadCountRefresh();
+            // どのステータス遷移でもキューノード内訳が変わるのでツリーもRefresh(debounce経由)。
+            ScheduleTreeRefresh();
+        });
+
+        private void OnNewVideosFound(object? sender, (SubscribedUser User, List<VideoInfo> Videos) e) => PostToUi(() =>
+        {
+            ScheduleTreeRefresh();
+            ScheduleVideoListRefresh();
+        });
+
+        private void OnAutoCheckCompleted(object? sender, EventArgs e) => PostToUi(ScheduleTreeRefresh);
+
+        /// <summary>バックグラウンドタスクの進捗をステータスバーに表示</summary>
+        private void OnBackgroundTaskProgress(object? sender, (string TaskName, string Message) e) => PostToUi(() =>
+        {
+            StatusMessage = $"[{e.TaskName}] {e.Message}";
+        });
+
+        /// <summary>バックグラウンドタスク完了時の通知</summary>
+        private void OnBackgroundTaskCompleted(object? sender, (string TaskName, string Summary, bool Success) e) => PostToUi(() =>
+        {
+            StatusMessage = $"[{e.TaskName}] {e.Summary}";
+            try
+            {
+                NotificationService.Instance.ShowNotification(
+                    e.Success ? L.T("MainForm_D175", e.TaskName) : L.T("MainForm_D176", e.TaskName),
+                    e.Summary);
+            }
+            catch { }
+            // 動画リスト/ツリーを更新 (サムネ補完で URL が増えたら再描画したい)
+            ScheduleTreeRefresh();
+            ScheduleVideoListRefresh();
+        });
+
+        /// <summary>DownloadManagerイベントで更新された1件だけをVideosコレクション内で差し替える(全件再読込を避ける)</summary>
+        private void UpdateVideoItem(DownloadTask task)
+        {
+            var item = Videos.FirstOrDefault(v => v.Video.VideoId == task.Video.VideoId);
+            item?.ApplyTaskUpdate(task);
+        }
+
+        /// <summary>短時間に複数回呼ばれてもRefreshTree()は1回だけ実行される(旧WinForms版と同じdebounce方式)</summary>
+        private void ScheduleTreeRefresh()
+        {
+            _treeRefreshTimer ??= CreateDebounceTimer(TreeRefreshDebounceMs, RefreshTree);
+            _treeRefreshTimer.Stop();
+            _treeRefreshTimer.Start();
+        }
+
+        /// <summary>短時間に複数回呼ばれてもLoadVideos()は1回だけ実行される(旧WinForms版RefreshVideoListに相当)</summary>
+        private void ScheduleVideoListRefresh()
+        {
+            _videoListRefreshTimer ??= CreateDebounceTimer(VideoListRefreshDebounceMs, LoadVideos);
+            _videoListRefreshTimer.Stop();
+            _videoListRefreshTimer.Start();
+        }
+
+        private void ScheduleDownloadCountRefresh()
+        {
+            _downloadCountTimer ??= CreateDebounceTimer(DownloadCountDebounceMs, RefreshDownloadCount);
+            _downloadCountTimer.Stop();
+            _downloadCountTimer.Start();
+        }
+
+        private static DispatcherTimer CreateDebounceTimer(int intervalMs, Action onTick)
+        {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(intervalMs) };
+            timer.Tick += (sender, _) =>
+            {
+                ((DispatcherTimer)sender!).Stop();
+                onTick();
+            };
+            return timer;
         }
 
         /// <summary>DL先ドライブの空き容量をステータスバー用に更新する</summary>

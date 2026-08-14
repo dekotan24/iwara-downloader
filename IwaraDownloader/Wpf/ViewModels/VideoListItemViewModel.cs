@@ -12,12 +12,24 @@ namespace IwaraDownloader.Wpf.ViewModels
     /// </summary>
     public partial class VideoListItemViewModel : ObservableObject
     {
-        public VideoInfo Video { get; }
+        public VideoInfo Video { get; private set; }
 
         public VideoListItemViewModel(VideoInfo video)
         {
             Video = video;
             Refresh();
+        }
+
+        /// <summary>
+        /// DownloadManagerのTaskProgressChanged/TaskStatusChanged経由の更新用。
+        /// task.VideoはDownloadManagerが実際に書き換え続けている参照そのものなので、
+        /// 表示側のVideoもそれに差し替えてから再計算する(旧WinForms版UpdateVideoItemの
+        /// `_displayVideoList[i] = task.Video` に相当)。
+        /// </summary>
+        public void ApplyTaskUpdate(DownloadTask task)
+        {
+            Video = task.Video;
+            Refresh(task);
         }
 
         /// <summary>
