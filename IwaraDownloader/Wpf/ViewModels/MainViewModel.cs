@@ -29,6 +29,9 @@ namespace IwaraDownloader.Wpf.ViewModels
         private ChannelTreeNodeViewModel? _selectedTreeNode;
 
         [ObservableProperty]
+        private VideoListItemViewModel? _selectedVideo;
+
+        [ObservableProperty]
         private string _urlInput = "";
 
         [ObservableProperty]
@@ -291,6 +294,169 @@ namespace IwaraDownloader.Wpf.ViewModels
             using var form = new StatisticsForm();
             form.ShowDialog();
         }
+
+        #region 動画コンテキストメニュー (Phase4f)
+        // 現時点は単一選択(SelectedVideo)のみ対応。複数選択の一括操作はPhase7以降で拡張検討。
+
+        [RelayCommand]
+        private void PlayVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video != null && !string.IsNullOrEmpty(video.LocalFilePath) && System.IO.File.Exists(video.LocalFilePath))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = video.LocalFilePath,
+                    UseShellExecute = true,
+                });
+            }
+        }
+
+        [RelayCommand]
+        private void OpenVideoFolder()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null || string.IsNullOrEmpty(video.LocalFilePath)) return;
+            var folder = Path.GetDirectoryName(video.LocalFilePath);
+            if (folder == null || !Directory.Exists(folder)) return;
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{video.LocalFilePath}\"",
+                UseShellExecute = true,
+            });
+        }
+
+        [RelayCommand]
+        private void OpenVideoPage()
+        {
+            var video = SelectedVideo?.Video;
+            if (video != null) Helpers.OpenUrl(video.Url);
+        }
+
+        [RelayCommand]
+        private void CopyVideoUrl()
+        {
+            var video = SelectedVideo?.Video;
+            if (video != null && !string.IsNullOrEmpty(video.Url))
+            {
+                System.Windows.Clipboard.SetText(video.Url);
+                StatusMessage = L.T("MainForm_D111", 1);
+            }
+        }
+
+        [RelayCommand]
+        private void CopyVideoTitle()
+        {
+            var video = SelectedVideo?.Video;
+            if (video != null && !string.IsNullOrEmpty(video.Title))
+            {
+                System.Windows.Clipboard.SetText(video.Title);
+                StatusMessage = L.T("MainForm_D112", 1);
+            }
+        }
+
+        [RelayCommand]
+        private void ToggleFavorite()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+            video.IsFavorite = !video.IsFavorite;
+            _database.UpdateVideo(video);
+            SelectedVideo!.Refresh(_downloadManager.GetTask(video.VideoId));
+            RefreshTree();
+        }
+
+        [RelayCommand]
+        private void OpenVideoDetails()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+            // TODO: dev側のCancelTask修正(feature/wpf-migration分岐後にdevへ入った)がマージされたら
+            // 4引数版(downloadManagerを渡す)に合わせること。
+            using var form = new VideoDetailsForm(video, _database, _downloadManager.IwaraApi);
+            form.ShowDialog();
+            RefreshTree();
+            LoadVideos();
+        }
+
+        [RelayCommand]
+        private void DeleteVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+
+            var result = System.Windows.MessageBox.Show(
+                L.T("MainForm_ConfirmDeleteOne", video.Title) + L.T("MainForm_D120"),
+                L.T("MainForm_D103"),
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
+            var deletedCount = _downloadManager.ExcludeVideos(new[] { video });
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D121", deletedCount);
+        }
+
+        [RelayCommand]
+        private void RestoreVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+            var restored = _downloadManager.RestoreExcludedVideos(new[] { video.VideoId });
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_RestoredStatus", restored);
+        }
+
+        #endregion
+
+        #region チャンネルコンテキストメニュー (Phase4f)
+
+        [RelayCommand]
+        private void EnableChannel()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+            user.IsEnabled = true;
+            _database.UpdateSubscribedUser(user);
+            RefreshTree();
+        }
+
+        [RelayCommand]
+        private void DisableChannel()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+            user.IsEnabled = false;
+            _database.UpdateSubscribedUser(user);
+            RefreshTree();
+        }
+
+        [RelayCommand]
+        private void CheckChannelNow()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+            _downloadManager.EnqueueUserForCheck(user, priority: true);
+        }
+
+        [RelayCommand]
+        private void DeleteChannel()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+
+            var result = System.Windows.MessageBox.Show(
+                L.T("MainForm_D102", user.Username), L.T("MainForm_D103"),
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
+            _database.DeleteSubscribedUser(user.Id);
+            RefreshTree();
+        }
+
+        #endregion
 
         partial void OnSelectedTreeNodeChanged(ChannelTreeNodeViewModel? value) => LoadVideos();
 

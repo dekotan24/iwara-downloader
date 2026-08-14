@@ -94,6 +94,20 @@
                          SelectedItem="{Binding SelectedTreeNode}"
                          Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ContextMenu>
+                        <!--
+                            ContextMenuはPopupの別ツリーに属しDataContextを継承しないため、
+                            PlacementTarget(=このListBox)のDataContext(=MainViewModel)を
+                            明示的に引き継がせる。これで配下のMenuItemは通常通り{Binding XCommand}で書ける。
+                        -->
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="今すぐ確認" Command="{Binding CheckChannelNowCommand}" />
+                            <MenuItem Header="有効にする" Command="{Binding EnableChannelCommand}" />
+                            <MenuItem Header="無効にする" Command="{Binding DisableChannelCommand}" />
+                            <Separator />
+                            <MenuItem Header="削除" Command="{Binding DeleteChannelCommand}" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="Padding" Value="8,4" />
@@ -148,10 +162,27 @@
                     可視行のみUI要素化される(旧WinForms版のVirtualModeに相当)。
                 -->
                 <ListView ItemsSource="{Binding Videos}"
+                          SelectedItem="{Binding SelectedVideo}"
                           Background="Transparent" BorderThickness="0"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           VirtualizingPanel.ScrollUnit="Pixel">
+                    <ListView.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="再生" Command="{Binding PlayVideoCommand}" />
+                            <MenuItem Header="フォルダを開く" Command="{Binding OpenVideoFolderCommand}" />
+                            <Separator />
+                            <MenuItem Header="ページを開く" Command="{Binding OpenVideoPageCommand}" />
+                            <MenuItem Header="URLをコピー" Command="{Binding CopyVideoUrlCommand}" />
+                            <MenuItem Header="タイトルをコピー" Command="{Binding CopyVideoTitleCommand}" />
+                            <Separator />
+                            <MenuItem Header="お気に入り切替" Command="{Binding ToggleFavoriteCommand}" />
+                            <MenuItem Header="詳細..." Command="{Binding OpenVideoDetailsCommand}" />
+                            <Separator />
+                            <MenuItem Header="削除" Command="{Binding DeleteVideoCommand}" />
+                            <MenuItem Header="復元" Command="{Binding RestoreVideoCommand}" />
+                        </ContextMenu>
+                    </ListView.ContextMenu>
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Header="タイトル" Width="400" DisplayMemberBinding="{Binding Title}" />
