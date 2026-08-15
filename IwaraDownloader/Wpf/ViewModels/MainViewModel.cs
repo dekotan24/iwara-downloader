@@ -434,6 +434,184 @@ namespace IwaraDownloader.Wpf.ViewModels
             form.ShowDialog();
         }
 
+        #region ツールバートグル+ツール/ヘルプメニュー (Phase8a-3でパリティ閉じ)
+        // クリップボード監視トグル(WM_CLIPBOARDUPDATEフック必須)とタイル表示モード切替
+        // (サムネグリッドUI自体が未実装)はPhase8b/将来フェーズへ持ち越し。
+
+        [ObservableProperty]
+        private bool _immediateDownloadOnAdd = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
+
+        public string ImmediateDownloadToggleText => ImmediateDownloadOnAdd ? L.T("MainForm_D189") : L.T("MainForm_D190");
+
+        partial void OnImmediateDownloadOnAddChanged(bool value)
+        {
+            SettingsManager.Instance.Settings.ImmediateDownloadOnAdd = value;
+            SettingsManager.Instance.Save();
+            OnPropertyChanged(nameof(ImmediateDownloadToggleText));
+        }
+
+        [RelayCommand]
+        private void OpenLogFolder()
+        {
+            var logFolder = LoggingService.Instance.LogDirectory;
+            if (Directory.Exists(logFolder))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = logFolder,
+                    UseShellExecute = true,
+                });
+            }
+            else
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D133"), L.T("MainForm_D090"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+        }
+
+        [RelayCommand]
+        private void RelocateFiles()
+        {
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D134") + L.T("MainForm_D135"), L.T("MainForm_D136"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var downloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var plan = FileMoveHelper.BuildRelocationPlan(_database.GetAllVideos(), _database.GetAllSubscribedUsers(), downloadFolder);
+            if (plan.Count == 0)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D137"), L.T("MainForm_D136"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            long totalBytes = 0;
+            foreach (var (video, _) in plan)
+            {
+                try { totalBytes += new FileInfo(video.LocalFilePath).Length; } catch { }
+            }
+            var spaceSummary = FileMoveHelper.BuildDriveSpaceSummary(plan, out bool insufficient);
+            var spaceLines = string.IsNullOrEmpty(spaceSummary) ? "" : "\n\n" + spaceSummary;
+            var warnLine = insufficient ? L.T("MainForm_LowSpaceWarn") : "";
+
+            var confirm = System.Windows.MessageBox.Show(
+                L.T("MainForm_D138", plan.Count) + $" ({FileMoveHelper.FormatSize(totalBytes)})。\n" +
+                L.T("MainForm_D139") + L.T("MainForm_D140") + spaceLines + warnLine,
+                L.T("MainForm_D136"), System.Windows.MessageBoxButton.YesNo,
+                insufficient ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Question);
+            if (confirm != System.Windows.MessageBoxResult.Yes) return;
+
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D141") + L.T("MainForm_D135"), L.T("MainForm_D136"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var oldDirs = plan.Select(p => Path.GetDirectoryName(p.Video.LocalFilePath))
+                .Where(d => !string.IsNullOrEmpty(d)).Select(d => d!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var newDirs = plan.Select(p => Path.GetDirectoryName(p.NewPath))
+                .Where(d => !string.IsNullOrEmpty(d)).Select(d => d!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            using var progressForm = new FileMoveProgressForm(plan, _database);
+            progressForm.ShowDialog(GetOwnerWin32Window());
+
+            foreach (var dir in oldDirs)
+            {
+                IndexCacheService.Invalidate(dir);
+                FileMoveHelper.CleanupEmptyDirectories(dir);
+                FileMoveHelper.TryDeleteDirectoryIfEmpty(dir);
+            }
+            foreach (var dir in newDirs) IndexCacheService.Invalidate(dir);
+            RefreshTree();
+            LoadVideos();
+
+            StatusMessage = L.T("MainForm_D142", progressForm.MovedCount, progressForm.FailedCount);
+            if (progressForm.FailedCount > 0)
+            {
+                System.Windows.MessageBox.Show(
+                    L.T("MainForm_D143", progressForm.FailedCount) + L.T("MainForm_D098") + L.T("MainForm_D144"),
+                    L.T("MainForm_D136"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            }
+        }
+
+        [RelayCommand]
+        private async Task RelinkFiles()
+        {
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D134") + L.T("MainForm_D135"), L.T("MainForm_D145"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var downloadFolder = SettingsManager.Instance.Settings.DownloadFolder;
+            var videos = _database.GetAllVideos();
+            var users = _database.GetAllSubscribedUsers();
+
+            StatusMessage = L.T("MainForm_D146");
+            var result = await Task.Run(() => FileMoveHelper.BuildRelinkPlan(videos, users, downloadFolder));
+
+            var notes = new List<string>();
+            if (result.NotMovedCount > 0) notes.Add(L.T("MainForm_RelinkNotMoved", result.NotMovedCount));
+            if (result.UnverifiedCount > 0) notes.Add(L.T("MainForm_RelinkUnverified", result.UnverifiedCount));
+            if (result.MissingCount > 0) notes.Add(L.T("MainForm_RelinkMissing", result.MissingCount));
+            var notesText = notes.Count > 0 ? "\n\n" + string.Join("\n", notes) : "";
+
+            if (result.Items.Count == 0)
+            {
+                StatusMessage = L.T("MainForm_D147");
+                var hint = (result.NotMovedCount + result.MissingCount + result.UnverifiedCount) > 0 ? L.T("MainForm_RelinkHint") : "";
+                System.Windows.MessageBox.Show(L.T("MainForm_D148") + notesText + hint, L.T("MainForm_D145"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            int copiedCount = result.Items.Count(i => i.OldFileStillExists);
+            var copiedLine = copiedCount > 0 ? L.T("MainForm_RelinkCopied", copiedCount) : "";
+
+            var confirm = System.Windows.MessageBox.Show(
+                L.T("MainForm_D149", result.Items.Count) + L.T("MainForm_D150") + L.T("MainForm_D151") + copiedLine + notesText,
+                L.T("MainForm_D145"), System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            if (confirm != System.Windows.MessageBoxResult.Yes) return;
+
+            if (_downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D152") + L.T("MainForm_D135"), L.T("MainForm_D145"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            int relinked = 0;
+            await Task.Run(() =>
+            {
+                foreach (var (video, newPath, _) in result.Items)
+                {
+                    var oldPath = video.LocalFilePath;
+                    video.LocalFilePath = newPath;
+                    _database.UpdateVideo(video);
+                    relinked++;
+
+                    try
+                    {
+                        var newJson = Path.ChangeExtension(newPath, ".json");
+                        var oldJson = Path.ChangeExtension(oldPath, ".json");
+                        if (!File.Exists(newJson) && File.Exists(oldJson)) File.Move(oldJson, newJson);
+                    }
+                    catch { }
+                }
+            });
+
+            RefreshTree();
+            LoadVideos();
+            StatusMessage = L.T("MainForm_D153", relinked);
+        }
+
+        #endregion
+
         #region 動画コンテキストメニュー (Phase4f, Phase8a-1でパリティ閉じ)
         // 現時点は単一選択(SelectedVideo)のみ対応。複数選択の一括操作はPhase8a-5で対応。
 

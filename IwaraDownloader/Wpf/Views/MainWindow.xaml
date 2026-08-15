@@ -38,10 +38,25 @@
                         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
                         <Setter Property="BorderThickness" Value="1" />
                     </Style>
+                    <Style TargetType="ToggleButton">
+                        <Setter Property="Padding" Value="10,6" />
+                        <Setter Property="Margin" Value="0,0,4,0" />
+                        <Setter Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+                        <Setter Property="BorderThickness" Value="1" />
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
                 </StackPanel.Resources>
                 <Button Content="今すぐ確認" Command="{Binding CheckNowCommand}" />
                 <Button Content="DL開始" Command="{Binding StartAllCommand}" />
                 <Button Content="停止" Command="{Binding StopAllCommand}" />
+                <ToggleButton Content="{Binding ImmediateDownloadToggleText}" IsChecked="{Binding ImmediateDownloadOnAdd}" />
                 <Separator Margin="4,0" />
                 <Button Content="一括インポート" Command="{Binding OpenBulkImportCommand}" />
                 <Button Content="検索インポート" Command="{Binding OpenSearchImportCommand}" />
@@ -49,7 +64,11 @@
                 <Button Content="重複チェック" Command="{Binding OpenDuplicateCheckCommand}" />
                 <Button Content="統計" Command="{Binding OpenStatisticsCommand}" />
                 <Separator Margin="4,0" />
+                <Button Content="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
+                <Button Content="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
+                <Separator Margin="4,0" />
                 <Button Content="設定" Command="{Binding OpenSettingsCommand}" />
+                <Button Content="{loc:T MainForm_menuHelpOpenLogs}" Command="{Binding OpenLogFolderCommand}" />
                 <Button Content="バージョン情報" Command="{Binding OpenAboutCommand}" />
             </StackPanel>
         </Border>
