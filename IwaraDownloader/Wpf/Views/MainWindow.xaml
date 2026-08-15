@@ -207,18 +207,79 @@
 
             <Border Grid.Column="2" x:Name="VideoListHost"
                     Background="{DynamicResource Brush.Background}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- 動画一覧フィルタ行(旧WinForms版txtVideoFilter/btnClearFilter/btnAdvancedSearch) -->
+                    <Grid Grid.Row="0" Margin="8,8,8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding VideoFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="6"
+                                 Background="{DynamicResource Brush.BackgroundElevated}"
+                                 Foreground="{DynamicResource Brush.Text}"
+                                 BorderBrush="{DynamicResource Brush.Border}" Margin="0,0,4,0" />
+                        <Button Grid.Column="1" Content="✕" Command="{Binding ClearVideoFilterCommand}"
+                                Padding="8,4" Margin="0,0,4,0"
+                                Background="{DynamicResource Brush.BackgroundHover}"
+                                Foreground="{DynamicResource Brush.Text}"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
+                        <Button Grid.Column="2" Content="{Binding AdvancedSearchToggleText}" Command="{Binding ToggleAdvancedSearchCommand}"
+                                Padding="8,4"
+                                Background="{DynamicResource Brush.BackgroundHover}"
+                                Foreground="{DynamicResource Brush.Text}"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
+                    </Grid>
+
+                    <!-- 詳細検索パネル(旧WinForms版panelAdvancedFilter: NSFWフィルタ/お気に入りのみ/タグ絞り込み) -->
+                    <Border Grid.Row="1" Margin="8,4,8,0" Padding="8"
+                            Background="{DynamicResource Brush.BackgroundElevated}"
+                            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                            Visibility="{Binding IsAdvancedFilterVisible, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="NSFW:" VerticalAlignment="Center" Margin="0,0,4,0"
+                                       Foreground="{DynamicResource Brush.Text}" />
+                            <ComboBox Width="110" Margin="0,0,12,0"
+                                      SelectedIndex="{Binding NsfwFilterMode}"
+                                      Background="{DynamicResource Brush.BackgroundElevated}"
+                                      Foreground="{DynamicResource Brush.Text}">
+                                <ComboBoxItem Content="全部表示" />
+                                <ComboBoxItem Content="SFWのみ" />
+                                <ComboBoxItem Content="NSFWのみ" />
+                            </ComboBox>
+                            <CheckBox Content="{loc:T MainForm_chkFavOnly}" IsChecked="{Binding FavoriteOnlyFilter}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                      Foreground="{DynamicResource Brush.Text}" />
+                            <TextBox Width="220" Text="{Binding TagFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="4"
+                                     Background="{DynamicResource Brush.BackgroundElevated}"
+                                     Foreground="{DynamicResource Brush.Text}"
+                                     BorderBrush="{DynamicResource Brush.Border}"
+                                     VerticalAlignment="Center"
+                                     ToolTip="{loc:T MainForm_txtTagFilter_Placeholder}" />
+                        </StackPanel>
+                    </Border>
+
                 <!--
                     動画一覧: ListViewの既定パネルはVirtualizingStackPanelのため、
                     IsVirtualizing/VirtualizationMode を明示しなくても4万件規模で
                     可視行のみUI要素化される(旧WinForms版のVirtualModeに相当)。
                 -->
-                <ListView ItemsSource="{Binding Videos}"
+                <ListView Grid.Row="2" ItemsSource="{Binding Videos}"
                           SelectedItem="{Binding SelectedVideo}"
                           Background="Transparent" BorderThickness="0"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           VirtualizingPanel.ScrollUnit="Pixel"
-                          ContextMenuOpening="VideoList_ContextMenuOpening">
+                          ContextMenuOpening="VideoList_ContextMenuOpening"
+                          GridViewColumnHeader.Click="VideoColumnHeader_Click">
                     <!--
                         各MenuItemのVisibilityはMainViewModel.RefreshVideoContextMenuState()が
                         メニューを開く直前(ContextMenuOpening)に計算するCanXxxSelectedVideo系の
@@ -268,21 +329,22 @@
                     </ListView.ContextMenu>
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="{loc:T MainForm_colVideoTitle}" Width="400" DisplayMemberBinding="{Binding Title}" />
-                            <GridViewColumn Header="{loc:T MainForm_colVideoSource}" Width="80" DisplayMemberBinding="{Binding Source}" />
-                            <GridViewColumn Header="{loc:T MainForm_colVideoStatus}" Width="90">
+                            <GridViewColumn Header="{Binding TitleColumnHeader}" Width="400" DisplayMemberBinding="{Binding Title}" />
+                            <GridViewColumn Header="{Binding SourceColumnHeader}" Width="80" DisplayMemberBinding="{Binding Source}" />
+                            <GridViewColumn Header="{Binding StatusColumnHeader}" Width="90">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusForeground}" />
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="{loc:T MainForm_colVideoProgress}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
-                            <GridViewColumn Header="{loc:T MainForm_colVideoSize}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
-                            <GridViewColumn Header="{loc:T MainForm_colVideoDate}" Width="140" DisplayMemberBinding="{Binding CreatedAt}" />
+                            <GridViewColumn Header="{Binding ProgressColumnHeader}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
+                            <GridViewColumn Header="{Binding SizeColumnHeader}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
+                            <GridViewColumn Header="{Binding DateColumnHeader}" Width="140" DisplayMemberBinding="{Binding CreatedAt}" />
                         </GridView>
                     </ListView.View>
                 </ListView>
+                </Grid>
             </Border>
         </Grid>
 

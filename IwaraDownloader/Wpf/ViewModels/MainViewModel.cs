@@ -1301,6 +1301,8 @@ namespace IwaraDownloader.Wpf.ViewModels
 
         partial void OnSelectedTreeNodeChanged(ChannelTreeNodeViewModel? value) => LoadVideos();
 
+        private List<VideoInfo> _allLoadedVideos = new();
+
         /// <summary>
         /// 選択中ノードに応じた動画一覧を読み込む。旧WinForms版RefreshVideoListCoreAsyncに対応。
         /// ツリー選択が変わった時にのみ実行する(状態変化のたびに毎回全件再取得はしない)。
@@ -1308,11 +1310,8 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// </summary>
         public void LoadVideos()
         {
-            Videos.Clear();
             var node = SelectedTreeNode;
-            if (node == null) return;
-
-            List<VideoInfo> videos = node.Kind switch
+            _allLoadedVideos = node?.Kind switch
             {
                 TreeNodeKind.Channel when node.Channel != null => _database.GetVideosBySubscribedUser(node.Channel.Id),
                 TreeNodeKind.AllVideos => _database.GetAllVideos(),
@@ -1327,18 +1326,152 @@ namespace IwaraDownloader.Wpf.ViewModels
                 TreeNodeKind.Excluded => _database.GetExcludedVideos(),
                 _ => new List<VideoInfo>(),
             };
+            ApplyVideoFilter();
+        }
 
-            // 各DatabaseServiceメソッドが既にSQL側でCreatedAt DESC順に返す(GetVideosByStatusのConcatは
-            // 旧WinForms版と同じ挙動: 個々にソート済みだが連結後の全体ソートはしない)ため、ここでは
-            // 追加のソートをしない(4万件規模の再ソートを避ける)。
-            foreach (var video in videos)
+        /// <summary>
+        /// 検索テキスト/NSFWフィルタ/お気に入りのみ/タグ絞り込みを_allLoadedVideosへ適用し、
+        /// ソートしてVideosへ反映する。旧WinForms版ApplyVideoFilterに対応(DBへは再クエリしない)。
+        /// </summary>
+        private void ApplyVideoFilter()
+        {
+            IEnumerable<VideoInfo> source = _allLoadedVideos;
+            if (NsfwFilterMode == 1)
+                source = source.Where(v => string.IsNullOrEmpty(v.Rating) || v.Rating == "general");
+            else if (NsfwFilterMode == 2)
+                source = source.Where(v => v.Rating == "ecchi" || v.Rating == "nsfw");
+
+            if (FavoriteOnlyFilter)
+                source = source.Where(v => v.IsFavorite);
+
+            string[] tagTerms = Array.Empty<string>();
+            if (!string.IsNullOrWhiteSpace(TagFilterText))
+            {
+                tagTerms = TagFilterText
+                    .Split(new[] { ',', ' ', '　' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(t => t.ToLowerInvariant())
+                    .ToArray();
+                if (tagTerms.Length > 0)
+                    source = source.Where(v => tagTerms.All(tt => (v.Tags ?? "").ToLowerInvariant().Contains(tt)));
+            }
+
+            var query = SearchQuery.Parse(VideoFilterText);
+            query.IncludeAuthorInFreeText = SelectedTreeNode?.Kind != TreeNodeKind.Channel;
+            var filtered = query.IsEmpty ? source.ToList() : source.Where(query.Match).ToList();
+
+            SortVideoList(filtered);
+
+            Videos.Clear();
+            foreach (var video in filtered)
             {
                 var task = _downloadManager.GetTask(video.VideoId);
                 var item = new VideoListItemViewModel(video);
                 item.Refresh(task);
                 Videos.Add(item);
             }
+
+            if (!query.IsEmpty || NsfwFilterMode != 0 || FavoriteOnlyFilter || tagTerms.Length > 0)
+            {
+                StatusMessage = L.T("MainForm_D069", filtered.Count, _allLoadedVideos.Count);
+            }
         }
+
+        #region 動画一覧フィルタ/ソート (Phase8a-4でパリティ閉じ)
+
+        [ObservableProperty] private string _videoFilterText = "";
+        [ObservableProperty] private bool _isAdvancedFilterVisible;
+        [ObservableProperty] private bool _favoriteOnlyFilter;
+        [ObservableProperty] private string _tagFilterText = "";
+        [ObservableProperty] private int _nsfwFilterMode = SettingsManager.Instance.Settings.NsfwFilterMode;
+
+        public string AdvancedSearchToggleText => IsAdvancedFilterVisible ? L.T("MainForm_D166") : L.T("MainForm_D167");
+
+        partial void OnVideoFilterTextChanged(string value) => ApplyVideoFilter();
+        partial void OnFavoriteOnlyFilterChanged(bool value) => ApplyVideoFilter();
+        partial void OnTagFilterTextChanged(string value) => ApplyVideoFilter();
+
+        partial void OnNsfwFilterModeChanged(int value)
+        {
+            SettingsManager.Instance.Settings.NsfwFilterMode = value;
+            SettingsManager.Instance.Save();
+            ApplyVideoFilter();
+        }
+
+        [RelayCommand]
+        private void ClearVideoFilter() => VideoFilterText = "";
+
+        [RelayCommand]
+        private void ToggleAdvancedSearch()
+        {
+            IsAdvancedFilterVisible = !IsAdvancedFilterVisible;
+            OnPropertyChanged(nameof(AdvancedSearchToggleText));
+        }
+
+        // ソート状態(旧WinForms版_sortColumn/_sortOrder相当)。デフォルトは追加日時の降順(新しい順)。
+        private int _sortColumn = 5;
+        private bool _sortDescending = true;
+
+        [ObservableProperty] private string _titleColumnHeader = "";
+        [ObservableProperty] private string _sourceColumnHeader = "";
+        [ObservableProperty] private string _statusColumnHeader = "";
+        [ObservableProperty] private string _progressColumnHeader = "";
+        [ObservableProperty] private string _sizeColumnHeader = "";
+        [ObservableProperty] private string _dateColumnHeader = "";
+
+        /// <summary>
+        /// 動画一覧のGridViewColumnHeaderクリックで呼ぶ。旧WinForms版listViewVideos_ColumnClickに対応。
+        /// </summary>
+        public void SortVideosByColumn(int columnIndex)
+        {
+            if (columnIndex == _sortColumn) _sortDescending = !_sortDescending;
+            else { _sortColumn = columnIndex; _sortDescending = false; }
+            ApplyVideoFilter();
+        }
+
+        private void SortVideoList(List<VideoInfo> list)
+        {
+            Comparison<VideoInfo> comparison = _sortColumn switch
+            {
+                0 => (a, b) => string.Compare(a.Title, b.Title, StringComparison.CurrentCulture),
+                1 => (a, b) => string.Compare(VideoListItemViewModel.GetSourceLabel(a), VideoListItemViewModel.GetSourceLabel(b), StringComparison.Ordinal),
+                2 => (a, b) => a.Status.CompareTo(b.Status),
+                3 => (a, b) => GetProgressSortValue(a).CompareTo(GetProgressSortValue(b)),
+                4 => (a, b) => a.FileSize.CompareTo(b.FileSize),
+                5 => (a, b) => a.CreatedAt.CompareTo(b.CreatedAt),
+                _ => (a, b) => 0,
+            };
+            list.Sort(comparison);
+            if (_sortDescending) list.Reverse();
+
+            UpdateColumnHeaderTexts();
+        }
+
+        private double GetProgressSortValue(VideoInfo video)
+        {
+            var task = _downloadManager.GetTask(video.VideoId);
+            if (task != null && task.Status == DownloadStatus.Downloading) return task.Progress;
+            if (video.Status == DownloadStatus.Completed) return 100;
+            if (video.Status == DownloadStatus.Pending) return -1;
+            return -2;
+        }
+
+        private void UpdateColumnHeaderTexts()
+        {
+            var baseTexts = new[]
+            {
+                L.T("MainForm_colVideoTitle"), L.T("MainForm_colVideoSource"), L.T("MainForm_colVideoStatus"),
+                L.T("MainForm_colVideoProgress"), L.T("MainForm_colVideoSize"), L.T("MainForm_colVideoDate"),
+            };
+            var arrow = _sortDescending ? " ▼" : " ▲";
+            TitleColumnHeader = baseTexts[0] + (_sortColumn == 0 ? arrow : "");
+            SourceColumnHeader = baseTexts[1] + (_sortColumn == 1 ? arrow : "");
+            StatusColumnHeader = baseTexts[2] + (_sortColumn == 2 ? arrow : "");
+            ProgressColumnHeader = baseTexts[3] + (_sortColumn == 3 ? arrow : "");
+            SizeColumnHeader = baseTexts[4] + (_sortColumn == 4 ? arrow : "");
+            DateColumnHeader = baseTexts[5] + (_sortColumn == 5 ? arrow : "");
+        }
+
+        #endregion
 
         /// <summary>
         /// チャンネルツリーを再構築する。旧WinForms版RefreshChannelTreeCoreAsyncに対応。

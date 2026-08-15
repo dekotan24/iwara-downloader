@@ -27,5 +27,17 @@ namespace IwaraDownloader.Wpf.Views
         {
             (DataContext as MainViewModel)?.RefreshChannelContextMenuState();
         }
+
+        private void VideoColumnHeader_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (e.OriginalSource is not System.Windows.Controls.GridViewColumnHeader header || header.Column == null) return;
+            var listView = (System.Windows.Controls.ListView)sender;
+            var gridView = (System.Windows.Controls.GridView)listView.View;
+            int index = gridView.Columns.IndexOf(header.Column);
+            if (index >= 0)
+            {
+                (DataContext as MainViewModel)?.SortVideosByColumn(index);
+            }
+        }
     }
 }

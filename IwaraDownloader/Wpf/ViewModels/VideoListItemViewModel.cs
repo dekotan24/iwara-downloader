@@ -72,7 +72,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             }
         }
 
-        private static string GetSourceLabel(VideoInfo video)
+        internal static string GetSourceLabel(VideoInfo video)
         {
             if (!video.IsExternal)
                 return string.Equals(video.Site, Helpers.SiteAi, StringComparison.OrdinalIgnoreCase) ? "iwara.ai" : "iwara.tv";
