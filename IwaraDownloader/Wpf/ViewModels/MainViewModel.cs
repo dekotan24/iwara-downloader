@@ -22,9 +22,11 @@ namespace IwaraDownloader.Wpf.ViewModels
         private const int DownloadCountDebounceMs = 500;
 
         private readonly DatabaseService _database = DatabaseService.Instance;
-        // Phase8カットオーバーまではWinForms版MainFormも別途DownloadManagerを持つ (二重インスタンス)。
-        // アプリ全体で1個に統合するのはカットオーバー時の作業とする。
-        private readonly DownloadManager _downloadManager = new();
+        // Phase8b: DownloadManagerはコンストラクタ引数で受け取る単一インスタンス。
+        // 生成元はコンストラクタ側(--wpf-main起動時はProgram.cs)。MainViewModelが独自にnew()する
+        // ことは二重インスタンス(WebServerServiceとの不整合含む)の温床になるため禁止。
+        private readonly DownloadManager _downloadManager;
+        private readonly WebServerService _webServer;
         private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
 
         private DispatcherTimer? _treeRefreshTimer;
@@ -73,8 +75,13 @@ namespace IwaraDownloader.Wpf.ViewModels
 
         private readonly DispatcherTimer _freeSpaceTimer;
 
-        public MainViewModel()
+        public MainViewModel(DownloadManager downloadManager)
         {
+            _downloadManager = downloadManager;
+            _webServer = new WebServerService();
+            _webServer.SetDownloadManager(_downloadManager);
+            WebServerServiceHolder.Instance = _webServer;
+
             RefreshTree();
             RefreshFreeSpace();
             RefreshDownloadCount();
@@ -94,8 +101,258 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => StatusMessage = msg);
             _downloadManager.UserAdded += (_, _) => PostToUi(ScheduleTreeRefresh);
             _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() => StatusMessage = L.T("MainForm_D004", count));
+
+            InitializeLifecycle();
         }
 
+        /// <summary>
+        /// Phase8b: 旧WinForms版MainForm_Load/MainForm_Shownに対応するアプリ起動処理。
+        /// 整合性復旧→環境/ログイン確認→DL再開→Webサーバー自動起動→初回セットアップ判定→
+        /// アップデートチェックの順で、旧WinForms版と同じ順序・同じ設定ゲートで実行する。
+        /// </summary>
+        private void InitializeLifecycle()
+        {
+            var settings = SettingsManager.Instance.Settings;
+
+            var recoveryMessage = FileMoveJournal.RecoverIfNeeded(_database);
+
+            RefreshEnvironmentAndLoginStatus();
+
+            _downloadManager.Start();
+            _downloadManager.ResumeIncompleteDownloads();
+
+            if (recoveryMessage != null) StatusMessage = recoveryMessage;
+
+            if (settings.WebServerAutoStart)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _webServer.StartAsync(settings.WebServerPort, settings.WebServerBindAll);
+                        LoggingService.Instance.Info($"Web media server auto-started on port {settings.WebServerPort}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Instance.Error("Web media server auto-start failed", ex);
+                    }
+                });
+            }
+
+            // 初回起動時: 環境が未セットアップなら自動でウィザード起動(旧WinForms版MainForm_Shownに対応)。
+            // WPFウィンドウの初回描画後に呼びたいのでDispatcherへ回す。
+            var (pythonReady, scriptReady) = _downloadManager.CheckEnvironment();
+            if (!pythonReady || !scriptReady)
+            {
+                _dispatcher.BeginInvoke(new Action(() => ShowSetupWizard(autoTriggered: true)));
+            }
+
+            if (settings.CheckUpdateOnStartup)
+            {
+                _ = CheckForUpdatesOnStartupAsync();
+            }
+        }
+
+        #region 環境チェック/ログイン状態/セットアップウィザード/アップデートチェック (Phase8b)
+
+        [ObservableProperty] private bool _isSetupNeeded;
+        [ObservableProperty] private string _loginStatusText = "";
+        [ObservableProperty] private Brush _loginStatusBrush = ThemeManager.GetBrush("Brush.TextSecondary");
+
+        /// <summary>
+        /// 環境チェック+ログイン状態表示の更新。旧WinForms版CheckEnvironment/UpdateLoginStatusに対応。
+        /// ログインアクション自体はSettingsForm(ブリッジ)側のログインUIに集約する方針とし、
+        /// ここでは状態表示のみを持つ(WPF側にメール/パスワード入力ダイアログを新規に作らない判断、
+        /// 2026-08-15)。
+        /// </summary>
+        private void RefreshEnvironmentAndLoginStatus()
+        {
+            var (pythonReady, scriptReady) = _downloadManager.CheckEnvironment();
+            bool setupComplete = pythonReady && scriptReady;
+            IsSetupNeeded = !setupComplete;
+
+            if (!setupComplete)
+            {
+                StatusMessage = L.T("MainForm_D017");
+            }
+            else if (!_downloadManager.IsLoggedIn)
+            {
+                StatusMessage = L.T("MainForm_D018");
+            }
+            else
+            {
+                StatusMessage = L.T("MainForm_D019");
+                _ = VerifyLoginInBackgroundAsync();
+            }
+            UpdateLoginStatusDisplay();
+        }
+
+        private void UpdateLoginStatusDisplay()
+        {
+            if (_downloadManager.IsLoggedIn)
+            {
+                LoginStatusText = L.T("MainForm_D022");
+                LoginStatusBrush = ThemeManager.GetBrush("Brush.Success");
+            }
+            else
+            {
+                LoginStatusText = L.T("MainForm_D024");
+                LoginStatusBrush = ThemeManager.GetBrush("Brush.TextSecondary");
+            }
+        }
+
+        private async Task VerifyLoginInBackgroundAsync()
+        {
+            try
+            {
+                var (valid, error) = await _downloadManager.VerifyTokenAsync();
+                if (!valid)
+                {
+                    PostToUi(() =>
+                    {
+                        UpdateLoginStatusDisplay();
+                        StatusMessage = L.T("MainForm_D020", error ?? L.T("Common_Unknown"));
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"VerifyToken error: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private void OpenSetupWizard() => ShowSetupWizard();
+
+        private void ShowSetupWizard(bool autoTriggered = false)
+        {
+            using var wiz = new SetupWizardForm();
+            var result = wiz.ShowDialog();
+            if (result == System.Windows.Forms.DialogResult.OK)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D013"), L.T("MainForm_D014"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            else if (autoTriggered)
+            {
+                StatusMessage = L.T("MainForm_D015");
+            }
+            RefreshEnvironmentAndLoginStatus();
+        }
+
+        private async Task CheckForUpdatesOnStartupAsync()
+        {
+            try
+            {
+                await Task.Delay(3000);
+                var result = await UpdateService.CheckForUpdateAsync();
+                if (result.HasUpdate)
+                {
+                    var dialogResult = System.Windows.MessageBox.Show(
+                        L.T("MainForm_D128") + L.T("MainForm_D129", UpdateService.CurrentVersionString) +
+                        L.T("MainForm_D130", result.LatestVersion) + L.T("MainForm_D131"),
+                        L.T("MainForm_D132"), System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Information);
+                    if (dialogResult == System.Windows.MessageBoxResult.Yes)
+                    {
+                        UpdateService.OpenReleasesPage();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"更新チェック失敗: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region クリップボード監視 (Phase8b)
+        // Win32フック(AddClipboardFormatListener/WM_CLIPBOARDUPDATE)自体はウィンドウハンドルが要るため
+        // MainWindow.xaml.cs側が持つ。ここではON/OFF状態とURL検知後の処理(旧WinForms版
+        // OnClipboardChangedに対応)のみを持ち、フック登録要求はイベントで橋渡しする。
+
+        [ObservableProperty] private bool _clipboardMonitorEnabled = SettingsManager.Instance.Settings.EnableClipboardMonitor;
+        private string? _lastProcessedClipboardText;
+
+        public string ClipboardMonitorToggleText => ClipboardMonitorEnabled ? L.T("MainForm_D155") : L.T("MainForm_D156");
+
+        /// <summary>MainWindow.xaml.csがAddClipboardFormatListener/RemoveClipboardFormatListenerを呼ぶためのフック。</summary>
+        public event Action<bool>? ClipboardMonitorToggled;
+
+        partial void OnClipboardMonitorEnabledChanged(bool value)
+        {
+            SettingsManager.Instance.Settings.EnableClipboardMonitor = value;
+            SettingsManager.Instance.Save();
+            OnPropertyChanged(nameof(ClipboardMonitorToggleText));
+            ClipboardMonitorToggled?.Invoke(value);
+        }
+
+        /// <summary>MainWindow.xaml.csのWM_CLIPBOARDUPDATEフックから呼ぶ。旧WinForms版OnClipboardChangedに対応。</summary>
+        public async void OnClipboardChanged()
+        {
+            try
+            {
+                if (!ClipboardMonitorEnabled) return;
+
+                string text;
+                try
+                {
+                    if (!System.Windows.Clipboard.ContainsText()) return;
+                    text = System.Windows.Clipboard.GetText() ?? "";
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Clipboard read failed: {ex.Message}");
+                    return;
+                }
+
+                text = text.Trim();
+                if (string.IsNullOrEmpty(text)) return;
+                if (text == _lastProcessedClipboardText) return;
+
+                bool isVideo = Helpers.IsVideoUrl(text);
+                bool isUser = Helpers.IsUserProfileUrl(text);
+                if (!isVideo && !isUser) return;
+
+                _lastProcessedClipboardText = text;
+
+                if (isVideo)
+                {
+                    var vid = Helpers.ExtractVideoIdFromUrl(text);
+                    if (!string.IsNullOrEmpty(vid) && _database.GetVideoByVideoId(vid) != null)
+                    {
+                        StatusMessage = L.T("MainForm_D159", vid);
+                        return;
+                    }
+                    StatusMessage = L.T("MainForm_D160");
+                    await AddVideoAsync(text);
+                }
+                else
+                {
+                    _downloadManager.EnqueueSubscribedUser(text);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("OnClipboardChanged で予期せぬ例外", ex);
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// 終了処理に時間がかかりそうか(旧WinForms版FormClosingのslowClose判定に対応)。
+        /// trueならMainWindow側でトレイバルーンを出してから閉じる。
+        /// </summary>
+        public bool IsSlowCloseExpected =>
+            _downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0
+            || _downloadManager.PendingTaskCount > 0 || MetadataService.WritesInProgress > 0;
+
+        /// <summary>
+        /// アプリ終了処理。旧WinForms版MainForm_FormClosing(トレイ最小化ではなく実際に閉じる経路)に対応。
+        /// DL停止→Webサーバー停止→mp4タグ書き込み完了待ち→DownloadManager破棄の順で行う
+        /// (moov atom破損防止のため書き込み完了待ちを挟む)。
+        /// </summary>
         public void Dispose()
         {
             _freeSpaceTimer.Stop();
@@ -109,6 +366,12 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.AutoCheckCompleted -= OnAutoCheckCompleted;
             _downloadManager.BackgroundTaskProgress -= OnBackgroundTaskProgress;
             _downloadManager.BackgroundTaskCompleted -= OnBackgroundTaskCompleted;
+
+            _downloadManager.Stop();
+            try { _webServer.StopAsync().Wait(5000); } catch { }
+            _webServer.Dispose();
+            MetadataService.WaitForWritesToComplete(10000);
+            _downloadManager.Dispose();
         }
 
         /// <summary>

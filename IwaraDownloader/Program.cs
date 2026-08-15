@@ -32,7 +32,10 @@ namespace IwaraDownloader
             }
             if (args.Contains("--wpf-main"))
             {
-                new Wpf.Views.MainWindow().ShowDialog();
+                // Phase8b: DownloadManagerは1個だけ生成し、MainWindow(→MainViewModel→WebServerService)へ
+                // 同じ参照を渡す。Phase8c本カットオーバーでもこの生成元をProgram.csに置く方針を踏襲する。
+                var sharedDownloadManager = new Services.DownloadManager();
+                new Wpf.Views.MainWindow(sharedDownloadManager).ShowDialog();
                 return;
             }
 
