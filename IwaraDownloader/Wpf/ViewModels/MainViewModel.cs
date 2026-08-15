@@ -102,7 +102,29 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.UserAdded += (_, _) => PostToUi(ScheduleTreeRefresh);
             _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() => StatusMessage = L.T("MainForm_D004", count));
 
+            Current = this;
+
             InitializeLifecycle();
+        }
+
+        /// <summary>
+        /// Phase8c: 唯一存在するMainViewModelインスタンスへの参照。旧WinForms版の
+        /// Application.OpenForms経由でMainFormを探すパターン(ImportFromFolderWizard等の
+        /// ブリッジダイアログからの通知用)をWPF側で置き換えるためのホルダー。
+        /// </summary>
+        public static MainViewModel? Current { get; private set; }
+
+        /// <summary>
+        /// 外部 (ImportFromFolderWizard 等のブリッジダイアログ) からインポート完了通知を受けたときに
+        /// チャンネル一覧 + 動画リストの両方を更新するフック。旧WinForms版MainForm.RefreshAfterImportに対応。
+        /// </summary>
+        public void RefreshAfterImport()
+        {
+            PostToUi(() =>
+            {
+                RefreshTree();
+                LoadVideos();
+            });
         }
 
         /// <summary>
@@ -355,6 +377,8 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// </summary>
         public void Dispose()
         {
+            if (Current == this) Current = null;
+
             _freeSpaceTimer.Stop();
             _treeRefreshTimer?.Stop();
             _videoListRefreshTimer?.Stop();

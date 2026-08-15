@@ -1027,15 +1027,12 @@ namespace IwaraDownloader.Forms
                 Debug.WriteLine($"通知失敗: {ex.Message}");
             }
 
-            // MainForm にチャンネル一覧 + 動画リスト更新を通知
-            // (Owner 経由で渡しても良いが、SettingsForm 経由で開かれた場合に
-            //  Owner が SettingsForm になってる可能性があるので OpenForms から直接探す)
+            // WPF側MainViewModelにチャンネル一覧 + 動画リスト更新を通知
+            // (Phase8c: WinFormsのApplication.OpenForms経由MainForm探索から、
+            //  MainViewModel.Currentホルダー経由に置き換え)
             try
             {
-                foreach (Form f in Application.OpenForms)
-                {
-                    if (f is MainForm mf) { mf.RefreshAfterImport(); break; }
-                }
+                Wpf.ViewModels.MainViewModel.Current?.RefreshAfterImport();
             }
             catch (Exception ex)
             {

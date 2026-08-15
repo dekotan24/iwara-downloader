@@ -14,31 +14,6 @@ namespace IwaraDownloader
             // UI言語の適用。フォーム生成前(=文言が読まれる前)に必ず行う
             ApplyUiLanguage();
 
-            // WPF移行 検証用の一時的な起動フラグ。Phase8カットオーバーまでに削除すること。
-            if (args.Contains("--wpf-styleguide"))
-            {
-                new Wpf.Views.StyleGuideWindow().ShowDialog();
-                return;
-            }
-            if (args.Contains("--wpf-about"))
-            {
-                new Wpf.Views.AboutWindow().ShowDialog();
-                return;
-            }
-            if (args.Contains("--thumbcache-selftest"))
-            {
-                RunThumbnailCacheSelfTest();
-                return;
-            }
-            if (args.Contains("--wpf-main"))
-            {
-                // Phase8b: DownloadManagerは1個だけ生成し、MainWindow(→MainViewModel→WebServerService)へ
-                // 同じ参照を渡す。Phase8c本カットオーバーでもこの生成元をProgram.csに置く方針を踏襲する。
-                var sharedDownloadManager = new Services.DownloadManager();
-                new Wpf.Views.MainWindow(sharedDownloadManager).ShowDialog();
-                return;
-            }
-
             // 多重起動防止
             using var mutex = new Mutex(true, "IwaraDownloader_SingleInstance", out bool createdNew);
             if (!createdNew)
@@ -51,7 +26,8 @@ namespace IwaraDownloader
                 return;
             }
 
-            // アプリケーション設定
+            // アプリケーション設定 (WinFormsブリッジダイアログ群の視覚スタイル初期化。
+            // DPI対応そのものはapp.manifestのdpiAwareness宣言でプロセス全体へ担保する)
             ApplicationConfiguration.Initialize();
 
             // 子プロセス管理用 Job Object を初期化
@@ -68,82 +44,25 @@ namespace IwaraDownloader
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             // fire-and-forget Task 内の未捕捉例外 (await されない _ = Task.Run など)
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            // WPF側(MainWindow)のDispatcherループはApplication.ThreadExceptionでは捕捉されないため個別に登録する
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.UnhandledException += Dispatcher_UnhandledException;
 
             try
             {
-                // スプラッシュスクリーンを表示
-                SplashForm.ShowSplash();
-                SplashForm.UpdateStatus("初期化中...", 0);
-
-                // メインフォームを起動
-                Application.Run(new MainForm());
+                // Phase8c: メインウィンドウはWPF側(MainWindow)。DownloadManagerは1個だけここで生成し、
+                // MainWindow(→MainViewModel→WebServerService)へ同じ参照を渡す。
+                // System.Windows.Applicationオブジェクトは意図的に導入しない。
+                // Window.ShowDialog()内部のメッセージポンプ(PushFrame)のみで
+                // NotifyIcon/クリップボード監視/ブリッジダイアログ表示まで含めて動作することは
+                // Phase8bの--wpf-mainデバッグ経路で検証済みのため、追加の複雑性を避ける。
+                var sharedDownloadManager = new Services.DownloadManager();
+                new Wpf.Views.MainWindow(sharedDownloadManager).ShowDialog();
             }
             finally
             {
-                // スプラッシュが残っていれば閉じる
-                SplashForm.CloseSplash();
-
                 // ログサービス終了
                 logger.Dispose();
             }
-        }
-
-        /// <summary>
-        /// WPF移行 Phase3 検証用の一時的な自己診断。ThumbnailCacheServiceのbyte[]化改修が
-        /// 実際のキャッシュ済みファイルに対して正しく動くかを確認する。Phase8までに削除すること。
-        /// </summary>
-        private static void RunThumbnailCacheSelfTest()
-        {
-            var resultPath = Path.Combine(Path.GetTempPath(), "thumbcache_selftest_result.txt");
-            var lines = new List<string>();
-            try
-            {
-                var dir = Services.ThumbnailCacheService.ResolveCacheDir();
-                var file = Directory.EnumerateFiles(dir, "*.jpg").FirstOrDefault();
-                if (file == null)
-                {
-                    lines.Add("NO_CACHE_FILE_FOUND");
-                }
-                else
-                {
-                    var videoId = Path.GetFileNameWithoutExtension(file);
-                    var svc = Services.ThumbnailCacheService.Instance;
-
-                    var diskImg = svc.TryGetCached(videoId);
-                    lines.Add($"TryGetCached (disk->mem promote): {(diskImg != null ? $"OK {diskImg.Width}x{diskImg.Height}" : "NULL")}");
-                    diskImg?.Dispose();
-
-                    var memImg = svc.TryGetMemoryCached(videoId);
-                    lines.Add($"TryGetMemoryCached (mem hit): {(memImg != null ? $"OK {memImg.Width}x{memImg.Height}" : "NULL")}");
-                    memImg?.Dispose();
-
-                    var bytes = svc.TryGetMemoryCachedBytes(videoId);
-                    lines.Add($"TryGetMemoryCachedBytes: {(bytes != null ? $"OK {bytes.Length} bytes" : "NULL")}");
-
-                    if (bytes != null)
-                    {
-                        try
-                        {
-                            using var ms = new MemoryStream(bytes);
-                            using var decoded = Image.FromStream(ms);
-                            lines.Add($"WPF-side decode simulation (Image.FromStream on cached bytes): OK {decoded.Width}x{decoded.Height}");
-                        }
-                        catch (Exception ex)
-                        {
-                            lines.Add($"WPF-side decode simulation: FAILED {ex.Message}");
-                        }
-                    }
-
-                    // 別のvideoIdでミス確認 (キャッシュに無いキーはnullを返すこと)
-                    var missBytes = svc.TryGetMemoryCachedBytes("__nonexistent__");
-                    lines.Add($"Miss case (non-cached id): {(missBytes == null ? "OK (null)" : "UNEXPECTED NON-NULL")}");
-                }
-            }
-            catch (Exception ex)
-            {
-                lines.Add($"EXCEPTION: {ex}");
-            }
-            File.WriteAllLines(resultPath, lines, System.Text.Encoding.UTF8);
         }
 
         /// <summary>
@@ -200,6 +119,17 @@ namespace IwaraDownloader
             {
                 ShowErrorAndLog(ex);
             }
+        }
+
+        /// <summary>
+        /// WPF(MainWindow)のDispatcherループでの未処理例外。
+        /// Application.ThreadExceptionはWinFormsのメッセージループ専用でWPF側には効かないため、
+        /// Phase8cで個別に登録する。
+        /// </summary>
+        private static void Dispatcher_UnhandledException(object? sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            ShowErrorAndLog(e.Exception);
+            e.Handled = true;
         }
 
         /// <summary>

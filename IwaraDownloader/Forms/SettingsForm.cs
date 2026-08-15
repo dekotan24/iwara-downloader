@@ -1041,7 +1041,7 @@ namespace IwaraDownloader.Forms
     }
 
     /// <summary>
-    /// WebServerService のグローバルホルダー（MainForm で初期化、SettingsForm から参照）
+    /// WebServerService のグローバルホルダー（WPF側MainViewModelで初期化、SettingsForm から参照）
     /// </summary>
     public static class WebServerServiceHolder
     {
