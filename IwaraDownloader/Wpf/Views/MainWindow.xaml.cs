@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using IwaraDownloader.Wpf.Theme;
 using IwaraDownloader.Wpf.ViewModels;
@@ -21,6 +22,15 @@ namespace IwaraDownloader.Wpf.Views
         private void VideoList_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
         {
             (DataContext as MainViewModel)?.RefreshVideoContextMenuState();
+        }
+
+        private void VideoList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.SelectedVideos = ((System.Windows.Controls.ListView)sender).SelectedItems
+                    .Cast<VideoListItemViewModel>().ToList();
+            }
         }
 
         private void ChannelTree_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)

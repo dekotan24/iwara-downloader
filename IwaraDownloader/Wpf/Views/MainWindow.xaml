@@ -274,6 +274,8 @@
                 -->
                 <ListView Grid.Row="2" ItemsSource="{Binding Videos}"
                           SelectedItem="{Binding SelectedVideo}"
+                          SelectionMode="Extended"
+                          SelectionChanged="VideoList_SelectionChanged"
                           Background="Transparent" BorderThickness="0"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
@@ -307,7 +309,8 @@
                             <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}"
                                       Visibility="{Binding CanOpenFolderSelectedVideo, Converter={StaticResource BoolToVis}}" />
                             <Separator />
-                            <MenuItem Header="{loc:T MainForm_menuVidOpenPage}" Command="{Binding OpenVideoPageCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuVidOpenPage}" Command="{Binding OpenVideoPageCommand}"
+                                      Visibility="{Binding CanOpenPageSelectedVideo, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuVidOpenAuthor}" Command="{Binding OpenVideoAuthorPageCommand}"
                                       Visibility="{Binding CanOpenAuthorSelectedVideo, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}" />
@@ -316,7 +319,7 @@
                             <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}"
                                       Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuVidDetails}" Command="{Binding OpenVideoDetailsCommand}"
-                                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding CanShowVideoDetails, Converter={StaticResource BoolToVis}}" />
                             <Separator />
                             <MenuItem Header="{loc:T MainForm_menuVidDelete}" Command="{Binding DeleteVideoCommand}"
                                       Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
