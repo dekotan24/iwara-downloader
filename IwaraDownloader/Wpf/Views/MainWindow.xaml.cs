@@ -113,8 +113,10 @@ namespace IwaraDownloader.Wpf.Views
             };
             try
             {
+                // Assembly.Location は IwaraDownloader.dll を指す(アイコン未埋め込み)ため、
+                // icon.ico が埋め込まれた実行ファイル自体のパスを取る
                 _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(
-                    System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    Environment.ProcessPath ?? System.Reflection.Assembly.GetExecutingAssembly().Location);
             }
             catch
             {
