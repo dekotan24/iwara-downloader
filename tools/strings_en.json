@@ -1058,5 +1058,8 @@
   "MainForm_ToolbarHint_Settings": "Open the app settings",
   "MainForm_ToolbarHint_Setup": "Run the initial setup (Python environment, login, etc.)",
   "MainForm_ToolbarHint_Tools": "Open the tools menu (bulk import, search import, duplicate check, etc.)",
-  "MainForm_ToolbarHint_Help": "Open the help menu (about, log folder, etc.)"
+  "MainForm_ToolbarHint_Help": "Open the help menu (about, log folder, etc.)",
+
+  "MainForm_QueueSuspendedDiskSpace": "Download queue paused: disk space is low ({0} tasks pending). It will resume automatically once space is freed.",
+  "MainForm_QueueResumedDiskSpace": "Disk space recovered — download queue resumed automatically."
 }

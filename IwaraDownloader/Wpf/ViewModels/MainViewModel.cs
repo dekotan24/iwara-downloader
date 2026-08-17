@@ -143,6 +143,8 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => StatusMessage = msg);
             _downloadManager.UserAdded += (_, _) => PostToUi(ScheduleTreeRefresh);
             _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() => StatusMessage = L.T("MainForm_D004", count));
+            _downloadManager.DownloadQueueSuspendedForDiskSpace += (_, count) => PostToUi(() => StatusMessage = L.T("MainForm_QueueSuspendedDiskSpace", count));
+            _downloadManager.DownloadQueueResumedForDiskSpace += (_, _) => PostToUi(() => StatusMessage = L.T("MainForm_QueueResumedDiskSpace"));
             ThumbnailCacheService.Instance.ThumbnailReady += OnThumbnailReady;
 
             IsTileMode = SettingsManager.Instance.Settings.VideoListViewMode == 1;

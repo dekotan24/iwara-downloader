@@ -1265,8 +1265,14 @@ videoId 后导入数据库。
   <data name="MainForm_QueuePending" xml:space="preserve">
     <value>{0} 等待</value>
   </data>
+  <data name="MainForm_QueueResumedDiskSpace" xml:space="preserve">
+    <value>磁盘空间已恢复,下载队列已自动继续。</value>
+  </data>
   <data name="MainForm_QueueSummaryFull" xml:space="preserve">
     <value> | 平均{0}%</value>
+  </data>
+  <data name="MainForm_QueueSuspendedDiskSpace" xml:space="preserve">
+    <value>磁盘空间不足,已暂停下载队列({0}个等待中)。空间恢复后将自动继续。</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0} 写入标签</value>

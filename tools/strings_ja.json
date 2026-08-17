@@ -1058,5 +1058,8 @@
   "MainForm_ToolbarHint_Settings": "アプリの設定画面を開きます",
   "MainForm_ToolbarHint_Setup": "Python環境やログイン等の初期セットアップを行います",
   "MainForm_ToolbarHint_Tools": "一括インポート・検索インポート・重複チェックなどのツールメニューを開きます",
-  "MainForm_ToolbarHint_Help": "バージョン情報・ログフォルダなどのヘルプメニューを開きます"
+  "MainForm_ToolbarHint_Help": "バージョン情報・ログフォルダなどのヘルプメニューを開きます",
+
+  "MainForm_QueueSuspendedDiskSpace": "空き容量不足のためDLキューを停止しました ({0}件待機中)。空き容量が回復すると自動で再開します。",
+  "MainForm_QueueResumedDiskSpace": "空き容量が回復したため、DLキューを自動再開しました。"
 }

@@ -1265,8 +1265,14 @@ Moves to those drives will fail and files will remain in place.</value>
   <data name="MainForm_QueuePending" xml:space="preserve">
     <value>{0} pending</value>
   </data>
+  <data name="MainForm_QueueResumedDiskSpace" xml:space="preserve">
+    <value>Disk space recovered — download queue resumed automatically.</value>
+  </data>
   <data name="MainForm_QueueSummaryFull" xml:space="preserve">
     <value> | avg {0}%</value>
+  </data>
+  <data name="MainForm_QueueSuspendedDiskSpace" xml:space="preserve">
+    <value>Download queue paused: disk space is low ({0} tasks pending). It will resume automatically once space is freed.</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0} writing tags</value>

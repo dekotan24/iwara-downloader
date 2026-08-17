@@ -1269,8 +1269,14 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_QueuePending" xml:space="preserve">
     <value>{0}待機</value>
   </data>
+  <data name="MainForm_QueueResumedDiskSpace" xml:space="preserve">
+    <value>空き容量が回復したため、DLキューを自動再開しました。</value>
+  </data>
   <data name="MainForm_QueueSummaryFull" xml:space="preserve">
     <value> | 平均{0}%</value>
+  </data>
+  <data name="MainForm_QueueSuspendedDiskSpace" xml:space="preserve">
+    <value>空き容量不足のためDLキューを停止しました ({0}件待機中)。空き容量が回復すると自動で再開します。</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0}タグ書込</value>

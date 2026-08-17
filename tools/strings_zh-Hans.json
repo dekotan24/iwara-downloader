@@ -1058,5 +1058,8 @@
   "MainForm_ToolbarHint_Settings": "打开应用设置画面",
   "MainForm_ToolbarHint_Setup": "进行Python环境、登录等初始设置",
   "MainForm_ToolbarHint_Tools": "打开工具菜单(批量导入、搜索导入、重复检查等)",
-  "MainForm_ToolbarHint_Help": "打开帮助菜单(版本信息、日志文件夹等)"
+  "MainForm_ToolbarHint_Help": "打开帮助菜单(版本信息、日志文件夹等)",
+
+  "MainForm_QueueSuspendedDiskSpace": "磁盘空间不足,已暂停下载队列({0}个等待中)。空间恢复后将自动继续。",
+  "MainForm_QueueResumedDiskSpace": "磁盘空间已恢复,下载队列已自动继续。"
 }

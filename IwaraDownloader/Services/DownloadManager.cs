@@ -38,6 +38,12 @@ namespace IwaraDownloader.Services
         /// <summary>ログイン必要エラーでキューが停止した時のイベント (int = 停止したタスク数)</summary>
         public event EventHandler<int>? DownloadQueueSuspended;
 
+        /// <summary>空き容量不足でキューが停止した時のイベント (int = 停止したタスク数)</summary>
+        public event EventHandler<int>? DownloadQueueSuspendedForDiskSpace;
+
+        /// <summary>空き容量が回復してキューを自動再開した時のイベント</summary>
+        public event EventHandler? DownloadQueueResumedForDiskSpace;
+
         /// <summary>アクティブなタスク数</summary>
         public int ActiveTaskCount => _activeTasks.Count;
 
@@ -956,7 +962,12 @@ namespace IwaraDownloader.Services
                                     || ex.Message.Contains("errors.notFound")
                                     || ex.Message.Contains("Video not found");
 
-                bool isUnrecoverable = isLoginRequired || isCdnUnavailable || isPrivateVideo || isVideoNotFound;
+                // 空き容量不足: DownloadManager.ProcessTaskAsync のDL開始前チェックが投げる
+                // "DISK_SPACE: " マーカー付き例外。閾値が回復するまでは何度リトライしても
+                // 同じ理由で失敗するので、ログイン必要と同じ扱いでキューを止める。
+                bool isDiskSpace = ex.Message.Contains("DISK_SPACE:");
+
+                bool isUnrecoverable = isLoginRequired || isCdnUnavailable || isPrivateVideo || isVideoNotFound || isDiskSpace;
 
                 if (isLoginRequired)
                 {
@@ -969,6 +980,16 @@ namespace IwaraDownloader.Services
                     task.Video.Status = DownloadStatus.Pending;
                     _database.UpdateVideo(task.Video);
                     SuspendQueueForLogin();
+                }
+                else if (isDiskSpace)
+                {
+                    _logger.Warn($"Disk space low — suspending download queue until space is freed.");
+                    // ログイン切れと同じ理由でRetryCountは動画側の問題ではないため取り消し、
+                    // ResumeAfterDiskSpaceRecovered (Pendingのみ再開) の対象にする。
+                    task.Video.RetryCount = Math.Max(0, task.Video.RetryCount - 1);
+                    task.Video.Status = DownloadStatus.Pending;
+                    _database.UpdateVideo(task.Video);
+                    SuspendQueueForDiskSpace();
                 }
                 else if (task.Video.RetryCount < maxRetry && !isUnrecoverable)
                 {
@@ -1281,6 +1302,89 @@ namespace IwaraDownloader.Services
 
             if (count > 0)
                 _logger.Info($"Resumed {count} downloads after login");
+        }
+
+        /// <summary>空き容量不足によるキュー停止が既に通知済みかどうか (多重イベント発火の防止用)。</summary>
+        private int _suspendNotifiedForDiskSpace;
+
+        /// <summary>
+        /// 空き容量が回復したか30秒おきに確認するタイマー。SuspendQueueForDiskSpaceで起動し、
+        /// ResumeAfterDiskSpaceRecoveredまたはDisposeで停止する。
+        /// </summary>
+        private System.Timers.Timer? _diskSpaceRecoveryTimer;
+
+        /// <summary>
+        /// 空き容量不足によるキュー一時停止(デコ指摘issue対応)。ログイン切れと違い、
+        /// 全ドライブ・全保存先を厳密に区別すると設計が複雑になるため、既定の保存先
+        /// (settings.DownloadFolder)のドライブ1つだけを監視対象として単純化している。
+        /// 実行中タスクは能動的にキャンセルしない(ディスクフルなら書き込みで自然に失敗するため、
+        /// ログイン切れほど緊急に止める必要がない)。待機中タスクだけPendingに戻して次の投入を防ぐ。
+        /// </summary>
+        private void SuspendQueueForDiskSpace()
+        {
+            var suspendedCount = 0;
+            while (_pendingQueue.TryDequeue(out var task))
+            {
+                _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                task.Video.Status = DownloadStatus.Pending;
+                _database.UpdateVideo(task.Video);
+                suspendedCount++;
+            }
+
+            if (Interlocked.Exchange(ref _suspendNotifiedForDiskSpace, 1) == 0)
+            {
+                _logger.Warn($"Download queue suspended: disk space low ({suspendedCount} tasks returned to Pending)");
+                DownloadQueueSuspendedForDiskSpace?.Invoke(this, suspendedCount);
+
+                _diskSpaceRecoveryTimer?.Stop();
+                _diskSpaceRecoveryTimer?.Dispose();
+                _diskSpaceRecoveryTimer = new System.Timers.Timer(30000) { AutoReset = true };
+                _diskSpaceRecoveryTimer.Elapsed += (_, _) => CheckDiskSpaceRecovery();
+                _diskSpaceRecoveryTimer.Start();
+            }
+        }
+
+        /// <summary>_diskSpaceRecoveryTimerから30秒おきに呼ばれ、既定保存先の空き容量が
+        /// MinFreeSpaceGb以上に回復していればキューを自動再開する。</summary>
+        private void CheckDiskSpaceRecovery()
+        {
+            try
+            {
+                var settings = SettingsManager.Instance.Settings;
+                var minFreeGb = settings.MinFreeSpaceGb;
+                if (minFreeGb <= 0) { ResumeAfterDiskSpaceRecovered(); return; }
+
+                var root = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
+                if (string.IsNullOrEmpty(root)) return;
+
+                var freeBytes = new DriveInfo(root).AvailableFreeSpace;
+                if (freeBytes >= minFreeGb * 1024L * 1024 * 1024)
+                    ResumeAfterDiskSpaceRecovered();
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug($"CheckDiskSpaceRecovery failed (will retry): {ex.Message}");
+            }
+        }
+
+        /// <summary>空き容量回復によるキュー再開。Pending状態の動画をすべて再エンキューする。</summary>
+        private void ResumeAfterDiskSpaceRecovered()
+        {
+            _diskSpaceRecoveryTimer?.Stop();
+            _diskSpaceRecoveryTimer?.Dispose();
+            _diskSpaceRecoveryTimer = null;
+            Interlocked.Exchange(ref _suspendNotifiedForDiskSpace, 0);
+
+            var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
+            var count = 0;
+            foreach (var video in pendingVideos)
+            {
+                EnqueueDownload(video);
+                count++;
+            }
+
+            _logger.Info($"Disk space recovered — resumed {count} downloads");
+            DownloadQueueResumedForDiskSpace?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -1866,6 +1970,8 @@ namespace IwaraDownloader.Services
                       && Interlocked.CompareExchange(ref _isProcessingQueue, 0, 0) == 0,
                 5000);
             _autoCheckTimer.Dispose();
+            _diskSpaceRecoveryTimer?.Stop();
+            _diskSpaceRecoveryTimer?.Dispose();
             _slotAvailableSignal.Dispose();
             _globalCts?.Dispose();
         }
