@@ -8,6 +8,143 @@
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!--
+            OS標準のButton/ComboBox/GridViewColumnHeaderテンプレートはMouseOver/フォーカス時に
+            文字色と連動しない明るい(ほぼ白の)オーバーレイを独自に乗せてくるため、ウィンドウ全体で
+            共有するフラットなテンプレートに差し替える。ホバー/フォーカスは枠線の強調だけで表現する。
+        -->
+        <Style x:Key="FlatButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Border}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
+            ComboBoxは展開時のPopup(ItemsPresenter)はOS標準のまま(白背景に項目文字色は黒固定、
+            ComboBox.ItemContainerStyle側で対応済み)にしつつ、閉じた状態の本体だけをダークテーマに
+            合わせる。本体側までPopupごとダーク化すると、既に黒固定した項目文字色と衝突するため。
+        -->
+        <Style x:Key="FlatComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundElevated}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="Toggle"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press" Focusable="False">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ToggleBd"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="20" />
+                                                </Grid.ColumnDefinitions>
+                                                <Path Grid.Column="1" Data="M0,0 L4,4 L8,0 Z"
+                                                      Fill="{DynamicResource Brush.TextSecondary}"
+                                                      Width="8" Height="4" Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ToggleBd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False"
+                                               Content="{TemplateBinding SelectionBoxItem}"
+                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                               Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="Left" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                            <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True"
+                                   Focusable="False" PopupAnimation="None"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        SnapsToDevicePixels="True">
+                                    <ScrollViewer SnapsToDevicePixels="True">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FlatGridViewColumnHeaderStyle" TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundElevated}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridViewColumnHeader">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="0,0,1,1">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="Left" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <!--
         Phase4a: レイアウトシェルのみ。中身(チャンネルツリー/動画一覧/ツールバー等)は
@@ -30,45 +167,8 @@
                 Padding="6">
             <StackPanel Orientation="Horizontal">
                 <StackPanel.Resources>
-                    <!-- OS標準のButton/ToggleButtonテンプレートはMouseOver/フォーカス時に文字色と連動しない
-                         明るいオーバーレイを独自に乗せてくるため、常時ForegroundをBrush.Textに固定できる
-                         最小限のControlTemplateに差し替える。ホバー/フォーカスは枠線の強調だけで表現する。 -->
-                    <Style TargetType="Button">
-                        <Setter Property="Padding" Value="10,6" />
+                    <Style TargetType="Button" BasedOn="{StaticResource FlatButtonStyle}">
                         <Setter Property="Margin" Value="0,0,4,0" />
-                        <Setter Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
-                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
-                        <Setter Property="BorderThickness" Value="1" />
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="Bd"
-                                            Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                            CornerRadius="4">
-                                        <ContentPresenter Margin="{TemplateBinding Padding}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           TextElement.Foreground="{TemplateBinding Foreground}" />
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
-                                        </Trigger>
-                                        <Trigger Property="IsKeyboardFocused" Value="True">
-                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Border}" />
-                                        </Trigger>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.5" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
                     </Style>
                     <Style TargetType="ToggleButton">
                         <Setter Property="Padding" Value="10,6" />
@@ -177,6 +277,7 @@
                 </TextBox>
                 <Button Grid.Column="1" Content="貼り付けて追加"
                         Command="{Binding AddFromUrlCommand}"
+                        Style="{StaticResource FlatButtonStyle}"
                         Padding="10,6"
                         Background="{DynamicResource Brush.Accent}"
                         Foreground="{DynamicResource Brush.OnAccent}"
@@ -310,15 +411,9 @@
                                  Foreground="{DynamicResource Brush.Text}"
                                  BorderBrush="{DynamicResource Brush.Border}" Margin="0,0,4,0" />
                         <Button Grid.Column="1" Content="✕" Command="{Binding ClearVideoFilterCommand}"
-                                Padding="8,4" Margin="0,0,4,0"
-                                Background="{DynamicResource Brush.BackgroundHover}"
-                                Foreground="{DynamicResource Brush.Text}"
-                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
+                                Style="{StaticResource FlatButtonStyle}" Padding="8,4" Margin="0,0,4,0" />
                         <Button Grid.Column="2" Content="{Binding AdvancedSearchToggleText}" Command="{Binding ToggleAdvancedSearchCommand}"
-                                Padding="8,4"
-                                Background="{DynamicResource Brush.BackgroundHover}"
-                                Foreground="{DynamicResource Brush.Text}"
-                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
+                                Style="{StaticResource FlatButtonStyle}" Padding="8,4" />
                     </Grid>
 
                     <!-- 詳細検索パネル(旧WinForms版panelAdvancedFilter: NSFWフィルタ/お気に入りのみ/タグ絞り込み) -->
@@ -330,9 +425,8 @@
                             <TextBlock Text="NSFW:" VerticalAlignment="Center" Margin="0,0,4,0"
                                        Foreground="{DynamicResource Brush.Text}" />
                             <ComboBox Width="110" Margin="0,0,12,0"
-                                      SelectedIndex="{Binding NsfwFilterMode}"
-                                      Background="{DynamicResource Brush.BackgroundElevated}"
-                                      Foreground="{DynamicResource Brush.Text}">
+                                      Style="{StaticResource FlatComboBoxStyle}"
+                                      SelectedIndex="{Binding NsfwFilterMode}">
                                 <!-- ドロップダウン展開部分はOS標準の白背景で描画されるため、項目文字色は黒固定にする -->
                                 <ComboBox.ItemContainerStyle>
                                     <Style TargetType="ComboBoxItem">
@@ -464,7 +558,7 @@
                         </ContextMenu>
                     </ListView.ContextMenu>
                     <ListView.View>
-                        <GridView>
+                        <GridView ColumnHeaderContainerStyle="{StaticResource FlatGridViewColumnHeaderStyle}">
                             <GridViewColumn Header="{Binding TitleColumnHeader}" Width="400" DisplayMemberBinding="{Binding Title}" />
                             <GridViewColumn Header="{Binding SourceColumnHeader}" Width="80" DisplayMemberBinding="{Binding Source}" />
                             <GridViewColumn Header="{Binding StatusColumnHeader}" Width="90">
