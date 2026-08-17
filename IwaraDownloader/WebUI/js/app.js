@@ -4,7 +4,7 @@ const App = {
     viewMode: 'list',
     currentPage: 1,
     searchQuery: '',
-    sortField: 'added',
+    sortField: 'date',
     sortOrder: 'desc',
     channels: [],
     lastVideos: null,

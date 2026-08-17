@@ -400,11 +400,11 @@ namespace IwaraDownloader.Services
             {
                 "title" => order == "asc" ? videos.OrderBy(v => v.Title).ToList() : videos.OrderByDescending(v => v.Title).ToList(),
                 "author" => order == "asc" ? videos.OrderBy(v => v.AuthorUsername).ToList() : videos.OrderByDescending(v => v.AuthorUsername).ToList(),
-                "date" => order == "asc" ? videos.OrderBy(v => v.PostedAt).ToList() : videos.OrderByDescending(v => v.PostedAt).ToList(),
+                "date" => order == "asc" ? videos.OrderBy(v => v.PostedAt ?? v.CreatedAt).ToList() : videos.OrderByDescending(v => v.PostedAt ?? v.CreatedAt).ToList(),
                 "size" => order == "asc" ? videos.OrderBy(v => v.FileSize).ToList() : videos.OrderByDescending(v => v.FileSize).ToList(),
                 "duration" => order == "asc" ? videos.OrderBy(v => v.DurationSeconds).ToList() : videos.OrderByDescending(v => v.DurationSeconds).ToList(),
                 "added" => order == "asc" ? videos.OrderBy(v => v.CreatedAt).ToList() : videos.OrderByDescending(v => v.CreatedAt).ToList(),
-                _ => videos.OrderByDescending(v => v.CreatedAt).ToList()
+                _ => videos.OrderByDescending(v => v.PostedAt ?? v.CreatedAt).ToList()
             };
 
             var items = videos.Skip((page - 1) * limit).Take(limit).Select(MapVideoDto).ToList();

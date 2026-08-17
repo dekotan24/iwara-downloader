@@ -356,7 +356,7 @@
                             </GridViewColumn>
                             <GridViewColumn Header="{Binding ProgressColumnHeader}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
                             <GridViewColumn Header="{Binding SizeColumnHeader}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
-                            <GridViewColumn Header="{Binding DateColumnHeader}" Width="140" DisplayMemberBinding="{Binding CreatedAt}" />
+                            <GridViewColumn Header="{Binding DateColumnHeader}" Width="140" DisplayMemberBinding="{Binding DisplayDate}" />
                         </GridView>
                     </ListView.View>
                 </ListView>

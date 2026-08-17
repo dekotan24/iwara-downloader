@@ -715,6 +715,7 @@ class IwaraAPI:
                 "author_name": user_obj.get("name"),
                 "rating": video_data.get("rating") or "",
                 "thumbnail": self._get_thumbnail_url(video_data),
+                "created_at": video_data.get("createdAt"),
             }
 
         except Exception as e:

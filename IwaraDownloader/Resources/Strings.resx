@@ -1404,7 +1404,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>NSFWのみ</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
-    <value>追加日時</value>
+    <value>公開日時</value>
   </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>進捗</value>

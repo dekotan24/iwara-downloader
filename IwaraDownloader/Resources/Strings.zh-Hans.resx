@@ -1400,7 +1400,7 @@ videoId 后导入数据库。
     <value>仅 NSFW</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
-    <value>添加时间</value>
+    <value>发布时间</value>
   </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>进度</value>

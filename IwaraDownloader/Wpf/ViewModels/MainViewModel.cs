@@ -1732,7 +1732,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             OnPropertyChanged(nameof(AdvancedSearchToggleText));
         }
 
-        // ソート状態(旧WinForms版_sortColumn/_sortOrder相当)。デフォルトは追加日時の降順(新しい順)。
+        // ソート状態(旧WinForms版_sortColumn/_sortOrder相当)。デフォルトは公開日時の降順(新しい順)。
         private int _sortColumn = 5;
         private bool _sortDescending = true;
 
@@ -1762,7 +1762,7 @@ namespace IwaraDownloader.Wpf.ViewModels
                 2 => (a, b) => a.Status.CompareTo(b.Status),
                 3 => (a, b) => GetProgressSortValue(a).CompareTo(GetProgressSortValue(b)),
                 4 => (a, b) => a.FileSize.CompareTo(b.FileSize),
-                5 => (a, b) => a.CreatedAt.CompareTo(b.CreatedAt),
+                5 => (a, b) => (a.PostedAt ?? a.CreatedAt).CompareTo(b.PostedAt ?? b.CreatedAt),
                 _ => (a, b) => 0,
             };
             list.Sort(comparison);

@@ -8,7 +8,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 {
     /// <summary>
     /// 動画一覧の1行分。旧WinForms版CreateVideoListItemに対応する6列
-    /// (タイトル/ソース/状態/進捗/サイズ/追加日時)を持つ。
+    /// (タイトル/ソース/状態/進捗/サイズ/公開日時)を持つ。
     /// </summary>
     public partial class VideoListItemViewModel : ObservableObject
     {
@@ -41,7 +41,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             Title = Video.Title;
             Source = GetSourceLabel(Video);
             FileSize = Video.FileSizeFormatted;
-            CreatedAt = Video.CreatedAt.ToString("yyyy/MM/dd HH:mm");
+            DisplayDate = (Video.PostedAt ?? Video.CreatedAt).ToString("yyyy/MM/dd HH:mm");
             IsFavorite = Video.IsFavorite;
 
             var effectiveStatus = task?.Status ?? Video.Status;
@@ -127,7 +127,7 @@ namespace IwaraDownloader.Wpf.ViewModels
         private string _fileSize = "";
 
         [ObservableProperty]
-        private string _createdAt = "";
+        private string _displayDate = "";
 
         [ObservableProperty]
         private bool _isFavorite;

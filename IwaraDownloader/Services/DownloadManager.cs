@@ -1334,6 +1334,8 @@ namespace IwaraDownloader.Services
                         video.AuthorUsername = urlInfo.AuthorUsername;
                     if (!string.IsNullOrEmpty(urlInfo.FileUuid))
                         video.FileUuid = urlInfo.FileUuid;
+                    if (urlInfo.PostedAt.HasValue)
+                        video.PostedAt = urlInfo.PostedAt;
                     _database.UpdateVideo(video);
                     progress?.Report(L.T("SvcDownloadManager_D006", urlInfo.Title));
                     return true;
@@ -1585,6 +1587,7 @@ namespace IwaraDownloader.Services
                 // しまう (issue #21)。Paused なら起動時レジュームや EnqueuePendingVideosForUser の
                 // 対象から自然に外れ、右クリック「ダウンロード」等の手動操作でのみ開始される。
                 var newVideos = new List<VideoInfo>();
+                var postedAtBackfill = new List<(string VideoId, DateTime PostedAt)>();
                 foreach (var video in videos)
                 {
                     // 除外(ゴミ箱)に入っている動画は自動取得で復活させない。
@@ -1600,7 +1603,15 @@ namespace IwaraDownloader.Services
                         video.Id = _database.AddVideo(video);
                         newVideos.Add(video);
                     }
+                    else if (video.PostedAt.HasValue)
+                    {
+                        // 既存動画は get_videos の応答が来ても再登録しないためここではスキップされるが、
+                        // PostedAt(iwara公開日時) が未取得(NULL)なままの旧データはついでに埋める (issue #24)。
+                        postedAtBackfill.Add((video.VideoId, video.PostedAt.Value));
+                    }
                 }
+                if (postedAtBackfill.Count > 0)
+                    _database.BackfillPostedAtBatch(postedAtBackfill);
 
                 user.TotalVideoCount = videos.Count;
                 user.LastCheckedAt = DateTime.Now;
@@ -1777,6 +1788,7 @@ namespace IwaraDownloader.Services
                 Url = url,
                 AuthorUsername = urlInfo.AuthorUsername ?? "",
                 FileUuid = urlInfo.FileUuid ?? "",
+                PostedAt = urlInfo.PostedAt,
                 Site = siteHost,
                 // 「後で」選択時は Paused で保存 (Pending は起動時レジューム対象のため。issue #21)
                 Status = effectiveImmediateDownload ? DownloadStatus.Pending : DownloadStatus.Paused

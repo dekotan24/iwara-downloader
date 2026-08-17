@@ -62,7 +62,7 @@
   "MainForm_colVideoStatus": "状態",
   "MainForm_colVideoProgress": "進捗",
   "MainForm_colVideoSize": "サイズ",
-  "MainForm_colVideoDate": "追加日時",
+  "MainForm_colVideoDate": "公開日時",
   "MainForm_btnAddUser": "＋チャンネル",
   "MainForm_btnAddUser_Tip": "購読チャンネルを追加 (ユーザー名 / プロフィールURL)",
   "MainForm_btnAddVideo": "＋動画",

@@ -1400,7 +1400,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>NSFW only</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
-    <value>Added</value>
+    <value>Published</value>
   </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>Progress</value>

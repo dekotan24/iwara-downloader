@@ -59,8 +59,13 @@ namespace IwaraDownloader.Services
                 var backupDir = Path.Combine(Path.GetDirectoryName(_dbPath)!, "backups");
                 Directory.CreateDirectory(backupDir);
 
+                // data_backup_manual_... 等の命名違いのファイルが混じると文字列ソートで
+                // 先頭に来てしまい (例: 'm' > '2') 24時間スロットルが常に無効化されるバグがあった。
+                // 自動生成パターン (data_backup_yyyyMMdd_HHmmss.db) のみに絞り、実際の更新日時でソートする。
                 var existing = Directory.GetFiles(backupDir, "data_backup_*.db")
-                    .OrderByDescending(f => f)
+                    .Where(f => System.Text.RegularExpressions.Regex.IsMatch(
+                        Path.GetFileName(f), @"^data_backup_\d{8}_\d{6}\.db$"))
+                    .OrderByDescending(f => File.GetLastWriteTime(f))
                     .ToArray();
 
                 if (existing.Length > 0)
@@ -763,6 +768,42 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// PostedAt(iwara公開日時)が未取得(NULL)の既存動画にだけまとめて書き込む。
+        /// 既に値が入っている行は上書きしない(手動編集や別経路での取得を尊重)。
+        /// 1件ずつ接続を開いてUPDATEすると新着チェックのたびに数千件規模の個別コミットで
+        /// DB書き込みロックを奪い合う (AddVideosBatch と同じ理由)ため、1接続・1トランザクションで処理する。
+        /// </summary>
+        public void BackfillPostedAtBatch(IEnumerable<(string VideoId, DateTime PostedAt)> items)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = "UPDATE Videos SET PostedAt = @PostedAt WHERE VideoId = @VideoId AND PostedAt IS NULL";
+                var pPostedAt = command.Parameters.Add("@PostedAt", SqliteType.Text);
+                var pVideoId = command.Parameters.Add("@VideoId", SqliteType.Text);
+
+                foreach (var (videoId, postedAt) in items)
+                {
+                    pPostedAt.Value = postedAt.ToString("o");
+                    pVideoId.Value = videoId;
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        /// <summary>
         /// FileUuid で動画を検索(ローカルに既に存在する動画の検出用)
         /// </summary>
         public VideoInfo? GetVideoByFileUuid(string fileUuid)
@@ -808,7 +849,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos ORDER BY CreatedAt DESC";
+            command.CommandText = "SELECT * FROM Videos ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -922,7 +963,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId = @SubscribedUserId ORDER BY PostedAt DESC";
+            command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId = @SubscribedUserId ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
             command.Parameters.AddWithValue("@SubscribedUserId", subscribedUserId);
 
             using var reader = command.ExecuteReader();
@@ -943,7 +984,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE Status != @Completed AND Status != @Skipped ORDER BY CreatedAt DESC";
+            command.CommandText = "SELECT * FROM Videos WHERE Status != @Completed AND Status != @Skipped ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
             command.Parameters.AddWithValue("@Completed", (int)DownloadStatus.Completed);
             command.Parameters.AddWithValue("@Skipped", (int)DownloadStatus.Skipped);
 
@@ -965,7 +1006,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId IS NULL ORDER BY CreatedAt DESC";
+            command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId IS NULL ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -985,7 +1026,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE IsFavorite = 1 ORDER BY CreatedAt DESC";
+            command.CommandText = "SELECT * FROM Videos WHERE IsFavorite = 1 ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -1005,7 +1046,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE Status = @Status ORDER BY CreatedAt DESC";
+            command.CommandText = "SELECT * FROM Videos WHERE Status = @Status ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
             command.Parameters.AddWithValue("@Status", (int)status);
 
             using var reader = command.ExecuteReader();

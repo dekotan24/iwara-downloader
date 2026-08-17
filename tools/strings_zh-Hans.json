@@ -62,7 +62,7 @@
   "MainForm_colVideoStatus": "状态",
   "MainForm_colVideoProgress": "进度",
   "MainForm_colVideoSize": "大小",
-  "MainForm_colVideoDate": "添加时间",
+  "MainForm_colVideoDate": "发布时间",
   "MainForm_btnAddUser": "＋频道",
   "MainForm_btnAddUser_Tip": "添加订阅频道（用户名 / 个人资料URL）",
   "MainForm_btnAddVideo": "＋视频",

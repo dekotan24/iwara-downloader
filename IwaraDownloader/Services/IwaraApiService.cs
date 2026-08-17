@@ -503,6 +503,13 @@ namespace IwaraDownloader.Services
             {
                 foreach (var video in videosArray.EnumerateArray())
                 {
+                    DateTime? postedAt = null;
+                    if (video.TryGetProperty("created_at", out var ca) && ca.ValueKind == JsonValueKind.String
+                        && DateTime.TryParse(ca.GetString(), out var caDt))
+                    {
+                        postedAt = caDt;
+                    }
+
                     var videoInfo = new VideoInfo
                     {
                         VideoId = video.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
@@ -512,6 +519,7 @@ namespace IwaraDownloader.Services
                             ? (int)dur.GetDouble() : 0,
                         EmbedUrl = video.TryGetProperty("embed_url", out var embed) ? embed.GetString() ?? "" : "",
                         Rating = video.TryGetProperty("rating", out var rt) ? rt.GetString() ?? "" : "",
+                        PostedAt = postedAt,
                         Site = site ?? Utils.Helpers.SiteTv,
                         AuthorUserId = username,
                         AuthorUsername = username
@@ -569,6 +577,13 @@ namespace IwaraDownloader.Services
 
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
             {
+                DateTime? postedAt = null;
+                if (root.TryGetProperty("created_at", out var ca) && ca.ValueKind == JsonValueKind.String
+                    && DateTime.TryParse(ca.GetString(), out var caDt))
+                {
+                    postedAt = caDt;
+                }
+
                 return new VideoUrlInfo
                 {
                     Success = true,
@@ -580,6 +595,7 @@ namespace IwaraDownloader.Services
                     AuthorName = GetString(root, "author_name"),
                     Rating = GetString(root, "rating"),
                     ThumbnailUrl = GetString(root, "thumbnail"),
+                    PostedAt = postedAt,
                 };
             }
 
@@ -603,6 +619,7 @@ namespace IwaraDownloader.Services
             public string? AuthorName { get; set; }
             public string? Rating { get; set; }
             public string? ThumbnailUrl { get; set; }
+            public DateTime? PostedAt { get; set; }
             public string? Error { get; set; }
 
             /// <summary>

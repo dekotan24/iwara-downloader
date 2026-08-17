@@ -62,7 +62,7 @@
   "MainForm_colVideoStatus": "Status",
   "MainForm_colVideoProgress": "Progress",
   "MainForm_colVideoSize": "Size",
-  "MainForm_colVideoDate": "Added",
+  "MainForm_colVideoDate": "Published",
   "MainForm_btnAddUser": "+ Channel",
   "MainForm_btnAddUser_Tip": "Add a subscribed channel (username / profile URL)",
   "MainForm_btnAddVideo": "+ Video",
