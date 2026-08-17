@@ -28,11 +28,6 @@
                 Background="{DynamicResource Brush.BackgroundElevated}"
                 BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1"
                 Padding="6">
-            <!--
-                ボタン数が増えてウィンドウ幅に収まらなくなったため(Phase8a-3/8bで追加)、
-                横スクロール可能にする。旧WinForms版ToolStripのオーバーフローシェブロンに相当。
-            -->
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <StackPanel Orientation="Horizontal">
                 <StackPanel.Resources>
                     <Style TargetType="Button">
@@ -57,6 +52,12 @@
                             </Trigger>
                         </Style.Triggers>
                     </Style>
+                    <!-- ドロップダウンボタン: Buttonのクリックで自身に付けたContextMenuを開く(MainWindow.xaml.cs ToolbarDropdown_Click)。
+                         ContextMenuはPopupの別ツリーに属しDataContextを継承しないため、ChannelTreeのContextMenuと同じ手法で
+                         PlacementTarget(=このButton)のDataContextを明示的に引き継がせる。 -->
+                    <Style x:Key="DropdownButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <EventSetter Event="Click" Handler="ToolbarDropdown_Click" />
+                    </Style>
                 </StackPanel.Resources>
                 <Button Content="今すぐ確認" Command="{Binding CheckNowCommand}" />
                 <Button Content="DL開始" Command="{Binding StartAllCommand}" />
@@ -64,26 +65,37 @@
                 <ToggleButton Content="{Binding ImmediateDownloadToggleText}" IsChecked="{Binding ImmediateDownloadOnAdd}" />
                 <ToggleButton Content="{Binding ClipboardMonitorToggleText}" IsChecked="{Binding ClipboardMonitorEnabled}" />
                 <Separator Margin="4,0" />
-                <Button Content="一括インポート" Command="{Binding OpenBulkImportCommand}" />
-                <Button Content="検索インポート" Command="{Binding OpenSearchImportCommand}" />
-                <Button Content="フォルダ取込" Command="{Binding OpenImportFromFolderCommand}" />
-                <Button Content="重複チェック" Command="{Binding OpenDuplicateCheckCommand}" />
-                <Button Content="統計" Command="{Binding OpenStatisticsCommand}" />
-                <Separator Margin="4,0" />
-                <Button Content="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
-                <Button Content="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
-                <Separator Margin="4,0" />
                 <Button Content="設定" Command="{Binding OpenSettingsCommand}" />
-                <Button Content="{loc:T MainForm_menuHelpOpenLogs}" Command="{Binding OpenLogFolderCommand}" />
-                <Button Content="バージョン情報" Command="{Binding OpenAboutCommand}" />
-                <Separator Margin="4,0" />
                 <Button Content="環境セットアップ" Command="{Binding OpenSetupWizardCommand}"
                         Background="{DynamicResource Brush.Warning}"
                         Visibility="{Binding IsSetupNeeded, Converter={StaticResource BoolToVis}}" />
+                <Separator Margin="4,0" />
+                <Button Content="ツール ▾" Style="{StaticResource DropdownButtonStyle}">
+                    <Button.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="一括インポート" Command="{Binding OpenBulkImportCommand}" />
+                            <MenuItem Header="検索インポート" Command="{Binding OpenSearchImportCommand}" />
+                            <MenuItem Header="フォルダ取込" Command="{Binding OpenImportFromFolderCommand}" />
+                            <Separator />
+                            <MenuItem Header="重複チェック" Command="{Binding OpenDuplicateCheckCommand}" />
+                            <MenuItem Header="統計" Command="{Binding OpenStatisticsCommand}" />
+                            <Separator />
+                            <MenuItem Header="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+                <Button Content="ヘルプ ▾" Style="{StaticResource DropdownButtonStyle}">
+                    <Button.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="バージョン情報" Command="{Binding OpenAboutCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuHelpOpenLogs}" Command="{Binding OpenLogFolderCommand}" />
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
                 <TextBlock Text="{Binding LoginStatusText}" Foreground="{Binding LoginStatusBrush}"
                            VerticalAlignment="Center" Margin="8,0,0,0" />
             </StackPanel>
-            </ScrollViewer>
         </Border>
 
         <!-- URL入力行 -->

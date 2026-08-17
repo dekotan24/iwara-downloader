@@ -205,6 +205,15 @@ namespace IwaraDownloader.Wpf.Views
             (DataContext as MainViewModel)?.RefreshChannelContextMenuState();
         }
 
+        private void ToolbarDropdown_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var button = (System.Windows.Controls.Button)sender;
+            if (button.ContextMenu == null) return;
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            button.ContextMenu.IsOpen = true;
+        }
+
         private void VideoColumnHeader_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             if (e.OriginalSource is not System.Windows.Controls.GridViewColumnHeader header || header.Column == null) return;
