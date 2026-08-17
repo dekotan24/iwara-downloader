@@ -1001,6 +1001,26 @@ namespace IwaraDownloader.Wpf.ViewModels
             }
         }
 
+        /// <summary>
+        /// 動画一覧のダブルクリック用(旧WinForms版listViewVideos_MouseDoubleClickに対応)。
+        /// DL済み+ローカルファイルが実在すればそれを既定アプリで再生、そうでなければ元動画ページを開く。
+        /// </summary>
+        [RelayCommand]
+        private void PlayOrOpenSelectedVideo()
+        {
+            var video = SelectedVideo?.Video;
+            if (video == null) return;
+
+            if (video.Status == DownloadStatus.Completed && !string.IsNullOrEmpty(video.LocalFilePath) && System.IO.File.Exists(video.LocalFilePath))
+            {
+                PlayVideo();
+            }
+            else
+            {
+                Helpers.OpenUrl(video.Url);
+            }
+        }
+
         [RelayCommand]
         private void OpenVideoFolder()
         {
