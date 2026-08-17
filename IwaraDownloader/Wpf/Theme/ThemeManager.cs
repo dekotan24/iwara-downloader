@@ -64,16 +64,26 @@ namespace IwaraDownloader.Wpf.Theme
         private static AppTheme ParseTheme(string value)
             => string.Equals(value, "light", StringComparison.OrdinalIgnoreCase) ? AppTheme.Light : AppTheme.Dark;
 
+        private static ResourceDictionary? _cachedResources;
+        private static AppTheme _cachedTheme;
+
         /// <summary>
         /// 現在のテーマから直接Brushを1個だけ解決する。ViewModel側でチャンネルツリーの行の色
         /// (Success/Warning等)のように、DynamicResourceバインディングでは表現しづらい
-        /// 動的キー参照が必要な場面向け。テーマ切替時にツリー自体が再構築される前提のため、
-        /// 都度呼び出しで最新テーマの値を取ればよく、DynamicResourceほどの追従性は不要。
+        /// 動的キー参照が必要な場面向け。
+        /// 動画一覧の行(VideoListItemViewModel.Refresh)から1件ごとに呼ばれるため、
+        /// BuildResources(2つのXAMLファイルをpack URIから毎回ロード/パース)を都度実行すると
+        /// 数万件規模で致命的に遅くなる。現在テーマの ResourceDictionary をキャッシュし、
+        /// SetThemeでテーマが変わった時だけ再構築する。
         /// </summary>
         public static System.Windows.Media.Brush GetBrush(string key)
         {
-            var resources = BuildResources(Current);
-            return resources[key] as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
+            if (_cachedResources == null || _cachedTheme != Current)
+            {
+                _cachedResources = BuildResources(Current);
+                _cachedTheme = Current;
+            }
+            return _cachedResources[key] as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
         }
     }
 }
