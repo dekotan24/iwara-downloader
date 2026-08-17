@@ -160,6 +160,7 @@ namespace IwaraDownloader.Services
                     EmbedUrl TEXT DEFAULT '',
                     Rating TEXT DEFAULT '',
                     IsFavorite INTEGER DEFAULT 0,
+                    ApiRawJson TEXT DEFAULT '',
                     FOREIGN KEY (SubscribedUserId) REFERENCES SubscribedUsers(Id) ON DELETE SET NULL
                 );
 
@@ -200,6 +201,7 @@ namespace IwaraDownloader.Services
                     Site TEXT DEFAULT '',
                     IsFavorite INTEGER DEFAULT 0,
                     ThumbnailStatus INTEGER DEFAULT 0,
+                    ApiRawJson TEXT DEFAULT '',
                     ExcludedAt TEXT NOT NULL
                 );
 
@@ -307,6 +309,7 @@ namespace IwaraDownloader.Services
             bool hasSite = false;
             bool hasIsFavorite = false;
             bool hasThumbnailStatus = false;
+            bool hasApiRawJson = false;
 
             try
             {
@@ -324,6 +327,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "Site") hasSite = true;
                     if (columnName == "IsFavorite") hasIsFavorite = true;
                     if (columnName == "ThumbnailStatus") hasThumbnailStatus = true;
+                    if (columnName == "ApiRawJson") hasApiRawJson = true;
                 }
             }
             catch (Exception ex)
@@ -389,6 +393,12 @@ namespace IwaraDownloader.Services
             // ThumbnailStatus カラム (0=未試行, 1=キャッシュ済, 2=失敗)
             AddColumnIfMissing(connection, hasThumbnailStatus,
                 "ALTER TABLE Videos ADD COLUMN ThumbnailStatus INTEGER DEFAULT 0", "ThumbnailStatus");
+
+            // ApiRawJson カラム: iwara API の生レスポンス(著者アカウントの揮発的情報のみ間引いたもの)を
+            // そのまま保存。将来 numLikes/numViews/tags/body 等を使いたくなった時に再取得なしで
+            // json_extract できるようにするための保険 (issue #24 のリフィルついでに追加、2026-08-17)。
+            AddColumnIfMissing(connection, hasApiRawJson,
+                "ALTER TABLE Videos ADD COLUMN ApiRawJson TEXT DEFAULT ''", "ApiRawJson");
         }
 
         private static void AddColumnIfMissing(SqliteConnection connection, bool exists, string alterSql, string columnName)
@@ -671,10 +681,10 @@ namespace IwaraDownloader.Services
                 DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus)
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson)
                 VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                     @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus);
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson);
                 SELECT last_insert_rowid();
             ";
             AddVideoParameters(command, video);
@@ -716,7 +726,8 @@ namespace IwaraDownloader.Services
                     Rating = @Rating,
                     Site = @Site,
                     IsFavorite = @IsFavorite,
-                    ThumbnailStatus = @ThumbnailStatus
+                    ThumbnailStatus = @ThumbnailStatus,
+                    ApiRawJson = @ApiRawJson
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", video.Id);
@@ -768,12 +779,14 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// PostedAt(iwara公開日時)が未取得(NULL)の既存動画にだけまとめて書き込む。
-        /// 既に値が入っている行は上書きしない(手動編集や別経路での取得を尊重)。
+        /// チャンネル新着チェックで既存動画に再度遭遇した際、iwara APIから取れる情報をまとめて更新する。
+        /// PostedAt(iwara公開日時)は既に値が入っている行には上書きしない(手動編集や別経路での取得を尊重)。
+        /// ApiRawJson(APIの生レスポンス、issue #24のリフィルついでに追加)は
+        /// numLikes/numViews等が変動し続けるため毎回最新のもので置き換える。
         /// 1件ずつ接続を開いてUPDATEすると新着チェックのたびに数千件規模の個別コミットで
         /// DB書き込みロックを奪い合う (AddVideosBatch と同じ理由)ため、1接続・1トランザクションで処理する。
         /// </summary>
-        public void BackfillPostedAtBatch(IEnumerable<(string VideoId, DateTime PostedAt)> items)
+        public void BackfillExistingVideoMetadata(IEnumerable<(string VideoId, DateTime? PostedAt, string? ApiRawJson)> items)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
@@ -783,13 +796,19 @@ namespace IwaraDownloader.Services
             {
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
-                command.CommandText = "UPDATE Videos SET PostedAt = @PostedAt WHERE VideoId = @VideoId AND PostedAt IS NULL";
+                command.CommandText = @"
+                    UPDATE Videos SET
+                        PostedAt = COALESCE(PostedAt, @PostedAt),
+                        ApiRawJson = COALESCE(@ApiRawJson, ApiRawJson)
+                    WHERE VideoId = @VideoId";
                 var pPostedAt = command.Parameters.Add("@PostedAt", SqliteType.Text);
+                var pApiRawJson = command.Parameters.Add("@ApiRawJson", SqliteType.Text);
                 var pVideoId = command.Parameters.Add("@VideoId", SqliteType.Text);
 
-                foreach (var (videoId, postedAt) in items)
+                foreach (var (videoId, postedAt, apiRawJson) in items)
                 {
-                    pPostedAt.Value = postedAt.ToString("o");
+                    pPostedAt.Value = postedAt?.ToString("o") ?? (object)DBNull.Value;
+                    pApiRawJson.Value = string.IsNullOrEmpty(apiRawJson) ? (object)DBNull.Value : apiRawJson;
                     pVideoId.Value = videoId;
                     command.ExecuteNonQuery();
                 }
@@ -1178,6 +1197,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@Site", video.Site ?? "");
             command.Parameters.AddWithValue("@IsFavorite", video.IsFavorite ? 1 : 0);
             command.Parameters.AddWithValue("@ThumbnailStatus", video.ThumbnailStatus);
+            command.Parameters.AddWithValue("@ApiRawJson", video.ApiRawJson ?? "");
         }
 
         private static VideoInfo ReadVideo(SqliteDataReader reader)
@@ -1209,7 +1229,8 @@ namespace IwaraDownloader.Services
                 Rating = TryGetString(reader, "Rating"),
                 Site = TryGetString(reader, "Site"),
                 IsFavorite = TryGetInt(reader, "IsFavorite") == 1,
-                ThumbnailStatus = TryGetInt(reader, "ThumbnailStatus")
+                ThumbnailStatus = TryGetInt(reader, "ThumbnailStatus"),
+                ApiRawJson = TryGetString(reader, "ApiRawJson")
             };
         }
 
@@ -1271,10 +1292,10 @@ namespace IwaraDownloader.Services
                     DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                     INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                         DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus)
+                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson)
                     VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                         @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus)
+                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson)
                 ";
 
                 // パラメータを作成(再利用)
@@ -1303,6 +1324,7 @@ namespace IwaraDownloader.Services
                 var pSite = command.Parameters.Add("@Site", SqliteType.Text);
                 var pIsFavorite = command.Parameters.Add("@IsFavorite", SqliteType.Integer);
                 var pThumbnailStatus = command.Parameters.Add("@ThumbnailStatus", SqliteType.Integer);
+                var pApiRawJson = command.Parameters.Add("@ApiRawJson", SqliteType.Text);
 
                 foreach (var video in videos)
                 {
@@ -1331,6 +1353,7 @@ namespace IwaraDownloader.Services
                     pSite.Value = video.Site ?? "";
                     pIsFavorite.Value = video.IsFavorite ? 1 : 0;
                     pThumbnailStatus.Value = video.ThumbnailStatus;
+                    pApiRawJson.Value = video.ApiRawJson ?? "";
 
                     addedCount += command.ExecuteNonQuery();
                 }
@@ -1387,7 +1410,8 @@ namespace IwaraDownloader.Services
                         Rating = @Rating,
                         Site = @Site,
                         IsFavorite = @IsFavorite,
-                        ThumbnailStatus = @ThumbnailStatus
+                        ThumbnailStatus = @ThumbnailStatus,
+                        ApiRawJson = @ApiRawJson
                     WHERE Id = @Id
                 ";
 
@@ -1416,6 +1440,7 @@ namespace IwaraDownloader.Services
                 var pSite = command.Parameters.Add("@Site", SqliteType.Text);
                 var pIsFavorite = command.Parameters.Add("@IsFavorite", SqliteType.Integer);
                 var pThumbnailStatus = command.Parameters.Add("@ThumbnailStatus", SqliteType.Integer);
+                var pApiRawJson = command.Parameters.Add("@ApiRawJson", SqliteType.Text);
 
                 foreach (var video in videos)
                 {
@@ -1443,6 +1468,7 @@ namespace IwaraDownloader.Services
                     pSite.Value = video.Site ?? "";
                     pIsFavorite.Value = video.IsFavorite ? 1 : 0;
                     pThumbnailStatus.Value = video.ThumbnailStatus;
+                    pApiRawJson.Value = video.ApiRawJson ?? "";
 
                     updatedCount += command.ExecuteNonQuery();
                 }

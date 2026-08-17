@@ -1336,6 +1336,8 @@ namespace IwaraDownloader.Services
                         video.FileUuid = urlInfo.FileUuid;
                     if (urlInfo.PostedAt.HasValue)
                         video.PostedAt = urlInfo.PostedAt;
+                    if (!string.IsNullOrEmpty(urlInfo.ApiRawJson))
+                        video.ApiRawJson = urlInfo.ApiRawJson;
                     _database.UpdateVideo(video);
                     progress?.Report(L.T("SvcDownloadManager_D006", urlInfo.Title));
                     return true;
@@ -1587,7 +1589,7 @@ namespace IwaraDownloader.Services
                 // しまう (issue #21)。Paused なら起動時レジュームや EnqueuePendingVideosForUser の
                 // 対象から自然に外れ、右クリック「ダウンロード」等の手動操作でのみ開始される。
                 var newVideos = new List<VideoInfo>();
-                var postedAtBackfill = new List<(string VideoId, DateTime PostedAt)>();
+                var existingBackfill = new List<(string VideoId, DateTime? PostedAt, string? ApiRawJson)>();
                 foreach (var video in videos)
                 {
                     // 除外(ゴミ箱)に入っている動画は自動取得で復活させない。
@@ -1603,15 +1605,15 @@ namespace IwaraDownloader.Services
                         video.Id = _database.AddVideo(video);
                         newVideos.Add(video);
                     }
-                    else if (video.PostedAt.HasValue)
+                    else if (video.PostedAt.HasValue || !string.IsNullOrEmpty(video.ApiRawJson))
                     {
                         // 既存動画は get_videos の応答が来ても再登録しないためここではスキップされるが、
-                        // PostedAt(iwara公開日時) が未取得(NULL)なままの旧データはついでに埋める (issue #24)。
-                        postedAtBackfill.Add((video.VideoId, video.PostedAt.Value));
+                        // PostedAt(未取得なら、issue #24) と ApiRawJson(常に最新化) はついでに埋める。
+                        existingBackfill.Add((video.VideoId, video.PostedAt, video.ApiRawJson));
                     }
                 }
-                if (postedAtBackfill.Count > 0)
-                    _database.BackfillPostedAtBatch(postedAtBackfill);
+                if (existingBackfill.Count > 0)
+                    _database.BackfillExistingVideoMetadata(existingBackfill);
 
                 user.TotalVideoCount = videos.Count;
                 user.LastCheckedAt = DateTime.Now;
@@ -1789,6 +1791,7 @@ namespace IwaraDownloader.Services
                 AuthorUsername = urlInfo.AuthorUsername ?? "",
                 FileUuid = urlInfo.FileUuid ?? "",
                 PostedAt = urlInfo.PostedAt,
+                ApiRawJson = urlInfo.ApiRawJson ?? "",
                 Site = siteHost,
                 // 「後で」選択時は Paused で保存 (Pending は起動時レジューム対象のため。issue #21)
                 Status = effectiveImmediateDownload ? DownloadStatus.Pending : DownloadStatus.Paused

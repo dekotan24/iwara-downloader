@@ -94,6 +94,13 @@ namespace IwaraDownloader.Models
         public int ThumbnailStatus { get; set; }
 
         /// <summary>
+        /// iwara APIの生レスポンス(著者アカウントの揮発的情報のみ間引いたJSON文字列)。
+        /// numLikes/numViews/tags/body等、現時点でDB専用カラムを持たない情報を将来使いたくなった時に
+        /// 再取得なしで参照できるようにするための保険。取得経路によっては空文字のままのこともある。
+        /// </summary>
+        public string ApiRawJson { get; set; } = string.Empty;
+
+        /// <summary>
         /// 動画の長さを表示用にフォーマット
         /// </summary>
         public string DurationFormatted

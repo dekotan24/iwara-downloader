@@ -109,6 +109,25 @@ def _extract_secret_from_main_js(scraper) -> str:
         return ''
 
 
+def _prune_video_raw(video: dict) -> dict:
+    """
+    動画APIレスポンスの生JSONをDB保存用に間引く。
+    将来 numLikes/numViews/tags/body 等を使いたくなった時に再取得なしで参照できるよう
+    ほぼそのまま残すが、著者アカウントの揮発的な付随情報(avatar/オンライン状態/
+    フォロー関係等、動画とは無関係で全動画行に重複して乗る)と常に固定値の siteId だけ間引く。
+    """
+    pruned = dict(video)
+    pruned.pop("siteId", None)
+    user = pruned.get("user")
+    if isinstance(user, dict):
+        pruned["user"] = {
+            "id": user.get("id"),
+            "name": user.get("name"),
+            "username": user.get("username"),
+        }
+    return pruned
+
+
 class IwaraAPI:
     def __init__(self, token=None, rate_limit_config=None, site=None):
         self.scraper = cloudscraper.create_scraper(
@@ -503,7 +522,8 @@ class IwaraAPI:
                         "created_at": video.get("createdAt"),
                         "private": video.get("private", False),
                         "embed_url": video.get("embedUrl") or "",
-                        "rating": video.get("rating") or ""
+                        "rating": video.get("rating") or "",
+                        "raw": _prune_video_raw(video),
                     })
                 
                 print(f"Fetched page {page + 1}, {len(results)} videos (total: {len(videos)})", file=sys.stderr)
@@ -716,6 +736,7 @@ class IwaraAPI:
                 "rating": video_data.get("rating") or "",
                 "thumbnail": self._get_thumbnail_url(video_data),
                 "created_at": video_data.get("createdAt"),
+                "raw": _prune_video_raw(video_data),
             }
 
         except Exception as e:

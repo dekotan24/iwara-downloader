@@ -510,6 +510,8 @@ namespace IwaraDownloader.Services
                         postedAt = caDt;
                     }
 
+                    var apiRawJson = video.TryGetProperty("raw", out var rawEl) ? rawEl.GetRawText() : "";
+
                     var videoInfo = new VideoInfo
                     {
                         VideoId = video.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
@@ -520,6 +522,7 @@ namespace IwaraDownloader.Services
                         EmbedUrl = video.TryGetProperty("embed_url", out var embed) ? embed.GetString() ?? "" : "",
                         Rating = video.TryGetProperty("rating", out var rt) ? rt.GetString() ?? "" : "",
                         PostedAt = postedAt,
+                        ApiRawJson = apiRawJson,
                         Site = site ?? Utils.Helpers.SiteTv,
                         AuthorUserId = username,
                         AuthorUsername = username
@@ -584,6 +587,8 @@ namespace IwaraDownloader.Services
                     postedAt = caDt;
                 }
 
+                var apiRawJson = root.TryGetProperty("raw", out var rawEl) ? rawEl.GetRawText() : null;
+
                 return new VideoUrlInfo
                 {
                     Success = true,
@@ -596,6 +601,7 @@ namespace IwaraDownloader.Services
                     Rating = GetString(root, "rating"),
                     ThumbnailUrl = GetString(root, "thumbnail"),
                     PostedAt = postedAt,
+                    ApiRawJson = apiRawJson,
                 };
             }
 
@@ -620,6 +626,7 @@ namespace IwaraDownloader.Services
             public string? Rating { get; set; }
             public string? ThumbnailUrl { get; set; }
             public DateTime? PostedAt { get; set; }
+            public string? ApiRawJson { get; set; }
             public string? Error { get; set; }
 
             /// <summary>
