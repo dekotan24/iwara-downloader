@@ -224,6 +224,17 @@ namespace IwaraDownloader.Wpf.Views
             (e.NewValue as VideoListItemViewModel)?.EnsureThumbnailLoaded();
         }
 
+        /// <summary>
+        /// タイル表示のダブルクリック。VirtualizingWrapPanel経由だとListBox.InputBindingsの
+        /// MouseBinding(LeftDoubleClick)が発火しなかった(実機確認、パネル側でイベントを吸収している
+        /// 可能性)ため、PreviewMouseLeftButtonDown(Tunnel、パネルより先に届く)でClickCountを見て判定する。
+        /// </summary>
+        private void TileList_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ClickCount != 2) return;
+            (DataContext as MainViewModel)?.PlayOrOpenSelectedVideoCommand.Execute(null);
+        }
+
         private void TileItem_Loaded(object sender, System.Windows.RoutedEventArgs e)
         {
             if (((System.Windows.FrameworkElement)sender).DataContext is VideoListItemViewModel vm)

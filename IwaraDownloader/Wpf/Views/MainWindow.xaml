@@ -638,10 +638,8 @@
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling"
                          VirtualizingPanel.ScrollUnit="Pixel"
-                         ItemContainerStyle="{StaticResource VideoTileItemStyle}">
-                    <ListBox.InputBindings>
-                        <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding PlayOrOpenSelectedVideoCommand}" />
-                    </ListBox.InputBindings>
+                         ItemContainerStyle="{StaticResource VideoTileItemStyle}"
+                         PreviewMouseLeftButtonDown="TileList_PreviewMouseLeftButtonDown">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
                             <vwp:VirtualizingWrapPanel Orientation="Horizontal" />
@@ -649,7 +647,10 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Width="150" Loaded="TileItem_Loaded" DataContextChanged="TileItem_DataContextChanged">
+                            <!-- Background未指定だとヒットテスト対象外になり、サムネ未読込(Image.Sourceがnull)の
+                                 領域でクリック/ダブルクリックが素通りしてしまうため、Transparentを明示する -->
+                            <Grid Width="150" Background="Transparent"
+                                  Loaded="TileItem_Loaded" DataContextChanged="TileItem_DataContextChanged">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="84" />
                                     <RowDefinition Height="Auto" />
