@@ -1047,5 +1047,16 @@
   "ImportFromFolderWizard_colTMDuration": "时长差",
   "ImportFromFolderWizard_TMArtistDropdownHint": "找到多个候选。可以从下拉列表中重新选择要采用的视频。",
   "ImportFromFolderWizard_TMManuallySelected": "已手动选择(时长一致)",
-  "ImportFromFolderWizard_TMManuallySelectedReview": "已手动选择(时长不一致,需确认)"
+  "ImportFromFolderWizard_TMManuallySelectedReview": "已手动选择(时长不一致,需确认)",
+
+  "MainForm_ToolbarHint_CheckNow": "立即检查所有频道的新视频",
+  "MainForm_ToolbarHint_StartAll": "开始下载队列",
+  "MainForm_ToolbarHint_StopAll": "暂停正在进行的下载",
+  "MainForm_ToolbarHint_ImmediateDownload": "切换添加视频时是否立即开始下载",
+  "MainForm_ToolbarHint_ClipboardMonitor": "监视剪贴板,复制iwara链接时自动添加",
+  "MainForm_ToolbarHint_ViewMode": "切换视频列表的显示方式(详细列表/缩略图)",
+  "MainForm_ToolbarHint_Settings": "打开应用设置画面",
+  "MainForm_ToolbarHint_Setup": "进行Python环境、登录等初始设置",
+  "MainForm_ToolbarHint_Tools": "打开工具菜单(批量导入、搜索导入、重复检查等)",
+  "MainForm_ToolbarHint_Help": "打开帮助菜单(版本信息、日志文件夹等)"
 }

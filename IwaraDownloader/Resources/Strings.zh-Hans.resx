@@ -1303,6 +1303,36 @@ videoId 后导入数据库。
   <data name="MainForm_SourceNico" xml:space="preserve">
     <value>Niconico</value>
   </data>
+  <data name="MainForm_ToolbarHint_CheckNow" xml:space="preserve">
+    <value>立即检查所有频道的新视频</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ClipboardMonitor" xml:space="preserve">
+    <value>监视剪贴板,复制iwara链接时自动添加</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Help" xml:space="preserve">
+    <value>打开帮助菜单(版本信息、日志文件夹等)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ImmediateDownload" xml:space="preserve">
+    <value>切换添加视频时是否立即开始下载</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Settings" xml:space="preserve">
+    <value>打开应用设置画面</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
+    <value>进行Python环境、登录等初始设置</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
+    <value>开始下载队列</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
+    <value>暂停正在进行的下载</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
+    <value>打开工具菜单(批量导入、搜索导入、重复检查等)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ViewMode" xml:space="preserve">
+    <value>切换视频列表的显示方式(详细列表/缩略图)</value>
+  </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>＋频道</value>
   </data>

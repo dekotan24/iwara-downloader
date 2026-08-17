@@ -1307,6 +1307,36 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_SourceNico" xml:space="preserve">
     <value>ニコニコ</value>
   </data>
+  <data name="MainForm_ToolbarHint_CheckNow" xml:space="preserve">
+    <value>全チャンネルの新着動画を今すぐ確認します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ClipboardMonitor" xml:space="preserve">
+    <value>クリップボードを監視し、iwaraのURLをコピーすると自動で追加します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Help" xml:space="preserve">
+    <value>バージョン情報・ログフォルダなどのヘルプメニューを開きます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ImmediateDownload" xml:space="preserve">
+    <value>動画追加時に即座にダウンロードを開始するかを切り替えます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Settings" xml:space="preserve">
+    <value>アプリの設定画面を開きます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
+    <value>Python環境やログイン等の初期セットアップを行います</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
+    <value>ダウンロードキューを開始します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
+    <value>実行中のダウンロードを一時停止します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
+    <value>一括インポート・検索インポート・重複チェックなどのツールメニューを開きます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ViewMode" xml:space="preserve">
+    <value>動画一覧の表示形式(詳細リスト/サムネイルタイル)を切り替えます</value>
+  </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>＋チャンネル</value>
   </data>

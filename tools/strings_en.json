@@ -1047,5 +1047,16 @@
   "ImportFromFolderWizard_colTMDuration": "Duration diff",
   "ImportFromFolderWizard_TMArtistDropdownHint": "Multiple candidates were found. Pick the video to use from the dropdown.",
   "ImportFromFolderWizard_TMManuallySelected": "Manually selected (duration matches)",
-  "ImportFromFolderWizard_TMManuallySelectedReview": "Manually selected (duration mismatch, review)"
+  "ImportFromFolderWizard_TMManuallySelectedReview": "Manually selected (duration mismatch, review)",
+
+  "MainForm_ToolbarHint_CheckNow": "Check all channels for new videos right now",
+  "MainForm_ToolbarHint_StartAll": "Start the download queue",
+  "MainForm_ToolbarHint_StopAll": "Pause running downloads",
+  "MainForm_ToolbarHint_ImmediateDownload": "Toggle whether newly added videos start downloading immediately",
+  "MainForm_ToolbarHint_ClipboardMonitor": "Watch the clipboard and auto-add videos when an iwara URL is copied",
+  "MainForm_ToolbarHint_ViewMode": "Switch the video list between detail list and thumbnail tiles",
+  "MainForm_ToolbarHint_Settings": "Open the app settings",
+  "MainForm_ToolbarHint_Setup": "Run the initial setup (Python environment, login, etc.)",
+  "MainForm_ToolbarHint_Tools": "Open the tools menu (bulk import, search import, duplicate check, etc.)",
+  "MainForm_ToolbarHint_Help": "Open the help menu (about, log folder, etc.)"
 }

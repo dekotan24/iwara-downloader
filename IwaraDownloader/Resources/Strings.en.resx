@@ -1303,6 +1303,36 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_SourceNico" xml:space="preserve">
     <value>Niconico</value>
   </data>
+  <data name="MainForm_ToolbarHint_CheckNow" xml:space="preserve">
+    <value>Check all channels for new videos right now</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ClipboardMonitor" xml:space="preserve">
+    <value>Watch the clipboard and auto-add videos when an iwara URL is copied</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Help" xml:space="preserve">
+    <value>Open the help menu (about, log folder, etc.)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ImmediateDownload" xml:space="preserve">
+    <value>Toggle whether newly added videos start downloading immediately</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Settings" xml:space="preserve">
+    <value>Open the app settings</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
+    <value>Run the initial setup (Python environment, login, etc.)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
+    <value>Start the download queue</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
+    <value>Pause running downloads</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
+    <value>Open the tools menu (bulk import, search import, duplicate check, etc.)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ViewMode" xml:space="preserve">
+    <value>Switch the video list between detail list and thumbnail tiles</value>
+  </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>+ Channel</value>
   </data>

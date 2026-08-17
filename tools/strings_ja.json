@@ -1047,5 +1047,16 @@
   "ImportFromFolderWizard_colTMDuration": "長さ差",
   "ImportFromFolderWizard_TMArtistDropdownHint": "複数の候補が見つかりました。ドロップダウンから採用する動画を選び直せます。",
   "ImportFromFolderWizard_TMManuallySelected": "手動選択済み(長さ一致)",
-  "ImportFromFolderWizard_TMManuallySelectedReview": "手動選択済み(長さ不一致・要確認)"
+  "ImportFromFolderWizard_TMManuallySelectedReview": "手動選択済み(長さ不一致・要確認)",
+
+  "MainForm_ToolbarHint_CheckNow": "全チャンネルの新着動画を今すぐ確認します",
+  "MainForm_ToolbarHint_StartAll": "ダウンロードキューを開始します",
+  "MainForm_ToolbarHint_StopAll": "実行中のダウンロードを一時停止します",
+  "MainForm_ToolbarHint_ImmediateDownload": "動画追加時に即座にダウンロードを開始するかを切り替えます",
+  "MainForm_ToolbarHint_ClipboardMonitor": "クリップボードを監視し、iwaraのURLをコピーすると自動で追加します",
+  "MainForm_ToolbarHint_ViewMode": "動画一覧の表示形式(詳細リスト/サムネイルタイル)を切り替えます",
+  "MainForm_ToolbarHint_Settings": "アプリの設定画面を開きます",
+  "MainForm_ToolbarHint_Setup": "Python環境やログイン等の初期セットアップを行います",
+  "MainForm_ToolbarHint_Tools": "一括インポート・検索インポート・重複チェックなどのツールメニューを開きます",
+  "MainForm_ToolbarHint_Help": "バージョン情報・ログフォルダなどのヘルプメニューを開きます"
 }

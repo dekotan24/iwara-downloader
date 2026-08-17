@@ -215,6 +215,22 @@ namespace IwaraDownloader.Wpf.Views
         }
 
         /// <summary>
+        /// ツールバー項目にマウスホバー/キーボードフォーカスした時、その説明(ToolTipに設定した文字列)を
+        /// ステータスバーに表示する。ToolTipプロパティを唯一の説明文ソースとして再利用することで、
+        /// 通常の吹き出しツールチップとステータスバー表示の両方を1箇所の記述でまかなう。
+        /// </summary>
+        private void ToolbarItem_ShowHint(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is not MainViewModel vm) return;
+            vm.HoverHintText = (sender as System.Windows.FrameworkElement)?.ToolTip as string ?? "";
+        }
+
+        private void ToolbarItem_HideHint(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm) vm.HoverHintText = "";
+        }
+
+        /// <summary>
         /// タイル表示の1枠分。VirtualizingWrapPanelはコンテナをリサイクルするため、
         /// Loadedではなくスクロールでコンテナが別の動画に再利用されるたびに発火する
         /// DataContextChangedでサムネ読み込みをトリガーする。

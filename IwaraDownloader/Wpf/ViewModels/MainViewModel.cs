@@ -89,7 +89,19 @@ namespace IwaraDownloader.Wpf.ViewModels
         private string _urlInput = "";
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(FooterStatusText))]
         private string _statusMessage = "";
+
+        /// <summary>ツールバー項目にマウスホバー/キーボードフォーカスした時の説明文(空なら非表示)。</summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(FooterStatusText))]
+        private string _hoverHintText = "";
+
+        /// <summary>
+        /// ステータスバー左側の実際の表示テキスト。HoverHintTextが設定されている間は
+        /// それを優先表示し(ツールバー項目の説明)、無ければ通常のStatusMessageを表示する。
+        /// </summary>
+        public string FooterStatusText => string.IsNullOrEmpty(HoverHintText) ? StatusMessage : HoverHintText;
 
         [ObservableProperty]
         private string _freeSpaceText = "";
