@@ -779,10 +779,12 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// チャンネル新着チェックで既存動画に再度遭遇した際、iwara APIから取れる情報をまとめて更新する。
-        /// PostedAt(iwara公開日時)は既に値が入っている行には上書きしない(手動編集や別経路での取得を尊重)。
-        /// ApiRawJson(APIの生レスポンス、issue #24のリフィルついでに追加)は
-        /// numLikes/numViews等が変動し続けるため毎回最新のもので置き換える。
+        /// チャンネル新着チェックで既存動画に再度遭遇した際、まだ未取得(NULL/空)なPostedAt・ApiRawJsonだけ
+        /// まとめて埋める。どちらも既に値が入っている行は上書きしない(バックフィル専用、
+        /// 継続的な鮮度更新はしない設計。デコ判断: numLikes/numViews等を使う機能が無い現状では
+        /// 毎回上書きは書き込みが無駄なだけなので、初回に埋まったら以降のチェックは触らない)。
+        /// WHERE 句に未取得条件を入れているので、既に両方埋まっている行は該当0件でUPDATE自体が
+        /// スキップされる。取得失敗などで空のままなら次回以降のチェックでも自然に対象になり続ける。
         /// 1件ずつ接続を開いてUPDATEすると新着チェックのたびに数千件規模の個別コミットで
         /// DB書き込みロックを奪い合う (AddVideosBatch と同じ理由)ため、1接続・1トランザクションで処理する。
         /// </summary>
@@ -799,8 +801,9 @@ namespace IwaraDownloader.Services
                 command.CommandText = @"
                     UPDATE Videos SET
                         PostedAt = COALESCE(PostedAt, @PostedAt),
-                        ApiRawJson = COALESCE(@ApiRawJson, ApiRawJson)
-                    WHERE VideoId = @VideoId";
+                        ApiRawJson = COALESCE(NULLIF(ApiRawJson, ''), @ApiRawJson)
+                    WHERE VideoId = @VideoId
+                      AND (PostedAt IS NULL OR ApiRawJson IS NULL OR ApiRawJson = '')";
                 var pPostedAt = command.Parameters.Add("@PostedAt", SqliteType.Text);
                 var pApiRawJson = command.Parameters.Add("@ApiRawJson", SqliteType.Text);
                 var pVideoId = command.Parameters.Add("@VideoId", SqliteType.Text);
