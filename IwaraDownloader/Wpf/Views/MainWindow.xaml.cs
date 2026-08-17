@@ -214,6 +214,22 @@ namespace IwaraDownloader.Wpf.Views
             button.ContextMenu.IsOpen = true;
         }
 
+        /// <summary>
+        /// タイル表示の1枠分。VirtualizingWrapPanelはコンテナをリサイクルするため、
+        /// Loadedではなくスクロールでコンテナが別の動画に再利用されるたびに発火する
+        /// DataContextChangedでサムネ読み込みをトリガーする。
+        /// </summary>
+        private void TileItem_DataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e)
+        {
+            (e.NewValue as VideoListItemViewModel)?.EnsureThumbnailLoaded();
+        }
+
+        private void TileItem_Loaded(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (((System.Windows.FrameworkElement)sender).DataContext is VideoListItemViewModel vm)
+                vm.EnsureThumbnailLoaded();
+        }
+
         private void VideoColumnHeader_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             if (e.OriginalSource is not System.Windows.Controls.GridViewColumnHeader header || header.Column == null) return;

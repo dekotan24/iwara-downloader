@@ -94,6 +94,7 @@
 
     <!-- WPF移行用 MVVM ツールキット (ソースジェネレータ、公式) -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="VirtualizingWrapPanel" Version="2.5.1" />
   </ItemGroup>
 
   <ItemGroup>

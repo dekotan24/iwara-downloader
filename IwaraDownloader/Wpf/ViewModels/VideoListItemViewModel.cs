@@ -1,8 +1,12 @@
+using System.IO;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using IwaraDownloader.Models;
+using IwaraDownloader.Services;
 using IwaraDownloader.Utils;
 using IwaraDownloader.Wpf.Theme;
 using Brush = System.Windows.Media.Brush;
+using ImageSource = System.Windows.Media.ImageSource;
 
 namespace IwaraDownloader.Wpf.ViewModels
 {
@@ -131,5 +135,46 @@ namespace IwaraDownloader.Wpf.ViewModels
 
         [ObservableProperty]
         private bool _isFavorite;
+
+        [ObservableProperty]
+        private ImageSource? _thumbnail;
+
+        /// <summary>
+        /// タイル表示に切り替わった時に呼ぶ。メモリキャッシュにあれば即座に反映、無ければ
+        /// バックグラウンドロードを開始するだけ(結果はMainViewModel.OnThumbnailReady経由で反映)。
+        /// UIスレッド上でI/Oは発生しない(ThumbnailCacheService.TryGetMemoryCachedBytesはメモリのみ参照)。
+        /// </summary>
+        public void EnsureThumbnailLoaded()
+        {
+            if (Thumbnail != null) return;
+            var bytes = ThumbnailCacheService.Instance.TryGetMemoryCachedBytes(Video.VideoId);
+            if (bytes != null)
+            {
+                ApplyThumbnailBytes(bytes);
+            }
+            else
+            {
+                ThumbnailCacheService.Instance.EnsureLoadedAsync(Video.VideoId, Video.ThumbnailUrl);
+            }
+        }
+
+        public void ApplyThumbnailBytes(byte[] bytes)
+        {
+            try
+            {
+                var bmp = new BitmapImage();
+                using var ms = new MemoryStream(bytes);
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.StreamSource = ms;
+                bmp.EndInit();
+                bmp.Freeze();
+                Thumbnail = bmp;
+            }
+            catch
+            {
+                // 破損データ等はプレースホルダーのまま(Thumbnail=null)にしておく
+            }
+        }
     }
 }

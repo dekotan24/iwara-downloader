@@ -49,6 +49,36 @@ namespace IwaraDownloader.Wpf.ViewModels
         public BulkObservableCollection<ChannelTreeNodeViewModel> TreeNodes { get; } = new();
         public BulkObservableCollection<VideoListItemViewModel> Videos { get; } = new();
 
+        #region 表示モード切替(詳細リスト/タイル、旧WinForms版btnViewMode相当)
+
+        // VirtualizingWrapPanel(NuGet: WpfToolkit.Controls)がコンテナ自体を仮想化するため、
+        // 旧WinForms版のTileModeMaxItems(=500件キャップ)は不要。Videosをそのままタイル表示にも
+        // 束縛でき、可視範囲のコンテナ生成時(DataContextChanged)にサムネ読み込みをトリガーする。
+        [ObservableProperty]
+        private bool _isTileMode;
+
+        public bool IsListMode => !IsTileMode;
+
+        public string ViewModeToggleText => IsTileMode ? L.T("MainForm_D161") : L.T("MainForm_D162");
+
+        partial void OnIsTileModeChanged(bool value)
+        {
+            SettingsManager.Instance.Settings.VideoListViewMode = value ? 1 : 0;
+            SettingsManager.Instance.Save();
+            OnPropertyChanged(nameof(IsListMode));
+            OnPropertyChanged(nameof(ViewModeToggleText));
+        }
+
+        private void OnThumbnailReady(object? sender, string videoId) => PostToUi(() =>
+        {
+            var item = Videos.FirstOrDefault(v => v.Video.VideoId == videoId);
+            if (item == null) return;
+            var bytes = ThumbnailCacheService.Instance.TryGetMemoryCachedBytes(videoId);
+            if (bytes != null) item.ApplyThumbnailBytes(bytes);
+        });
+
+        #endregion
+
         [ObservableProperty]
         private ChannelTreeNodeViewModel? _selectedTreeNode;
 
@@ -101,6 +131,9 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.UserAddStatusChanged += (_, msg) => PostToUi(() => StatusMessage = msg);
             _downloadManager.UserAdded += (_, _) => PostToUi(ScheduleTreeRefresh);
             _downloadManager.DownloadQueueSuspended += (_, count) => PostToUi(() => StatusMessage = L.T("MainForm_D004", count));
+            ThumbnailCacheService.Instance.ThumbnailReady += OnThumbnailReady;
+
+            IsTileMode = SettingsManager.Instance.Settings.VideoListViewMode == 1;
 
             Current = this;
 
@@ -390,6 +423,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.AutoCheckCompleted -= OnAutoCheckCompleted;
             _downloadManager.BackgroundTaskProgress -= OnBackgroundTaskProgress;
             _downloadManager.BackgroundTaskCompleted -= OnBackgroundTaskCompleted;
+            ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady;
 
             _downloadManager.Stop();
             try { _webServer.StopAsync().Wait(5000); } catch { }
