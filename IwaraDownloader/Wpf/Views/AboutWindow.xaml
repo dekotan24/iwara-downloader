@@ -9,12 +9,12 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
     <!--
-        遊び心: ウィンドウ内枠に1pxの虹色アニメーション境界(デコ発案、2026-08-14)。
+        遊び心: ウィンドウ内枠に虹色アニメーション境界(デコ発案、2026-08-14)。
         LinearGradientBrushのRelativeTransform(RotateTransform)をぐるぐる回すことで
         グラデーションが流れているように見せている。真面目な機能ではないので
         AboutWindow限定(他ウィンドウに波及させない)。
     -->
-    <Border BorderThickness="1" Padding="1">
+    <Border BorderThickness="2" Padding="2">
         <Border.BorderBrush>
             <LinearGradientBrush x:Name="RainbowBrush" StartPoint="0,0" EndPoint="1,1">
                 <LinearGradientBrush.RelativeTransform>

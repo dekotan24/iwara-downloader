@@ -46,8 +46,8 @@ namespace IwaraDownloader.Wpf.ViewModels
             public Win32WindowWrapper(IntPtr handle) => Handle = handle;
         }
 
-        public ObservableCollection<ChannelTreeNodeViewModel> TreeNodes { get; } = new();
-        public ObservableCollection<VideoListItemViewModel> Videos { get; } = new();
+        public BulkObservableCollection<ChannelTreeNodeViewModel> TreeNodes { get; } = new();
+        public BulkObservableCollection<VideoListItemViewModel> Videos { get; } = new();
 
         [ObservableProperty]
         private ChannelTreeNodeViewModel? _selectedTreeNode;
@@ -529,11 +529,8 @@ namespace IwaraDownloader.Wpf.ViewModels
             {
                 double avgInProgress = dlTasks.Average(t => t.Progress);
                 progressValue = Math.Clamp((int)avgInProgress, 0, 100);
-                queueText = L.T("MainForm_QueueSummaryFull", dlTasks.Count, avgInProgress.ToString("F0"), pending);
-            }
-            else if (pending > 0)
-            {
-                queueText = L.T("MainForm_QueueSummaryPending", pending);
+                // 件数(DL中/待機)は前半の DL:/待機: と重複するため、ここでは進捗の平均%だけ足す
+                queueText = L.T("MainForm_QueueSummaryFull", avgInProgress.ToString("F0"));
             }
 
             DownloadCountText = L.T("MainForm_D127", downloading, pending, completed, totalSizeStr, queueText);
@@ -1635,6 +1632,7 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// </summary>
         public void LoadVideos()
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var node = SelectedTreeNode;
             _allLoadedVideos = node?.Kind switch
             {
@@ -1651,7 +1649,21 @@ namespace IwaraDownloader.Wpf.ViewModels
                 TreeNodeKind.Excluded => _database.GetExcludedVideos(),
                 _ => new List<VideoInfo>(),
             };
+            var fetchMs = sw.ElapsedMilliseconds;
+
             ApplyVideoFilter();
+            sw.Stop();
+
+            // LoadVideos()はDispatcherTimer(UIスレッド)から同期的に呼ばれるため、ここが遅いと
+            // そのままウィンドウが無応答に見える。全件ノードでの巨大な再取得/再構築を切り分けられるよう、
+            // 閾値超過時だけ内訳付きでログに残す。
+            if (sw.ElapsedMilliseconds > 150)
+            {
+                LoggingService.Instance.Warn(
+                    $"LoadVideos が遅延: 合計{sw.ElapsedMilliseconds}ms " +
+                    $"(DB取得{fetchMs}ms / フィルタ適用{sw.ElapsedMilliseconds - fetchMs}ms), " +
+                    $"node={node?.Kind}, 読込件数={_allLoadedVideos.Count}, 表示件数={Videos.Count}");
+            }
         }
 
         /// <summary>
@@ -1686,14 +1698,17 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             SortVideoList(filtered);
 
-            Videos.Clear();
+            var items = new List<VideoListItemViewModel>(filtered.Count);
             foreach (var video in filtered)
             {
                 var task = _downloadManager.GetTask(video.VideoId);
                 var item = new VideoListItemViewModel(video);
                 item.Refresh(task);
-                Videos.Add(item);
+                items.Add(item);
             }
+            // Add()を件数分呼ぶとCollectionChangedが都度発火しUIスレッドが固まるため、
+            // 単発のResetイベントで一括差し替える。
+            Videos.ReplaceAll(items);
 
             if (!query.IsEmpty || NsfwFilterMode != 0 || FavoriteOnlyFilter || tagTerms.Length > 0)
             {
@@ -1804,6 +1819,7 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// </summary>
         public void RefreshTree()
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var counts = _database.GetVideoTreeCounts();
             var users = _database.GetAllSubscribedUsers();
             var excludedCount = _database.GetExcludedCount();
@@ -1811,23 +1827,25 @@ namespace IwaraDownloader.Wpf.ViewModels
             var selectedKind = SelectedTreeNode?.Kind;
             var selectedChannelId = SelectedTreeNode?.Channel?.Id;
 
-            TreeNodes.Clear();
+            // TreeNodes.Add()を件数分呼ぶとCollectionChangedが都度発火するため、
+            // ローカルリストに組み立ててから最後にまとめて差し替える(Videosと同じ理由)。
+            var nodes = new List<ChannelTreeNodeViewModel>(users.Count + 8);
 
-            TreeNodes.Add(new ChannelTreeNodeViewModel
+            nodes.Add(new ChannelTreeNodeViewModel
             {
                 Kind = TreeNodeKind.AllVideos,
                 Text = L.T("MainForm_D177", counts.Completed, counts.Total),
                 IsBold = true,
             });
 
-            TreeNodes.Add(new ChannelTreeNodeViewModel
+            nodes.Add(new ChannelTreeNodeViewModel
             {
                 Kind = TreeNodeKind.Favorites,
                 Text = L.T("MainForm_D178", counts.Favorite),
                 Foreground = ThemeManager.GetBrush("Brush.Favorite"),
             });
 
-            TreeNodes.Add(new ChannelTreeNodeViewModel
+            nodes.Add(new ChannelTreeNodeViewModel
             {
                 Kind = TreeNodeKind.AllDownloads,
                 Text = L.T("MainForm_D179"),
@@ -1835,7 +1853,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             if (counts.NotDownloaded > 0)
             {
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.NotDownloaded,
                     Text = L.T("MainForm_D180", counts.NotDownloaded),
@@ -1845,7 +1863,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             if (counts.Completed > 0)
             {
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.Downloaded,
                     Text = L.T("MainForm_D181", counts.Completed),
@@ -1855,7 +1873,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             if (counts.Skipped > 0)
             {
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.Skipped,
                     Text = L.T("MainForm_D182", counts.Skipped),
@@ -1865,7 +1883,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             if (counts.Failed > 0)
             {
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.FailedVideos,
                     Text = L.T("MainForm_D183", counts.Failed),
@@ -1875,7 +1893,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             if (counts.SingleVideos > 0)
             {
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.SingleVideos,
                     Text = L.T("MainForm_D184", counts.SingleVideos),
@@ -1884,7 +1902,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             if (excludedCount > 0)
             {
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.Excluded,
                     Text = L.T("MainForm_ExcludedNode", excludedCount),
@@ -1906,7 +1924,7 @@ namespace IwaraDownloader.Wpf.ViewModels
                 else if (chPending > 0) statusText = $" ⏳{chPending}";
                 if (chPaused > 0) statusText += $" ⏸️{chPaused}";
 
-                TreeNodes.Add(new ChannelTreeNodeViewModel
+                nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.Channel,
                     Channel = user,
@@ -1914,6 +1932,8 @@ namespace IwaraDownloader.Wpf.ViewModels
                     Foreground = user.IsEnabled ? ThemeManager.GetBrush("Brush.Text") : ThemeManager.GetBrush("Brush.TextDisabled"),
                 });
             }
+
+            TreeNodes.ReplaceAll(nodes);
 
             // 選択状態を復元
             if (selectedKind != null)
@@ -1923,6 +1943,13 @@ namespace IwaraDownloader.Wpf.ViewModels
                     (n.Kind != TreeNodeKind.Channel || n.Channel?.Id == selectedChannelId));
             }
             SelectedTreeNode ??= TreeNodes.FirstOrDefault();
+
+            sw.Stop();
+            if (sw.ElapsedMilliseconds > 150)
+            {
+                LoggingService.Instance.Warn(
+                    $"RefreshTree が遅延: {sw.ElapsedMilliseconds}ms, チャンネル数={users.Count}");
+            }
         }
     }
 }

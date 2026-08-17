@@ -1270,10 +1270,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>{0}待機</value>
   </data>
   <data name="MainForm_QueueSummaryFull" xml:space="preserve">
-    <value> | キュー: DL中 {0}件 平均{1}% / 待機 {2}件</value>
-  </data>
-  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
-    <value> | キュー: 待機 {0}件</value>
+    <value> | 平均{0}%</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0}タグ書込</value>

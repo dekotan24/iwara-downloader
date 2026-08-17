@@ -1266,10 +1266,7 @@ Moves to those drives will fail and files will remain in place.</value>
     <value>{0} pending</value>
   </data>
   <data name="MainForm_QueueSummaryFull" xml:space="preserve">
-    <value> | Queue: {0} downloading avg {1}% / {2} pending</value>
-  </data>
-  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
-    <value> | Queue: {0} pending</value>
+    <value> | avg {0}%</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0} writing tags</value>

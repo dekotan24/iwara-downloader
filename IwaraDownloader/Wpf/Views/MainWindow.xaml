@@ -30,6 +30,9 @@
                 Padding="6">
             <StackPanel Orientation="Horizontal">
                 <StackPanel.Resources>
+                    <!-- OS標準のButton/ToggleButtonテンプレートはMouseOver/フォーカス時に文字色と連動しない
+                         明るいオーバーレイを独自に乗せてくるため、常時ForegroundをBrush.Textに固定できる
+                         最小限のControlTemplateに差し替える。ホバー/フォーカスは枠線の強調だけで表現する。 -->
                     <Style TargetType="Button">
                         <Setter Property="Padding" Value="10,6" />
                         <Setter Property="Margin" Value="0,0,4,0" />
@@ -37,6 +40,35 @@
                         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
                         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
                         <Setter Property="BorderThickness" Value="1" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bd"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4">
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           TextElement.Foreground="{TemplateBinding Foreground}" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Border}" />
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.5" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                     <Style TargetType="ToggleButton">
                         <Setter Property="Padding" Value="10,6" />
@@ -45,6 +77,32 @@
                         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
                         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
                         <Setter Property="BorderThickness" Value="1" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Bd"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4">
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           TextElement.Foreground="{TemplateBinding Foreground}" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.5" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
@@ -275,6 +333,12 @@
                                       SelectedIndex="{Binding NsfwFilterMode}"
                                       Background="{DynamicResource Brush.BackgroundElevated}"
                                       Foreground="{DynamicResource Brush.Text}">
+                                <!-- ドロップダウン展開部分はOS標準の白背景で描画されるため、項目文字色は黒固定にする -->
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem">
+                                        <Setter Property="Foreground" Value="Black" />
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
                                 <ComboBoxItem Content="全部表示" />
                                 <ComboBoxItem Content="SFWのみ" />
                                 <ComboBoxItem Content="NSFWのみ" />
