@@ -372,6 +372,50 @@
                           ContextMenuOpening="VideoList_ContextMenuOpening"
                           GridViewColumnHeader.Click="VideoColumnHeader_Click">
                     <!--
+                        ItemContainerStyle未指定だとOS標準のListViewItemテンプレートが使われ、
+                        選択/フォーカス時に文字色と連動しない明るい(ほぼ白の)ハイライトを乗せてくる
+                        (ツールバーのButtonと同じ問題)。行の文字色は各列がBrush.Text/StatusForeground
+                        (どちらも明るい色)前提のため、背景は常にダークテーマの色に留め、選択/フォーカスは
+                        背景の明暗差とアクセント枠線だけで表現する。
+                    -->
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListViewItem">
+                                        <Border x:Name="Bd"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                Padding="{TemplateBinding Padding}"
+                                                SnapsToDevicePixels="True">
+                                            <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                                   Columns="{TemplateBinding GridView.ColumnCollection}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                                <Setter TargetName="Bd" Property="BorderThickness" Value="1" />
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                                <Setter TargetName="Bd" Property="BorderThickness" Value="1" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <!--
                         各MenuItemのVisibilityはMainViewModel.RefreshVideoContextMenuState()が
                         メニューを開く直前(ContextMenuOpening)に計算するCanXxxSelectedVideo系の
                         プロパティにバインドする(旧WinForms版menuVideoContext_Openingに相当)。
