@@ -1608,7 +1608,7 @@ namespace IwaraDownloader.Services
                     else if (video.PostedAt.HasValue || !string.IsNullOrEmpty(video.ApiRawJson))
                     {
                         // 既存動画は get_videos の応答が来ても再登録しないためここではスキップされるが、
-                        // PostedAt/ApiRawJson とも未取得(NULL/空)ならついでに埋める(issue #24)。
+                        // PostedAt/ApiRawJson とも未取得(NULL/空)ならバックフィル対象として積む。
                         // 既に埋まっている行はDB側のWHERE句でUPDATE自体がスキップされるので、
                         // ここで毎回リストに積んでも定常状態では無駄な書き込みにはならない。
                         existingBackfill.Add((video.VideoId, video.PostedAt, video.ApiRawJson));

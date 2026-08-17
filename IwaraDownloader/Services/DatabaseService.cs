@@ -396,7 +396,7 @@ namespace IwaraDownloader.Services
 
             // ApiRawJson カラム: iwara API の生レスポンス(著者アカウントの揮発的情報のみ間引いたもの)を
             // そのまま保存。将来 numLikes/numViews/tags/body 等を使いたくなった時に再取得なしで
-            // json_extract できるようにするための保険 (issue #24 のリフィルついでに追加、2026-08-17)。
+            // json_extract できるようにするための保険。
             AddColumnIfMissing(connection, hasApiRawJson,
                 "ALTER TABLE Videos ADD COLUMN ApiRawJson TEXT DEFAULT ''", "ApiRawJson");
         }
@@ -780,13 +780,12 @@ namespace IwaraDownloader.Services
 
         /// <summary>
         /// チャンネル新着チェックで既存動画に再度遭遇した際、まだ未取得(NULL/空)なPostedAt・ApiRawJsonだけ
-        /// まとめて埋める。どちらも既に値が入っている行は上書きしない(バックフィル専用、
-        /// 継続的な鮮度更新はしない設計。デコ判断: numLikes/numViews等を使う機能が無い現状では
-        /// 毎回上書きは書き込みが無駄なだけなので、初回に埋まったら以降のチェックは触らない)。
-        /// WHERE 句に未取得条件を入れているので、既に両方埋まっている行は該当0件でUPDATE自体が
-        /// スキップされる。取得失敗などで空のままなら次回以降のチェックでも自然に対象になり続ける。
+        /// まとめて埋める。どちらも既に値が入っている行は上書きしないバックフィル専用の更新で、
+        /// 継続的な鮮度更新はしない。WHERE 句に未取得条件を入れているので、既に両方埋まっている行は
+        /// 該当0件でUPDATE自体がスキップされる。取得失敗などで空のままなら次回以降のチェックでも
+        /// 自然に対象になり続ける。
         /// 1件ずつ接続を開いてUPDATEすると新着チェックのたびに数千件規模の個別コミットで
-        /// DB書き込みロックを奪い合う (AddVideosBatch と同じ理由)ため、1接続・1トランザクションで処理する。
+        /// DB書き込みロックを奪い合うため、1接続・1トランザクションで処理する。
         /// </summary>
         public void BackfillExistingVideoMetadata(IEnumerable<(string VideoId, DateTime? PostedAt, string? ApiRawJson)> items)
         {
