@@ -1307,8 +1307,12 @@ namespace IwaraDownloader.Services
         /// <summary>空き容量不足によるキュー停止が既に通知済みかどうか (多重イベント発火の防止用)。</summary>
         private int _suspendNotifiedForDiskSpace;
 
+        /// <summary>空き容量回復チェックの間隔。DriveInfoの取得自体は軽いが、キュー停止中に
+        /// 頻繁すぎるポーリングをする意味は薄いため1分間隔にしている(旧: 30秒、デコ指摘で緩和)。</summary>
+        private const int DiskSpaceRecoveryCheckIntervalMs = 60_000;
+
         /// <summary>
-        /// 空き容量が回復したか30秒おきに確認するタイマー。SuspendQueueForDiskSpaceで起動し、
+        /// 空き容量が回復したか一定間隔で確認するタイマー。SuspendQueueForDiskSpaceで起動し、
         /// ResumeAfterDiskSpaceRecoveredまたはDisposeで停止する。
         /// </summary>
         private System.Timers.Timer? _diskSpaceRecoveryTimer;
@@ -1338,7 +1342,7 @@ namespace IwaraDownloader.Services
 
                 _diskSpaceRecoveryTimer?.Stop();
                 _diskSpaceRecoveryTimer?.Dispose();
-                _diskSpaceRecoveryTimer = new System.Timers.Timer(30000) { AutoReset = true };
+                _diskSpaceRecoveryTimer = new System.Timers.Timer(DiskSpaceRecoveryCheckIntervalMs) { AutoReset = true };
                 _diskSpaceRecoveryTimer.Elapsed += (_, _) => CheckDiskSpaceRecovery();
                 _diskSpaceRecoveryTimer.Start();
             }
