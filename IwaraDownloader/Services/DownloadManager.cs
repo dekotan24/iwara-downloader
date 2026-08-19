@@ -438,7 +438,7 @@ namespace IwaraDownloader.Services
         /// ローカルファイルは除外時に削除済みのため:
         ///   - 完了扱いだったのにファイルが無いもの → Pending にリセットして再DLキューへ
         ///   - 元々待機中(Pending)だったもの → 再DLキューへ (取得を再開)
-        ///   - 失敗(Failed)/スキップ/一時停止 → 状態はそのまま (自動DLしない。デコが選ぶ)
+        ///   - 失敗(Failed)/スキップ/一時停止 → 状態はそのまま (自動DLしない。手動で選ぶ)
         /// </summary>
         /// <returns>復元した件数</returns>
         public int RestoreExcludedVideos(IEnumerable<string> videoIds)
@@ -1308,7 +1308,7 @@ namespace IwaraDownloader.Services
         private int _suspendNotifiedForDiskSpace;
 
         /// <summary>空き容量回復チェックの間隔。DriveInfoの取得自体は軽いが、キュー停止中に
-        /// 頻繁すぎるポーリングをする意味は薄いため1分間隔にしている(旧: 30秒、デコ指摘で緩和)。</summary>
+        /// 頻繁すぎるポーリングをする意味は薄いため1分間隔にしている(旧: 30秒から緩和)。</summary>
         private const int DiskSpaceRecoveryCheckIntervalMs = 60_000;
 
         /// <summary>
@@ -1318,7 +1318,7 @@ namespace IwaraDownloader.Services
         private System.Timers.Timer? _diskSpaceRecoveryTimer;
 
         /// <summary>
-        /// 空き容量不足によるキュー一時停止(デコ指摘issue対応)。ログイン切れと違い、
+        /// 空き容量不足によるキュー一時停止(報告のあったissue対応)。ログイン切れと違い、
         /// 全ドライブ・全保存先を厳密に区別すると設計が複雑になるため、既定の保存先
         /// (settings.DownloadFolder)のドライブ1つだけを監視対象として単純化している。
         /// 実行中タスクは能動的にキャンセルしない(ディスクフルなら書き込みで自然に失敗するため、

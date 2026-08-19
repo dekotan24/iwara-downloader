@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
     <!--
-        遊び心: ウィンドウ内枠に虹色アニメーション境界(デコ発案、2026-08-14)。
+        遊び心: ウィンドウ内枠に虹色アニメーション境界(2026-08-14)。
         LinearGradientBrushのRelativeTransform(RotateTransform)をぐるぐる回すことで
         グラデーションが流れているように見せている。真面目な機能ではないので
         AboutWindow限定(他ウィンドウに波及させない)。
