@@ -977,6 +977,11 @@ namespace IwaraDownloader.Wpf.ViewModels
         [ObservableProperty] private bool _canOpenPageSelectedVideo;
         [ObservableProperty] private bool _canShowVideoDetails;
         [ObservableProperty] private string _favoriteMenuText = "";
+        [ObservableProperty] private bool _canChangeVideoPriority;
+        [ObservableProperty] private bool _priorityHighestChecked;
+        [ObservableProperty] private bool _priorityHighChecked;
+        [ObservableProperty] private bool _priorityNormalChecked;
+        [ObservableProperty] private bool _priorityLowChecked;
 
         /// <summary>
         /// 動画コンテキストメニューを開く直前に呼ぶ。旧WinForms版menuVideoContext_Openingに相当
@@ -1002,6 +1007,8 @@ namespace IwaraDownloader.Wpf.ViewModels
                 CanOpenAuthorSelectedVideo = false;
                 CanPlaySelectedVideo = false;
                 CanOpenFolderSelectedVideo = false;
+                CanChangeVideoPriority = false;
+                PriorityHighestChecked = PriorityHighChecked = PriorityNormalChecked = PriorityLowChecked = false;
                 return;
             }
 
@@ -1033,6 +1040,30 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             bool allFav = selected.All(v => v.IsFavorite);
             FavoriteMenuText = allFav ? L.T("MainForm_D106") : L.T("MainForm_D107");
+
+            // 優先度は未DL(Pending)にのみ意味を持つ。チェックマークは選択中Pending全件の実効優先度
+            // (手動設定 ?? 所属チャンネルの既定 ?? Normal) が一致する場合のみ点灯、バラバラなら消灯。
+            // 選択件数分の個別DB問い合わせを避けるため、チャンネルは1回だけ一括取得する
+            // (大量選択(数千件)で右クリックメニューを開くたびにUIスレッドが固まるのを防ぐため)。
+            CanChangeVideoPriority = hasPending;
+            if (hasPending)
+            {
+                var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
+                var resolved = selected.Where(v => v.Status == DownloadStatus.Pending)
+                    .Select(v => v.Priority ?? (v.SubscribedUserId.HasValue && userMap.TryGetValue(v.SubscribedUserId.Value, out var u)
+                        ? u.DefaultPriority
+                        : null) ?? DownloadPriority.Normal)
+                    .Distinct().ToList();
+                var uniform = resolved.Count == 1 ? resolved[0] : (DownloadPriority?)null;
+                PriorityHighestChecked = uniform == DownloadPriority.Highest;
+                PriorityHighChecked = uniform == DownloadPriority.High;
+                PriorityNormalChecked = uniform == DownloadPriority.Normal;
+                PriorityLowChecked = uniform == DownloadPriority.Low;
+            }
+            else
+            {
+                PriorityHighestChecked = PriorityHighChecked = PriorityNormalChecked = PriorityLowChecked = false;
+            }
         }
 
         [RelayCommand]
@@ -1166,6 +1197,26 @@ namespace IwaraDownloader.Wpf.ViewModels
             LoadVideos();
             StatusMessage = L.T("MainForm_RestoredStatus", restored);
         }
+
+        /// <summary>
+        /// 選択中の未DL(Pending)動画すべての優先度を一括変更する。DownloadingやCompleted等は
+        /// ChangeVideoPriority側で自動的に除外される(優先度はキュー待ち順にしか意味がないため)。
+        /// </summary>
+        private void SetVideoPriority(DownloadPriority priority)
+        {
+            var videos = GetSelectedVideoInfos();
+            if (videos.Count == 0) return;
+            var changed = _downloadManager.ChangeVideoPriority(videos, priority);
+            if (changed == 0) return;
+            foreach (var item in Videos.Where(item => videos.Contains(item.Video)))
+                item.Refresh(_downloadManager.GetTask(item.Video.VideoId));
+            StatusMessage = L.T("MainForm_D191", changed);
+        }
+
+        [RelayCommand] private void SetVideoPriorityHighest() => SetVideoPriority(DownloadPriority.Highest);
+        [RelayCommand] private void SetVideoPriorityHigh() => SetVideoPriority(DownloadPriority.High);
+        [RelayCommand] private void SetVideoPriorityNormal() => SetVideoPriority(DownloadPriority.Normal);
+        [RelayCommand] private void SetVideoPriorityLow() => SetVideoPriority(DownloadPriority.Low);
 
         [RelayCommand]
         private void DownloadVideo()
@@ -1355,6 +1406,10 @@ namespace IwaraDownloader.Wpf.ViewModels
         [ObservableProperty] private bool _channelExternalDLOnChecked;
         [ObservableProperty] private bool _channelExternalDLOffChecked;
         [ObservableProperty] private string _channelExternalDLInheritText = "";
+        [ObservableProperty] private bool _channelPriorityHighestChecked;
+        [ObservableProperty] private bool _channelPriorityHighChecked;
+        [ObservableProperty] private bool _channelPriorityNormalChecked;
+        [ObservableProperty] private bool _channelPriorityLowChecked;
 
         /// <summary>
         /// チャンネルコンテキストメニューを開く直前に呼ぶ。旧WinForms版contextMenuChannel_Openingに相当。
@@ -1374,6 +1429,8 @@ namespace IwaraDownloader.Wpf.ViewModels
                 CanEnableChannel = false;
                 CanDisableChannel = false;
                 CheckChannelNowEnabled = false;
+                ChannelPriorityHighestChecked = ChannelPriorityHighChecked =
+                    ChannelPriorityNormalChecked = ChannelPriorityLowChecked = false;
                 return;
             }
 
@@ -1387,6 +1444,12 @@ namespace IwaraDownloader.Wpf.ViewModels
             ChannelExternalDLOffChecked = user.DownloadExternalVideosOverride == false;
             var globalDefault = SettingsManager.Instance.Settings.DownloadExternalVideosDefault;
             ChannelExternalDLInheritText = L.T("MainForm_D084", globalDefault ? "ON" : "OFF");
+
+            var channelPriority = user.DefaultPriority ?? DownloadPriority.Normal;
+            ChannelPriorityHighestChecked = channelPriority == DownloadPriority.Highest;
+            ChannelPriorityHighChecked = channelPriority == DownloadPriority.High;
+            ChannelPriorityNormalChecked = channelPriority == DownloadPriority.Normal;
+            ChannelPriorityLowChecked = channelPriority == DownloadPriority.Low;
         }
 
         [RelayCommand]
@@ -1668,6 +1731,25 @@ namespace IwaraDownloader.Wpf.ViewModels
             StatusMessage = L.T("MainForm_D101", user.Username, label);
         }
 
+        [RelayCommand] private void SetChannelPriorityHighest() => SetChannelDefaultPriority(DownloadPriority.Highest);
+        [RelayCommand] private void SetChannelPriorityHigh() => SetChannelDefaultPriority(DownloadPriority.High);
+        [RelayCommand] private void SetChannelPriorityNormal() => SetChannelDefaultPriority(DownloadPriority.Normal);
+        [RelayCommand] private void SetChannelPriorityLow() => SetChannelDefaultPriority(DownloadPriority.Low);
+
+        /// <summary>
+        /// チャンネルの既定優先度を変更する。この変更は投入時解決(EnqueueDownload/ResolvePriority)
+        /// のため、既にキューに入っている動画には遡及しない — 今後そのチャンネルの動画がキューに
+        /// 入る時に適用される。
+        /// </summary>
+        private void SetChannelDefaultPriority(DownloadPriority priority)
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+            user.DefaultPriority = priority;
+            _database.UpdateSubscribedUser(user);
+            StatusMessage = L.T("MainForm_D192", user.Username);
+        }
+
         [RelayCommand]
         private void DeleteChannel()
         {
@@ -1766,12 +1848,17 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             SortVideoList(filtered);
 
+            // 優先度表示の解決(Video.Priority ?? 所属チャンネルのDefaultPriority ?? Normal)用に
+            // チャンネルを1回だけ一括取得してDictionary化(動画1件ごとのDB問い合わせを避ける)。
+            var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
+
             var items = new List<VideoListItemViewModel>(filtered.Count);
             foreach (var video in filtered)
             {
                 var task = _downloadManager.GetTask(video.VideoId);
+                var owner = video.SubscribedUserId.HasValue && userMap.TryGetValue(video.SubscribedUserId.Value, out var u) ? u : null;
                 var item = new VideoListItemViewModel(video);
-                item.Refresh(task);
+                item.Refresh(task, owner);
                 items.Add(item);
             }
             // Add()を件数分呼ぶとCollectionChangedが都度発火しUIスレッドが固まるため、

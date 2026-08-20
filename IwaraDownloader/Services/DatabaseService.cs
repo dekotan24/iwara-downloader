@@ -132,7 +132,8 @@ namespace IwaraDownloader.Services
                     IsEnabled INTEGER DEFAULT 1,
                     CustomSavePath TEXT DEFAULT '',
                     DownloadExternalVideosOverride INTEGER NULL,
-                    VideosLoaded INTEGER DEFAULT 0
+                    VideosLoaded INTEGER DEFAULT 0,
+                    DefaultPriority INTEGER NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS Videos (
@@ -161,6 +162,7 @@ namespace IwaraDownloader.Services
                     Rating TEXT DEFAULT '',
                     IsFavorite INTEGER DEFAULT 0,
                     ApiRawJson TEXT DEFAULT '',
+                    Priority INTEGER NULL,
                     FOREIGN KEY (SubscribedUserId) REFERENCES SubscribedUsers(Id) ON DELETE SET NULL
                 );
 
@@ -202,6 +204,7 @@ namespace IwaraDownloader.Services
                     IsFavorite INTEGER DEFAULT 0,
                     ThumbnailStatus INTEGER DEFAULT 0,
                     ApiRawJson TEXT DEFAULT '',
+                    Priority INTEGER NULL,
                     ExcludedAt TEXT NOT NULL
                 );
 
@@ -267,6 +270,7 @@ namespace IwaraDownloader.Services
             bool hasDownloadExternalOverride = false;
             bool hasSubSite = false;
             bool hasVideosLoaded = false;
+            bool hasDefaultPriority = false;
 
             var checkCmd = connection.CreateCommand();
             checkCmd.CommandText = "PRAGMA table_info(SubscribedUsers)";
@@ -279,6 +283,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "DownloadExternalVideosOverride") hasDownloadExternalOverride = true;
                     if (columnName == "Site") hasSubSite = true;
                     if (columnName == "VideosLoaded") hasVideosLoaded = true;
+                    if (columnName == "DefaultPriority") hasDefaultPriority = true;
                 }
             }
 
@@ -291,6 +296,8 @@ namespace IwaraDownloader.Services
             // 既存ユーザーは動画取得済みとみなす (DEFAULT 1)
             AddColumnIfMissing(connection, hasVideosLoaded,
                 "ALTER TABLE SubscribedUsers ADD COLUMN VideosLoaded INTEGER DEFAULT 1", "VideosLoaded");
+            AddColumnIfMissing(connection, hasDefaultPriority,
+                "ALTER TABLE SubscribedUsers ADD COLUMN DefaultPriority INTEGER NULL", "DefaultPriority");
 
             // VideosテーブルのTags/Memo/FileUuid/EmbedUrl/Rating/Site カラムマイグレーション
             MigrateVideosTable(connection);
@@ -310,6 +317,7 @@ namespace IwaraDownloader.Services
             bool hasIsFavorite = false;
             bool hasThumbnailStatus = false;
             bool hasApiRawJson = false;
+            bool hasPriority = false;
 
             try
             {
@@ -328,6 +336,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "IsFavorite") hasIsFavorite = true;
                     if (columnName == "ThumbnailStatus") hasThumbnailStatus = true;
                     if (columnName == "ApiRawJson") hasApiRawJson = true;
+                    if (columnName == "Priority") hasPriority = true;
                 }
             }
             catch (Exception ex)
@@ -399,6 +408,18 @@ namespace IwaraDownloader.Services
             // json_extract できるようにするための保険。
             AddColumnIfMissing(connection, hasApiRawJson,
                 "ALTER TABLE Videos ADD COLUMN ApiRawJson TEXT DEFAULT ''", "ApiRawJson");
+
+            // Priority カラム: DLキューの優先度(手動設定時のみ非NULL、未設定はチャンネル既定/Normalへ解決)
+            AddColumnIfMissing(connection, hasPriority,
+                "ALTER TABLE Videos ADD COLUMN Priority INTEGER NULL", "Priority");
+
+            // ExcludedVideos は CREATE TABLE IF NOT EXISTS のみで既存DBには新規列が反映されないため、
+            // ここで個別にマイグレーションする。無いと GetSharedVideoColumnList の交差から Priority が
+            // 漏れ、削除→復元の往復で優先度が黙って消える。
+            bool hasExcludedPriority = GetTableColumns(connection, "ExcludedVideos")
+                .Contains("Priority", StringComparer.OrdinalIgnoreCase);
+            AddColumnIfMissing(connection, hasExcludedPriority,
+                "ALTER TABLE ExcludedVideos ADD COLUMN Priority INTEGER NULL", "ExcludedVideos.Priority");
         }
 
         private static void AddColumnIfMissing(SqliteConnection connection, bool exists, string alterSql, string columnName)
@@ -434,8 +455,8 @@ namespace IwaraDownloader.Services
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site, VideosLoaded)
-                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site, @VideosLoaded);
+                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site, VideosLoaded, DefaultPriority)
+                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site, @VideosLoaded, @DefaultPriority);
                 SELECT last_insert_rowid();
             ";
             command.Parameters.AddWithValue("@UserId", user.UserId);
@@ -450,6 +471,8 @@ namespace IwaraDownloader.Services
                 user.DownloadExternalVideosOverride.HasValue ? (object)(user.DownloadExternalVideosOverride.Value ? 1 : 0) : DBNull.Value);
             command.Parameters.AddWithValue("@Site", user.Site ?? "");
             command.Parameters.AddWithValue("@VideosLoaded", user.VideosLoaded ? 1 : 0);
+            command.Parameters.AddWithValue("@DefaultPriority",
+                user.DefaultPriority.HasValue ? (object)(int)user.DefaultPriority.Value : DBNull.Value);
 
             return Convert.ToInt32(command.ExecuteScalar());
         }
@@ -476,7 +499,8 @@ namespace IwaraDownloader.Services
                     CustomSavePath = @CustomSavePath,
                     DownloadExternalVideosOverride = @DownloadExternalVideosOverride,
                     Site = @Site,
-                    VideosLoaded = @VideosLoaded
+                    VideosLoaded = @VideosLoaded,
+                    DefaultPriority = @DefaultPriority
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", user.Id);
@@ -493,6 +517,8 @@ namespace IwaraDownloader.Services
                 user.DownloadExternalVideosOverride.HasValue ? (object)(user.DownloadExternalVideosOverride.Value ? 1 : 0) : DBNull.Value);
             command.Parameters.AddWithValue("@Site", user.Site ?? "");
             command.Parameters.AddWithValue("@VideosLoaded", user.VideosLoaded ? 1 : 0);
+            command.Parameters.AddWithValue("@DefaultPriority",
+                user.DefaultPriority.HasValue ? (object)(int)user.DefaultPriority.Value : DBNull.Value);
 
             command.ExecuteNonQuery();
         }
@@ -643,6 +669,15 @@ namespace IwaraDownloader.Services
             }
             catch { user.VideosLoaded = true; } // 旧DBは取得済みとみなす
 
+            // DefaultPriority カラム (マイグレーション対応)
+            try
+            {
+                var ordinal = reader.GetOrdinal("DefaultPriority");
+                var rawPriority = reader.IsDBNull(ordinal) ? (int?)null : reader.GetInt32(ordinal);
+                user.DefaultPriority = rawPriority is >= 0 and <= 3 ? (DownloadPriority)rawPriority.Value : null;
+            }
+            catch { user.DefaultPriority = null; }
+
             return user;
         }
 
@@ -681,10 +716,10 @@ namespace IwaraDownloader.Services
                 DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                 INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                     DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson)
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson, Priority)
                 VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                     @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson);
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson, @Priority);
                 SELECT last_insert_rowid();
             ";
             AddVideoParameters(command, video);
@@ -727,7 +762,8 @@ namespace IwaraDownloader.Services
                     Site = @Site,
                     IsFavorite = @IsFavorite,
                     ThumbnailStatus = @ThumbnailStatus,
-                    ApiRawJson = @ApiRawJson
+                    ApiRawJson = @ApiRawJson,
+                    Priority = @Priority
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", video.Id);
@@ -776,6 +812,32 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@IsFavorite", isFavorite ? 1 : 0);
             command.Parameters.AddWithValue("@Id", videoId);
             command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// 複数動画の優先度だけを高速に更新する(他カラムを触らない一括UPDATE、500件バッチ)。
+        /// </summary>
+        public void SetVideoPriority(IEnumerable<string> videoIds, DownloadPriority priority)
+        {
+            var idList = videoIds.Distinct().ToList();
+            if (idList.Count == 0) return;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            const int batchSize = 500;
+            for (int i = 0; i < idList.Count; i += batchSize)
+            {
+                var batch = idList.Skip(i).Take(batchSize).ToList();
+                var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
+
+                var command = connection.CreateCommand();
+                command.CommandText = $"UPDATE Videos SET Priority = @Priority WHERE VideoId IN ({placeholders})";
+                command.Parameters.AddWithValue("@Priority", (int)priority);
+                for (int j = 0; j < batch.Count; j++)
+                    command.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                command.ExecuteNonQuery();
+            }
         }
 
         /// <summary>
@@ -1200,6 +1262,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@IsFavorite", video.IsFavorite ? 1 : 0);
             command.Parameters.AddWithValue("@ThumbnailStatus", video.ThumbnailStatus);
             command.Parameters.AddWithValue("@ApiRawJson", video.ApiRawJson ?? "");
+            command.Parameters.AddWithValue("@Priority", video.Priority.HasValue ? (int)video.Priority.Value : (object)DBNull.Value);
         }
 
         private static VideoInfo ReadVideo(SqliteDataReader reader)
@@ -1232,8 +1295,30 @@ namespace IwaraDownloader.Services
                 Site = TryGetString(reader, "Site"),
                 IsFavorite = TryGetInt(reader, "IsFavorite") == 1,
                 ThumbnailStatus = TryGetInt(reader, "ThumbnailStatus"),
-                ApiRawJson = TryGetString(reader, "ApiRawJson")
+                ApiRawJson = TryGetString(reader, "ApiRawJson"),
+                // 範囲外の値(DB破損等)はNormal相当としてフォールバックする。
+                // ここでガードしないと DownloadManager 側の _pendingQueueByPriority[(int)priority] が
+                // 配列範囲外アクセスで例外を投げ、fire-and-forget の ProcessQueueAsync 内で
+                // 観測されないままキュー処理が永久に止まる。
+                Priority = TryGetNullableInt(reader, "Priority") is int p && p is >= 0 and <= 3 ? (DownloadPriority)p : null
             };
+        }
+
+        /// <summary>
+        /// カラムが存在する場合のみnullable整数を取得(マイグレーション対応)。無い/NULLならnull。
+        /// TryGetIntと違い「未設定(NULL)」と「0」を区別する必要がある列(Priority等)用。
+        /// </summary>
+        private static int? TryGetNullableInt(SqliteDataReader reader, string columnName)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal(columnName);
+                return reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -1294,10 +1379,10 @@ namespace IwaraDownloader.Services
                     DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                     INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                         DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson)
+                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson, Priority)
                     VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
                         @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson)
+                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson, @Priority)
                 ";
 
                 // パラメータを作成(再利用)
@@ -1327,6 +1412,7 @@ namespace IwaraDownloader.Services
                 var pIsFavorite = command.Parameters.Add("@IsFavorite", SqliteType.Integer);
                 var pThumbnailStatus = command.Parameters.Add("@ThumbnailStatus", SqliteType.Integer);
                 var pApiRawJson = command.Parameters.Add("@ApiRawJson", SqliteType.Text);
+                var pPriority = command.Parameters.Add("@Priority", SqliteType.Integer);
 
                 foreach (var video in videos)
                 {
@@ -1356,6 +1442,7 @@ namespace IwaraDownloader.Services
                     pIsFavorite.Value = video.IsFavorite ? 1 : 0;
                     pThumbnailStatus.Value = video.ThumbnailStatus;
                     pApiRawJson.Value = video.ApiRawJson ?? "";
+                    pPriority.Value = video.Priority.HasValue ? (int)video.Priority.Value : (object)DBNull.Value;
 
                     addedCount += command.ExecuteNonQuery();
                 }
@@ -1413,7 +1500,8 @@ namespace IwaraDownloader.Services
                         Site = @Site,
                         IsFavorite = @IsFavorite,
                         ThumbnailStatus = @ThumbnailStatus,
-                        ApiRawJson = @ApiRawJson
+                        ApiRawJson = @ApiRawJson,
+                        Priority = @Priority
                     WHERE Id = @Id
                 ";
 
@@ -1443,6 +1531,7 @@ namespace IwaraDownloader.Services
                 var pIsFavorite = command.Parameters.Add("@IsFavorite", SqliteType.Integer);
                 var pThumbnailStatus = command.Parameters.Add("@ThumbnailStatus", SqliteType.Integer);
                 var pApiRawJson = command.Parameters.Add("@ApiRawJson", SqliteType.Text);
+                var pPriority = command.Parameters.Add("@Priority", SqliteType.Integer);
 
                 foreach (var video in videos)
                 {
@@ -1471,6 +1560,7 @@ namespace IwaraDownloader.Services
                     pIsFavorite.Value = video.IsFavorite ? 1 : 0;
                     pThumbnailStatus.Value = video.ThumbnailStatus;
                     pApiRawJson.Value = video.ApiRawJson ?? "";
+                    pPriority.Value = video.Priority.HasValue ? (int)video.Priority.Value : (object)DBNull.Value;
 
                     updatedCount += command.ExecuteNonQuery();
                 }

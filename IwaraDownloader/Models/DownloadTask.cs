@@ -41,6 +41,12 @@ namespace IwaraDownloader.Models
         /// <summary>画質設定</summary>
         public VideoQuality Quality { get; set; } = VideoQuality.Source;
 
+        /// <summary>
+        /// 解決済みの優先度(non-null)。EnqueueDownload時にVideo.Priority ?? SubscribedUser.DefaultPriority ??
+        /// Normal で決定される。DownloadManagerの優先度別キューがどのバケットに入っているかの判定に使う。
+        /// </summary>
+        public DownloadPriority Priority { get; set; } = DownloadPriority.Normal;
+
         /// <summary>キャンセルトークン</summary>
         public CancellationTokenSource? CancellationTokenSource { get; set; }
 

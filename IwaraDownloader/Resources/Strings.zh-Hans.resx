@@ -1226,6 +1226,12 @@ videoId 后导入数据库。
   <data name="MainForm_D190" xml:space="preserve">
     <value>⏸立即DL：关</value>
   </data>
+  <data name="MainForm_D191" xml:space="preserve">
+    <value>已更改 {0} 项的优先级</value>
+  </data>
+  <data name="MainForm_D192" xml:space="preserve">
+    <value>已更改「{0}」的默认优先级</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1435,6 +1441,9 @@ videoId 后导入数据库。
   <data name="MainForm_colVideoDate" xml:space="preserve">
     <value>发布时间</value>
   </data>
+  <data name="MainForm_colVideoPriority" xml:space="preserve">
+    <value>优先级</value>
+  </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>进度</value>
   </data>
@@ -1473,6 +1482,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuChCheckNow" xml:space="preserve">
     <value>立即检查</value>
+  </data>
+  <data name="MainForm_menuChDefaultPriority" xml:space="preserve">
+    <value>默认优先级</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
     <value>删除</value>
@@ -1518,6 +1530,18 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
     <value>打开日志文件夹</value>
+  </data>
+  <data name="MainForm_menuPriorityHigh" xml:space="preserve">
+    <value>优先</value>
+  </data>
+  <data name="MainForm_menuPriorityHighest" xml:space="preserve">
+    <value>最优先</value>
+  </data>
+  <data name="MainForm_menuPriorityLow" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="MainForm_menuPriorityNormal" xml:space="preserve">
+    <value>普通</value>
   </data>
   <data name="MainForm_menuShow" xml:space="preserve">
     <value>显示</value>
@@ -1584,6 +1608,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>播放</value>
+  </data>
+  <data name="MainForm_menuVidPriority" xml:space="preserve">
+    <value>优先级</value>
   </data>
   <data name="MainForm_menuVidReDownload" xml:space="preserve">
     <value>重新下载...</value>

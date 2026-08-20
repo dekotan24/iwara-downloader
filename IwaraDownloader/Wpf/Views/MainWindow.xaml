@@ -171,6 +171,17 @@
                       Visibility="{Binding CanCheckFileExistsSelectedVideo, Converter={StaticResource BoolToVis}}" />
             <MenuItem Header="{loc:T MainForm_menuVidMapLocalFile}" Command="{Binding MapLocalFileCommand}"
                       Visibility="{Binding CanMapLocalFileSelectedVideo, Converter={StaticResource BoolToVis}}" />
+            <MenuItem Header="{loc:T MainForm_menuVidPriority}"
+                      Visibility="{Binding CanChangeVideoPriority, Converter={StaticResource BoolToVis}}">
+                <MenuItem Header="{loc:T MainForm_menuPriorityHighest}" Command="{Binding SetVideoPriorityHighestCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityHighestChecked, Mode=OneWay}" />
+                <MenuItem Header="{loc:T MainForm_menuPriorityHigh}" Command="{Binding SetVideoPriorityHighCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityHighChecked, Mode=OneWay}" />
+                <MenuItem Header="{loc:T MainForm_menuPriorityNormal}" Command="{Binding SetVideoPriorityNormalCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityNormalChecked, Mode=OneWay}" />
+                <MenuItem Header="{loc:T MainForm_menuPriorityLow}" Command="{Binding SetVideoPriorityLowCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityLowChecked, Mode=OneWay}" />
+            </MenuItem>
             <Separator />
             <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}"
                       Visibility="{Binding CanPlaySelectedVideo, Converter={StaticResource BoolToVis}}" />
@@ -431,6 +442,17 @@
                                 <MenuItem Header="{loc:T MainForm_menuChExternalDLOff}" Command="{Binding SetChannelExternalDLOffCommand}"
                                           IsCheckable="True" IsChecked="{Binding ChannelExternalDLOffChecked, Mode=OneWay}" />
                             </MenuItem>
+                            <MenuItem Header="{loc:T MainForm_menuChDefaultPriority}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem Header="{loc:T MainForm_menuPriorityHighest}" Command="{Binding SetChannelPriorityHighestCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityHighestChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuPriorityHigh}" Command="{Binding SetChannelPriorityHighCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityHighChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuPriorityNormal}" Command="{Binding SetChannelPriorityNormalCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityNormalChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuPriorityLow}" Command="{Binding SetChannelPriorityLowCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityLowChecked, Mode=OneWay}" />
+                            </MenuItem>
                             <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuChEnable}" Command="{Binding EnableChannelCommand}"
                                       Visibility="{Binding CanEnableChannel, Converter={StaticResource BoolToVis}}" />
@@ -625,6 +647,7 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
+                            <GridViewColumn Header="{loc:T MainForm_colVideoPriority}" Width="60" DisplayMemberBinding="{Binding PriorityText}" />
                             <GridViewColumn Header="{Binding ProgressColumnHeader}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
                             <GridViewColumn Header="{Binding SizeColumnHeader}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
                             <GridViewColumn Header="{Binding DateColumnHeader}" Width="140" DisplayMemberBinding="{Binding DisplayDate}" />

@@ -1226,6 +1226,12 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D190" xml:space="preserve">
     <value>⏸Auto-DL: OFF</value>
   </data>
+  <data name="MainForm_D191" xml:space="preserve">
+    <value>Changed priority for {0} item(s)</value>
+  </data>
+  <data name="MainForm_D192" xml:space="preserve">
+    <value>Changed default priority for "{0}"</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1435,6 +1441,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_colVideoDate" xml:space="preserve">
     <value>Published</value>
   </data>
+  <data name="MainForm_colVideoPriority" xml:space="preserve">
+    <value>Priority</value>
+  </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>Progress</value>
   </data>
@@ -1473,6 +1482,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuChCheckNow" xml:space="preserve">
     <value>Check Now</value>
+  </data>
+  <data name="MainForm_menuChDefaultPriority" xml:space="preserve">
+    <value>Default priority</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
     <value>Delete</value>
@@ -1518,6 +1530,18 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
     <value>Open Log Folder</value>
+  </data>
+  <data name="MainForm_menuPriorityHigh" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="MainForm_menuPriorityHighest" xml:space="preserve">
+    <value>Highest</value>
+  </data>
+  <data name="MainForm_menuPriorityLow" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="MainForm_menuPriorityNormal" xml:space="preserve">
+    <value>Normal</value>
   </data>
   <data name="MainForm_menuShow" xml:space="preserve">
     <value>Show</value>
@@ -1584,6 +1608,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>Play</value>
+  </data>
+  <data name="MainForm_menuVidPriority" xml:space="preserve">
+    <value>Priority</value>
   </data>
   <data name="MainForm_menuVidReDownload" xml:space="preserve">
     <value>Re-download...</value>
