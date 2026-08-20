@@ -643,6 +643,7 @@
                 <ListBox Grid.Row="2" ItemsSource="{Binding Videos}"
                          SelectedItem="{Binding SelectedVideo}"
                          SelectionMode="Extended"
+                         SelectionChanged="VideoList_SelectionChanged"
                          Background="Transparent" BorderThickness="0"
                          Visibility="{Binding IsTileMode, Converter={StaticResource BoolToVis}}"
                          ContextMenu="{StaticResource VideoContextMenu}"

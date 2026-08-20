@@ -193,9 +193,11 @@ namespace IwaraDownloader.Wpf.Views
 
         private void VideoList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
+            // ListView(詳細リスト)/ListBox(タイル表示)の両方から呼ばれる共通ハンドラ。
+            // ListViewはListBoxのサブクラスなので、共通基底型でキャストしてSelectedItemsを読む。
             if (DataContext is MainViewModel vm)
             {
-                vm.SelectedVideos = ((System.Windows.Controls.ListView)sender).SelectedItems
+                vm.SelectedVideos = ((System.Windows.Controls.ListBox)sender).SelectedItems
                     .Cast<VideoListItemViewModel>().ToList();
             }
         }
