@@ -670,6 +670,23 @@ namespace IwaraDownloader.Services
                 var token = cts.Token;
                 while (_isRunning && !token.IsCancellationRequested)
                 {
+                    // Pendingが無ければ何もせず終了(スロット待ちに入る前に軽くチェックし、
+                    // 無駄な待機を避ける)。
+                    if (_pendingTasks.IsEmpty)
+                    {
+                        break;
+                    }
+
+                    // 同時DL数制限を先に待つ。デキュー(TryDequeueNext)より先にスロット空きを
+                    // 待つことで、「スロット満杯で1件を確保したまま待機」する死角を作らない —
+                    // これにより、待機中に他タスクの優先度を上げても、スロットが実際に空いた
+                    // 瞬間の優先度状態で次のタスクが選ばれる(逆順だと、確保済みの1件が
+                    // 優先度変更を無視してそのまま先に実行されてしまう)。
+                    while (_activeDownloadCount >= SettingsManager.Instance.Settings.MaxConcurrentDownloads)
+                    {
+                        await _slotAvailableSignal.WaitAsync(token);
+                    }
+
                     if (!TryDequeueNext(out var task) || task == null)
                     {
                         break;
@@ -680,11 +697,6 @@ namespace IwaraDownloader.Services
                     // _pendingTasks にも _activeTasks にも居ない死角ができ、UI 上で
                     // 「0DL中」と表示されてしまうため。
 
-                    // 同時DL数制限: 現在の設定値を都度参照し、動的変更に対応
-                    while (_activeDownloadCount >= SettingsManager.Instance.Settings.MaxConcurrentDownloads)
-                    {
-                        await _slotAvailableSignal.WaitAsync(token);
-                    }
                     Interlocked.Increment(ref _activeDownloadCount);
 
                     try
