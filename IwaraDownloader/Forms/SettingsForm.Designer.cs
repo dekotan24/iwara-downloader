@@ -402,10 +402,10 @@ namespace IwaraDownloader.Forms
             //
             // lblMinFreeSpaceNote
             //
-            this.lblMinFreeSpaceNote.AutoSize = true;
-            this.lblMinFreeSpaceNote.Location = new Point(165, 175);
+            this.lblMinFreeSpaceNote.AutoSize = false;
+            this.lblMinFreeSpaceNote.Location = new Point(165, 172);
             this.lblMinFreeSpaceNote.Name = "lblMinFreeSpaceNote";
-            this.lblMinFreeSpaceNote.Size = new Size(200, 15);
+            this.lblMinFreeSpaceNote.Size = new Size(275, 30);
             this.lblMinFreeSpaceNote.TabIndex = 13;
             this.lblMinFreeSpaceNote.Text = "GB 未満ならDLを開始しない (0=無効)";
 
@@ -586,11 +586,11 @@ namespace IwaraDownloader.Forms
             this.btnBrowsePython.Click += new EventHandler(this.btnBrowsePython_Click);
 
             // lblPythonNote
-            this.lblPythonNote.AutoSize = true;
+            this.lblPythonNote.AutoSize = false;
             this.lblPythonNote.ForeColor = Color.Gray;
             this.lblPythonNote.Location = new Point(10, 60);
             this.lblPythonNote.Name = "lblPythonNote";
-            this.lblPythonNote.Size = new Size(400, 15);
+            this.lblPythonNote.Size = new Size(420, 30);
             this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います(ライブラリの再インストールは不要)";
 
             // lblYtDlpPath
@@ -616,11 +616,11 @@ namespace IwaraDownloader.Forms
             this.btnBrowseYtDlp.Click += new EventHandler(this.btnBrowseYtDlp_Click);
 
             // lblYtDlpNote
-            this.lblYtDlpNote.AutoSize = true;
+            this.lblYtDlpNote.AutoSize = false;
             this.lblYtDlpNote.ForeColor = Color.Gray;
             this.lblYtDlpNote.Location = new Point(10, 125);
             this.lblYtDlpNote.Name = "lblYtDlpNote";
-            this.lblYtDlpNote.Size = new Size(400, 15);
+            this.lblYtDlpNote.Size = new Size(420, 30);
             this.lblYtDlpNote.Text = "※ \"yt-dlp\" (PATH参照) でOK。未インストールなら自動で pip install を試行します";
 
             // 
