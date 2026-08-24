@@ -699,6 +699,10 @@ namespace IwaraDownloader.Forms
                         writer.WriteLine($"{rank++},{EscapeCsv(g.Key)},{g.Count()},{g.Sum(v => v.FileSize)}");
                     }
 
+                    // using宣言だとtryブロック終端までDisposeが遅延し、書き込み完了前に
+                    // 「完了しました」ダイアログが出てしまうため、ここで明示的にFlush+Closeする
+                    writer.Dispose();
+
                     MessageBox.Show(L.T("StatisticsForm_D005"), L.T("StatisticsForm_D006"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
