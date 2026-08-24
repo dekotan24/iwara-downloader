@@ -353,6 +353,12 @@ https://www.iwara.ai/profile/username
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>ファイルを移動しています...</value>
   </data>
+  <data name="ImportFromFolderWizard_ApiFailedLog" xml:space="preserve">
+    <value>[API 失敗] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ApiQuerying" xml:space="preserve">
+    <value>iwara API 問い合わせ {0}/{1}: {2}</value>
+  </data>
   <data name="ImportFromFolderWizard_D001" xml:space="preserve">
     <value>準備中...</value>
   </data>
@@ -458,11 +464,77 @@ https://www.iwara.ai/profile/username
     <value>タイトル照合取込:   {0} 件
 </value>
   </data>
+  <data name="ImportFromFolderWizard_ErrorLog" xml:space="preserve">
+    <value>[エラー] {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionLog" xml:space="preserve">
+    <value>[例外] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionPrefix" xml:space="preserve">
+    <value>例外: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_FailedLog" xml:space="preserve">
+    <value>[失敗] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ImportCancelled" xml:space="preserve">
+    <value>[中止] 取り込みを中止しました</value>
+  </data>
+  <data name="ImportFromFolderWizard_Imported" xml:space="preserve">
+    <value>+ 取り込み: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
+    <value>≈ マージ: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
+    <value>+ 新規購読: {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} 件</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} 件  [既に登録済]</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCancelled" xml:space="preserve">
+    <value>[中止] スキャンを中止しました</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCompleteHeader" xml:space="preserve">
+    <value>=== スキャン完了 ===</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanTarget" xml:space="preserve">
+    <value>スキャン対象: {0} ファイル</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedAlreadyDownloaded" xml:space="preserve">
+    <value>→ スキップ (既にDL済み): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedExisting" xml:space="preserve">
+    <value>→ スキップ (既存ファイルあり): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiFailed" xml:space="preserve">
+    <value>  API 取得失敗: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiSkipped" xml:space="preserve">
+    <value>  API 問い合わせスキップ (DB既存): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryDup" xml:space="preserve">
+    <value>  重複 (既に別の場所にDL済み): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryNewAuthors" xml:space="preserve">
+    <value>  新規作者: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummarySingleVideos" xml:space="preserve">
+    <value>  単発動画: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTagged" xml:space="preserve">
+    <value>  タグ付きファイル: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTitleMatch" xml:space="preserve">
+    <value>  タイトル照合 (要確認): {0} (高確度 {1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUniqueId" xml:space="preserve">
+    <value>  ユニーク videoId: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUntagged" xml:space="preserve">
+    <value>  タグ無し (照合不可・スキップ): {0}</value>
   </data>
   <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
     <value>複数候補と一致</value>
@@ -506,8 +578,38 @@ https://www.iwara.ai/profile/username
   <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
     <value>部分一致</value>
   </data>
+  <data name="ImportFromFolderWizard_TagReading" xml:space="preserve">
+    <value>タグ読取り {0}/{1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TaggedUntaggedCount" xml:space="preserve">
+    <value>タグ付きファイル {0} 件 / タグ無し {1} 件</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>フォルダから取り込み</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchFailedLog" xml:space="preserve">
+    <value>[失敗] タイトル照合: {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedTagged" xml:space="preserve">
+    <value>☆ タイトル照合で取込 (タグ書込済): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedUntagged" xml:space="preserve">
+    <value>☆ タイトル照合で取込 (タグ未書込 - UUID解決失敗: {0}): {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImporting" xml:space="preserve">
+    <value>タイトル照合取り込み ({0}/{1}) {2}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchLostFromDb" xml:space="preserve">
+    <value>[失敗] タイトル照合: {0} (DBから消失)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchSummary" xml:space="preserve">
+    <value>タイトル照合 {0} 件 (うち高確度 {1} 件) / 重複(既にDL済み) {2} 件 / タグ無し (照合不可) {3} 件</value>
+  </data>
+  <data name="ImportFromFolderWizard_ToastSummary" xml:space="preserve">
+    <value>新規 {0} / マージ {1} / タイトル照合 {2} / スキップ(既存) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_UserIdRepaired" xml:space="preserve">
+    <value>~ UserId 修復: @{0}</value>
   </data>
   <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
     <value>&lt; 戻る</value>

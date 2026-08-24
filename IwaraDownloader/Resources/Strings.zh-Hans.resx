@@ -349,6 +349,12 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>正在移动文件...</value>
   </data>
+  <data name="ImportFromFolderWizard_ApiFailedLog" xml:space="preserve">
+    <value>[API失败] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ApiQuerying" xml:space="preserve">
+    <value>正在查询 iwara API {0}/{1}: {2}</value>
+  </data>
   <data name="ImportFromFolderWizard_D001" xml:space="preserve">
     <value>准备中...</value>
   </data>
@@ -454,11 +460,77 @@ https://www.iwara.tv/profile/username/videos</value>
     <value>标题匹配导入：      {0} 个
 </value>
   </data>
+  <data name="ImportFromFolderWizard_ErrorLog" xml:space="preserve">
+    <value>[错误] {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionLog" xml:space="preserve">
+    <value>[异常] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionPrefix" xml:space="preserve">
+    <value>异常: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_FailedLog" xml:space="preserve">
+    <value>[失败] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ImportCancelled" xml:space="preserve">
+    <value>[已中止] 导入已中止</value>
+  </data>
+  <data name="ImportFromFolderWizard_Imported" xml:space="preserve">
+    <value>+ 已导入: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
+    <value>已合并: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
+    <value>+ 新增订阅: {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} 个</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} 个  [已注册]</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCancelled" xml:space="preserve">
+    <value>[已中止] 扫描已中止</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCompleteHeader" xml:space="preserve">
+    <value>=== 扫描完成 ===</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanTarget" xml:space="preserve">
+    <value>扫描对象: {0} 个文件</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedAlreadyDownloaded" xml:space="preserve">
+    <value>跳过(已下载): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedExisting" xml:space="preserve">
+    <value>跳过(文件已存在): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiFailed" xml:space="preserve">
+    <value>  API获取失败: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiSkipped" xml:space="preserve">
+    <value>  跳过API查询(数据库已存在): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryDup" xml:space="preserve">
+    <value>  重复(已在其他位置下载): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryNewAuthors" xml:space="preserve">
+    <value>  新作者: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummarySingleVideos" xml:space="preserve">
+    <value>  单发视频: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTagged" xml:space="preserve">
+    <value>  含标签文件: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTitleMatch" xml:space="preserve">
+    <value>  标题匹配(需确认): {0} (高置信度 {1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUniqueId" xml:space="preserve">
+    <value>  唯一 videoId: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUntagged" xml:space="preserve">
+    <value>  无标签(无法匹配・跳过): {0}</value>
   </data>
   <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
     <value>匹配到多个候选</value>
@@ -502,8 +574,38 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
     <value>部分匹配</value>
   </data>
+  <data name="ImportFromFolderWizard_TagReading" xml:space="preserve">
+    <value>读取标签 {0}/{1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TaggedUntaggedCount" xml:space="preserve">
+    <value>含标签文件 {0} 个 / 无标签 {1} 个</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>从文件夹导入</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchFailedLog" xml:space="preserve">
+    <value>[失败] 标题匹配: {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedTagged" xml:space="preserve">
+    <value>通过标题匹配导入(已写入标签): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedUntagged" xml:space="preserve">
+    <value>通过标题匹配导入(未写入标签 - UUID解析失败: {0}): {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImporting" xml:space="preserve">
+    <value>正在导入标题匹配 ({0}/{1}) {2}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchLostFromDb" xml:space="preserve">
+    <value>[失败] 标题匹配: {0} (数据库中已消失)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchSummary" xml:space="preserve">
+    <value>标题匹配 {0} 个(其中高置信度 {1} 个) / 重复(已下载) {2} 个 / 无标签(无法匹配) {3} 个</value>
+  </data>
+  <data name="ImportFromFolderWizard_ToastSummary" xml:space="preserve">
+    <value>新增 {0} / 合并 {1} / 标题匹配 {2} / 跳过(已存在) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_UserIdRepaired" xml:space="preserve">
+    <value>~ 已修复 UserId: @{0}</value>
   </data>
   <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
     <value>&lt; 上一步</value>

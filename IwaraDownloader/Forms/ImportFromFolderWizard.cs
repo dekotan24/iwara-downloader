@@ -383,7 +383,7 @@ namespace IwaraDownloader.Forms
                         })
                         .ToList();
 
-                    ReportScan($"スキャン対象: {files.Count} ファイル", null, files.Count);
+                    ReportScan(L.T("ImportFromFolderWizard_ScanTarget", files.Count), null, files.Count);
 
                     foreach (var f in files)
                     {
@@ -405,14 +405,14 @@ namespace IwaraDownloader.Forms
                         }
                         processed++;
                         if (processed % 20 == 0 || processed == files.Count)
-                            ReportScan($"タグ読取り {processed}/{files.Count}", null, files.Count);
+                            ReportScan(L.T("ImportFromFolderWizard_TagReading", processed, files.Count), null, files.Count);
                     }
                     return list;
                 }, ct);
 
                 _scanned.AddRange(taggedItems);
 
-                ReportScan($"タグ付きファイル {_scanned.Count} 件 / タグ無し {_untaggedCount} 件", null, _scanned.Count);
+                ReportScan(L.T("ImportFromFolderWizard_TaggedUntaggedCount", _scanned.Count, _untaggedCount), null, _scanned.Count);
 
                 // Phase A2: タグ無しファイルの照合方法をユーザーに選ばせる
                 // (アーティストフォルダ選択検索 / ファイル名による検索(最終手段) / スキップ)。
@@ -444,8 +444,9 @@ namespace IwaraDownloader.Forms
                         _alreadyOwnedFiles.AddRange(raw.AlreadyOwnedFiles);
 
                         ReportScan(
-                            $"タイトル照合 {_titleMatches.Count} 件 (うち高確度 {_titleMatches.Count(m => m.HighConfidence)} 件) / " +
-                            $"重複(既にDL済み) {_alreadyOwnedFiles.Count} 件 / タグ無し (照合不可) {_untaggedCount} 件",
+                            L.T("ImportFromFolderWizard_TitleMatchSummary",
+                                _titleMatches.Count, _titleMatches.Count(m => m.HighConfidence),
+                                _alreadyOwnedFiles.Count, _untaggedCount),
                             null, 1);
                     }
                     // スキップ/キャンセルなら _untaggedFiles はそのまま (従来通りエラーログに記録される)
@@ -471,7 +472,7 @@ namespace IwaraDownloader.Forms
                     ct.ThrowIfCancellationRequested();
                     apiProcessed++;
                     ReportScan(
-                        $"iwara API 問い合わせ {apiProcessed}/{uniqueVideoIds.Count}: {item.VideoId}",
+                        L.T("ImportFromFolderWizard_ApiQuerying", apiProcessed, uniqueVideoIds.Count, item.VideoId),
                         apiProcessed, uniqueVideoIds.Count);
 
                     // 差分インポート: DB に既に video が存在し、author 情報も埋まってる場合は
@@ -525,7 +526,7 @@ namespace IwaraDownloader.Forms
                             item.ApiError = info.Error ?? "Unknown error";
                             apiFailed++;
                             _apiFailedItems.Add((item.VideoId, item.ApiError));
-                            AppendScanResult($"[API 失敗] {item.VideoId}: {info.Error}");
+                            AppendScanResult(L.T("ImportFromFolderWizard_ApiFailedLog", item.VideoId, info.Error));
                         }
                     }
                     catch (Exception ex)
@@ -533,8 +534,8 @@ namespace IwaraDownloader.Forms
                         item.ApiOk = false;
                         item.ApiError = ex.Message;
                         apiFailed++;
-                        _apiFailedItems.Add((item.VideoId, $"例外: {ex.Message}"));
-                        AppendScanResult($"[例外] {item.VideoId}: {ex.Message}");
+                        _apiFailedItems.Add((item.VideoId, L.T("ImportFromFolderWizard_ExceptionPrefix", ex.Message)));
+                        AppendScanResult(L.T("ImportFromFolderWizard_ExceptionLog", item.VideoId, ex.Message));
                     }
 
                     // 重複videoIdの他のScannedにもAPI結果を伝播
@@ -600,27 +601,27 @@ namespace IwaraDownloader.Forms
                 }
 
                 AppendScanResult(
-                    $"=== スキャン完了 ===\r\n" +
-                    $"  タグ付きファイル: {_scanned.Count}\r\n" +
-                    $"  タイトル照合 (要確認): {_titleMatches.Count} (高確度 {_titleMatches.Count(m => m.HighConfidence)})\r\n" +
-                    $"  重複 (既に別の場所にDL済み): {_alreadyOwnedFiles.Count}\r\n" +
-                    $"  タグ無し (照合不可・スキップ): {_untaggedCount}\r\n" +
-                    $"  ユニーク videoId: {uniqueVideoIds.Count}\r\n" +
-                    $"  API 問い合わせスキップ (DB既存): {apiSkipped}\r\n" +
-                    $"  API 取得失敗: {apiFailed}\r\n" +
-                    $"  新規作者: {authorGroups.Count(a => !a.AlreadySubscribed)}\r\n" +
-                    $"  単発動画: {singleVideoCount}");
+                    L.T("ImportFromFolderWizard_ScanCompleteHeader") + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryTagged", _scanned.Count) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryTitleMatch", _titleMatches.Count, _titleMatches.Count(m => m.HighConfidence)) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryDup", _alreadyOwnedFiles.Count) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryUntagged", _untaggedCount) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryUniqueId", uniqueVideoIds.Count) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryApiSkipped", apiSkipped) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryApiFailed", apiFailed) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummaryNewAuthors", authorGroups.Count(a => !a.AlreadySubscribed)) + "\r\n" +
+                    L.T("ImportFromFolderWizard_SummarySingleVideos", singleVideoCount));
 
                 _step = 3;
             }
             catch (OperationCanceledException)
             {
-                AppendScanResult("[中止] スキャンを中止しました");
+                AppendScanResult(L.T("ImportFromFolderWizard_ScanCancelled"));
                 _step = 1;
             }
             catch (Exception ex)
             {
-                AppendScanResult($"[エラー] {ex.Message}");
+                AppendScanResult(L.T("ImportFromFolderWizard_ErrorLog", ex.Message));
                 MessageBox.Show(this, L.T("ImportFromFolderWizard_D019", ex.Message),
                     L.T("ImportFromFolderWizard_D020"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _step = 1;
@@ -773,7 +774,7 @@ namespace IwaraDownloader.Forms
                                     {
                                         existing.UserId = sv.AuthorUsername!;
                                         _database.UpdateSubscribedUser(existing);
-                                        AppendImportLog($"~ UserId 修復: @{existing.Username}");
+                                        AppendImportLog(L.T("ImportFromFolderWizard_UserIdRepaired", existing.Username));
                                     }
                                     subUser = existing;
                                 }
@@ -795,7 +796,7 @@ namespace IwaraDownloader.Forms
                                     newUser.Id = newId;
                                     existingUsers[authorKey] = newUser;
                                     subUser = newUser;
-                                    AppendImportLog($"+ 新規購読: {sv.AuthorName ?? sv.AuthorUsername} (@{newUser.Username})");
+                                    AppendImportLog(L.T("ImportFromFolderWizard_NewSubscription", sv.AuthorName ?? sv.AuthorUsername, newUser.Username));
                                 }
                             }
 
@@ -829,13 +830,13 @@ namespace IwaraDownloader.Forms
                                     }
                                     _database.UpdateVideo(existingVideo);
                                     _mergedCount++;
-                                    AppendImportLog($"≈ マージ: {sv.Title}");
+                                    AppendImportLog(L.T("ImportFromFolderWizard_Merged", sv.Title));
                                 }
                                 else
                                 {
                                     // 実ファイルパスが存在するならインポートをスキップ
                                     _skippedExistingCount++;
-                                    AppendImportLog($"→ スキップ (既存ファイルあり): {sv.Title}");
+                                    AppendImportLog(L.T("ImportFromFolderWizard_SkippedExisting", sv.Title));
                                 }
                                 continue;
                             }
@@ -859,13 +860,13 @@ namespace IwaraDownloader.Forms
                             try { v.FileSize = new FileInfo(sv.FilePath).Length; } catch { }
                             _database.AddVideo(v);
                             _importedNew++;
-                            AppendImportLog($"+ 取り込み: {sv.Title}");
+                            AppendImportLog(L.T("ImportFromFolderWizard_Imported", sv.Title));
                         }
                         catch (Exception ex)
                         {
                             _failedCount++;
                             _dbFailedItems.Add((sv.Title, sv.VideoId, ex.Message));
-                            AppendImportLog($"[失敗] {sv.Title}: {ex.Message}");
+                            AppendImportLog(L.T("ImportFromFolderWizard_FailedLog", sv.Title, ex.Message));
                             LoggingService.Instance.Warn($"Import 失敗 ({sv.VideoId}): {ex.Message}");
                         }
                     }
@@ -878,13 +879,13 @@ namespace IwaraDownloader.Forms
             }
             catch (OperationCanceledException)
             {
-                AppendImportLog("[中止] 取り込みを中止しました");
+                AppendImportLog(L.T("ImportFromFolderWizard_ImportCancelled"));
                 ShowSummary();
                 _step = 5;
             }
             catch (Exception ex)
             {
-                AppendImportLog($"[エラー] {ex.Message}");
+                AppendImportLog(L.T("ImportFromFolderWizard_ErrorLog", ex.Message));
                 MessageBox.Show(this, L.T("ImportFromFolderWizard_D021", ex.Message),
                     L.T("ImportFromFolderWizard_D020"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -925,7 +926,7 @@ namespace IwaraDownloader.Forms
                 processed++;
                 var candidate = item.Candidate;
                 var chosen = item.SelectedVideo;
-                ReportImport($"タイトル照合取り込み ({processed}/{checkedItems.Count}) {chosen.Title}",
+                ReportImport(L.T("ImportFromFolderWizard_TitleMatchImporting", processed, checkedItems.Count, chosen.Title),
                     processed, checkedItems.Count);
 
                 try
@@ -939,13 +940,13 @@ namespace IwaraDownloader.Forms
                         ?? (chosen.Id == 0 ? chosen : null);
                     if (video == null)
                     {
-                        AppendImportLog($"[失敗] タイトル照合: {chosen.Title} (DBから消失)");
+                        AppendImportLog(L.T("ImportFromFolderWizard_TitleMatchLostFromDb", chosen.Title));
                         _failedCount++;
                         continue;
                     }
                     if (video.LocalFileExists)
                     {
-                        AppendImportLog($"→ スキップ (既にDL済み): {chosen.Title}");
+                        AppendImportLog(L.T("ImportFromFolderWizard_SkippedAlreadyDownloaded", chosen.Title));
                         _skippedExistingCount++;
                         continue;
                     }
@@ -961,13 +962,13 @@ namespace IwaraDownloader.Forms
 
                     if (outcome.TagWritten)
                     {
-                        AppendImportLog($"☆ タイトル照合で取込 (タグ書込済): {chosen.Title}");
+                        AppendImportLog(L.T("ImportFromFolderWizard_TitleMatchImportedTagged", chosen.Title));
                     }
                     else
                     {
                         _titleMatchApiFailed++;
                         AppendImportLog(
-                            $"☆ タイトル照合で取込 (タグ未書込 - UUID解決失敗: {outcome.ApiError}): {chosen.Title}");
+                            L.T("ImportFromFolderWizard_TitleMatchImportedUntagged", outcome.ApiError, chosen.Title));
                     }
                     _titleMatchImported++;
 
@@ -978,7 +979,7 @@ namespace IwaraDownloader.Forms
                 {
                     _failedCount++;
                     _dbFailedItems.Add((chosen.Title, chosen.VideoId, ex.Message));
-                    AppendImportLog($"[失敗] タイトル照合: {chosen.Title}: {ex.Message}");
+                    AppendImportLog(L.T("ImportFromFolderWizard_TitleMatchFailedLog", chosen.Title, ex.Message));
                     LoggingService.Instance.Warn($"TitleMatch Import 失敗 ({chosen.VideoId}): {ex.Message}");
                 }
             }
@@ -1018,8 +1019,8 @@ namespace IwaraDownloader.Forms
 
             try
             {
-                var msg =
-                    $"新規 {_importedNew} / マージ {_mergedCount} / タイトル照合 {_titleMatchImported} / スキップ(既存) {_skippedExistingCount}";
+                var msg = L.T("ImportFromFolderWizard_ToastSummary",
+                    _importedNew, _mergedCount, _titleMatchImported, _skippedExistingCount);
                 Services.NotificationService.Instance.ShowNotification(L.T("ImportFromFolderWizard_D030"), msg);
             }
             catch (Exception ex)

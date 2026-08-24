@@ -349,6 +349,12 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>Moving files...</value>
   </data>
+  <data name="ImportFromFolderWizard_ApiFailedLog" xml:space="preserve">
+    <value>[API Failed] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ApiQuerying" xml:space="preserve">
+    <value>Querying iwara API {0}/{1}: {2}</value>
+  </data>
   <data name="ImportFromFolderWizard_D001" xml:space="preserve">
     <value>Preparing...</value>
   </data>
@@ -454,11 +460,77 @@ Error log:
     <value>Title-matched:      {0}
 </value>
   </data>
+  <data name="ImportFromFolderWizard_ErrorLog" xml:space="preserve">
+    <value>[Error] {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionLog" xml:space="preserve">
+    <value>[Exception] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionPrefix" xml:space="preserve">
+    <value>Exception: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_FailedLog" xml:space="preserve">
+    <value>[Failed] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ImportCancelled" xml:space="preserve">
+    <value>[Cancelled] Import cancelled</value>
+  </data>
+  <data name="ImportFromFolderWizard_Imported" xml:space="preserve">
+    <value>+ Imported: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
+    <value>Merged: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
+    <value>+ New subscription: {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} videos</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} videos  [already registered]</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCancelled" xml:space="preserve">
+    <value>[Cancelled] Scan cancelled</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCompleteHeader" xml:space="preserve">
+    <value>=== Scan complete ===</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanTarget" xml:space="preserve">
+    <value>Scan target: {0} files</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedAlreadyDownloaded" xml:space="preserve">
+    <value>Skipped (already downloaded): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedExisting" xml:space="preserve">
+    <value>Skipped (file already exists): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiFailed" xml:space="preserve">
+    <value>  API fetch failed: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiSkipped" xml:space="preserve">
+    <value>  API query skipped (already in DB): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryDup" xml:space="preserve">
+    <value>  Duplicate (already downloaded elsewhere): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryNewAuthors" xml:space="preserve">
+    <value>  New authors: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummarySingleVideos" xml:space="preserve">
+    <value>  Single videos: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTagged" xml:space="preserve">
+    <value>  Tagged files: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTitleMatch" xml:space="preserve">
+    <value>  Title match (needs review): {0} (high confidence {1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUniqueId" xml:space="preserve">
+    <value>  Unique videoId: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUntagged" xml:space="preserve">
+    <value>  Untagged (unmatched, skipped): {0}</value>
   </data>
   <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
     <value>matches multiple candidates</value>
@@ -502,8 +574,38 @@ Error log:
   <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
     <value>partial match</value>
   </data>
+  <data name="ImportFromFolderWizard_TagReading" xml:space="preserve">
+    <value>Reading tags {0}/{1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TaggedUntaggedCount" xml:space="preserve">
+    <value>Tagged files {0} / Untagged {1}</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>Import from Folder</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchFailedLog" xml:space="preserve">
+    <value>[Failed] Title match: {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedTagged" xml:space="preserve">
+    <value>Imported via title match (tag written): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedUntagged" xml:space="preserve">
+    <value>Imported via title match (tag not written - UUID resolve failed: {0}): {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImporting" xml:space="preserve">
+    <value>Importing title match ({0}/{1}) {2}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchLostFromDb" xml:space="preserve">
+    <value>[Failed] Title match: {0} (missing from DB)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchSummary" xml:space="preserve">
+    <value>Title match {0} (high confidence {1}) / Duplicate (already downloaded) {2} / Untagged (unmatched) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ToastSummary" xml:space="preserve">
+    <value>New {0} / Merged {1} / Title match {2} / Skipped (existing) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_UserIdRepaired" xml:space="preserve">
+    <value>~ Repaired UserId: @{0}</value>
   </data>
   <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
     <value>&lt; Back</value>
