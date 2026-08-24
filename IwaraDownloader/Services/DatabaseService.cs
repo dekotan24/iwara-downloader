@@ -825,18 +825,30 @@ namespace IwaraDownloader.Services
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
-            const int batchSize = 500;
-            for (int i = 0; i < idList.Count; i += batchSize)
+            using var transaction = connection.BeginTransaction();
+            try
             {
-                var batch = idList.Skip(i).Take(batchSize).ToList();
-                var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
+                const int batchSize = 500;
+                for (int i = 0; i < idList.Count; i += batchSize)
+                {
+                    var batch = idList.Skip(i).Take(batchSize).ToList();
+                    var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
 
-                var command = connection.CreateCommand();
-                command.CommandText = $"UPDATE Videos SET Priority = @Priority WHERE VideoId IN ({placeholders})";
-                command.Parameters.AddWithValue("@Priority", (int)priority);
-                for (int j = 0; j < batch.Count; j++)
-                    command.Parameters.AddWithValue($"@vid{j}", batch[j]);
-                command.ExecuteNonQuery();
+                    var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = $"UPDATE Videos SET Priority = @Priority WHERE VideoId IN ({placeholders})";
+                    command.Parameters.AddWithValue("@Priority", (int)priority);
+                    for (int j = 0; j < batch.Count; j++)
+                        command.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
             }
         }
 

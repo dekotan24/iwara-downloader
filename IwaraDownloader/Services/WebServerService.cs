@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IwaraDownloader.Services
@@ -84,7 +85,23 @@ namespace IwaraDownloader.Services
             BaseUrl = bindAll ? $"http://{GetLanDisplayHost()}:{port}" : $"http://127.0.0.1:{port}";
             _logger.Info($"Web media server starting on {BaseUrl}");
 
-            _runTask = _app.RunAsync();
+            // RunAsync()はawaitせず投げっぱなしにすると、ポート競合等で起動直後にフォルトしても
+            // 誰も観測せず IsRunning(_app!=null) が偽陽性を返し続ける。StartAsync()で実際に
+            // リッスン開始(または失敗)するまで待ち、以降のシャットダウン待機だけを_runTaskに持たせる
+            // (RunAsync = StartAsync + WaitForShutdownAsync の分解)。
+            try
+            {
+                await _app.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Web media server failed to start: {ex.Message}");
+                await _app.DisposeAsync();
+                _app = null;
+                BaseUrl = null;
+                throw;
+            }
+            _runTask = _app.WaitForShutdownAsync();
         }
 
         public async Task StopAsync()
