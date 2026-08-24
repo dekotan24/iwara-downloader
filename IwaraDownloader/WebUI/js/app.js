@@ -530,9 +530,14 @@ const App = {
 
     esc(s) {
         if (!s) return '';
-        const d = document.createElement('div');
-        d.textContent = s;
-        return d.innerHTML;
+        // title="..."のような属性値コンテキストでも使われるため、textContent→innerHTML変換
+        // (&/</>のみエスケープ)ではなく"と'も含めて手動エスケープする
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 };
 
