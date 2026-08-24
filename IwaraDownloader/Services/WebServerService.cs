@@ -96,9 +96,11 @@ namespace IwaraDownloader.Services
             catch (Exception ex)
             {
                 _logger.Error($"Web media server failed to start: {ex.Message}");
-                await _app.DisposeAsync();
+                try { await _app.DisposeAsync(); } catch { /* 起動失敗直後のdisposeは元の例外を優先 */ }
                 _app = null;
                 BaseUrl = null;
+                _cts?.Dispose();
+                _cts = null;
                 throw;
             }
             _runTask = _app.WaitForShutdownAsync();
