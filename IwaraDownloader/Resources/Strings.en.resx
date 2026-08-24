@@ -1570,6 +1570,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_lblLoginStatus" xml:space="preserve">
     <value>(not logged in)</value>
   </data>
+  <data name="MainForm_lblNsfwFilterLabel" xml:space="preserve">
+    <value>NSFW:</value>
+  </data>
   <data name="MainForm_lblStatus" xml:space="preserve">
     <value>Ready</value>
   </data>

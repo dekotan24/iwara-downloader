@@ -481,6 +481,7 @@
   "MainForm_lblChannelHeader": "登録チャンネル",
   "MainForm_lblDownloadCount": "DL: 0 / 待機: 0",
   "MainForm_lblLoginStatus": "(未ログイン)",
+  "MainForm_lblNsfwFilterLabel": "NSFW:",
   "MainForm_lblStatus": "準備完了",
   "MainForm_lblTagFilter": "タグ:",
   "MainForm_lblVideoHeader": "動画一覧",

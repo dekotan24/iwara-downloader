@@ -1574,6 +1574,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_lblLoginStatus" xml:space="preserve">
     <value>(未ログイン)</value>
   </data>
+  <data name="MainForm_lblNsfwFilterLabel" xml:space="preserve">
+    <value>NSFW:</value>
+  </data>
   <data name="MainForm_lblStatus" xml:space="preserve">
     <value>準備完了</value>
   </data>

@@ -481,6 +481,7 @@
   "MainForm_lblChannelHeader": "订阅频道",
   "MainForm_lblDownloadCount": "下载: 0 / 等待: 0",
   "MainForm_lblLoginStatus": "（未登录）",
+  "MainForm_lblNsfwFilterLabel": "NSFW:",
   "MainForm_lblStatus": "就绪",
   "MainForm_lblTagFilter": "标签：",
   "MainForm_lblVideoHeader": "视频列表",

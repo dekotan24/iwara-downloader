@@ -481,6 +481,7 @@
   "MainForm_lblChannelHeader": "Subscribed Channels",
   "MainForm_lblDownloadCount": "DL: 0 / Queued: 0",
   "MainForm_lblLoginStatus": "(not logged in)",
+  "MainForm_lblNsfwFilterLabel": "NSFW:",
   "MainForm_lblStatus": "Ready",
   "MainForm_lblTagFilter": "Tags:",
   "MainForm_lblVideoHeader": "Videos",

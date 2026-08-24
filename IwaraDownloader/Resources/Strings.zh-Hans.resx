@@ -1570,6 +1570,9 @@ videoId 后导入数据库。
   <data name="MainForm_lblLoginStatus" xml:space="preserve">
     <value>（未登录）</value>
   </data>
+  <data name="MainForm_lblNsfwFilterLabel" xml:space="preserve">
+    <value>NSFW:</value>
+  </data>
   <data name="MainForm_lblStatus" xml:space="preserve">
     <value>就绪</value>
   </data>
