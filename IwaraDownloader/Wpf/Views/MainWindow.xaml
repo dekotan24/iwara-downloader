@@ -321,9 +321,9 @@
                         <EventSetter Event="Click" Handler="ToolbarDropdown_Click" />
                     </Style>
                 </StackPanel.Resources>
-                <Button Content="今すぐ確認" Command="{Binding CheckNowCommand}" ToolTip="{loc:T MainForm_ToolbarHint_CheckNow}" />
-                <Button Content="DL開始" Command="{Binding StartAllCommand}" ToolTip="{loc:T MainForm_ToolbarHint_StartAll}" />
-                <Button Content="停止" Command="{Binding StopAllCommand}" ToolTip="{loc:T MainForm_ToolbarHint_StopAll}" />
+                <Button Content="{loc:T MainForm_D082}" Command="{Binding CheckNowCommand}" ToolTip="{loc:T MainForm_ToolbarHint_CheckNow}" />
+                <Button Content="{loc:T MainForm_btnStartAll}" Command="{Binding StartAllCommand}" ToolTip="{loc:T MainForm_ToolbarHint_StartAll}" />
+                <Button Content="{loc:T MainForm_btnStopAll}" Command="{Binding StopAllCommand}" ToolTip="{loc:T MainForm_ToolbarHint_StopAll}" />
                 <ToggleButton Content="{Binding ImmediateDownloadToggleText}" IsChecked="{Binding ImmediateDownloadOnAdd}"
                               ToolTip="{loc:T MainForm_ToolbarHint_ImmediateDownload}" />
                 <ToggleButton Content="{Binding ClipboardMonitorToggleText}" IsChecked="{Binding ClipboardMonitorEnabled}"
@@ -331,31 +331,33 @@
                 <ToggleButton Content="{Binding ViewModeToggleText}" IsChecked="{Binding IsTileMode}"
                               ToolTip="{loc:T MainForm_ToolbarHint_ViewMode}" />
                 <Separator Margin="4,0" />
-                <Button Content="設定" Command="{Binding OpenSettingsCommand}" ToolTip="{loc:T MainForm_ToolbarHint_Settings}" />
-                <Button Content="環境セットアップ" Command="{Binding OpenSetupWizardCommand}"
+                <Button Content="{loc:T MainForm_btnSettings}" Command="{Binding OpenSettingsCommand}" ToolTip="{loc:T MainForm_ToolbarHint_Settings}" />
+                <Button Content="{loc:T MainForm_btnSetup}" Command="{Binding OpenSetupWizardCommand}"
                         Background="{DynamicResource Brush.Warning}"
                         Visibility="{Binding IsSetupNeeded, Converter={StaticResource BoolToVis}}"
                         ToolTip="{loc:T MainForm_ToolbarHint_Setup}" />
                 <Separator Margin="4,0" />
-                <Button Content="ツール ▾" Style="{StaticResource DropdownButtonStyle}" ToolTip="{loc:T MainForm_ToolbarHint_Tools}">
+                <Button Style="{StaticResource DropdownButtonStyle}" ToolTip="{loc:T MainForm_ToolbarHint_Tools}">
+                    <TextBlock><Run Text="{loc:T MainForm_btnTools}" /><Run Text=" ▾" /></TextBlock>
                     <Button.ContextMenu>
                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="一括インポート" Command="{Binding OpenBulkImportCommand}" />
-                            <MenuItem Header="検索インポート" Command="{Binding OpenSearchImportCommand}" />
-                            <MenuItem Header="フォルダ取込" Command="{Binding OpenImportFromFolderCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsBulkImport}" Command="{Binding OpenBulkImportCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsSearchImport}" Command="{Binding OpenSearchImportCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsImportFolder}" Command="{Binding OpenImportFromFolderCommand}" />
                             <Separator />
-                            <MenuItem Header="重複チェック" Command="{Binding OpenDuplicateCheckCommand}" />
-                            <MenuItem Header="統計" Command="{Binding OpenStatisticsCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsDuplicateCheck}" Command="{Binding OpenDuplicateCheckCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsStatistics}" Command="{Binding OpenStatisticsCommand}" />
                             <Separator />
                             <MenuItem Header="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
                             <MenuItem Header="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
-                <Button Content="ヘルプ ▾" Style="{StaticResource DropdownButtonStyle}" ToolTip="{loc:T MainForm_ToolbarHint_Help}">
+                <Button Style="{StaticResource DropdownButtonStyle}" ToolTip="{loc:T MainForm_ToolbarHint_Help}">
+                    <TextBlock><Run Text="{loc:T MainForm_btnHelp}" /><Run Text=" ▾" /></TextBlock>
                     <Button.ContextMenu>
                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                            <MenuItem Header="バージョン情報" Command="{Binding OpenAboutCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuHelpAbout}" Command="{Binding OpenAboutCommand}" />
                             <MenuItem Header="{loc:T MainForm_menuHelpOpenLogs}" Command="{Binding OpenLogFolderCommand}" />
                         </ContextMenu>
                     </Button.ContextMenu>
@@ -384,7 +386,7 @@
                         <KeyBinding Key="Return" Command="{Binding AddFromUrlCommand}" />
                     </TextBox.InputBindings>
                 </TextBox>
-                <Button Grid.Column="1" Content="貼り付けて追加"
+                <Button Grid.Column="1" Content="{loc:T MainForm_btnPasteAndAdd}"
                         Command="{Binding AddFromUrlCommand}"
                         Style="{StaticResource FlatButtonStyle}"
                         Padding="10,6"
@@ -553,9 +555,9 @@
                                         <Setter Property="Foreground" Value="Black" />
                                     </Style>
                                 </ComboBox.ItemContainerStyle>
-                                <ComboBoxItem Content="全部表示" />
-                                <ComboBoxItem Content="SFWのみ" />
-                                <ComboBoxItem Content="NSFWのみ" />
+                                <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item0}" />
+                                <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item1}" />
+                                <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item2}" />
                             </ComboBox>
                             <CheckBox Content="{loc:T MainForm_chkFavOnly}" IsChecked="{Binding FavoriteOnlyFilter}"
                                       VerticalAlignment="Center" Margin="0,0,12,0"
@@ -647,7 +649,7 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="{loc:T MainForm_colVideoPriority}" Width="60" DisplayMemberBinding="{Binding PriorityText}" />
+                            <GridViewColumn Header="{Binding PriorityColumnHeader}" Width="60" DisplayMemberBinding="{Binding PriorityText}" />
                             <GridViewColumn Header="{Binding ProgressColumnHeader}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
                             <GridViewColumn Header="{Binding SizeColumnHeader}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
                             <GridViewColumn Header="{Binding DateColumnHeader}" Width="140" DisplayMemberBinding="{Binding DisplayDate}" />
