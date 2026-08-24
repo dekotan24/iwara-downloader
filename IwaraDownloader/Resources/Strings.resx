@@ -1784,6 +1784,12 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>インポート完了: 新規 {0}件 / 再キュー {1}件</value>
   </data>
+  <data name="SearchImportForm_D012" xml:space="preserve">
+    <value>ページ -</value>
+  </data>
+  <data name="SearchImportForm_D013" xml:space="preserve">
+    <value>ページ {0} / {1}</value>
+  </data>
   <data name="SearchImportForm_Registered" xml:space="preserve">
     <value>[登録済] {0}</value>
   </data>
@@ -2162,6 +2168,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>エラー音声ファイルを選択</value>
+  </data>
+  <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
+    <value>ダウンロード保存先</value>
   </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>設定</value>
@@ -2579,6 +2588,21 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SetupWizardForm_D021" xml:space="preserve">
     <value>python.exe を選択</value>
   </data>
+  <data name="SetupWizardForm_D022" xml:space="preserve">
+    <value>=== セットアップ開始 ===</value>
+  </data>
+  <data name="SetupWizardForm_D023" xml:space="preserve">
+    <value>作業ディレクトリ: {0}</value>
+  </data>
+  <data name="SetupWizardForm_D024" xml:space="preserve">
+    <value>=== セットアップ完了 ===</value>
+  </data>
+  <data name="SetupWizardForm_D025" xml:space="preserve">
+    <value>[キャンセル] ユーザー操作で中止されました</value>
+  </data>
+  <data name="SetupWizardForm_D026" xml:space="preserve">
+    <value>[エラー] {0}</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader セットアップ</value>
   </data>
@@ -2638,6 +2662,33 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>起動中...</value>
+  </data>
+  <data name="StatisticsForm_CsvAuthorRankingHeader" xml:space="preserve">
+    <value>順位,投稿者,動画数,サイズ(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvChannelHeader" xml:space="preserve">
+    <value>チャンネル,総動画数,完了,失敗,サイズ,状態</value>
+  </data>
+  <data name="StatisticsForm_CsvErrorHeader" xml:space="preserve">
+    <value>エラー種別,件数</value>
+  </data>
+  <data name="StatisticsForm_CsvMonthlyHeader" xml:space="preserve">
+    <value>年月,DL数,サイズ(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionAuthorRanking" xml:space="preserve">
+    <value># 投稿者ランキング(上位50)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionByChannel" xml:space="preserve">
+    <value># チャンネル別統計</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionErrors" xml:space="preserve">
+    <value># エラー別失敗内訳</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionMonthly" xml:space="preserve">
+    <value># 月別推移</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionSummary" xml:space="preserve">
+    <value># 概要統計</value>
   </data>
   <data name="StatisticsForm_D001" xml:space="preserve">
     <value>統計情報の読み込みに失敗しました:
@@ -3134,6 +3185,18 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="SvcFileMove_D015" xml:space="preserve">
     <value>ファイル移動の確認</value>
+  </data>
+  <data name="SvcFileMove_D016" xml:space="preserve">
+    <value>
+同ドライブのため瞬時に完了します。</value>
+  </data>
+  <data name="SvcFileMove_D017" xml:space="preserve">
+    <value>
+移動先空き容量: {0} / 必要量: {1}</value>
+  </data>
+  <data name="SvcFileMove_D018" xml:space="preserve">
+    <value>
+(空き容量取得失敗: {0})</value>
   </data>
   <data name="SvcIwaraApiService_D001" xml:space="preserve">
     <value>{0}の動画一覧を取得中...</value>

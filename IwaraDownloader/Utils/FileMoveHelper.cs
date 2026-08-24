@@ -80,16 +80,14 @@ namespace IwaraDownloader.Utils
             string freeSpaceLine = "";
             if (sameDrive)
             {
-                freeSpaceLine = "\n同ドライブのため瞬時に完了します。";
+                freeSpaceLine = L.T("SvcFileMove_D016");
             }
             else if (!string.IsNullOrEmpty(driveNew))
             {
                 try
                 {
                     var di = new DriveInfo(driveNew);
-                    freeSpaceLine =
-                        $"\n移動先空き容量: {FormatSize(di.AvailableFreeSpace)}" +
-                        $" / 必要量: {FormatSize(totalBytes)}";
+                    freeSpaceLine = L.T("SvcFileMove_D017", FormatSize(di.AvailableFreeSpace), FormatSize(totalBytes));
                     if (di.AvailableFreeSpace < totalBytes)
                     {
                         MessageBox.Show(owner,
@@ -103,7 +101,7 @@ namespace IwaraDownloader.Utils
                 }
                 catch (Exception ex)
                 {
-                    freeSpaceLine = $"\n(空き容量取得失敗: {ex.Message})";
+                    freeSpaceLine = L.T("SvcFileMove_D018", ex.Message);
                 }
             }
 

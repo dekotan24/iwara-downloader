@@ -401,7 +401,7 @@ namespace IwaraDownloader.Forms
                     _database.GetAllVideos(), oldFolder, excludeBases);
 
                 var decision = FileMoveHelper.ConfirmMove(
-                    this, "ダウンロード保存先", movable, oldFolder, newFolder);
+                    this, L.T("SettingsForm_MoveSubjectDownloadFolder"), movable, oldFolder, newFolder);
                 if (decision == FileMoveHelper.MoveDecision.Cancel) return false;
                 if (decision == FileMoveHelper.MoveDecision.Move)
                 {

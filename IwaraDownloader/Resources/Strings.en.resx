@@ -1780,6 +1780,12 @@ Existing files will be deleted. Continue?</value>
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>Import complete: {0} new / {1} re-queued</value>
   </data>
+  <data name="SearchImportForm_D012" xml:space="preserve">
+    <value>Page -</value>
+  </data>
+  <data name="SearchImportForm_D013" xml:space="preserve">
+    <value>Page {0} / {1}</value>
+  </data>
   <data name="SearchImportForm_Registered" xml:space="preserve">
     <value>[Registered] {0}</value>
   </data>
@@ -2158,6 +2164,9 @@ Current: {0}</value>
   </data>
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>Select an error sound file</value>
+  </data>
+  <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
+    <value>download folder</value>
   </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>Settings</value>
@@ -2575,6 +2584,21 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SetupWizardForm_D021" xml:space="preserve">
     <value>Select python.exe</value>
   </data>
+  <data name="SetupWizardForm_D022" xml:space="preserve">
+    <value>=== Setup started ===</value>
+  </data>
+  <data name="SetupWizardForm_D023" xml:space="preserve">
+    <value>Working directory: {0}</value>
+  </data>
+  <data name="SetupWizardForm_D024" xml:space="preserve">
+    <value>=== Setup complete ===</value>
+  </data>
+  <data name="SetupWizardForm_D025" xml:space="preserve">
+    <value>[Cancelled] Aborted by user</value>
+  </data>
+  <data name="SetupWizardForm_D026" xml:space="preserve">
+    <value>[Error] {0}</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader Setup</value>
   </data>
@@ -2634,6 +2658,33 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>Starting...</value>
+  </data>
+  <data name="StatisticsForm_CsvAuthorRankingHeader" xml:space="preserve">
+    <value>Rank,Author,Videos,Size(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvChannelHeader" xml:space="preserve">
+    <value>Channel,Total Videos,Completed,Failed,Size,Status</value>
+  </data>
+  <data name="StatisticsForm_CsvErrorHeader" xml:space="preserve">
+    <value>Error Type,Count</value>
+  </data>
+  <data name="StatisticsForm_CsvMonthlyHeader" xml:space="preserve">
+    <value>Year-Month,Downloads,Size(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionAuthorRanking" xml:space="preserve">
+    <value># Author Ranking (Top 50)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionByChannel" xml:space="preserve">
+    <value># By Channel</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionErrors" xml:space="preserve">
+    <value># Failures by Error Type</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionMonthly" xml:space="preserve">
+    <value># Monthly Trend</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionSummary" xml:space="preserve">
+    <value># Summary</value>
   </data>
   <data name="StatisticsForm_D001" xml:space="preserve">
     <value>Failed to load statistics:
@@ -3130,6 +3181,18 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="SvcFileMove_D015" xml:space="preserve">
     <value>Confirm file move</value>
+  </data>
+  <data name="SvcFileMove_D016" xml:space="preserve">
+    <value>
+Same drive, so this will complete instantly.</value>
+  </data>
+  <data name="SvcFileMove_D017" xml:space="preserve">
+    <value>
+Destination free space: {0} / Required: {1}</value>
+  </data>
+  <data name="SvcFileMove_D018" xml:space="preserve">
+    <value>
+(Failed to get free space: {0})</value>
   </data>
   <data name="SvcIwaraApiService_D001" xml:space="preserve">
     <value>Fetching video list of {0}...</value>

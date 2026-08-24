@@ -176,8 +176,8 @@ namespace IwaraDownloader.Forms
 
             try
             {
-                AppendLog("=== セットアップ開始 ===");
-                AppendLog($"作業ディレクトリ: {_appDir}");
+                AppendLog(L.T("SetupWizardForm_D022"));
+                AppendLog(L.T("SetupWizardForm_D023", _appDir));
 
                 var resolvedPython = await _setup.RunFullSetupAsync(
                     pythonPath, _appDir, progress, _cts.Token);
@@ -187,18 +187,18 @@ namespace IwaraDownloader.Forms
                 SettingsManager.Instance.Save();
 
                 ConfiguredPythonPath = resolvedPython;
-                AppendLog("=== セットアップ完了 ===");
+                AppendLog(L.T("SetupWizardForm_D024"));
                 _step = 4;
             }
             catch (OperationCanceledException)
             {
-                AppendLog("[キャンセル] ユーザー操作で中止されました");
+                AppendLog(L.T("SetupWizardForm_D025"));
                 MessageBox.Show(L.T("SetupWizardForm_D015"), L.T("SetupWizardForm_D016"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                AppendLog($"[エラー] {ex.Message}");
+                AppendLog(L.T("SetupWizardForm_D026", ex.Message));
                 MessageBox.Show(
                     L.T("SetupWizardForm_D017", ex.Message) +
                     L.T("SetupWizardForm_D018"),

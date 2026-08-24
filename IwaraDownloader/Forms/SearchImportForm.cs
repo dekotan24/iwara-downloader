@@ -54,7 +54,7 @@ namespace IwaraDownloader.Forms
             if (listResults.Items.Count == 0) return;
             listResults.Items.Clear();
             lblStatus.Text = L.T("SearchImportForm_D001", cmbSite.SelectedItem);
-            lblPage.Text = "Page -";
+            lblPage.Text = L.T("SearchImportForm_D012");
             btnPrevPage.Enabled = false;
             btnNextPage.Enabled = false;
         }
@@ -103,7 +103,7 @@ namespace IwaraDownloader.Forms
                 PopulateResults(result.Items);
 
                 int totalPages = Math.Max(1, (int)Math.Ceiling((double)_totalCount / PageLimit));
-                lblPage.Text = $"Page {_currentPage + 1} / {totalPages}";
+                lblPage.Text = L.T("SearchImportForm_D013", _currentPage + 1, totalPages);
                 btnPrevPage.Enabled = _currentPage > 0;
                 btnNextPage.Enabled = (_currentPage + 1) < totalPages;
                 lblStatus.Text = L.T("SearchImportForm_D006", _totalCount, result.Items.Count, _currentPage + 1, totalPages);

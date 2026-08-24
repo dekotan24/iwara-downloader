@@ -289,9 +289,11 @@ namespace IwaraDownloader.Forms
             }
         }
 
-        // サイズ分布のビン定義(順序保持用)
+        // サイズ分布のビン定義(順序保持用)。単位表記は言語非依存なので固定文字列のままでよいが、
+        // 全角チルダ(日本語の範囲記法)は英語/中国語UIで不自然なため、SizeBin()と合わせて
+        // 言語非依存の半角記号(</+)に統一する
         private static readonly string[] SizeBinOrder =
-            { "～100MB", "100-300MB", "300-500MB", "500MB-1GB", "1-2GB", "2GB～" };
+            { "<100MB", "100-300MB", "300-500MB", "500MB-1GB", "1-2GB", "2GB+" };
 
         /// <summary>
         /// サイズ分布を読み込み
@@ -569,12 +571,12 @@ namespace IwaraDownloader.Forms
         private static string SizeBin(long bytes)
         {
             double mb = bytes / 1024.0 / 1024.0;
-            if (mb < 100) return "～100MB";
+            if (mb < 100) return "<100MB";
             if (mb < 300) return "100-300MB";
             if (mb < 500) return "300-500MB";
             if (mb < 1024) return "500MB-1GB";
             if (mb < 2048) return "1-2GB";
-            return "2GB～";
+            return "2GB+";
         }
 
         private static string DurationBin(int seconds)
@@ -639,18 +641,18 @@ namespace IwaraDownloader.Forms
                     using var writer = new StreamWriter(dialog.FileName, false, System.Text.Encoding.UTF8);
 
                     // 概要
-                    writer.WriteLine("# 概要統計");
-                    writer.WriteLine($"総動画数,{stats.TotalVideoCount}");
-                    writer.WriteLine($"完了,{stats.CompletedCount}");
-                    writer.WriteLine($"失敗,{stats.FailedCount}");
-                    writer.WriteLine($"待機中,{stats.PendingCount}");
-                    writer.WriteLine($"総サイズ,{stats.TotalDownloadedSizeFormatted}");
-                    writer.WriteLine($"チャンネル数,{stats.ChannelCount}");
+                    writer.WriteLine(L.T("StatisticsForm_CsvSectionSummary"));
+                    writer.WriteLine($"{L.T("StatisticsForm_lblTotalVideosLabel")},{stats.TotalVideoCount}");
+                    writer.WriteLine($"{L.T("StatisticsForm_lblCompletedLabel")},{stats.CompletedCount}");
+                    writer.WriteLine($"{L.T("StatisticsForm_lblFailedLabel")},{stats.FailedCount}");
+                    writer.WriteLine($"{L.T("StatisticsForm_lblPendingLabel")},{stats.PendingCount}");
+                    writer.WriteLine($"{L.T("StatisticsForm_lblTotalSizeLabel")},{stats.TotalDownloadedSizeFormatted}");
+                    writer.WriteLine($"{L.T("StatisticsForm_lblChannelsLabel")},{stats.ChannelCount}");
                     writer.WriteLine();
 
                     // チャンネル別
-                    writer.WriteLine("# チャンネル別統計");
-                    writer.WriteLine("チャンネル,総動画数,完了,失敗,サイズ,状態");
+                    writer.WriteLine(L.T("StatisticsForm_CsvSectionByChannel"));
+                    writer.WriteLine(L.T("StatisticsForm_CsvChannelHeader"));
 
                     foreach (var user in users)
                     {
@@ -659,13 +661,14 @@ namespace IwaraDownloader.Forms
                         var f = videos.Count(v => v.Status == DownloadStatus.Failed);
                         var totalSize = videos.Where(v => v.Status == DownloadStatus.Completed).Sum(v => v.FileSize);
 
-                        writer.WriteLine($"{EscapeCsv(user.Username)},{videos.Count},{c},{f},{totalSize},{(user.IsEnabled ? "有効" : "無効")}");
+                        var statusLabel = user.IsEnabled ? L.T("StatisticsForm_D008") : L.T("StatisticsForm_D009");
+                        writer.WriteLine($"{EscapeCsv(user.Username)},{videos.Count},{c},{f},{totalSize},{statusLabel}");
                     }
                     writer.WriteLine();
 
                     // エラー別失敗内訳
-                    writer.WriteLine("# エラー別失敗内訳");
-                    writer.WriteLine("エラー種別,件数");
+                    writer.WriteLine(L.T("StatisticsForm_CsvSectionErrors"));
+                    writer.WriteLine(L.T("StatisticsForm_CsvErrorHeader"));
                     foreach (var g in failed.GroupBy(v => CategorizeError(v.LastErrorMessage))
                                             .OrderByDescending(g => g.Count()))
                     {
@@ -674,8 +677,8 @@ namespace IwaraDownloader.Forms
                     writer.WriteLine();
 
                     // 月別推移
-                    writer.WriteLine("# 月別推移");
-                    writer.WriteLine("年月,DL数,サイズ(byte)");
+                    writer.WriteLine(L.T("StatisticsForm_CsvSectionMonthly"));
+                    writer.WriteLine(L.T("StatisticsForm_CsvMonthlyHeader"));
                     foreach (var g in completed.Where(v => v.DownloadedAt.HasValue)
                                                .GroupBy(v => new DateTime(v.DownloadedAt!.Value.Year, v.DownloadedAt.Value.Month, 1))
                                                .OrderBy(g => g.Key))
@@ -685,8 +688,8 @@ namespace IwaraDownloader.Forms
                     writer.WriteLine();
 
                     // 投稿者ランキング(上位50)
-                    writer.WriteLine("# 投稿者ランキング(上位50)");
-                    writer.WriteLine("順位,投稿者,動画数,サイズ(byte)");
+                    writer.WriteLine(L.T("StatisticsForm_CsvSectionAuthorRanking"));
+                    writer.WriteLine(L.T("StatisticsForm_CsvAuthorRankingHeader"));
                     int rank = 1;
                     foreach (var g in completed.Where(v => !string.IsNullOrEmpty(v.AuthorUsername))
                                                .GroupBy(v => v.AuthorUsername)

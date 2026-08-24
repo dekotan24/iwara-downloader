@@ -84,9 +84,9 @@ namespace IwaraDownloader.Forms
             if (url.Contains("youtube.com") || url.Contains("youtu.be")) return "YouTube";
             if (url.Contains("vimeo.com")) return "Vimeo";
             if (url.Contains("twitter.com") || url.Contains("x.com")) return "X/Twitter";
-            if (url.Contains("nicovideo.jp")) return "ニコニコ";
+            if (url.Contains("nicovideo.jp")) return L.T("MainForm_SourceNico");
             if (url.Contains("bilibili.com")) return "Bilibili";
-            return "外部";
+            return L.T("MainForm_SourceExternal");
         }
 
         private static string GetStatusText(DownloadStatus status) => status switch
