@@ -175,9 +175,9 @@ namespace IwaraDownloader.Wpf.ViewModels
         }
 
         /// <summary>
-        /// Phase8b: 旧WinForms版MainForm_Load/MainForm_Shownに対応するアプリ起動処理。
-        /// 整合性復旧→環境/ログイン確認→DL再開→Webサーバー自動起動→初回セットアップ判定→
-        /// アップデートチェックの順で、旧WinForms版と同じ順序・同じ設定ゲートで実行する。
+        /// 旧WinForms版MainForm_Load/MainForm_Shownに対応するアプリ起動処理。
+        /// DL再開(DownloadManager.Start/ResumeIncompleteDownloads)は環境セットアップ済みならここで
+        /// 即座に、未セットアップならShowSetupWizardの成功分岐まで遅延させる(キャンセル時は呼ばない)。
         /// </summary>
         private void InitializeLifecycle()
         {
@@ -186,9 +186,6 @@ namespace IwaraDownloader.Wpf.ViewModels
             var recoveryMessage = FileMoveJournal.RecoverIfNeeded(_database);
 
             RefreshEnvironmentAndLoginStatus();
-
-            _downloadManager.Start();
-            _downloadManager.ResumeIncompleteDownloads();
 
             if (recoveryMessage != null) StatusMessage = recoveryMessage;
 
@@ -208,12 +205,17 @@ namespace IwaraDownloader.Wpf.ViewModels
                 });
             }
 
-            // 初回起動時: 環境が未セットアップなら自動でウィザード起動(旧WinForms版MainForm_Shownに対応)。
+            // 環境未セットアップの間はDownloadManagerを起動しない(無駄な失敗試行・リトライを防ぐ)。
+            // DL開始はShowSetupWizardの成功分岐に寄せてあるので、キャンセル時はここでは起動しない。
             // WPFウィンドウの初回描画後に呼びたいのでDispatcherへ回す。
-            var (pythonReady, scriptReady) = _downloadManager.CheckEnvironment();
-            if (!pythonReady || !scriptReady)
+            if (IsSetupNeeded)
             {
                 _dispatcher.BeginInvoke(new Action(() => ShowSetupWizard(autoTriggered: true)));
+            }
+            else
+            {
+                _downloadManager.Start();
+                _downloadManager.ResumeIncompleteDownloads();
             }
 
             if (settings.CheckUpdateOnStartup)
@@ -301,6 +303,10 @@ namespace IwaraDownloader.Wpf.ViewModels
             {
                 System.Windows.MessageBox.Show(L.T("MainForm_D013"), L.T("MainForm_D014"),
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                // Start/ResumeIncompleteDownloadsは冪等(稼働中なら何もしない/重複投入しない)なので、
+                // 初回起動と手動再セットアップの両経路からここを呼んでも安全。
+                _downloadManager.Start();
+                _downloadManager.ResumeIncompleteDownloads();
             }
             else if (autoTriggered)
             {
@@ -1903,12 +1909,14 @@ namespace IwaraDownloader.Wpf.ViewModels
         }
 
         // ソート状態(旧WinForms版_sortColumn/_sortOrder相当)。デフォルトは公開日時の降順(新しい順)。
-        private int _sortColumn = 5;
+        // 列インデックスはMainWindow.xamlのGridViewColumn順(タイトル/ソース/状態/優先度/進捗/サイズ/公開日時)と一致させること。
+        private int _sortColumn = 6;
         private bool _sortDescending = true;
 
         [ObservableProperty] private string _titleColumnHeader = "";
         [ObservableProperty] private string _sourceColumnHeader = "";
         [ObservableProperty] private string _statusColumnHeader = "";
+        [ObservableProperty] private string _priorityColumnHeader = "";
         [ObservableProperty] private string _progressColumnHeader = "";
         [ObservableProperty] private string _sizeColumnHeader = "";
         [ObservableProperty] private string _dateColumnHeader = "";
@@ -1919,7 +1927,13 @@ namespace IwaraDownloader.Wpf.ViewModels
         public void SortVideosByColumn(int columnIndex)
         {
             if (columnIndex == _sortColumn) _sortDescending = !_sortDescending;
-            else { _sortColumn = columnIndex; _sortDescending = false; }
+            else
+            {
+                _sortColumn = columnIndex;
+                // 優先度列(3)だけ降順スタート: Pending以外は同値(-1)の塊になるため、昇順だと
+                // その塊が先頭に来てキュー本体(Highest〜Low)が埋もれる。
+                _sortDescending = columnIndex == 3;
+            }
             ApplyVideoFilter();
         }
 
@@ -1930,9 +1944,10 @@ namespace IwaraDownloader.Wpf.ViewModels
                 0 => (a, b) => string.Compare(a.Title, b.Title, StringComparison.CurrentCulture),
                 1 => (a, b) => string.Compare(VideoListItemViewModel.GetSourceLabel(a), VideoListItemViewModel.GetSourceLabel(b), StringComparison.Ordinal),
                 2 => (a, b) => a.Status.CompareTo(b.Status),
-                3 => (a, b) => GetProgressSortValue(a).CompareTo(GetProgressSortValue(b)),
-                4 => (a, b) => a.FileSize.CompareTo(b.FileSize),
-                5 => (a, b) => (a.PostedAt ?? a.CreatedAt).CompareTo(b.PostedAt ?? b.CreatedAt),
+                3 => (a, b) => GetPrioritySortValue(a).CompareTo(GetPrioritySortValue(b)),
+                4 => (a, b) => GetProgressSortValue(a).CompareTo(GetProgressSortValue(b)),
+                5 => (a, b) => a.FileSize.CompareTo(b.FileSize),
+                6 => (a, b) => (a.PostedAt ?? a.CreatedAt).CompareTo(b.PostedAt ?? b.CreatedAt),
                 _ => (a, b) => 0,
             };
             list.Sort(comparison);
@@ -1950,20 +1965,33 @@ namespace IwaraDownloader.Wpf.ViewModels
             return -2;
         }
 
+        /// <summary>
+        /// 優先度はキュー待ち(Pending)にしか意味を持たない(VideoListItemViewModel.Refreshの表示ルールと同じ)。
+        /// それ以外の状態は全て最下位扱いにして一覧の末尾/先頭にまとめる。
+        /// </summary>
+        private double GetPrioritySortValue(VideoInfo video)
+        {
+            if (video.Status != DownloadStatus.Pending) return -1;
+            var task = _downloadManager.GetTask(video.VideoId);
+            var resolved = video.Priority ?? task?.SubscribedUser?.DefaultPriority ?? DownloadPriority.Normal;
+            return (double)resolved;
+        }
+
         private void UpdateColumnHeaderTexts()
         {
             var baseTexts = new[]
             {
                 L.T("MainForm_colVideoTitle"), L.T("MainForm_colVideoSource"), L.T("MainForm_colVideoStatus"),
-                L.T("MainForm_colVideoProgress"), L.T("MainForm_colVideoSize"), L.T("MainForm_colVideoDate"),
+                L.T("MainForm_colVideoPriority"), L.T("MainForm_colVideoProgress"), L.T("MainForm_colVideoSize"), L.T("MainForm_colVideoDate"),
             };
             var arrow = _sortDescending ? " ▼" : " ▲";
             TitleColumnHeader = baseTexts[0] + (_sortColumn == 0 ? arrow : "");
             SourceColumnHeader = baseTexts[1] + (_sortColumn == 1 ? arrow : "");
             StatusColumnHeader = baseTexts[2] + (_sortColumn == 2 ? arrow : "");
-            ProgressColumnHeader = baseTexts[3] + (_sortColumn == 3 ? arrow : "");
-            SizeColumnHeader = baseTexts[4] + (_sortColumn == 4 ? arrow : "");
-            DateColumnHeader = baseTexts[5] + (_sortColumn == 5 ? arrow : "");
+            PriorityColumnHeader = baseTexts[3] + (_sortColumn == 3 ? arrow : "");
+            ProgressColumnHeader = baseTexts[4] + (_sortColumn == 4 ? arrow : "");
+            SizeColumnHeader = baseTexts[5] + (_sortColumn == 5 ? arrow : "");
+            DateColumnHeader = baseTexts[6] + (_sortColumn == 6 ? arrow : "");
         }
 
         #endregion
