@@ -1175,12 +1175,8 @@ namespace IwaraDownloader.Wpf.ViewModels
         }
 
         /// <summary>
-        /// 投稿者名を "author:名前" 形式でコピーする。検索ボックスへそのまま貼り付けて
-        /// 絞り込める用途を想定。チャンネルノード選択中はフリーテキスト検索がAuthorUsernameを
-        /// 除外する(SearchQuery.IncludeAuthorInFreeText)ため、素の名前だと0件になりうる。
-        /// author: の明示フィールド指定はこの除外の影響を受けないので、どのノードからでも動く。
-        /// 複数選択時も重複を除いて1行ずつに留める(同一動画一覧内で同じ投稿者が複数選ばれる
-        /// ケースが多いため)。
+        /// 投稿者名をそのままコピーする。複数選択時も重複を除いて1行ずつに留める
+        /// (同一動画一覧内で同じ投稿者が複数選ばれるケースが多いため)。
         /// </summary>
         [RelayCommand]
         private void CopyVideoAuthor()
@@ -1191,7 +1187,7 @@ namespace IwaraDownloader.Wpf.ViewModels
                 .Distinct()
                 .ToList();
             if (authors.Count == 0) return;
-            System.Windows.Clipboard.SetText(string.Join(Environment.NewLine, authors.Select(a => $"author:{a}")));
+            System.Windows.Clipboard.SetText(string.Join(Environment.NewLine, authors));
             StatusMessage = L.T("MainForm_D193", authors.Count);
         }
 
