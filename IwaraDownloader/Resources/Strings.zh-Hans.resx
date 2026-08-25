@@ -1334,6 +1334,9 @@ videoId 后导入数据库。
   <data name="MainForm_D192" xml:space="preserve">
     <value>已更改「{0}」的默认优先级</value>
   </data>
+  <data name="MainForm_D193" xml:space="preserve">
+    <value>已复制 {0} 个作者名</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1677,6 +1680,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
     <value>检查文件是否存在</value>
+  </data>
+  <data name="MainForm_menuVidCopyAuthor" xml:space="preserve">
+    <value>复制作者名</value>
   </data>
   <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
     <value>复制标题</value>

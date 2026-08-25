@@ -188,7 +188,23 @@ namespace IwaraDownloader.Wpf.Views
 
         private void VideoList_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
         {
-            (DataContext as MainViewModel)?.RefreshVideoContextMenuState();
+            if (DataContext is not MainViewModel vm) return;
+            // 直前のClosedが何らかの理由で発火しなかった場合の自己修復。開く直前に必ず
+            // falseへ戻し、この直後に発火するOpenedで正しくtrueへ戻る(通常経路では無害)。
+            vm.IsVideoContextMenuOpen = false;
+            vm.RefreshVideoContextMenuState();
+        }
+
+        private void VideoContextMenu_Opened(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm) vm.IsVideoContextMenuOpen = true;
+        }
+
+        private void VideoContextMenu_Closed(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (DataContext is not MainViewModel vm) return;
+            vm.IsVideoContextMenuOpen = false;
+            vm.FlushPendingVideoListRefresh();
         }
 
         private void VideoList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)

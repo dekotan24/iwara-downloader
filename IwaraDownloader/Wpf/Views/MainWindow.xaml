@@ -156,7 +156,8 @@
             プロパティにバインドする(旧WinForms版menuVideoContext_Openingに相当)。
         -->
         <ContextMenu x:Key="VideoContextMenu"
-                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                     Opened="VideoContextMenu_Opened" Closed="VideoContextMenu_Closed">
             <MenuItem Header="{Binding DownloadMenuText}" Command="{Binding DownloadVideoCommand}"
                       Visibility="{Binding CanDownloadSelectedVideo, Converter={StaticResource BoolToVis}}" />
             <MenuItem Header="{loc:T MainForm_menuVidCancel}" Command="{Binding CancelVideoCommand}"
@@ -194,6 +195,7 @@
                       Visibility="{Binding CanOpenAuthorSelectedVideo, Converter={StaticResource BoolToVis}}" />
             <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}" />
             <MenuItem Header="{loc:T MainForm_menuVidCopyTitle}" Command="{Binding CopyVideoTitleCommand}" />
+            <MenuItem Header="{loc:T MainForm_menuVidCopyAuthor}" Command="{Binding CopyVideoAuthorCommand}" />
             <Separator />
             <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}"
                       Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />

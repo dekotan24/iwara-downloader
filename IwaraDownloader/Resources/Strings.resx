@@ -1338,6 +1338,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_D192" xml:space="preserve">
     <value>「{0}」の既定優先度を変更しました</value>
   </data>
+  <data name="MainForm_D193" xml:space="preserve">
+    <value>{0}件の投稿者名をコピーしました</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1681,6 +1684,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
     <value>ファイル存在チェック</value>
+  </data>
+  <data name="MainForm_menuVidCopyAuthor" xml:space="preserve">
+    <value>投稿者名をコピー</value>
   </data>
   <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
     <value>タイトルをコピー</value>

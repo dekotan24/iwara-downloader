@@ -522,12 +522,40 @@ namespace IwaraDownloader.Wpf.ViewModels
             _treeRefreshTimer.Start();
         }
 
+        /// <summary>
+        /// 動画の右クリックメニューが開いている間かどうか。開いている間にLoadVideos()
+        /// (Videos.ReplaceAll、単発Resetイベント)が走ると、WPFのSelector標準動作で
+        /// SelectedItem(=SelectedVideo)がnullにリセットされ、メニュー項目のコマンドが
+        /// 対象を失って何も起きなくなる(メニュー自体は開いたまま反応しないように見える)。
+        /// そのため開いている間はLoadVideosを保留し、閉じた瞬間にまとめて反映する。
+        /// </summary>
+        public bool IsVideoContextMenuOpen { get; set; }
+        private bool _videoListRefreshPending;
+
         /// <summary>短時間に複数回呼ばれてもLoadVideos()は1回だけ実行される(旧WinForms版RefreshVideoListに相当)</summary>
         private void ScheduleVideoListRefresh()
         {
-            _videoListRefreshTimer ??= CreateDebounceTimer(VideoListRefreshDebounceMs, LoadVideos);
+            _videoListRefreshTimer ??= CreateDebounceTimer(VideoListRefreshDebounceMs, RunScheduledVideoListRefresh);
             _videoListRefreshTimer.Stop();
             _videoListRefreshTimer.Start();
+        }
+
+        private void RunScheduledVideoListRefresh()
+        {
+            if (IsVideoContextMenuOpen)
+            {
+                _videoListRefreshPending = true;
+                return;
+            }
+            LoadVideos();
+        }
+
+        /// <summary>右クリックメニューが閉じた直後に呼ぶ。開いている間に保留していた更新があれば反映する。</summary>
+        public void FlushPendingVideoListRefresh()
+        {
+            if (!_videoListRefreshPending) return;
+            _videoListRefreshPending = false;
+            LoadVideos();
         }
 
         private void ScheduleDownloadCountRefresh()
@@ -1144,6 +1172,27 @@ namespace IwaraDownloader.Wpf.ViewModels
             if (titles.Count == 0) return;
             System.Windows.Clipboard.SetText(string.Join(Environment.NewLine, titles));
             StatusMessage = L.T("MainForm_D112", titles.Count);
+        }
+
+        /// <summary>
+        /// 投稿者名を "author:名前" 形式でコピーする。検索ボックスへそのまま貼り付けて
+        /// 絞り込める用途を想定。チャンネルノード選択中はフリーテキスト検索がAuthorUsernameを
+        /// 除外する(SearchQuery.IncludeAuthorInFreeText)ため、素の名前だと0件になりうる。
+        /// author: の明示フィールド指定はこの除外の影響を受けないので、どのノードからでも動く。
+        /// 複数選択時も重複を除いて1行ずつに留める(同一動画一覧内で同じ投稿者が複数選ばれる
+        /// ケースが多いため)。
+        /// </summary>
+        [RelayCommand]
+        private void CopyVideoAuthor()
+        {
+            var authors = GetSelectedVideoInfos()
+                .Where(v => !string.IsNullOrEmpty(v.AuthorUsername))
+                .Select(v => v.AuthorUsername)
+                .Distinct()
+                .ToList();
+            if (authors.Count == 0) return;
+            System.Windows.Clipboard.SetText(string.Join(Environment.NewLine, authors.Select(a => $"author:{a}")));
+            StatusMessage = L.T("MainForm_D193", authors.Count);
         }
 
         [RelayCommand]
@@ -1777,7 +1826,31 @@ namespace IwaraDownloader.Wpf.ViewModels
 
         #endregion
 
-        partial void OnSelectedTreeNodeChanged(ChannelTreeNodeViewModel? value) => LoadVideos();
+        // RefreshTree()はTreeNodesを毎回作り直すため、選択中ノードが論理的に同じでも
+        // (同じKind/ChannelId)、選択復元時に新しいインスタンスへの再代入が起きて
+        // OnSelectedTreeNodeChangedが発火してしまう。新着チェック等でRefreshTreeが
+        // 頻繁に走るたびにLoadVideos()(Videos.ReplaceAll)が無条件に走ると、動画一覧の
+        // 選択状態(SelectedVideo)が巻き添えでリセットされ、開いている右クリックメニューの
+        // コマンドが対象を失う。実質同じノードへの再代入では再読込しないようにする。
+        private TreeNodeKind? _lastLoadedTreeNodeKind;
+        private int? _lastLoadedTreeNodeChannelId;
+
+        partial void OnSelectedTreeNodeChanged(ChannelTreeNodeViewModel? value)
+        {
+            // TreeNodes.ReplaceAll(単発Resetイベント)が起きると、WPFのSelector標準動作で
+            // バインド中のSelectedItem(=SelectedTreeNode)が一瞬nullを経由してから、
+            // RefreshTree()側の選択復元処理で改めて実ノードへ代入される。この中間のnull遷移で
+            // ガード変数がリセットされると、直後の実ノードへの再代入が「値が変わった」と
+            // 誤判定されてしまうため、nullへの変化自体は無視する(直後に必ず本代入が来る)。
+            if (value == null) return;
+
+            var kind = value.Kind;
+            var channelId = value.Channel?.Id;
+            if (kind == _lastLoadedTreeNodeKind && channelId == _lastLoadedTreeNodeChannelId) return;
+            _lastLoadedTreeNodeKind = kind;
+            _lastLoadedTreeNodeChannelId = channelId;
+            LoadVideos();
+        }
 
         private List<VideoInfo> _allLoadedVideos = new();
 

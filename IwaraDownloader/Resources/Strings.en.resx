@@ -1334,6 +1334,9 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D192" xml:space="preserve">
     <value>Changed default priority for "{0}"</value>
   </data>
+  <data name="MainForm_D193" xml:space="preserve">
+    <value>Copied {0} author names</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1677,6 +1680,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
     <value>Check File Existence</value>
+  </data>
+  <data name="MainForm_menuVidCopyAuthor" xml:space="preserve">
+    <value>Copy Author Name</value>
   </data>
   <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
     <value>Copy Title</value>
