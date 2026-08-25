@@ -114,7 +114,7 @@ namespace IwaraDownloader.Forms
                         : !string.IsNullOrEmpty(subUser?.Site)
                             ? subUser.Site
                             : Helpers.SiteTv;
-                    var fetched = await _downloadManager.IwaraApi.GetUserVideosAsync(username, site: site);
+                    var (fetched, _) = await _downloadManager.IwaraApi.GetUserVideosAsync(username, site: site);
                     if (fetched.Count == 0)
                     {
                         lblArtistResolved.Text = L.T("UntaggedFileMatchForm_D010", username);

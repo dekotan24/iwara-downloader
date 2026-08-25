@@ -6,6 +6,18 @@ using IwaraDownloader.Models;
 namespace IwaraDownloader.Services
 {
     /// <summary>
+    /// チャンネル動画一覧取得の結果種別。Success/UserNotFound は確定した状態、Failed は
+    /// ログイン未済・レート制限・一時的な通信エラー等の「今回は分からなかった」を表す。
+    /// 呼び出し側は Failed のとき、それ以前に確定していたアカウント消滅フラグ等を変更してはいけない。
+    /// </summary>
+    public enum ChannelFetchStatus
+    {
+        Success,
+        UserNotFound,
+        Failed,
+    }
+
+    /// <summary>
     /// Python iwara_helper.py を呼び出すサービス(Embeddable Python対応)
     /// </summary>
     public class IwaraApiService
@@ -466,35 +478,40 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)
+        /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)。
+        /// Status は Success/UserNotFound(確定) と Failed(ログイン未済・通信エラー等、今回は
+        /// 判定できなかった) を区別する。呼び出し側はアカウント消滅フラグ等の永続状態を
+        /// Failed のときには変更してはいけない(一時的な403/レート制限を消滅と誤判定するため)。
         /// </summary>
-        public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default)
+        public async Task<(List<VideoInfo> Videos, ChannelFetchStatus Status)> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default)
         {
             if (!IsLoggedIn)
             {
                 progress?.Report("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
-                return new List<VideoInfo>();
+                return (new List<VideoInfo>(), ChannelFetchStatus.Failed);
             }
 
             progress?.Report(L.T("SvcIwaraApiService_D001", username));
 
             var result = await RunPythonAsync("get_videos", site, ct, username);
-            
+
             if (result == null)
             {
                 progress?.Report(L.T("SvcIwaraApiService_D002"));
-                return new List<VideoInfo>();
+                return (new List<VideoInfo>(), ChannelFetchStatus.Failed);
             }
 
             var root = result.RootElement;
-            
+
             if (!root.TryGetProperty("success", out var success) || !success.GetBoolean())
             {
-                var error = root.TryGetProperty("error", out var errorProp) 
-                    ? errorProp.GetString() 
+                var error = root.TryGetProperty("error", out var errorProp)
+                    ? errorProp.GetString()
                     : "Unknown error";
                 progress?.Report(L.T("SvcIwaraApiService_D003", error));
-                return new List<VideoInfo>();
+                var code = root.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+                var status = code == "USER_NOT_FOUND" ? ChannelFetchStatus.UserNotFound : ChannelFetchStatus.Failed;
+                return (new List<VideoInfo>(), status);
             }
 
             var videos = new List<VideoInfo>();
@@ -537,7 +554,7 @@ namespace IwaraDownloader.Services
             var count = root.TryGetProperty("count", out var countProp) ? countProp.GetInt32() : videos.Count;
             progress?.Report(L.T("SvcIwaraApiService_D004", count));
 
-            return videos;
+            return (videos, ChannelFetchStatus.Success);
         }
 
         /// <summary>

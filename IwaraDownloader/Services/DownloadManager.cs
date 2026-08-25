@@ -1799,7 +1799,7 @@ namespace IwaraDownloader.Services
                 UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D017", user.Username, reasonLabel));
                 var progress = new Progress<string>(msg => UserAddStatusChanged?.Invoke(this, msg));
                 var siteHost = string.IsNullOrEmpty(user.Site) ? Helpers.SiteTv : user.Site;
-                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
+                var (videos, fetchStatus) = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
 
                 // Add (追加時) は req.ImmediateDownload (呼び出し側の選択、既定は設定値)、
                 // Check (定期新着チェック) は AutoDownloadOnCheck 設定 — 常に今まで通り。
@@ -1844,11 +1844,19 @@ namespace IwaraDownloader.Services
                 if (existingBackfill.Count > 0)
                     _database.BackfillExistingVideoMetadata(existingBackfill);
 
-                user.TotalVideoCount = videos.Count;
                 user.LastCheckedAt = DateTime.Now;
-                // 取得成功 = 本登録扱い。Add はもちろん、5 回失敗で諦めた仮登録 (VideosLoaded=false) が
-                // 後の新着チェックで取れた場合もここで解除し、起動時の無駄な Add 再取得ループを防ぐ。
-                user.VideosLoaded = true;
+                // Failed (ログイン未済・レート制限・一時的な通信エラー等、今回は判定できなかった) は
+                // TotalVideoCount/VideosLoaded/IsAccountDeleted を一切書き換えない。ここを無条件で
+                // 更新すると、一時的な403等で取得0件になっただけの生存チャンネルが毎回0件表示になったり、
+                // 消滅判定が意図せず巻き戻ったりする。
+                if (fetchStatus != ChannelFetchStatus.Failed)
+                {
+                    user.TotalVideoCount = videos.Count;
+                    // 取得成功 = 本登録扱い。Add はもちろん、5 回失敗で諦めた仮登録 (VideosLoaded=false) が
+                    // 後の新着チェックで取れた場合もここで解除し、起動時の無駄な Add 再取得ループを防ぐ。
+                    user.VideosLoaded = true;
+                    user.IsAccountDeleted = fetchStatus == ChannelFetchStatus.UserNotFound;
+                }
                 _database.UpdateSubscribedUser(user);
 
                 if (req.Reason == FetchReason.Add)

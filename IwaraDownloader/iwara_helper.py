@@ -455,7 +455,7 @@ class IwaraAPI:
                 return {"success": False, "error": "No response from server"}
             
             if profile_r.status_code == 404:
-                return {"success": False, "error": f"User not found: {username}"}
+                return {"success": False, "error": f"User not found: {username}", "code": "USER_NOT_FOUND"}
             
             if profile_r.status_code == 403:
                 try:

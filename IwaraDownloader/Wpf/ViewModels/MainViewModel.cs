@@ -2107,12 +2107,19 @@ namespace IwaraDownloader.Wpf.ViewModels
                 else if (chPending > 0) statusText = $" ⏳{chPending}";
                 if (chPaused > 0) statusText += $" ⏸️{chPaused}";
 
+                // アカウント消滅(iwara側で404)は無効化(⬜)より優先して表示する。
+                // 消滅済みでも無効化されていても、DL済みファイルや動画情報自体は消えない。
+                var channelEmoji = user.IsAccountDeleted ? "❌" : (user.IsEnabled ? "📺" : "⬜");
+                var channelForeground = user.IsAccountDeleted
+                    ? ThemeManager.GetBrush("Brush.Danger")
+                    : (user.IsEnabled ? ThemeManager.GetBrush("Brush.Text") : ThemeManager.GetBrush("Brush.TextDisabled"));
+
                 nodes.Add(new ChannelTreeNodeViewModel
                 {
                     Kind = TreeNodeKind.Channel,
                     Channel = user,
-                    Text = $"{(user.IsEnabled ? "📺" : "⬜")} {user.Username} [{chCompleted}/{chTotal}]{statusText}",
-                    Foreground = user.IsEnabled ? ThemeManager.GetBrush("Brush.Text") : ThemeManager.GetBrush("Brush.TextDisabled"),
+                    Text = $"{channelEmoji} {user.Username} [{chCompleted}/{chTotal}]{statusText}",
+                    Foreground = channelForeground,
                 });
             }
 

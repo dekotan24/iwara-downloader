@@ -133,7 +133,8 @@ namespace IwaraDownloader.Services
                     CustomSavePath TEXT DEFAULT '',
                     DownloadExternalVideosOverride INTEGER NULL,
                     VideosLoaded INTEGER DEFAULT 0,
-                    DefaultPriority INTEGER NULL
+                    DefaultPriority INTEGER NULL,
+                    IsAccountDeleted INTEGER DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS Videos (
@@ -271,6 +272,7 @@ namespace IwaraDownloader.Services
             bool hasSubSite = false;
             bool hasVideosLoaded = false;
             bool hasDefaultPriority = false;
+            bool hasIsAccountDeleted = false;
 
             var checkCmd = connection.CreateCommand();
             checkCmd.CommandText = "PRAGMA table_info(SubscribedUsers)";
@@ -284,6 +286,7 @@ namespace IwaraDownloader.Services
                     if (columnName == "Site") hasSubSite = true;
                     if (columnName == "VideosLoaded") hasVideosLoaded = true;
                     if (columnName == "DefaultPriority") hasDefaultPriority = true;
+                    if (columnName == "IsAccountDeleted") hasIsAccountDeleted = true;
                 }
             }
 
@@ -298,6 +301,8 @@ namespace IwaraDownloader.Services
                 "ALTER TABLE SubscribedUsers ADD COLUMN VideosLoaded INTEGER DEFAULT 1", "VideosLoaded");
             AddColumnIfMissing(connection, hasDefaultPriority,
                 "ALTER TABLE SubscribedUsers ADD COLUMN DefaultPriority INTEGER NULL", "DefaultPriority");
+            AddColumnIfMissing(connection, hasIsAccountDeleted,
+                "ALTER TABLE SubscribedUsers ADD COLUMN IsAccountDeleted INTEGER DEFAULT 0", "IsAccountDeleted");
 
             // VideosテーブルのTags/Memo/FileUuid/EmbedUrl/Rating/Site カラムマイグレーション
             MigrateVideosTable(connection);
@@ -455,8 +460,8 @@ namespace IwaraDownloader.Services
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site, VideosLoaded, DefaultPriority)
-                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site, @VideosLoaded, @DefaultPriority);
+                INSERT INTO SubscribedUsers (UserId, Username, ProfileUrl, ThumbnailUrl, LocalThumbnailPath, CreatedAt, IsEnabled, CustomSavePath, DownloadExternalVideosOverride, Site, VideosLoaded, DefaultPriority, IsAccountDeleted)
+                VALUES (@UserId, @Username, @ProfileUrl, @ThumbnailUrl, @LocalThumbnailPath, @CreatedAt, @IsEnabled, @CustomSavePath, @DownloadExternalVideosOverride, @Site, @VideosLoaded, @DefaultPriority, @IsAccountDeleted);
                 SELECT last_insert_rowid();
             ";
             command.Parameters.AddWithValue("@UserId", user.UserId);
@@ -473,6 +478,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@VideosLoaded", user.VideosLoaded ? 1 : 0);
             command.Parameters.AddWithValue("@DefaultPriority",
                 user.DefaultPriority.HasValue ? (object)(int)user.DefaultPriority.Value : DBNull.Value);
+            command.Parameters.AddWithValue("@IsAccountDeleted", user.IsAccountDeleted ? 1 : 0);
 
             return Convert.ToInt32(command.ExecuteScalar());
         }
@@ -500,7 +506,8 @@ namespace IwaraDownloader.Services
                     DownloadExternalVideosOverride = @DownloadExternalVideosOverride,
                     Site = @Site,
                     VideosLoaded = @VideosLoaded,
-                    DefaultPriority = @DefaultPriority
+                    DefaultPriority = @DefaultPriority,
+                    IsAccountDeleted = @IsAccountDeleted
                 WHERE Id = @Id
             ";
             command.Parameters.AddWithValue("@Id", user.Id);
@@ -519,6 +526,7 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@VideosLoaded", user.VideosLoaded ? 1 : 0);
             command.Parameters.AddWithValue("@DefaultPriority",
                 user.DefaultPriority.HasValue ? (object)(int)user.DefaultPriority.Value : DBNull.Value);
+            command.Parameters.AddWithValue("@IsAccountDeleted", user.IsAccountDeleted ? 1 : 0);
 
             command.ExecuteNonQuery();
         }
@@ -677,6 +685,14 @@ namespace IwaraDownloader.Services
                 user.DefaultPriority = rawPriority is >= 0 and <= 3 ? (DownloadPriority)rawPriority.Value : null;
             }
             catch { user.DefaultPriority = null; }
+
+            // IsAccountDeleted カラム(マイグレーション対応)
+            try
+            {
+                var ordinal = reader.GetOrdinal("IsAccountDeleted");
+                user.IsAccountDeleted = !reader.IsDBNull(ordinal) && reader.GetInt32(ordinal) == 1;
+            }
+            catch { user.IsAccountDeleted = false; }
 
             return user;
         }
