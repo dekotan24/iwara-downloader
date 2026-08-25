@@ -588,12 +588,8 @@
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           VirtualizingPanel.ScrollUnit="Pixel"
                           ContextMenuOpening="VideoList_ContextMenuOpening"
-                          GridViewColumnHeader.Click="VideoColumnHeader_Click">
-                    <ListView.InputBindings>
-                        <!-- 旧WinForms版listViewVideos_MouseDoubleClickに対応。DL済みならローカル再生、
-                             未DLなら元動画ページを開く(MainViewModel.PlayOrOpenSelectedVideo) -->
-                        <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding PlayOrOpenSelectedVideoCommand}" />
-                    </ListView.InputBindings>
+                          GridViewColumnHeader.Click="VideoColumnHeader_Click"
+                          PreviewMouseLeftButtonDown="VideoList_PreviewMouseLeftButtonDown">
                     <!--
                         ItemContainerStyle未指定だとOS標準のListViewItemテンプレートが使われ、
                         選択/フォーカス時に文字色と連動しない明るい(ほぼ白の)ハイライトを乗せてくる

@@ -270,5 +270,28 @@ namespace IwaraDownloader.Wpf.Views
                 (DataContext as MainViewModel)?.SortVideosByColumn(index);
             }
         }
+
+        /// <summary>
+        /// 詳細リスト表示のダブルクリック。ListView.InputBindings の MouseBinding(LeftDoubleClick)
+        /// は GridViewRowPresenter 経由だと発火しなかった(タイル表示と同じ症状、実機確認)ため、
+        /// PreviewMouseLeftButtonDown(Tunnel)でClickCountを見て判定する。列ヘッダーのダブルクリックは
+        /// ソート操作なのでコマンドを実行しない。
+        /// </summary>
+        private void VideoList_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ClickCount != 2) return;
+            if (IsInHeader(e.OriginalSource as System.Windows.DependencyObject)) return;
+            (DataContext as MainViewModel)?.PlayOrOpenSelectedVideoCommand.Execute(null);
+        }
+
+        private static bool IsInHeader(System.Windows.DependencyObject? source)
+        {
+            while (source != null)
+            {
+                if (source is System.Windows.Controls.GridViewColumnHeader) return true;
+                source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+            }
+            return false;
+        }
     }
 }
