@@ -94,7 +94,7 @@ namespace IwaraDownloader.Models
         /// <summary>iwara外動画(YouTube埋め込み等)をデフォルトでDLするか(チャンネル個別設定で上書き可能)</summary>
         public bool DownloadExternalVideosDefault { get; set; } = false;
 
-        /// <summary>yt-dlp実行パス(空または"yt-dlp"でPATH参照)。未インストールの場合は自動で pip install を試行</summary>
+        /// <summary>yt-dlp実行パス。空または"yt-dlp"でPATH参照。同梱exeがあればそちらを優先</summary>
         public string YtDlpPath { get; set; } = "yt-dlp";
 
         #region Sound Settings
@@ -141,7 +141,11 @@ namespace IwaraDownloader.Models
 
         #endregion
 
-        /// <summary>Pythonの実行パス</summary>
+        /// <summary>Rust helperの実行パス。空ならアプリ同梱のiwara-helper.exeを使う</summary>
+        public string RustHelperPath { get; set; } = string.Empty;
+
+        /// <summary>旧Python版との設定互換用。Rust版では参照しない。</summary>
+        [Obsolete("Python helper is no longer used")]
         public string PythonPath { get; set; } = "python";
 
         /// <summary>iwaraメールアドレス</summary>

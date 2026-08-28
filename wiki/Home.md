@@ -22,17 +22,17 @@ iwara.tv / iwara.ai 対応の動画ダウンローダー & メディアサーバ
 | 項目 | 要件 |
 |------|------|
 | OS | Windows 10 / 11 (64bit) |
-| ランタイム | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| Python | 不要（初回セットアップウィザードが自動で取得）。既存の Python 3.10 以上を使うことも可 |
+| ランタイム | [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| Rust helper | アプリに `iwara-helper.exe` を同梱。Pythonやpipは不要 |
 
 ## 技術スタック
 
 | 領域 | 技術 |
 |------|------|
-| アプリ本体 | C# / WinForms (.NET 8.0) |
+| アプリ本体 | C# / WinForms (.NET 10.0) |
 | Web サーバー | ASP.NET Core Kestrel (Minimal API) + Vanilla JS |
 | データベース | SQLite (Microsoft.Data.Sqlite) |
-| iwara API | Python 3.10+ / cloudscraper（Cloudflare 回避） |
+| iwara API | 同梱Rust `iwara-helper.exe`（reqwest + rustls） |
 | メタデータ | TagLibSharp（mp4 への UUID 埋め込み） |
 | その他 | NAudio（通知音）、DPAPI（資格情報の暗号化）、yt-dlp（外部動画 DL） |
 

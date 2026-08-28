@@ -219,8 +219,8 @@ URL 入力欄にユーザー名またはプロフィール URL（`https://www.iw
 <details>
 <summary><b>セットアップ / ログインに失敗する</b></summary>
 
-- インターネット接続を確認（Python の取得と cloudscraper のインストールに必要）
-- 既存の Python を指定した場合はパスが正しいか確認（`python.exe` のフルパス）
+- インターネット接続を確認（iwara APIとRust helperの通信に必要）
+- カスタムhelperを指定した場合は、`iwara-helper.exe` のパスが正しいか確認
 - iwara.tv に直接ログインできるか確認
 - ウイルス対策ソフトがブロックしていないか確認
 
@@ -266,7 +266,7 @@ dotnet test IwaraDownloader.sln -c Debug
 | アプリ本体 | C# / WinForms (.NET 10.0) |
 | Web サーバー | ASP.NET Core Kestrel (Minimal API) + Vanilla JS |
 | データベース | SQLite (Microsoft.Data.Sqlite) |
-| iwara API | Python 3.10+ / [cloudscraper](https://github.com/VeNoMouS/cloudscraper)（Cloudflare 回避） |
+| iwara API | 同梱Rust `iwara-helper.exe`（reqwest + rustls） |
 | メタデータ | [TagLibSharp](https://github.com/mono/taglib-sharp)（mp4 への UUID 埋め込み） |
 | その他 | NAudio（通知音）、DPAPI（資格情報の暗号化） |
 
@@ -284,5 +284,5 @@ dotnet test IwaraDownloader.sln -c Debug
 ## 🙏 謝辞
 
 - [iwara-python-api](https://github.com/xiatg/iwara-python-api)
-- [cloudscraper](https://github.com/VeNoMouS/cloudscraper)
+- [Rust](https://www.rust-lang.org/) / [reqwest](https://github.com/seanmonstar/reqwest)
 - 開発の一部に [Claude](https://claude.ai) by Anthropic を使用しています

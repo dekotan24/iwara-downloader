@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using IwaraDownloader.Models;
@@ -54,7 +53,7 @@ namespace IwaraDownloader.Services
     }
 
     /// <summary>
-    /// iwara 検索クライアント。IwaraApiService の Python ヘルパーに「search」action で問い合わせる。
+    /// iwara 検索クライアント。IwaraApiService のRust helperに「search」actionで問い合わせる。
     /// </summary>
     public class IwaraSearch
     {
@@ -71,46 +70,12 @@ namespace IwaraDownloader.Services
             }
             try
             {
-                // IwaraApiService に直接アクセスする手段が無いので Process を呼ぶ
-                // トークンは環境変数経由 (コマンドライン引数からの漏洩防止)
-                var siteArg = string.IsNullOrEmpty(site) ? "" : $" --site \"{site}\"";
-                var psi = new ProcessStartInfo
+                using var doc = await _api.SearchVideosAsync(query, page, limit, site);
+                if (doc == null)
                 {
-                    FileName = Utils.SettingsManager.Instance.Settings.PythonPath,
-                    Arguments = $"\"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "iwara_helper.py")}\" search \"{query.Replace("\"", "\\\"")}\" {page} {limit}{siteArg}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8,
-                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                };
-                if (!string.IsNullOrEmpty(_api.Token))
-                {
-                    psi.EnvironmentVariables["IWARA_TOKEN"] = _api.Token;
-                }
-                using var proc = new Process { StartInfo = psi };
-                var stdoutBuf = new StringBuilder();
-                var stderrBuf = new StringBuilder();
-                proc.OutputDataReceived += (_, e) => { if (e.Data != null) stdoutBuf.AppendLine(e.Data); };
-                proc.ErrorDataReceived += (_, e) => { if (e.Data != null) stderrBuf.AppendLine(e.Data); };
-                proc.Start();
-                Utils.ChildProcessJob.AssignProcess(proc); // 親死亡で自動 Kill
-                proc.BeginOutputReadLine();
-                proc.BeginErrorReadLine();
-                await proc.WaitForExitAsync();
-                proc.WaitForExit(); // ストリーム flush 完了を保証
-
-                var stdout = stdoutBuf.ToString();
-                if (string.IsNullOrWhiteSpace(stdout))
-                {
-                    result.Error = string.IsNullOrWhiteSpace(stderrBuf.ToString())
-                        ? "Python 応答なし"
-                        : $"Python エラー: {stderrBuf.ToString().Trim()}";
+                    result.Error = "Rust helperの応答がありません";
                     return result;
                 }
-                using var doc = JsonDocument.Parse(stdout);
                 var root = doc.RootElement;
                 if (!root.TryGetProperty("success", out var s) || !s.GetBoolean())
                 {

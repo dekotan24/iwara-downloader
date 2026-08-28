@@ -946,7 +946,7 @@ namespace IwaraDownloader.Services
                     }
                 });
 
-                // タスク個別CTとアプリ全体CTをリンク (どちらかキャンセルされたらpython側もKill)
+                // タスク個別CTとアプリ全体CTをリンク (どちらかキャンセルされたらRust helperもKill)
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                     task.CancellationTokenSource.Token,
                     _globalCts?.Token ?? CancellationToken.None);
@@ -1066,7 +1066,7 @@ namespace IwaraDownloader.Services
                                     || ex.Message.Contains("ログインが必要です");
 
                 // CDN_UNAVAILABLE / All CDN candidates failed: iwara 側の CDN 振り分けが壊れていて
-                // Python ヘルパーが既に内部で 6 回 CDN ガチャを引いてる。
+                // Rust helperが既に内部で 6 回 CDN の再解決を試行している。
                 // ここから更にリトライしても無駄なので即時諦める (CPU・帯域節約)。
                 bool isCdnUnavailable = ex.Message.Contains("CDN_UNAVAILABLE")
                                      || ex.Message.Contains("All CDN candidates failed");
@@ -2061,7 +2061,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>環境が準備できているか</summary>
-        public bool IsEnvironmentReady => _iwaraApi.IsPythonConfigured && _iwaraApi.IsSetupDone && _iwaraApi.IsScriptReady;
+        public bool IsEnvironmentReady => _iwaraApi.IsRustConfigured && _iwaraApi.IsSetupDone && _iwaraApi.IsScriptReady;
 
         /// <summary>ログイン済みか</summary>
         public bool IsLoggedIn => _iwaraApi.IsLoggedIn;
@@ -2081,11 +2081,11 @@ namespace IwaraDownloader.Services
         public DateTime? TokenExpiresAt => _iwaraApi.TokenExpiresAt;
 
         /// <summary>セットアップ実行</summary>
-        public Task<bool> RunSetupAsync(string pythonPath, IProgress<string>? progress = null)
-            => _iwaraApi.RunSetupAsync(pythonPath, progress);
+        public Task<bool> RunSetupAsync(string helperPath, IProgress<string>? progress = null)
+            => _iwaraApi.RunSetupAsync(helperPath, progress);
 
         /// <summary>環境チェック</summary>
-        public (bool PythonReady, bool ScriptReady) CheckEnvironment()
+        public (bool RustReady, bool HelperReady) CheckEnvironment()
             => _iwaraApi.CheckEnvironment();
 
         public void Dispose()

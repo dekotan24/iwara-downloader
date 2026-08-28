@@ -358,3 +358,26 @@ Rust完全移行後にPython helper由来として残るものはありません
 - Python helperのlogin guardと、現行APIの匿名公開挙動に入口条件の差がある。
 
 したがって、正式移行を開始する条件は「安全なテスト用tokenでlogin/verify/get-video/search/user-videos/get-urlをPython/Rust同条件で比較」「full download state machineをfixture serverで検証」「private/403/429/site差を正規セッション範囲で確認」です。これらを満たし、challengeが発生しない、またはWebView2等の正規session設計が受け入れられるなら、Python runtime、pip、cloudscraper、Python subprocess依存を段階的に削除できます。
+
+## Follow-up: Rust migration completed in the application (2026-08-28)
+
+The production integration described above was completed after the initial PoC review.
+
+- Restore point created first: commit `d3a43f7` (`chore: checkpoint before Rust migration`).
+- The Rust CLI in `tools/iwara-rust-poc` is now packaged as `IwaraDownloader/iwara-helper.exe`.
+- `IwaraApiService` now invokes the helper directly with `ProcessStartInfo.ArgumentList`; the token is passed through `IWARA_TOKEN`, and login credentials are passed through child-process environment variables rather than command-line arguments.
+- The Rust helper implements the production actions used by the application: login, token verification, public video metadata, search, user videos, URL resolution, full resumable download, and standalone yt-dlp execution. It includes `.part`/`.part.meta`, ETag and Content-Range checks, 64 KiB rewind, CDN retry, atomic finalization, cancellation-compatible process ownership, and bounded API/CDN backoff.
+- Python helper/setup files were removed from the application project. No Python runtime, pip, or cloudscraper is required by the application anymore. The old `PythonPath` setting is retained only so older settings JSON can still be deserialized; it is not read or exported by the new runtime.
+- The setup wizard and localized settings strings now refer to the Rust helper and standalone yt-dlp. The project copies `iwara-helper.exe` to the application output directory during build.
+
+Validation performed after integration:
+
+- Rust GNU release build: PASS; the helper imports only Windows system DLLs.
+- Rust unit tests: 6 passed.
+- .NET solution Release build: PASS, 0 warnings, 0 errors.
+- .NET tests: 13 passed.
+- Bundled output hash matched the source helper binary.
+- Live public `get-video`: PASS.
+- Live authenticated-path smoke using a synthetic non-secret token: `get-url` resolved Source and `download-test-video` received HTTP 206, 65,536 bytes, `Content-Range: bytes 0-65535/262104033`, with an ETag.
+
+Real account login/token verification, private-content download, and a full 262 MB download were intentionally not run because no credentials were supplied and a large file transfer was unnecessary for this migration check. The migration commit should therefore be treated as production code with those environment-specific checks still pending.

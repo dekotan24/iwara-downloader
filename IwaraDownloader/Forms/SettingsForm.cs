@@ -89,8 +89,8 @@ namespace IwaraDownloader.Forms
             }
             cmbLanguage.SelectedIndex = langIndex;
 
-            // Python環境
-            txtPythonPath.Text = settings.PythonPath;
+            // Rust helper環境
+            txtPythonPath.Text = settings.RustHelperPath;
             txtYtDlpPath.Text = settings.YtDlpPath;
 
             // アカウント
@@ -169,8 +169,8 @@ namespace IwaraDownloader.Forms
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
 
-            // Python環境
-            settings.PythonPath = txtPythonPath.Text.Trim();
+            // Rust helper環境
+            settings.RustHelperPath = txtPythonPath.Text.Trim();
             var ytDlp = txtYtDlpPath.Text.Trim();
             settings.YtDlpPath = string.IsNullOrEmpty(ytDlp) ? "yt-dlp" : ytDlp;
 
@@ -234,26 +234,8 @@ namespace IwaraDownloader.Forms
             {
                 Title = L.T("SettingsForm_D088"),
                 Filter = L.T("SettingsForm_D003"),
-                FileName = "python.exe"
+                FileName = "iwara-helper.exe"
             };
-
-            // よくあるPythonインストール先を探す
-            var possiblePaths = new[]
-            {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python"),
-                @"C:\Python311",
-                @"C:\Python312",
-                @"C:\Python310"
-            };
-
-            foreach (var path in possiblePaths)
-            {
-                if (Directory.Exists(path))
-                {
-                    dialog.InitialDirectory = path;
-                    break;
-                }
-            }
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {
@@ -286,7 +268,7 @@ namespace IwaraDownloader.Forms
                 return;
             }
 
-            // 先に設定を保存(Pythonパスを含む)
+            // 先に設定を保存(Rust helperパスを含む)
             SaveSettings();
 
             btnReLogin.Enabled = false;

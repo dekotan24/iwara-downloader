@@ -34,12 +34,12 @@
 
 ## アカウントタブ
 
-### Python 環境
+### Rust / yt-dlp 環境
 
 | 項目 | デフォルト | 説明 |
 |------|-----------|------|
-| Python パス | python | セットアップウィザードで設定される |
-| yt-dlp パス | yt-dlp | 未インストールなら自動で `pip install` を試行 |
+| Rust helper パス | 空欄 | 空欄ならアプリ同梱の `iwara-helper.exe` を使用 |
+| yt-dlp パス | yt-dlp | PATH上または指定したstandalone実行ファイルを使用 |
 
 ### iwara アカウント
 
