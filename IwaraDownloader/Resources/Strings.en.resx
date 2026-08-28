@@ -168,6 +168,135 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="Common_Unknown" xml:space="preserve">
     <value>Unknown</value>
   </data>
+  <data name="DatabaseToolForm_D001" xml:space="preserve">
+    <value>🔒 Read-only mode</value>
+  </data>
+  <data name="DatabaseToolForm_D002" xml:space="preserve">
+    <value>⚠ Write mode enabled (backup: {0})</value>
+  </data>
+  <data name="DatabaseToolForm_D003" xml:space="preserve">
+    <value>Enable Write Mode</value>
+  </data>
+  <data name="DatabaseToolForm_D004" xml:space="preserve">
+    <value>Return to Read-Only</value>
+  </data>
+  <data name="DatabaseToolForm_D005" xml:space="preserve">
+    <value>Enabling write mode allows SQL execution and table edits to change the database directly.
+
+A forced backup will be created before it is enabled.
+
+Continue?</value>
+  </data>
+  <data name="DatabaseToolForm_D007" xml:space="preserve">
+    <value>Database Tool</value>
+  </data>
+  <data name="DatabaseToolForm_D008" xml:space="preserve">
+    <value>Backup created:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D009" xml:space="preserve">
+    <value>Could not start write mode because the backup failed:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D010" xml:space="preserve">
+    <value>This is an advanced feature that edits the database directly.
+
+- A mistaken SQL statement or edit can corrupt or lose data
+- Video files are not changed in sync, which can cause the DB and the actual files to fall out of sync
+- A backup is created automatically when entering write mode, but it is not a complete guarantee
+
+Do you understand and want to continue?</value>
+  </data>
+  <data name="DatabaseToolForm_D011" xml:space="preserve">
+    <value>Advanced Feature Confirmation</value>
+  </data>
+  <data name="DatabaseToolForm_D012" xml:space="preserve">
+    <value>{0} row(s) retrieved</value>
+  </data>
+  <data name="DatabaseToolForm_D013" xml:space="preserve">
+    <value>{0} row(s) retrieved (capped — adjust "Max rows" above if you need more)</value>
+  </data>
+  <data name="DatabaseToolForm_D014" xml:space="preserve">
+    <value>{0} row(s) affected</value>
+  </data>
+  <data name="DatabaseToolForm_D015" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D017" xml:space="preserve">
+    <value>⚠ Integrity error: {0} video(s) exist in both Videos and ExcludedVideos. This is an unexpected state.</value>
+  </data>
+  <data name="DatabaseToolForm_D018" xml:space="preserve">
+    <value>Showing {0} row(s) (table: {1})</value>
+  </data>
+  <data name="DatabaseToolForm_D019" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="DatabaseToolForm_D020" xml:space="preserve">
+    <value>Update failed: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D021" xml:space="preserve">
+    <value>Delete the selected {0} row(s)?
+This cannot be undone (only a backup restore can recover it).</value>
+  </data>
+  <data name="DatabaseToolForm_D022" xml:space="preserve">
+    <value>Confirm Row Deletion</value>
+  </data>
+  <data name="DatabaseToolForm_D023" xml:space="preserve">
+    <value>{0} row(s) deleted</value>
+  </data>
+  <data name="DatabaseToolForm_D024" xml:space="preserve">
+    <value>Delete failed: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D025" xml:space="preserve">
+    <value>This table has no primary key, so cells cannot be edited and rows cannot be deleted (view only)</value>
+  </data>
+  <data name="DatabaseToolForm_D027" xml:space="preserve">
+    <value>Please select row(s) to delete</value>
+  </data>
+  <data name="DatabaseToolForm_D028" xml:space="preserve">
+    <value>(capped)</value>
+  </data>
+  <data name="DatabaseToolForm_Title" xml:space="preserve">
+    <value>Database Tool (Advanced)</value>
+  </data>
+  <data name="DatabaseToolForm_btnDeleteSelectedRow" xml:space="preserve">
+    <value>Delete Selected Row(s)</value>
+  </data>
+  <data name="DatabaseToolForm_btnExecuteSql" xml:space="preserve">
+    <value>Execute (F5)</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshTable" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="DatabaseToolForm_chkApplyRowLimit" xml:space="preserve">
+    <value>Apply row limit</value>
+  </data>
+  <data name="DatabaseToolForm_lblMaxRows" xml:space="preserve">
+    <value>Max rows:</value>
+  </data>
+  <data name="DatabaseToolForm_lblSqlHint" xml:space="preserve">
+    <value>Enter SQL and execute it. In read-only mode, only SELECT statements return results; write statements are rejected automatically.</value>
+  </data>
+  <data name="DatabaseToolForm_lblTable" xml:space="preserve">
+    <value>Table:</value>
+  </data>
+  <data name="DatabaseToolForm_tabBrowser" xml:space="preserve">
+    <value>Table Browser</value>
+  </data>
+  <data name="DatabaseToolForm_tabSql" xml:space="preserve">
+    <value>SQL Editor</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunning" xml:space="preserve">
+    <value>IwaraDownloader is currently running.
+
+Using the database tool while it's running may cause data inconsistencies due to conflicts with download processing.
+We strongly recommend closing IwaraDownloader first.
+
+Continue anyway?</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunningTitle" xml:space="preserve">
+    <value>Running Confirmation</value>
+  </data>
   <data name="DuplicateCheckForm_D001" xml:space="preserve">
     <value>Scanning...</value>
   </data>
@@ -1337,6 +1466,17 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D193" xml:space="preserve">
     <value>Copied {0} author names</value>
   </data>
+  <data name="MainForm_D200" xml:space="preserve">
+    <value>The database tool (DBMaintenanceTool.exe) was not found.
+Please check that the build completed correctly.</value>
+  </data>
+  <data name="MainForm_D201" xml:space="preserve">
+    <value>Database Tool</value>
+  </data>
+  <data name="MainForm_D202" xml:space="preserve">
+    <value>Failed to start the database tool:
+{0}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1656,6 +1796,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
     <value>Bulk URL Import...</value>
+  </data>
+  <data name="MainForm_menuToolsDatabaseTool" xml:space="preserve">
+    <value>Database Tool (Advanced)...</value>
   </data>
   <data name="MainForm_menuToolsDuplicateCheck" xml:space="preserve">
     <value>Duplicate Check...</value>
@@ -2363,6 +2506,9 @@ Current: {0}</value>
   <data name="SettingsForm_chkDownloadExternal" xml:space="preserve">
     <value>Also download external videos (YouTube embeds etc.) — can be overridden per channel</value>
   </data>
+  <data name="SettingsForm_chkEnableAdvancedDbTool" xml:space="preserve">
+    <value>Show the database tool (SQL editor / table browser) in the Tools menu</value>
+  </data>
   <data name="SettingsForm_chkEnableErrorSound" xml:space="preserve">
     <value>Play a sound when a download fails</value>
   </data>
@@ -2423,6 +2569,9 @@ Current: {0}</value>
   <data name="SettingsForm_grpAccount" xml:space="preserve">
     <value>iwara account</value>
   </data>
+  <data name="SettingsForm_grpAdvancedDbTool" xml:space="preserve">
+    <value>Database Tool (Advanced)</value>
+  </data>
   <data name="SettingsForm_grpAutoCheck" xml:space="preserve">
     <value>Auto check</value>
   </data>
@@ -2475,6 +2624,11 @@ Current: {0}</value>
     <value>* Logging in with an iwara account is required to download
    R-18 content and private videos.
 * After changing email/password, click "Re-login".</value>
+  </data>
+  <data name="SettingsForm_lblAdvancedDbToolWarning" xml:space="preserve">
+    <value>⚠ This is an advanced feature that edits the database directly.
+A mistaken operation can corrupt or lose data. It launches as a
+separate process — please close IwaraDownloader before using it.</value>
   </data>
   <data name="SettingsForm_lblAdvancedNote" xml:space="preserve">
     <value>* Rate limit settings reduce server load and prevent 403/429 errors.
@@ -2608,6 +2762,9 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="SettingsForm_tabBackup" xml:space="preserve">
     <value>Backup</value>
+  </data>
+  <data name="SettingsForm_tabDatabase" xml:space="preserve">
+    <value>Database</value>
   </data>
   <data name="SettingsForm_tabGeneral" xml:space="preserve">
     <value>General</value>

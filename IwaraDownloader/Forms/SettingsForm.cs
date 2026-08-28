@@ -105,6 +105,7 @@ namespace IwaraDownloader.Forms
             numRateLimitBase.Value = settings.RateLimitBaseDelayMs;
             numRateLimitMax.Value = settings.RateLimitMaxDelayMs;
             chkExponentialBackoff.Checked = settings.EnableExponentialBackoff;
+            chkEnableAdvancedDbTool.Checked = settings.EnableAdvancedDbTool;
 
             // その他設定
             chkEnableSound.Checked = settings.EnableCompletionSound;
@@ -185,6 +186,7 @@ namespace IwaraDownloader.Forms
             settings.RateLimitBaseDelayMs = (int)numRateLimitBase.Value;
             settings.RateLimitMaxDelayMs = (int)numRateLimitMax.Value;
             settings.EnableExponentialBackoff = chkExponentialBackoff.Checked;
+            settings.EnableAdvancedDbTool = chkEnableAdvancedDbTool.Checked;
 
             // その他設定
             settings.EnableCompletionSound = chkEnableSound.Checked;

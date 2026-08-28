@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -749,7 +750,38 @@ namespace IwaraDownloader.Wpf.ViewModels
             {
                 _downloadManager.UpdateAutoCheckTimer();
                 _downloadManager.NotifyConcurrentLimitChanged();
+                IsAdvancedDbToolEnabled = SettingsManager.Instance.Settings.EnableAdvancedDbTool;
                 LoadVideos();
+            }
+        }
+
+        /// <summary>DB操作ツール(SQLエディタ/テーブルブラウザ)をツールメニューに表示するか。設定画面のトグルに連動。</summary>
+        [ObservableProperty]
+        private bool _isAdvancedDbToolEnabled = SettingsManager.Instance.Settings.EnableAdvancedDbTool;
+
+        [RelayCommand]
+        private void OpenDatabaseTool()
+        {
+            // downloader起動中のままDBを直接いじると裏のDL処理と競合しうるため、
+            // 別プロセスの独立ツール(DBMaintenanceTool.exe、プロジェクトはIwaraDownloader.DbTool)
+            // として切り出している。本体からは起動するだけで、DownloadManagerとの連携は持たない
+            // (DbTool側で起動時に本体プロセスの有無を確認・警告する設計、詳細はDbTool側Program.cs参照)。
+            var exePath = System.IO.Path.Combine(AppContext.BaseDirectory, "DBMaintenanceTool.exe");
+            if (!File.Exists(exePath))
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D200"), L.T("MainForm_D201"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(L.T("MainForm_D202", ex.Message), L.T("MainForm_D201"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 

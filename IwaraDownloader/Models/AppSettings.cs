@@ -175,6 +175,13 @@ namespace IwaraDownloader.Models
 
         #endregion
 
+        #region Advanced Settings
+
+        /// <summary>DB操作ツール(SQLエディタ/テーブルブラウザ)をツールメニューに表示する。上級者向け機能、既定は無効</summary>
+        public bool EnableAdvancedDbTool { get; set; } = false;
+
+        #endregion
+
         /// <summary>
         /// UI言語: "auto"(OS言語に従う) / "ja" / "en" / "zh-Hans"。
         /// 変更はアプリ再起動で反映される。WebUIにも同じ設定が適用される。

@@ -1,0 +1,11 @@
+{
+  "token": "eyJhbGciOiJub25lIn0.eyJleHAiOjE3MDAwMDAwMDAsImlkIjoiZml4dHVyZSJ9.signature",
+  "expected_payload": {
+    "exp": 1700000000,
+    "id": "fixture"
+  },
+  "file_id": "fixture-file",
+  "expires": "1700000000",
+  "secret": "fixture-secret",
+  "expected_x_version": "b38092089760701788e7011a7576d7881aff457b"
+}

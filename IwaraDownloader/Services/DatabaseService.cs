@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.Data.Sqlite;
 using IwaraDownloader.Models;
 
@@ -1992,6 +1993,181 @@ namespace IwaraDownloader.Services
                 }
             }
             return imported;
+        }
+
+        #endregion
+
+        #region Advanced DB Tool (上級者向け: SQLエディタ/テーブルブラウザ)
+        // DatabaseToolForm 専用の管理者API。通常のアプリ機能からは呼ばない。
+        // 読み取りは常に Mode=ReadOnly の別接続で行い、書き込みは呼び出し元 (DatabaseToolForm) が
+        // 明示的な書き込みモードのときのみ ExecuteAdminNonQuery を呼ぶ想定。
+        // トランザクションは保持しない (Cache=Shared 環境で開きっぱなしにすると
+        // DownloadManager 側の書き込みが database is locked で失敗するため)。
+
+        /// <summary>DBファイルの絶対パス。DatabaseToolForm のバックアップ表示・確認用。</summary>
+        public string DbPath => _dbPath;
+
+        /// <summary>
+        /// 24時間スロットルの対象外・7世代ローテーションの対象外となる強制バックアップを作成する。
+        /// ファイル名は data_backup_manual_ プレフィックス (BackupDatabaseIfNeeded の自動生成
+        /// パターン ^data_backup_\d{8}_\d{6}\.db$ に一致しないため、既存のスロットル/削除ロジックの
+        /// 対象から自然に除外される)。DatabaseToolForm が書き込みモードへ切り替える直前に必ず呼ぶ。
+        /// </summary>
+        public string CreateForcedBackup()
+        {
+            var backupDir = Path.Combine(Path.GetDirectoryName(_dbPath)!, "backups");
+            Directory.CreateDirectory(backupDir);
+            var backupPath = Path.Combine(backupDir, $"data_backup_manual_{DateTime.Now:yyyyMMdd_HHmmss}.db");
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = $"VACUUM INTO '{backupPath.Replace("'", "''")}'";
+            cmd.ExecuteNonQuery();
+
+            LoggingService.Instance.Info($"DB操作ツール: 書き込みモード移行前の強制バックアップ作成: {Path.GetFileName(backupPath)}");
+            return backupPath;
+        }
+
+        /// <summary>
+        /// 任意のSQLを1文実行する。writable=false なら Mode=ReadOnly の別接続を使うため、
+        /// UPDATE/DELETE/INSERT/DDL 等は SQLite 自体が "attempt to write a readonly database" で
+        /// 拒否する(先頭キーワードでのSQL文字列判定は行わない。WITH句付きDELETE等の回避策があり
+        /// 信頼できないため、可否の判定は必ず接続の権限そのものに委ねる)。
+        /// SELECT等の結果セットを持つ文は DataTable を、UPDATE/DELETE/INSERT等は
+        /// RecordsAffected のみを返す。ExecuteReaderはどちらの文でも実行できるため、
+        /// 呼び出し前にSQL種別を判定する必要が無い。
+        /// maxRows で結果行数をキャップする(大テーブルの全件フェッチによるUIフリーズ防止)。
+        /// </summary>
+        public (DataTable? Result, int RecordsAffected) ExecuteAdminSql(string sql, bool writable, int maxRows = 1000)
+        {
+            var connStr = writable ? _connectionString : $"Data Source={_dbPath};Mode=ReadOnly";
+            using var connection = new SqliteConnection(connStr);
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+            using var reader = cmd.ExecuteReader();
+
+            if (reader.FieldCount == 0)
+                return (null, reader.RecordsAffected);
+
+            var table = new DataTable();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                // JOINで同名列(例: 複数テーブルのId)が並ぶとDataTable.Columns.Addが
+                // DuplicateNameExceptionを投げるため、重複時は連番を付けて回避する。
+                var name = reader.GetName(i);
+                var uniqueName = name;
+                var suffix = 1;
+                while (table.Columns.Contains(uniqueName))
+                    uniqueName = $"{name}{suffix++}";
+                table.Columns.Add(uniqueName, typeof(object));
+            }
+
+            var rowCount = 0;
+            while (reader.Read())
+            {
+                if (rowCount >= maxRows) { table.ExtendedProperties["Truncated"] = true; break; }
+                var row = table.NewRow();
+                for (var i = 0; i < reader.FieldCount; i++)
+                    row[i] = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                table.Rows.Add(row);
+                rowCount++;
+            }
+            return (table, reader.RecordsAffected);
+        }
+
+        /// <summary>テーブルブラウザ用: ユーザーテーブル名の一覧 (sqlite_内部テーブルは除外)。</summary>
+        public List<string> GetAdminTableNames()
+        {
+            var names = new List<string>();
+            using var connection = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                names.Add(reader.GetString(0));
+            return names;
+        }
+
+        /// <summary>テーブルブラウザ用: 指定テーブルの主キー列名 (複合主キー対応)。無ければ空リスト。</summary>
+        public List<string> GetAdminPrimaryKeyColumns(string tableName)
+        {
+            var pk = new List<(int Order, string Name)>();
+            using var connection = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = $"PRAGMA table_info('{tableName.Replace("'", "''")}')";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var pkOrder = reader.GetInt32(reader.GetOrdinal("pk"));
+                if (pkOrder > 0)
+                    pk.Add((pkOrder, reader.GetString(reader.GetOrdinal("name"))));
+            }
+            return pk.OrderBy(p => p.Order).Select(p => p.Name).ToList();
+        }
+
+        /// <summary>テーブルブラウザ用: 指定テーブルの行を取得 (limit/offset付き)。</summary>
+        public DataTable GetAdminTableRows(string tableName, int limit, int offset)
+        {
+            // テーブル名はコンボボックスの選択肢 (GetAdminTableNames の戻り値) のみを渡す前提。
+            // クォートで囲むことで予約語/記号を含むテーブル名にも安全に対応する。
+            var (result, _) = ExecuteAdminSql(
+                $"SELECT * FROM \"{tableName.Replace("\"", "\"\"")}\" LIMIT {limit} OFFSET {offset}",
+                writable: false,
+                maxRows: limit);
+            return result ?? new DataTable();
+        }
+
+        /// <summary>テーブルブラウザ用: 1セルを更新する。主キー列の値でWHERE句を組み立てる。</summary>
+        public void UpdateAdminCell(string tableName, IReadOnlyDictionary<string, object?> primaryKeyValues, string columnName, object? newValue)
+        {
+            if (primaryKeyValues.Count == 0)
+                throw new InvalidOperationException("主キーが無いテーブルはセル編集できません。");
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            var where = string.Join(" AND ", primaryKeyValues.Keys.Select((k, i) => $"\"{k.Replace("\"", "\"\"")}\" = @pk{i}"));
+            cmd.CommandText = $"UPDATE \"{tableName.Replace("\"", "\"\"")}\" SET \"{columnName.Replace("\"", "\"\"")}\" = @value WHERE {where}";
+            cmd.Parameters.AddWithValue("@value", (object?)newValue ?? DBNull.Value);
+            var i2 = 0;
+            foreach (var kv in primaryKeyValues)
+                cmd.Parameters.AddWithValue($"@pk{i2++}", kv.Value ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
+        }
+
+        /// <summary>テーブルブラウザ用: 主キーの値で1行削除する。</summary>
+        public void DeleteAdminRow(string tableName, IReadOnlyDictionary<string, object?> primaryKeyValues)
+        {
+            if (primaryKeyValues.Count == 0)
+                throw new InvalidOperationException("主キーが無いテーブルは行削除できません。");
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            var where = string.Join(" AND ", primaryKeyValues.Keys.Select((k, i) => $"\"{k.Replace("\"", "\"\"")}\" = @pk{i}"));
+            cmd.CommandText = $"DELETE FROM \"{tableName.Replace("\"", "\"\"")}\" WHERE {where}";
+            var i2 = 0;
+            foreach (var kv in primaryKeyValues)
+                cmd.Parameters.AddWithValue($"@pk{i2++}", kv.Value ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// Videos / ExcludedVideos の XOR不変条件 (同じVideoIdが両方に存在してはいけない) を検査する。
+        /// 生SQLでの直接編集はこの不変条件を無警告で破りうるため、DatabaseToolForm が
+        /// 書き込み実行のたびに呼び、違反があればバナーで警告する。
+        /// </summary>
+        public int CheckAdminXorViolationCount()
+        {
+            using var connection = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM Videos v INNER JOIN ExcludedVideos e ON v.VideoId = e.VideoId";
+            return Convert.ToInt32(cmd.ExecuteScalar());
         }
 
         #endregion
