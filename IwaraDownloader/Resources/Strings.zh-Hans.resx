@@ -1576,7 +1576,7 @@ videoId 后导入数据库。
     <value>打开应用设置画面</value>
   </data>
   <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
-    <value>进行 Rust helper、登录等初始设置</value>
+    <value>进行Python环境、登录等初始设置</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
     <value>开始下载队列</value>
@@ -1648,7 +1648,7 @@ videoId 后导入数据库。
     <value>环境设置</value>
   </data>
   <data name="MainForm_btnSetup_Tip" xml:space="preserve">
-    <value>Rust helper / yt-dlp 设置向导</value>
+    <value>Python / 依赖库设置向导</value>
   </data>
   <data name="MainForm_btnStartAll" xml:space="preserve">
     <value>▶ 开始下载</value>
@@ -2396,7 +2396,7 @@ videoId 后导入数据库。
 {0}</value>
   </data>
   <data name="SettingsForm_D088" xml:space="preserve">
-    <value>选择 Rust helper</value>
+    <value>选择 Python 可执行文件</value>
   </data>
   <data name="SettingsForm_D089" xml:space="preserve">
     <value>选择 yt-dlp 可执行文件</value>
@@ -2600,7 +2600,7 @@ videoId 后导入数据库。
     <value>通知·启动</value>
   </data>
   <data name="SettingsForm_grpPython" xml:space="preserve">
-    <value>Rust / yt-dlp 环境</value>
+    <value>Python 环境</value>
   </data>
   <data name="SettingsForm_grpRateLimit" xml:space="preserve">
     <value>速率限制设置</value>
@@ -2708,10 +2708,10 @@ videoId 后导入数据库。
     <value>预设：</value>
   </data>
   <data name="SettingsForm_lblPythonNote" xml:space="preserve">
-    <value>* 留空则使用应用内置的 iwara-helper.exe</value>
+    <value>* 若已完成初始设置，仅更改路径（无需重新安装库）</value>
   </data>
   <data name="SettingsForm_lblPythonPath" xml:space="preserve">
-    <value>Rust helper 路径：</value>
+    <value>Python 路径：</value>
   </data>
   <data name="SettingsForm_lblQuality" xml:space="preserve">
     <value>默认画质：</value>
@@ -2750,7 +2750,7 @@ videoId 后导入数据库。
     <value>用户名：</value>
   </data>
   <data name="SettingsForm_lblYtDlpNote" xml:space="preserve">
-    <value>* 使用 PATH 中的 "yt-dlp" 或指定的独立可执行文件</value>
+    <value>* "yt-dlp"（PATH 引用）即可。未安装时会自动尝试 pip install</value>
   </data>
   <data name="SettingsForm_lblYtDlpPath" xml:space="preserve">
     <value>yt-dlp 路径：</value>
@@ -2792,7 +2792,7 @@ videoId 后导入数据库。
     <value>欢迎</value>
   </data>
   <data name="SetupWizardForm_D003" xml:space="preserve">
-    <value>Rust helper 设置方式</value>
+    <value>Python 的获取方式</value>
   </data>
   <data name="SetupWizardForm_D004" xml:space="preserve">
     <value>正在执行设置</value>
@@ -2807,7 +2807,7 @@ videoId 后导入数据库。
     <value>下一步 &gt;</value>
   </data>
   <data name="SetupWizardForm_D008" xml:space="preserve">
-    <value>请输入 Rust helper 路径。</value>
+    <value>请输入 Python 路径。</value>
   </data>
   <data name="SetupWizardForm_D009" xml:space="preserve">
     <value>输入错误</value>
@@ -2823,7 +2823,7 @@ videoId 后导入数据库。
     <value>确认</value>
   </data>
   <data name="SetupWizardForm_D013" xml:space="preserve">
-    <value>Rust helper (*.exe)|*.exe|所有文件|*.*</value>
+    <value>Python 可执行文件|python.exe|所有文件|*.*</value>
   </data>
   <data name="SetupWizardForm_D014" xml:space="preserve">
     <value>正在开始设置...</value>
@@ -2842,7 +2842,7 @@ videoId 后导入数据库。
 </value>
   </data>
   <data name="SetupWizardForm_D018" xml:space="preserve">
-    <value>请确认 iwara-helper.exe 已放置，或指定其他 helper。</value>
+    <value>请检查网络连接，或通过「使用现有 Python」尝试其他 Python。</value>
   </data>
   <data name="SetupWizardForm_D019" xml:space="preserve">
     <value>设置错误</value>
@@ -2851,7 +2851,7 @@ videoId 后导入数据库。
     <value>设置正在运行。关闭将中止设置。继续吗？</value>
   </data>
   <data name="SetupWizardForm_D021" xml:space="preserve">
-    <value>选择 iwara-helper.exe</value>
+    <value>选择 python.exe</value>
   </data>
   <data name="SetupWizardForm_D022" xml:space="preserve">
     <value>=== 开始设置 ===</value>
@@ -2884,8 +2884,8 @@ videoId 后导入数据库。
     <value>下一步 &gt;</value>
   </data>
   <data name="SetupWizardForm_lblAutoDesc" xml:space="preserve">
-    <value>使用应用内置的 iwara-helper.exe。
-无需安装其他运行时或库。</value>
+    <value>从 python.org 自动下载 Python 3.10.11 (Embeddable amd64)，
+</value>
   </data>
   <data name="SetupWizardForm_lblComplete" xml:space="preserve">
     <value>设置完成！</value>
@@ -2895,7 +2895,7 @@ videoId 后导入数据库。
 </value>
   </data>
   <data name="SetupWizardForm_lblExistingDesc" xml:space="preserve">
-    <value>请指定 iwara-helper.exe 的路径。</value>
+    <value>请指定 python.exe 的路径。</value>
   </data>
   <data name="SetupWizardForm_lblProgressMsg" xml:space="preserve">
     <value>准备中...</value>
@@ -2904,7 +2904,7 @@ videoId 后导入数据库。
     <value>步骤 1/4：欢迎</value>
   </data>
   <data name="SetupWizardForm_lblStep2Title" xml:space="preserve">
-    <value>选择 Rust helper 设置方式</value>
+    <value>选择获取 Python 的方式</value>
   </data>
   <data name="SetupWizardForm_lblStep3Title" xml:space="preserve">
     <value>正在执行设置</value>
@@ -2923,7 +2923,7 @@ videoId 后导入数据库。
     <value>自动下载（推荐）</value>
   </data>
   <data name="SetupWizardForm_rbExistingPython" xml:space="preserve">
-    <value>使用其他 Rust helper</value>
+    <value>使用现有 Python</value>
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>正在启动...</value>
@@ -3354,28 +3354,28 @@ videoId 后导入数据库。
     <value>缩略图补全</value>
   </data>
   <data name="SvcEnvironmentSetupService_D001" xml:space="preserve">
-    <value>正在检查 Rust helper...</value>
+    <value>正在下载 Python embeddable...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D002" xml:space="preserve">
-    <value>正在检查 Rust helper...</value>
+    <value>Python 下载中 {0}MB / {1}MB</value>
   </data>
   <data name="SvcEnvironmentSetupService_D003" xml:space="preserve">
-    <value>正在验证 Rust helper...</value>
+    <value>正在解压 Python...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D004" xml:space="preserve">
-    <value>正在检查 Rust helper 配置...</value>
+    <value>正在调整 Python 配置 (._pth)...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D005" xml:space="preserve">
-    <value>正在检查 Rust helper 启动...</value>
+    <value>正在安装 pip...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D006" xml:space="preserve">
-    <value>Rust helper 检查完成</value>
+    <value>pip 已安装</value>
   </data>
   <data name="SvcEnvironmentSetupService_D007" xml:space="preserve">
-    <value>正在检查可执行文件位置...</value>
+    <value>正在下载 get-pip.py...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D008" xml:space="preserve">
-    <value>正在检查 Rust helper 是否可以启动...</value>
+    <value>正在执行 pip 安装...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D009" xml:space="preserve">
     <value>正在安装 {0}...</value>
@@ -3384,7 +3384,7 @@ videoId 后导入数据库。
     <value>正在验证 {0}...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D011" xml:space="preserve">
-    <value>正在检查指定的 Rust helper...</value>
+    <value>正在检查指定的 Python...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D012" xml:space="preserve">
     <value>正在创建设置标记...</value>
@@ -3467,7 +3467,7 @@ videoId 后导入数据库。
     <value>正在获取 {0} 的视频列表...</value>
   </data>
   <data name="SvcIwaraApiService_D002" xml:space="preserve">
-    <value>Rust helper 执行失败</value>
+    <value>Python 脚本执行失败</value>
   </data>
   <data name="SvcIwaraApiService_D003" xml:space="preserve">
     <value>错误：{0}</value>

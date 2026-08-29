@@ -31,7 +31,7 @@ namespace IwaraDownloader
             ApplicationConfiguration.Initialize();
 
             // 子プロセス管理用 Job Object を初期化
-            // (親 (このプロセス) が死ぬと紐付けた子プロセス = Rust helper等も自動 Kill される)
+            // (親 (このプロセス) が死ぬと紐付けた子プロセス = Python ヘルパー等も自動 Kill される)
             IwaraDownloader.Utils.ChildProcessJob.EnsureInitialized();
 
             // ログサービス初期化

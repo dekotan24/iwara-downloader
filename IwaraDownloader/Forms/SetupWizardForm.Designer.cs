@@ -27,7 +27,7 @@ namespace IwaraDownloader.Forms
             this.lblWelcome = new System.Windows.Forms.Label();
             this.lblWelcomeDesc = new System.Windows.Forms.Label();
 
-            // Step 2: Rust helper choice
+            // Step 2: Python choice
             this.pnlStep2 = new System.Windows.Forms.Panel();
             this.lblStep2Title = new System.Windows.Forms.Label();
             this.rbAutoDownload = new System.Windows.Forms.RadioButton();
@@ -115,15 +115,17 @@ namespace IwaraDownloader.Forms
             this.lblWelcomeDesc.Name = "lblWelcomeDesc";
             this.lblWelcomeDesc.Size = new System.Drawing.Size(520, 200);
             this.lblWelcomeDesc.Text =
-                "このウィザードでは、動作に必要な以下を確認します:\r\n" +
+                "このウィザードでは、動作に必要な以下を自動的にセットアップします:\r\n" +
                 "\r\n" +
-                "  ・ Rust helper (iwara-helper.exe)\r\n" +
-                "  ・ yt-dlp standalone (外部動画用・任意)\r\n" +
+                "  ・ Python 3.10.11 (Embeddable版) ※自動DLまたは既存パス指定\r\n" +
+                "  ・ pip (パッケージマネージャ)\r\n" +
+                "  ・ cloudscraper (Cloudflare対策)\r\n" +
+                "  ・ yt-dlp (動画ダウンローダ)\r\n" +
                 "\r\n" +
-                "Rust helperはアプリに同梱されています。\r\n" +
+                "ネットワーク接続が必要です。完了まで数分かかる場合があります。\r\n" +
                 "「次へ」を押して開始してください。";
 
-            // pnlStep2 (Rust helper choice)
+            // pnlStep2 (Python choice)
             this.pnlStep2.Controls.Add(this.btnBrowse);
             this.pnlStep2.Controls.Add(this.txtPythonPath);
             this.pnlStep2.Controls.Add(this.lblExistingDesc);
@@ -139,14 +141,14 @@ namespace IwaraDownloader.Forms
             this.lblStep2Title.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
             this.lblStep2Title.Location = new System.Drawing.Point(10, 10);
             this.lblStep2Title.Name = "lblStep2Title";
-            this.lblStep2Title.Text = "Rust helper の場所を選択";
+            this.lblStep2Title.Text = "Python の取得方法を選択";
 
             this.rbAutoDownload.AutoSize = true;
             this.rbAutoDownload.Checked = true;
             this.rbAutoDownload.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.rbAutoDownload.Location = new System.Drawing.Point(15, 55);
             this.rbAutoDownload.Name = "rbAutoDownload";
-            this.rbAutoDownload.Text = "アプリ同梱のRust helperを使用 (推奨)";
+            this.rbAutoDownload.Text = "自動ダウンロード (推奨)";
 
             this.lblAutoDesc.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.lblAutoDesc.ForeColor = System.Drawing.Color.DimGray;
@@ -154,14 +156,14 @@ namespace IwaraDownloader.Forms
             this.lblAutoDesc.Name = "lblAutoDesc";
             this.lblAutoDesc.Size = new System.Drawing.Size(520, 36);
             this.lblAutoDesc.Text =
-                "アプリ実行フォルダの iwara-helper.exe を使用します。\r\n" +
-                "追加のランタイムやライブラリのインストールは必要ありません。";
+                "python.org から Python 3.10.11 (Embeddable amd64) を自動でダウンロードし、\r\n" +
+                "アプリ専用フォルダ (Python310/) に展開します。システムのPythonには触れません。";
 
             this.rbExistingPython.AutoSize = true;
             this.rbExistingPython.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.rbExistingPython.Location = new System.Drawing.Point(15, 135);
             this.rbExistingPython.Name = "rbExistingPython";
-            this.rbExistingPython.Text = "別のRust helperを使用";
+            this.rbExistingPython.Text = "既存のPythonを使用";
             this.rbExistingPython.CheckedChanged += new System.EventHandler(this.rbExistingPython_CheckedChanged);
 
             this.lblExistingDesc.Font = new System.Drawing.Font("Segoe UI", 9F);
@@ -169,14 +171,14 @@ namespace IwaraDownloader.Forms
             this.lblExistingDesc.Location = new System.Drawing.Point(38, 160);
             this.lblExistingDesc.Name = "lblExistingDesc";
             this.lblExistingDesc.Size = new System.Drawing.Size(520, 18);
-            this.lblExistingDesc.Text = "別の iwara-helper.exe へのパスを指定できます。";
+            this.lblExistingDesc.Text = "python.exe へのパスを指定してください。";
 
             this.txtPythonPath.Enabled = false;
             this.txtPythonPath.Font = new System.Drawing.Font("Consolas", 9F);
             this.txtPythonPath.Location = new System.Drawing.Point(38, 185);
             this.txtPythonPath.Name = "txtPythonPath";
             this.txtPythonPath.Size = new System.Drawing.Size(430, 23);
-            this.txtPythonPath.PlaceholderText = "C:\\path\\to\\iwara-helper.exe";
+            this.txtPythonPath.PlaceholderText = "C:\\Python310\\python.exe";
 
             this.btnBrowse.Enabled = false;
             this.btnBrowse.Font = new System.Drawing.Font("Segoe UI", 9F);

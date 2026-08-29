@@ -239,8 +239,8 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// </summary>
         private void RefreshEnvironmentAndLoginStatus()
         {
-            var (rustReady, helperReady) = _downloadManager.CheckEnvironment();
-            bool setupComplete = rustReady && helperReady;
+            var (pythonReady, scriptReady) = _downloadManager.CheckEnvironment();
+            bool setupComplete = pythonReady && scriptReady;
             IsSetupNeeded = !setupComplete;
 
             if (!setupComplete)

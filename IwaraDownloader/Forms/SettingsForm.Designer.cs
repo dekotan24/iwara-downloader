@@ -568,14 +568,14 @@ namespace IwaraDownloader.Forms
             this.grpPython.Size = new Size(440, 160);
             this.grpPython.TabIndex = 0;
             this.grpPython.TabStop = false;
-            this.grpPython.Text = "Rust / yt-dlp 環境";
+            this.grpPython.Text = "Python環境";
 
             // lblPythonPath
             this.lblPythonPath.AutoSize = true;
             this.lblPythonPath.Location = new Point(10, 30);
             this.lblPythonPath.Name = "lblPythonPath";
             this.lblPythonPath.Size = new Size(80, 15);
-            this.lblPythonPath.Text = "Rust helper:";
+            this.lblPythonPath.Text = "Pythonパス:";
 
             // txtPythonPath
             this.txtPythonPath.Location = new Point(100, 27);
@@ -598,7 +598,7 @@ namespace IwaraDownloader.Forms
             this.lblPythonNote.Location = new Point(10, 60);
             this.lblPythonNote.Name = "lblPythonNote";
             this.lblPythonNote.Size = new Size(420, 30);
-            this.lblPythonNote.Text = "※ 空欄ならアプリ同梱のiwara-helper.exeを使用します";
+            this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います(ライブラリの再インストールは不要)";
 
             // lblYtDlpPath
             this.lblYtDlpPath.AutoSize = true;
@@ -628,7 +628,7 @@ namespace IwaraDownloader.Forms
             this.lblYtDlpNote.Location = new Point(10, 125);
             this.lblYtDlpNote.Name = "lblYtDlpNote";
             this.lblYtDlpNote.Size = new Size(420, 30);
-            this.lblYtDlpNote.Text = "※ 空欄または \"yt-dlp\" でPATH参照。同梱exeがあればそちらを使用します";
+            this.lblYtDlpNote.Text = "※ \"yt-dlp\" (PATH参照) でOK。未インストールなら自動で pip install を試行します";
 
             // 
             // grpAccount

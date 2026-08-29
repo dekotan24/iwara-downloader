@@ -4,9 +4,9 @@ using System.Runtime.InteropServices;
 namespace IwaraDownloader.Utils
 {
     /// <summary>
-    /// Windows Job Object を使って外部ヘルパー等の子プロセスを親プロセスに紐付ける。
+    /// Windows Job Object を使って子プロセス (Python ヘルパー等) を親プロセスに紐付ける。
     /// 親が異常終了/強制 Kill されても、Job が閉じられた瞬間に子も自動 Kill される。
-    /// これにより親終了後のゾンビプロセス問題を防ぐ。
+    /// これによりゾンビ Python プロセス問題を根絶する。
     ///
     /// 使い方:
     ///   1. アプリ起動時 (Program.Main) に <see cref="EnsureInitialized"/> を呼ぶ

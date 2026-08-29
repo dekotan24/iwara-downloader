@@ -14,8 +14,8 @@ namespace IwaraDownloader.Forms
         private int _step = 1;
         private bool _setupRunning;
 
-        /// <summary>セットアップ完了で確定されたRust helperのパス。失敗時はnull。</summary>
-        public string? ConfiguredRustHelperPath { get; private set; }
+        /// <summary>セットアップ完了で確定された python.exe のパス。失敗時は null。</summary>
+        public string? ConfiguredPythonPath { get; private set; }
 
         public SetupWizardForm()
         {
@@ -96,7 +96,7 @@ namespace IwaraDownloader.Forms
                                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
-                        // 相対パスはアプリ実行フォルダから解決する。
+                        // 「python」のような相対名も許容する (パス探索でリゾルブされる)
                         if (Path.IsPathRooted(p) && !File.Exists(p))
                         {
                             MessageBox.Show(L.T("SetupWizardForm_D010", p), L.T("SetupWizardForm_D009"),
@@ -147,7 +147,7 @@ namespace IwaraDownloader.Forms
             {
                 Title = L.T("SetupWizardForm_D021"),
                 Filter = L.T("SetupWizardForm_D013"),
-                FileName = "iwara-helper.exe",
+                FileName = "python.exe",
             };
             if (ofd.ShowDialog(this) == DialogResult.OK)
                 txtPythonPath.Text = ofd.FileName;
@@ -162,7 +162,7 @@ namespace IwaraDownloader.Forms
             progressBar.Value = 0;
             lblProgressMsg.Text = L.T("SetupWizardForm_D014");
 
-            string? rustHelperPath = rbExistingPython.Checked ? txtPythonPath.Text.Trim() : null;
+            string? pythonPath = rbExistingPython.Checked ? txtPythonPath.Text.Trim() : null;
 
             var progress = new Progress<SetupProgress>(p =>
             {
@@ -179,14 +179,14 @@ namespace IwaraDownloader.Forms
                 AppendLog(L.T("SetupWizardForm_D022"));
                 AppendLog(L.T("SetupWizardForm_D023", _appDir));
 
-                var resolvedHelper = await _setup.RunFullSetupAsync(
-                    rustHelperPath, _appDir, progress, _cts.Token);
+                var resolvedPython = await _setup.RunFullSetupAsync(
+                    pythonPath, _appDir, progress, _cts.Token);
 
                 // 設定に保存
-                SettingsManager.Instance.Settings.RustHelperPath = resolvedHelper;
+                SettingsManager.Instance.Settings.PythonPath = resolvedPython;
                 SettingsManager.Instance.Save();
 
-                ConfiguredRustHelperPath = resolvedHelper;
+                ConfiguredPythonPath = resolvedPython;
                 AppendLog(L.T("SetupWizardForm_D024"));
                 _step = 4;
             }

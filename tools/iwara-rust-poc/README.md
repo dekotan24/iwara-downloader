@@ -1,38 +1,28 @@
-# iwara-helper (Rust)
+# iwara-rust-poc
 
-旧 `IwaraDownloader/iwara_helper.py` のRust置換実装です。C#から1 action=1プロセスで呼び出し、stdoutのJSON契約とstderrの進捗契約を維持します。
+隔離されたRust CLIによる `IwaraDownloader/iwara_helper.py` 移行調査用PoCです。既存C#、Python helper、セットアップ処理は変更しません。
 
 ## Build
 
-WindowsではMSVC targetを推奨します。リポジトリルートから実行してください。
+この環境ではWindows MSVC SDKが不完全だったため、調査時の検証はGNU targetで行いました。通常の利用ではRustの標準Windows toolchainでビルドできます。
 
 ```powershell
-cargo test --manifest-path tools/iwara-rust-poc/Cargo.toml
-cargo build --release --manifest-path tools/iwara-rust-poc/Cargo.toml
+cargo test
+cargo build --release
 ```
-
-生成された `target/release/iwara-helper.exe` をアプリの実行フォルダへ配置します。正式ビルドでは `IwaraDownloader/iwara-helper.exe` として同梱します。
 
 ## Commands
 
 ```text
-iwara-helper login [email] [password]
-iwara-helper verify-token
-iwara-helper get-videos USERNAME
-iwara-helper search QUERY [PAGE] [LIMIT]
-iwara-helper get-url VIDEO_ID [QUALITY]
-iwara-helper download VIDEO_ID OUTPUT_PATH
-iwara-helper download-external EMBED_URL OUTPUT_PATH --yt-dlp-path PATH
-
-# 検証用
-iwara-helper get-video VIDEO_ID
-iwara-helper download-test DIRECT_URL [OUTPUT_PATH]
-iwara-helper download-test-video VIDEO_ID [QUALITY]
-iwara-helper probe URL
+iwara-rust-poc login [email] [password]
+iwara-rust-poc verify-token [--token TOKEN]
+iwara-rust-poc get-video VIDEO_ID [--token TOKEN]
+iwara-rust-poc search QUERY [PAGE] [LIMIT] [--token TOKEN]
+iwara-rust-poc user-videos USERNAME [--token TOKEN]
+iwara-rust-poc get-url VIDEO_ID [QUALITY] [--token TOKEN]
+iwara-rust-poc download-test DIRECT_URL [OUTPUT_PATH]
+iwara-rust-poc download-test-video VIDEO_ID [QUALITY] [--token TOKEN]
+iwara-rust-poc probe URL [--token TOKEN]
 ```
 
-`verify_token`、`get_videos`、`get_url`、`download_external` も旧呼び出しとの互換性のため利用できます。
-
-認証情報は `IWARA_EMAIL`、`IWARA_PASSWORD`、`IWARA_TOKEN` で渡せます。X-Version secretの検証用overrideは `IWARA_X_VERSION_SECRET`、rate-limit設定は現行helperと同じ `--api-delay` 等を使えます。`login` はC#がtokenを受け取るためstdoutにtokenを返しますが、C#側ではstdout全体をログ出力しません。直接実行時は出力を保存・共有しないでください。
-
-`download` は `.part` / `.part.meta`、ETag、Content-Range、末尾65,536 bytes rewind、atomic finalize、CDN URL再取得を実装しています。外部動画はPythonやpipを使わず、指定されたstandalone `yt-dlp.exe`をRustから起動します。
+認証情報は `IWARA_EMAIL`、`IWARA_PASSWORD`、`IWARA_TOKEN`、X-Version secretの検証用overrideは `IWARA_X_VERSION_SECRET` で渡せます。PoCはtoken、Cookie、signed URL、secret値を出力しません。`login` の引数はプロセス一覧に残り得るため、実運用では環境変数を使ってください。

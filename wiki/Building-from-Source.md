@@ -2,8 +2,7 @@
 
 ## 必要なもの
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Rust stable toolchain](https://www.rust-lang.org/tools/install)（Rust helperを再ビルドする場合）
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - Visual Studio 2022（推奨）または `dotnet` CLI
 
 ## ビルド手順
@@ -14,15 +13,7 @@ cd iwara-downloader
 dotnet build IwaraDownloader\IwaraDownloader.csproj -c Release
 ```
 
-出力先: `IwaraDownloader\bin\Release\net10.0-windows\`
-
-Rust helperだけを再ビルドする場合:
-
-```powershell
-cargo test --manifest-path tools\iwara-rust-poc\Cargo.toml
-cargo build --release --manifest-path tools\iwara-rust-poc\Cargo.toml
-Copy-Item tools\iwara-rust-poc\target\release\iwara-helper.exe IwaraDownloader\iwara-helper.exe
-```
+出力先: `IwaraDownloader\bin\Release\net8.0-windows\`
 
 ## NuGet パッケージ
 
@@ -50,7 +41,8 @@ iwara-downloader/
 │   ├── Services/         # ビジネスロジック
 │   ├── Utils/            # ユーティリティ
 │   ├── WebUI/            # Web メディアサーバーのフロントエンド
-│   └── iwara-helper.exe  # Rust API / download helper
+│   ├── iwara_helper.py   # Python API ヘルパー
+│   └── iwara_setup.bat   # セットアップバッチ
 ├── README.md
 ├── README_en.md
 └── LICENSE

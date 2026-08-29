@@ -1580,7 +1580,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>アプリの設定画面を開きます</value>
   </data>
   <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
-    <value>Rust helperやログイン等の初期セットアップを行います</value>
+    <value>Python環境やログイン等の初期セットアップを行います</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
     <value>ダウンロードキューを開始します</value>
@@ -1652,7 +1652,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>環境セットアップ</value>
   </data>
   <data name="MainForm_btnSetup_Tip" xml:space="preserve">
-    <value>Rust helper / yt-dlp のセットアップウィザード</value>
+    <value>Python / 依存ライブラリのセットアップウィザード</value>
   </data>
   <data name="MainForm_btnStartAll" xml:space="preserve">
     <value>▶ DL開始</value>
@@ -2400,7 +2400,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
 {0}</value>
   </data>
   <data name="SettingsForm_D088" xml:space="preserve">
-    <value>Rust helperを選択</value>
+    <value>Python実行ファイルを選択</value>
   </data>
   <data name="SettingsForm_D089" xml:space="preserve">
     <value>yt-dlpの実行ファイルを選択</value>
@@ -2604,7 +2604,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>通知・起動</value>
   </data>
   <data name="SettingsForm_grpPython" xml:space="preserve">
-    <value>Rust / yt-dlp環境</value>
+    <value>Python環境</value>
   </data>
   <data name="SettingsForm_grpRateLimit" xml:space="preserve">
     <value>レート制限設定</value>
@@ -2712,10 +2712,10 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>プリセット:</value>
   </data>
   <data name="SettingsForm_lblPythonNote" xml:space="preserve">
-    <value>※ 空欄ならアプリ同梱のiwara-helper.exeを使用します</value>
+    <value>※ 初回セットアップ済みの場合、パス変更のみ行います(ライブラリの再インストールは不要)</value>
   </data>
   <data name="SettingsForm_lblPythonPath" xml:space="preserve">
-    <value>Rust helperパス:</value>
+    <value>Pythonパス:</value>
   </data>
   <data name="SettingsForm_lblQuality" xml:space="preserve">
     <value>デフォルト画質:</value>
@@ -2754,7 +2754,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>ユーザー名:</value>
   </data>
   <data name="SettingsForm_lblYtDlpNote" xml:space="preserve">
-    <value>※ "yt-dlp" (PATH参照) または設定した実行ファイルを使用します</value>
+    <value>※ "yt-dlp" (PATH参照) でOK。未インストールなら自動で pip install を試行します</value>
   </data>
   <data name="SettingsForm_lblYtDlpPath" xml:space="preserve">
     <value>yt-dlpパス:</value>
@@ -2796,7 +2796,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>ようこそ</value>
   </data>
   <data name="SetupWizardForm_D003" xml:space="preserve">
-    <value>Rust helperの設定方法</value>
+    <value>Python の取得方法</value>
   </data>
   <data name="SetupWizardForm_D004" xml:space="preserve">
     <value>セットアップ実行中</value>
@@ -2811,7 +2811,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>次へ &gt;</value>
   </data>
   <data name="SetupWizardForm_D008" xml:space="preserve">
-    <value>Rust helperのパスを入力してください。</value>
+    <value>Python のパスを入力してください。</value>
   </data>
   <data name="SetupWizardForm_D009" xml:space="preserve">
     <value>入力エラー</value>
@@ -2827,7 +2827,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>確認</value>
   </data>
   <data name="SetupWizardForm_D013" xml:space="preserve">
-    <value>Rust helper (*.exe)|*.exe|すべてのファイル|*.*</value>
+    <value>Python実行ファイル|python.exe|すべてのファイル|*.*</value>
   </data>
   <data name="SetupWizardForm_D014" xml:space="preserve">
     <value>セットアップを開始しています...</value>
@@ -2846,7 +2846,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
 </value>
   </data>
   <data name="SetupWizardForm_D018" xml:space="preserve">
-    <value>iwara-helper.exeの配置を確認するか、「別のRust helperを使用」で別の実行ファイルを指定してください。</value>
+    <value>ネットワーク接続を確認するか、「既存のPythonを使用」で別のPythonを試してください。</value>
   </data>
   <data name="SetupWizardForm_D019" xml:space="preserve">
     <value>セットアップエラー</value>
@@ -2855,7 +2855,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>セットアップ実行中です。閉じると中止されます。続行しますか?</value>
   </data>
   <data name="SetupWizardForm_D021" xml:space="preserve">
-    <value>iwara-helper.exe を選択</value>
+    <value>python.exe を選択</value>
   </data>
   <data name="SetupWizardForm_D022" xml:space="preserve">
     <value>=== セットアップ開始 ===</value>
@@ -2888,8 +2888,8 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>次へ &gt;</value>
   </data>
   <data name="SetupWizardForm_lblAutoDesc" xml:space="preserve">
-    <value>アプリ同梱の iwara-helper.exe を使用します。
-追加のランタイムやライブラリのインストールは不要です。</value>
+    <value>python.org から Python 3.10.11 (Embeddable amd64) を自動でダウンロードし、
+</value>
   </data>
   <data name="SetupWizardForm_lblComplete" xml:space="preserve">
     <value>セットアップ完了!</value>
@@ -2899,7 +2899,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
 </value>
   </data>
   <data name="SetupWizardForm_lblExistingDesc" xml:space="preserve">
-    <value>iwara-helper.exe へのパスを指定してください。</value>
+    <value>python.exe へのパスを指定してください。</value>
   </data>
   <data name="SetupWizardForm_lblProgressMsg" xml:space="preserve">
     <value>準備中...</value>
@@ -2908,7 +2908,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>ステップ 1/4: ようこそ</value>
   </data>
   <data name="SetupWizardForm_lblStep2Title" xml:space="preserve">
-    <value>Rust helperの設定方法を選択</value>
+    <value>Python の取得方法を選択</value>
   </data>
   <data name="SetupWizardForm_lblStep3Title" xml:space="preserve">
     <value>セットアップ実行中</value>
@@ -2927,7 +2927,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>自動ダウンロード (推奨)</value>
   </data>
   <data name="SetupWizardForm_rbExistingPython" xml:space="preserve">
-    <value>別のRust helperを使用</value>
+    <value>既存のPythonを使用</value>
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>起動中...</value>
@@ -3358,28 +3358,28 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>サムネ補完</value>
   </data>
   <data name="SvcEnvironmentSetupService_D001" xml:space="preserve">
-    <value>Rust helperを確認中...</value>
+    <value>Python embeddable をダウンロード中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D002" xml:space="preserve">
-    <value>Rust helperを確認中...</value>
+    <value>Python DL中 {0}MB / {1}MB</value>
   </data>
   <data name="SvcEnvironmentSetupService_D003" xml:space="preserve">
-    <value>Rust helperを検証中...</value>
+    <value>Python を展開中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D004" xml:space="preserve">
-    <value>Rust helperの設定を確認中...</value>
+    <value>Python設定 (._pth) を調整中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D005" xml:space="preserve">
-    <value>Rust helperの起動を確認中...</value>
+    <value>pip をインストール中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D006" xml:space="preserve">
-    <value>Rust helperの確認完了</value>
+    <value>pip は既にインストール済み</value>
   </data>
   <data name="SvcEnvironmentSetupService_D007" xml:space="preserve">
-    <value>実行ファイルの配置を確認中...</value>
+    <value>get-pip.py をダウンロード中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D008" xml:space="preserve">
-    <value>Rust helperを起動できるか確認中...</value>
+    <value>pip をインストール実行中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D009" xml:space="preserve">
     <value>{0} をインストール中...</value>
@@ -3388,7 +3388,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>{0} の動作確認中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D011" xml:space="preserve">
-    <value>指定されたRust helperを確認中...</value>
+    <value>指定されたPythonを確認中...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D012" xml:space="preserve">
     <value>セットアップマーカーを作成中...</value>
@@ -3471,7 +3471,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>{0}の動画一覧を取得中...</value>
   </data>
   <data name="SvcIwaraApiService_D002" xml:space="preserve">
-    <value>Rust helperの実行に失敗しました</value>
+    <value>Pythonスクリプトの実行に失敗しました</value>
   </data>
   <data name="SvcIwaraApiService_D003" xml:space="preserve">
     <value>エラー: {0}</value>

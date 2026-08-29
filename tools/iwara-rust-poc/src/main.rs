@@ -3,27 +3,22 @@ use base64::Engine;
 use regex::Regex;
 use reqwest::blocking::{Client, Response};
 use reqwest::header::{
-    HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, ETAG, RANGE,
+    HeaderMap, HeaderValue, ACCEPT_RANGES, AUTHORIZATION, CONTENT_LENGTH, CONTENT_RANGE, ETAG,
+    RANGE,
 };
-use reqwest::Method;
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 use sha1::{Digest, Sha1};
 use std::env;
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
-use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration, Instant, SystemTime};
+use std::fs;
+use std::io::{Read, Write};
+use std::path::PathBuf;
+use std::time::{Duration, SystemTime};
 use url::Url;
 
 const API_URL: &str = "https://api.iwara.tv";
 const SITE_TV: &str = "www.iwara.tv";
-const DEFAULT_X_VERSION_SECRET: &str = "mSvL05GfEmeEmsEYfGCnVpEjYgTJraJN";
 const SECRET_TTL: Duration = Duration::from_secs(30 * 24 * 60 * 60);
-const RESUME_REWIND_BYTES: u64 = 65_536;
-const CDN_RETRIES: usize = 6;
-const CHUNK_SIZE: usize = 65_536;
+const RANGE_TEST_BYTES: u64 = 64 * 1024;
 
 fn main() {
     let mut args: Vec<String> = env::args().skip(1).collect();
@@ -31,65 +26,29 @@ fn main() {
     let site = take_option(&mut args, "--site").unwrap_or_else(|| SITE_TV.to_string());
     let secret_override =
         take_option(&mut args, "--secret").or_else(|| env::var("IWARA_X_VERSION_SECRET").ok());
-    let yt_dlp_path = take_option(&mut args, "--yt-dlp-path");
-    let rate = RateConfig {
-        api_delay: take_option(&mut args, "--api-delay")
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(1.0),
-        page_delay: take_option(&mut args, "--page-delay")
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(0.5),
-        rate_limit_base: take_option(&mut args, "--rate-limit-base")
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(30.0),
-        rate_limit_max: take_option(&mut args, "--rate-limit-max")
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(300.0),
-        enable_backoff: !take_flag(&mut args, "--no-backoff"),
-    };
 
     let result = match args.first().map(String::as_str) {
-        Some("login") => command_login(&args[1..], &site, &rate),
-        Some("verify-token") | Some("verify_token") => command_verify_token(&token, &site, &rate),
-        Some("get-video") => command_get_video(&args[1..], &token, &site, &rate),
-        Some("search") => command_search(&args[1..], &token, &site, &rate),
-        // C#側の正式名は kebab-case。snake_caseも受け付けて、旧ビルドや
-        // 外部から直接呼び出す利用者との互換性を保つ。
-        Some("user-videos") | Some("get-videos") | Some("get_videos") => {
-            command_user_videos(&args[1..], &token, &site, &rate)
-        }
-        Some("get-url") | Some("get_url") => {
-            command_get_url(&args[1..], &token, &site, &rate, secret_override.as_deref())
-        }
-        Some("download") => {
-            command_download(&args[1..], &token, &site, &rate, secret_override.as_deref())
-        }
-        Some("download_external") | Some("download-external") => {
-            command_download_external(&args[1..], yt_dlp_path.as_deref().unwrap_or("yt-dlp"))
-        }
+        Some("login") => command_login(&args[1..]),
+        Some("verify-token") | Some("verify_token") => command_verify_token(&token, &site),
+        Some("get-video") => command_get_video(&args[1..], &token, &site),
+        Some("search") => command_search(&args[1..], &token, &site),
+        Some("user-videos") | Some("get-videos") => command_user_videos(&args[1..], &token, &site),
+        Some("get-url") => command_get_url(&args[1..], &token, &site, secret_override.as_deref()),
         Some("download-test") => command_download_test(&args[1..]),
-        Some("download-test-video") => command_download_test_video(
-            &args[1..],
-            &token,
-            &site,
-            &rate,
-            secret_override.as_deref(),
-        ),
+        Some("download-test-video") => command_download_test_video(&args[1..], &token, &site, secret_override.as_deref()),
         Some("probe") => command_probe(&args[1..], &token, &site),
-        Some(other) => Err(format!("Unknown action: {other}")),
-        None => Err("No action specified".to_string()),
+        Some(other) => Err(format!("unknown action: {other}")),
+        None => Err("usage: iwara-rust-poc <login|verify-token|get-video|search|user-videos|get-url|download-test|download-test-video|probe>".to_string()),
     };
 
     match result {
         Ok(value) => {
-            let success = value.get("success") != Some(&Value::Bool(false));
             println!(
                 "{}",
-                serde_json::to_string(&value).unwrap_or_else(|_| {
-                    "{\"success\":false,\"error\":\"JSON serialization failed\"}".to_string()
-                })
+                serde_json::to_string_pretty(&value)
+                    .unwrap_or_else(|_| "{\"success\":false}".to_string())
             );
-            if !success {
+            if value.get("success") == Some(&Value::Bool(false)) {
                 std::process::exit(1);
             }
         }
@@ -110,91 +69,9 @@ fn take_option(args: &mut Vec<String>, name: &str) -> Option<String> {
     }
 }
 
-fn take_flag(args: &mut Vec<String>, name: &str) -> bool {
-    if let Some(position) = args.iter().position(|arg| arg == name) {
-        args.remove(position);
-        true
-    } else {
-        false
-    }
-}
-
-#[derive(Clone)]
-struct RateConfig {
-    api_delay: f64,
-    page_delay: f64,
-    rate_limit_base: f64,
-    rate_limit_max: f64,
-    enable_backoff: bool,
-}
-
-struct RateLimiter {
-    config: RateConfig,
-    last_request: Option<Instant>,
-    consecutive_errors: u32,
-}
-
-impl RateLimiter {
-    fn new(config: &RateConfig) -> Self {
-        Self {
-            config: config.clone(),
-            last_request: None,
-            consecutive_errors: 0,
-        }
-    }
-
-    fn wait(&mut self, seconds: f64) {
-        let delay = Duration::from_secs_f64(seconds.max(0.0));
-        if let Some(last) = self.last_request {
-            if let Some(remaining) = delay.checked_sub(last.elapsed()) {
-                if !remaining.is_zero() {
-                    eprintln!("RateLimit: waiting {:.1}s...", remaining.as_secs_f64());
-                    thread::sleep(remaining);
-                }
-            }
-        }
-        self.last_request = Some(Instant::now());
-    }
-
-    fn api_wait(&mut self) {
-        self.wait(self.config.api_delay);
-    }
-
-    fn page_wait(&mut self) {
-        self.wait(self.config.page_delay);
-    }
-
-    fn backoff(&mut self, status: u16, detail: &str) {
-        self.consecutive_errors = self.consecutive_errors.saturating_add(1);
-        let exponent = self.consecutive_errors.saturating_sub(1).min(10);
-        let multiplier = if self.config.enable_backoff {
-            2_f64.powi(exponent as i32)
-        } else {
-            1.0
-        };
-        let delay = (self.config.rate_limit_base * multiplier).min(self.config.rate_limit_max);
-        eprintln!(
-            "RateLimit: HTTP {status}, backing off for {delay:.0}s (attempt {}) {detail}",
-            self.consecutive_errors
-        );
-        thread::sleep(Duration::from_secs_f64(delay.max(0.0)));
-    }
-
-    fn reset_errors(&mut self) {
-        self.consecutive_errors = 0;
-    }
-}
-
-struct HttpResult {
-    status: u16,
-    body: String,
-}
-
 fn client() -> Result<Client, String> {
     Client::builder()
-        .user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        )
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
         .timeout(Duration::from_secs(30))
         .cookie_store(true)
         .redirect(reqwest::redirect::Policy::limited(5))
@@ -215,72 +92,14 @@ fn request_headers(token: &Option<String>, site: &str) -> HeaderMap {
     headers
 }
 
-fn request_with_retry(
-    client: &Client,
-    method: Method,
-    url: &str,
-    query: &[(&str, String)],
-    headers: HeaderMap,
-    body: Option<Value>,
-    rate: &mut RateLimiter,
-) -> Result<HttpResult, String> {
-    let max_attempts = 3;
-    let mut last_error = String::new();
-
-    for attempt in 0..max_attempts {
-        rate.api_wait();
-        let mut request = client
-            .request(method.clone(), url)
-            .headers(headers.clone())
-            .query(query);
-        if let Some(body) = &body {
-            request = request.json(body);
-        }
-
-        match request.send() {
-            Ok(response) => {
-                let result = read_http_result(response)?;
-                if is_retryable_rate_limit(&result) && attempt + 1 < max_attempts {
-                    last_error = safe_error_message_text(&result.body);
-                    rate.backoff(result.status, &last_error);
-                    eprintln!("Retrying... (attempt {}/{max_attempts})", attempt + 2);
-                    continue;
-                }
-                rate.reset_errors();
-                return Ok(result);
-            }
-            Err(error) => {
-                last_error = error.to_string();
-                eprintln!(
-                    "Request error (attempt {}/{}): {}",
-                    attempt + 1,
-                    max_attempts,
-                    last_error
-                );
-                if attempt + 1 < max_attempts {
-                    thread::sleep(Duration::from_secs_f64(
-                        rate.config.api_delay * (attempt + 1) as f64,
-                    ));
-                }
-            }
-        }
-    }
-
-    Err(format!(
-        "Request failed after {max_attempts} attempts: {last_error}"
-    ))
-}
-
-fn read_http_result(mut response: Response) -> Result<HttpResult, String> {
+fn response_json(response: Response) -> Result<(u16, Value), String> {
     let status = response.status().as_u16();
-    let mut bytes = Vec::new();
-    response
-        .read_to_end(&mut bytes)
+    let text = response
+        .text()
         .map_err(|error| format!("response read failed: {error}"))?;
-    Ok(HttpResult {
-        status,
-        body: String::from_utf8_lossy(&bytes).into_owned(),
-    })
+    let value = serde_json::from_str(&text)
+        .map_err(|error| format!("HTTP {status} returned non-JSON response: {error}"))?;
+    Ok((status, value))
 }
 
 fn api_get(
@@ -289,167 +108,111 @@ fn api_get(
     query: &[(&str, String)],
     token: &Option<String>,
     site: &str,
-    rate: &mut RateLimiter,
-) -> Result<HttpResult, String> {
-    request_with_retry(
-        client,
-        Method::GET,
-        &format!("{API_URL}{path}"),
-        query,
-        request_headers(token, site),
-        None,
-        rate,
-    )
+) -> Result<(u16, Value), String> {
+    let response = client
+        .get(format!("{API_URL}{path}"))
+        .query(query)
+        .headers(request_headers(token, site))
+        .send()
+        .map_err(|error| format!("GET {path} failed: {error}"))?;
+    response_json(response)
 }
 
-fn parse_body(result: &HttpResult) -> Value {
-    serde_json::from_str(&result.body).unwrap_or(Value::Null)
-}
-
-fn command_login(args: &[String], site: &str, rate_config: &RateConfig) -> Result<Value, String> {
+fn command_login(args: &[String]) -> Result<Value, String> {
     let email = args
         .first()
         .cloned()
         .or_else(|| env::var("IWARA_EMAIL").ok())
-        .ok_or("Usage: login <email> <password>")?;
+        .ok_or("login requires email or IWARA_EMAIL")?;
     let password = args
         .get(1)
         .cloned()
         .or_else(|| env::var("IWARA_PASSWORD").ok())
-        .ok_or("Usage: login <email> <password>")?;
+        .ok_or("login requires password or IWARA_PASSWORD")?;
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
-    let response = request_with_retry(
-        &http,
-        Method::POST,
-        &format!("{API_URL}/user/login"),
-        &[],
-        request_headers(&None, site),
-        Some(json!({"email": email, "password": password})),
-        &mut rate,
-    )?;
-    let body = parse_body(&response);
-
-    if response.status == 401 {
-        return Ok(json!({"success": false, "error": "Invalid email or password"}));
+    let response = http
+        .post(format!("{API_URL}/user/login"))
+        .headers(request_headers(&None, SITE_TV))
+        .json(&json!({"email": email, "password": password}))
+        .send()
+        .map_err(|error| format!("login request failed: {error}"))?;
+    let (status, body) = response_json(response)?;
+    if status != 200 {
+        return Ok(json!({"success": false, "status": status, "error": safe_error_message(&body)}));
     }
-    if response.status == 403 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("Login blocked: {}", safe_error_message(&body, "Too many attempts or account issue"))
-        }));
-    }
-    if response.status != 200 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("Login failed: HTTP {} - {}", response.status, safe_error_message(&body, ""))
-        }));
-    }
-
     let token = body
         .get("token")
         .and_then(Value::as_str)
         .unwrap_or_default();
     if token.is_empty() {
-        return Ok(json!({"success": false, "error": "No token in response"}));
+        return Ok(
+            json!({"success": false, "status": status, "error": "login response did not contain a token"}),
+        );
     }
-    let payload = decode_jwt_payload(token).unwrap_or(Value::Null);
+    let payload = decode_jwt_payload(token).unwrap_or_else(|| json!({}));
     Ok(json!({
         "success": true,
-        "token": token,
+        "status": status,
+        "token_present": true,
+        "token_parts": token.split('.').count(),
+        "payload_keys": object_keys(&payload),
         "expires_at": payload.get("exp").cloned().unwrap_or(Value::Null),
-        "user_id": payload.get("id").cloned().unwrap_or(Value::Null),
-        "token_type": payload.get("type").cloned().unwrap_or(Value::Null)
+        "user_id_present": payload.get("id").is_some(),
+        "token_type_present": payload.get("type").is_some()
     }))
 }
 
-fn command_verify_token(
-    token: &Option<String>,
-    site: &str,
-    rate_config: &RateConfig,
-) -> Result<Value, String> {
+fn command_verify_token(token: &Option<String>, site: &str) -> Result<Value, String> {
     let Some(token) = token else {
-        return Ok(json!({
-            "success": false,
-            "error": "No token",
-            "code": "LOGIN_REQUIRED"
-        }));
+        return Ok(json!({"success": false, "code": "LOGIN_REQUIRED", "error": "No token"}));
     };
-    let payload = decode_jwt_payload(token).unwrap_or(Value::Null);
-    if let Some(exp) = payload.get("exp").and_then(Value::as_i64) {
-        if unix_now() >= exp {
-            return Ok(json!({
-                "success": false,
-                "error": "Token expired",
-                "code": "TOKEN_EXPIRED",
-                "expires_at": exp
-            }));
+    let payload = decode_jwt_payload(token);
+    if let Some(exp) = payload
+        .as_ref()
+        .and_then(|value| value.get("exp"))
+        .and_then(Value::as_i64)
+    {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|error| error.to_string())?
+            .as_secs() as i64;
+        if now >= exp {
+            return Ok(
+                json!({"success": false, "code": "TOKEN_EXPIRED", "expires_at": exp, "error": "Token expired"}),
+            );
         }
     }
-
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
-    let response = api_get(&http, "/user", &[], &Some(token.clone()), site, &mut rate)?;
-    let body = parse_body(&response);
-    if response.status == 401 || response.status == 403 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("Token rejected: HTTP {}", response.status),
-            "code": "TOKEN_INVALID"
-        }));
+    let (status, body) = api_get(&http, "/user", &[], &Some(token.clone()), site)?;
+    if status != 200 {
+        return Ok(
+            json!({"success": false, "status": status, "code": if status == 401 || status == 403 { "TOKEN_INVALID" } else { "API_ERROR" }, "error": safe_error_message(&body)}),
+        );
     }
-    if response.status != 200 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("HTTP {}", response.status),
-            "code": "API_ERROR"
-        }));
-    }
-    let user = body.get("user").cloned().unwrap_or(Value::Null);
+    let user = body.get("user").unwrap_or(&Value::Null);
     Ok(json!({
         "success": true,
-        "expires_at": payload.get("exp").cloned().unwrap_or(Value::Null),
-        "user_id": user.get("id").cloned().unwrap_or(Value::Null),
-        "username": user.get("username").cloned().unwrap_or(Value::Null),
+        "status": status,
+        "expires_at": payload.as_ref().and_then(|value| value.get("exp")).cloned().unwrap_or(Value::Null),
+        "user_present": user.is_object(),
+        "username_present": user.get("username").is_some(),
         "role": user.get("role").cloned().unwrap_or(Value::Null),
         "premium": user.get("premium").cloned().unwrap_or(Value::Bool(false))
     }))
 }
 
-fn command_get_video(
-    args: &[String],
-    token: &Option<String>,
-    site: &str,
-    rate_config: &RateConfig,
-) -> Result<Value, String> {
-    let video_id = args.first().ok_or("Usage: get-video <video_id>")?;
+fn command_get_video(args: &[String], token: &Option<String>, site: &str) -> Result<Value, String> {
+    let video_id = args.first().ok_or("get-video requires video id")?;
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
-    let response = api_get(
-        &http,
-        &format!("/video/{video_id}"),
-        &[],
-        token,
-        site,
-        &mut rate,
-    )?;
-    let body = parse_body(&response);
-    if response.status != 200 {
-        return Ok(video_error(response.status, &body, video_id));
+    let (status, body) = api_get(&http, &format!("/video/{video_id}"), &[], token, site)?;
+    if status != 200 {
+        return Ok(json!({"success": false, "status": status, "error": safe_error_message(&body)}));
     }
-    Ok(json!({"success": true, "data": body}))
+    Ok(summarize_video(video_id, &body, status))
 }
 
-fn command_search(
-    args: &[String],
-    token: &Option<String>,
-    site: &str,
-    rate_config: &RateConfig,
-) -> Result<Value, String> {
-    let query = args.first().ok_or("Usage: search <query> [page] [limit]")?;
-    if token.is_none() {
-        return Ok(login_required());
-    }
+fn command_search(args: &[String], token: &Option<String>, site: &str) -> Result<Value, String> {
+    let query = args.first().ok_or("search requires query")?;
     let page = args
         .get(1)
         .and_then(|value| value.parse::<u32>().ok())
@@ -459,8 +222,7 @@ fn command_search(
         .and_then(|value| value.parse::<u32>().ok())
         .unwrap_or(32);
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
-    let response = api_get(
+    let (status, body) = api_get(
         &http,
         "/search",
         &[
@@ -471,77 +233,51 @@ fn command_search(
         ],
         token,
         site,
-        &mut rate,
     )?;
-    let body = parse_body(&response);
-    if response.status != 200 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("Search failed: HTTP {} - {}", response.status, safe_error_message(&body, ""))
-        }));
+    if status != 200 {
+        return Ok(json!({"success": false, "status": status, "error": safe_error_message(&body)}));
     }
-
-    let videos = body
-        .get("results")
-        .and_then(Value::as_array)
-        .map(|items| items.iter().map(map_search_video).collect::<Vec<_>>())
-        .unwrap_or_default();
-    Ok(json!({
-        "success": true,
-        "count": body.get("count").cloned().unwrap_or(json!(videos.len())),
-        "page": page,
-        "limit": limit,
-        "videos": videos
-    }))
+    let mut videos = Vec::new();
+    if let Some(results) = body.get("results").and_then(Value::as_array) {
+        for video in results {
+            videos.push(json!({
+                "id": video.get("id").cloned().unwrap_or(Value::Null),
+                "title": video.get("title").cloned().unwrap_or(Value::String(String::new())),
+                "rating": video.get("rating").cloned().unwrap_or(Value::String(String::new())),
+                "author_present": video.get("user").and_then(Value::as_object).is_some(),
+                "thumbnail_present": video.get("file").and_then(|file| file.get("id")).is_some(),
+                "created_at": video.get("createdAt").cloned().unwrap_or(Value::Null)
+            }));
+        }
+    }
+    Ok(
+        json!({"success": true, "status": status, "count": body.get("count").cloned().unwrap_or(json!(videos.len())), "page": page, "limit": limit, "videos": videos}),
+    )
 }
 
 fn command_user_videos(
     args: &[String],
     token: &Option<String>,
     site: &str,
-    rate_config: &RateConfig,
 ) -> Result<Value, String> {
-    let username = args.first().ok_or("Usage: get_videos <username>")?;
-    if token.is_none() {
-        return Ok(login_required());
-    }
+    let username = args.first().ok_or("user-videos requires username")?;
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
-    let profile = api_get(
-        &http,
-        &format!("/profile/{username}"),
-        &[],
-        token,
-        site,
-        &mut rate,
-    )?;
-    let profile_body = parse_body(&profile);
-    if profile.status == 404 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("User not found: {username}"),
-            "code": "USER_NOT_FOUND"
-        }));
+    let (profile_status, profile) =
+        api_get(&http, &format!("/profile/{username}"), &[], token, site)?;
+    if profile_status != 200 {
+        return Ok(
+            json!({"success": false, "status": profile_status, "code": if profile_status == 404 { "USER_NOT_FOUND" } else { "PROFILE_ERROR" }, "error": safe_error_message(&profile)}),
+        );
     }
-    if profile.status != 200 {
-        return Ok(json!({
-            "success": false,
-            "error": format!("Profile fetch failed: HTTP {} - {}", profile.status, safe_error_message(&profile_body, ""))
-        }));
-    }
-    let user_id = profile_body
+    let user_id = profile
         .get("user")
         .and_then(|user| user.get("id"))
         .and_then(Value::as_str)
-        .ok_or("User ID not found")?;
-
+        .ok_or("profile response did not contain user id")?;
     let mut videos = Vec::new();
-    let mut page = 0_u32;
+    let mut page = 0u32;
     while page < 100 {
-        if page > 0 {
-            rate.page_wait();
-        }
-        let response = api_get(
+        let (status, body) = api_get(
             &http,
             "/videos",
             &[
@@ -552,141 +288,74 @@ fn command_user_videos(
             ],
             token,
             site,
-            &mut rate,
         )?;
-        let body = parse_body(&response);
-        if response.status != 200 {
-            eprintln!("Page {page} fetch failed, stopping pagination");
+        if status != 200 {
             break;
         }
-        let Some(items) = body.get("results").and_then(Value::as_array) else {
+        let Some(results) = body.get("results").and_then(Value::as_array) else {
             break;
         };
-        if items.is_empty() {
+        if results.is_empty() {
             break;
         }
-        for video in items {
-            videos.push(map_user_video(video));
+        for video in results {
+            videos.push(json!({"id": video.get("id").cloned().unwrap_or(Value::Null), "title": video.get("title").cloned().unwrap_or(Value::String(String::new())), "rating": video.get("rating").cloned().unwrap_or(Value::String(String::new())), "created_at": video.get("createdAt").cloned().unwrap_or(Value::Null)}));
         }
-        eprintln!(
-            "Fetched page {}, {} videos (total: {})",
-            page + 1,
-            items.len(),
-            videos.len()
-        );
         page += 1;
     }
-
-    Ok(json!({
-        "success": true,
-        "username": username,
-        "user_id": user_id,
-        "count": videos.len(),
-        "videos": videos
-    }))
+    Ok(
+        json!({"success": true, "profile_status": profile_status, "user_id_present": true, "count": videos.len(), "pages_fetched": page, "videos": videos}),
+    )
 }
 
 fn command_get_url(
     args: &[String],
     token: &Option<String>,
     site: &str,
-    rate_config: &RateConfig,
     secret_override: Option<&str>,
 ) -> Result<Value, String> {
-    let video_id = args.first().ok_or("Usage: get_url <video_id>")?;
-    if token.is_none() {
-        return Ok(login_required());
-    }
-    let quality = args.get(1).map(String::as_str).unwrap_or("Source");
+    let video_id = args.first().ok_or("get-url requires video id")?;
+    let requested_quality = args.get(1).map(String::as_str).unwrap_or("Source");
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
     let resolved = match resolve_download_url(
         &http,
         video_id,
-        quality,
+        requested_quality,
         token,
         site,
-        &mut rate,
         secret_override,
     ) {
-        Ok(resolved) => resolved,
-        Err(error) => return Ok(json!({"success": false, "error": error})),
+        Ok(value) => value,
+        Err(error) => return Ok(json!({"success": false, "status": 200, "error": error})),
     };
     let video = &resolved.video;
-    let user = video.get("user").cloned().unwrap_or(Value::Null);
-    let file = video.get("file").cloned().unwrap_or(Value::Null);
+    let user = video.get("user").and_then(Value::as_object);
+    let file = video.get("file").and_then(Value::as_object);
     Ok(json!({
         "success": true,
-        "url": resolved.url,
+        "status": 200,
         "quality": resolved.quality,
-        "title": video.get("title").cloned().unwrap_or(json!(video_id)),
-        "file_id": file.get("id").cloned().unwrap_or(Value::Null),
-        "author_username": user.get("username").cloned().unwrap_or(Value::Null),
-        "author_name": user.get("name").cloned().unwrap_or(Value::Null),
-        "rating": video.get("rating").cloned().unwrap_or(json!("")),
-        "thumbnail": thumbnail_url(video),
-        "created_at": video.get("createdAt").cloned().unwrap_or(Value::Null),
-        "raw": prune_video_raw(video)
+        "available_qualities": resolved.available,
+        "download_url_present": !resolved.url.is_empty(),
+        "download_url_absolute": Url::parse(&resolved.url).is_ok(),
+        "download_url_host": safe_host(&resolved.url),
+        "title": video.get("title").cloned().unwrap_or(Value::String(video_id.to_string())),
+        "file_id_present": file.and_then(|obj| obj.get("id")).is_some(),
+        "author_present": user.is_some(),
+        "rating": video.get("rating").cloned().unwrap_or(Value::String(String::new())),
+        "thumbnail_present": file.and_then(|obj| obj.get("id")).is_some(),
+        "secret_source": resolved.secret_source,
+        "secret_refreshed": resolved.secret_refreshed
     }))
-}
-
-fn command_download(
-    args: &[String],
-    token: &Option<String>,
-    site: &str,
-    rate_config: &RateConfig,
-    secret_override: Option<&str>,
-) -> Result<Value, String> {
-    let video_id = args
-        .first()
-        .ok_or("Usage: download <video_id> <output_path>")?;
-    let output_path = args
-        .get(1)
-        .ok_or("Usage: download <video_id> <output_path>")?;
-    if token.is_none() {
-        return Ok(login_required());
-    }
-    let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
-    download_video(
-        &http,
-        video_id,
-        output_path,
-        token,
-        site,
-        &mut rate,
-        secret_override,
-    )
-}
-
-fn command_download_external(args: &[String], configured_path: &str) -> Result<Value, String> {
-    let embed_url = args
-        .first()
-        .ok_or("Usage: download_external <embed_url> <output_path>")?;
-    let output_path = args
-        .get(1)
-        .ok_or("Usage: download_external <embed_url> <output_path>")?;
-    let path = resolve_yt_dlp(configured_path).ok_or_else(|| {
-        format!(
-            "yt-dlp executable was not found: {}. Install the standalone yt-dlp.exe or configure its path.",
-            configured_path
-        )
-    })?;
-    match run_yt_dlp(&path, embed_url, output_path) {
-        Ok(file_path) => Ok(json!({
-            "success": true,
-            "file_path": file_path,
-            "url": embed_url
-        })),
-        Err(error) => Ok(json!({"success": false, "error": error})),
-    }
 }
 
 struct ResolvedDownload {
     video: Value,
     url: String,
     quality: String,
+    available: Vec<Value>,
     secret_source: String,
+    secret_refreshed: bool,
 }
 
 fn resolve_download_url(
@@ -695,63 +364,60 @@ fn resolve_download_url(
     requested_quality: &str,
     token: &Option<String>,
     site: &str,
-    rate: &mut RateLimiter,
     secret_override: Option<&str>,
 ) -> Result<ResolvedDownload, String> {
-    let video_response = api_get(
-        client,
-        &format!("/video/{video_id}"),
-        &[],
-        token,
-        site,
-        rate,
-    )?;
-    let video = parse_body(&video_response);
-    if video_response.status != 200 {
-        return Err(video_error_message(video_response.status, &video, video_id));
+    let (status, video) = api_get(client, &format!("/video/{video_id}"), &[], token, site)?;
+    if status != 200 {
+        return Err(format!(
+            "video HTTP {status}: {}",
+            safe_error_message(&video)
+        ));
     }
-
     let file_url = video
         .get("fileUrl")
         .and_then(Value::as_str)
         .ok_or("No fileUrl in video data")?;
-    let file_url = normalize_download_url(file_url);
-    let parsed = Url::parse(&file_url).map_err(|error| format!("invalid fileUrl: {error}"))?;
-    let file_id = parsed
+    let file_url_parsed =
+        Url::parse(file_url).map_err(|error| format!("invalid fileUrl: {error}"))?;
+    let file_id = file_url_parsed
         .path_segments()
         .and_then(|segments| segments.last())
-        .filter(|value| !value.is_empty())
-        .ok_or("fileUrl has no file id")?;
-    let expires = parsed
+        .ok_or("fileUrl has no file id")?
+        .to_string();
+    let expires = file_url_parsed
         .query_pairs()
         .find(|(key, _)| key == "expires")
-        .map(|(_, value)| value.into_owned())
+        .map(|(_, value)| value.to_string())
         .unwrap_or_default();
-
-    let (mut secret, mut secret_source) = if let Some(value) = secret_override {
+    let (secret, mut secret_source) = if let Some(value) = secret_override {
         (value.to_string(), "override".to_string())
     } else {
-        resolve_secret(client)?
+        let (value, source) = resolve_secret(client)?;
+        (value, source.to_string())
     };
-    let mut files = fetch_files(
-        client, &file_url, file_id, &expires, &secret, token, site, rate,
-    )?;
+    let mut files = fetch_files(client, file_url, &file_id, &expires, &secret, token, site)?;
+    let mut secret_refreshed = false;
     if !has_high_quality(&files) && secret_override.is_none() {
-        eprintln!(
-            "Low-quality only response detected. Refreshing X-Version secret from main.js..."
-        );
         if let Ok((new_secret, _)) = extract_secret_from_main_js(client) {
             if new_secret != secret {
-                let _ = save_cached_secret(&new_secret);
-                secret = new_secret;
-                secret_source = "main_js_refresh".to_string();
                 files = fetch_files(
-                    client, &file_url, file_id, &expires, &secret, token, site, rate,
+                    client,
+                    file_url,
+                    &file_id,
+                    &expires,
+                    &new_secret,
+                    token,
+                    site,
                 )?;
+                secret_source = "main_js_refresh".to_string();
+                secret_refreshed = true;
             }
         }
     }
-
+    let available: Vec<Value> = files
+        .iter()
+        .filter_map(|file| file.get("name").cloned())
+        .collect();
     let quality_order = ["Source", "540", "360", "preview"];
     let mut search_order = Vec::new();
     if quality_order.contains(&requested_quality) {
@@ -762,36 +428,37 @@ fn resolve_download_url(
             search_order.push(quality);
         }
     }
-
+    let mut selected: Option<(String, String)> = None;
     for quality in search_order {
         for file in &files {
-            if file.get("name").and_then(Value::as_str) != Some(quality) {
-                continue;
-            }
-            let Some(src) = file.get("src").and_then(Value::as_object) else {
-                continue;
-            };
-            let raw_url = src
-                .get("download")
-                .or_else(|| src.get("view"))
-                .and_then(Value::as_str);
-            if let Some(raw_url) = raw_url {
-                return Ok(ResolvedDownload {
-                    video,
-                    url: normalize_download_url(raw_url),
-                    quality: quality.to_string(),
-                    secret_source,
-                });
+            if file.get("name").and_then(Value::as_str) == Some(quality) {
+                let src = file.get("src").and_then(Value::as_object);
+                let raw_url = src
+                    .and_then(|source| source.get("download").or_else(|| source.get("view")))
+                    .and_then(Value::as_str);
+                if let Some(raw_url) = raw_url {
+                    selected = Some((quality.to_string(), normalize_download_url(raw_url)));
+                    break;
+                }
             }
         }
+        if selected.is_some() {
+            break;
+        }
     }
-    Err(format!(
-        "No download URL found; available qualities={:?}",
-        files
-            .iter()
-            .filter_map(|file| file.get("name").and_then(Value::as_str))
-            .collect::<Vec<_>>()
-    ))
+    let Some((quality, url)) = selected else {
+        return Err(format!(
+            "No download URL found; available qualities={available:?}"
+        ));
+    };
+    Ok(ResolvedDownload {
+        video,
+        url,
+        quality,
+        available,
+        secret_source,
+        secret_refreshed,
+    })
 }
 
 fn fetch_files(
@@ -802,7 +469,6 @@ fn fetch_files(
     secret: &str,
     token: &Option<String>,
     site: &str,
-    rate: &mut RateLimiter,
 ) -> Result<Vec<Value>, String> {
     let x_version = sha1_hex(&format!("{file_id}_{expires}_{secret}"));
     let mut headers = request_headers(token, site);
@@ -810,19 +476,16 @@ fn fetch_files(
         "X-Version",
         HeaderValue::from_str(&x_version).map_err(|error| error.to_string())?,
     );
-    let response = request_with_retry(client, Method::GET, file_url, &[], headers, None, rate)?;
-    let body = parse_body(&response);
-    if response.status == 403 {
+    let response = client
+        .get(file_url)
+        .headers(headers)
+        .send()
+        .map_err(|error| format!("filesq request failed: {error}"))?;
+    let (status, body) = response_json(response)?;
+    if status != 200 {
         return Err(format!(
-            "Access denied to download: {}",
-            safe_error_message(&body, "Private video or login required")
-        ));
-    }
-    if response.status != 200 {
-        return Err(format!(
-            "File URL fetch failed: HTTP {} - {}",
-            response.status,
-            safe_error_message(&body, "")
+            "filesq HTTP {status}: {}",
+            safe_error_message(&body)
         ));
     }
     if let Some(files) = body.as_array() {
@@ -831,429 +494,11 @@ fn fetch_files(
     if let Some(files) = body.get("files").and_then(Value::as_array) {
         return Ok(files.clone());
     }
-    Err("Failed to parse filesq response: file list not found".to_string())
-}
-
-enum DownloadKind {
-    Success(u64),
-    CdnError(String),
-    AuthError(String),
-    HardError(String),
-}
-
-fn download_video(
-    client: &Client,
-    video_id: &str,
-    output_path: &str,
-    token: &Option<String>,
-    site: &str,
-    rate: &mut RateLimiter,
-    secret_override: Option<&str>,
-) -> Result<Value, String> {
-    let mut last_error = String::new();
-    let mut tried_hosts = Vec::new();
-
-    for attempt in 0..CDN_RETRIES {
-        let resolved = match resolve_download_url(
-            client,
-            video_id,
-            "Source",
-            token,
-            site,
-            rate,
-            secret_override,
-        ) {
-            Ok(value) => value,
-            Err(error) => return Err(error),
-        };
-        let quality = resolved.quality.clone();
-        let video = &resolved.video;
-        let file = video.get("file").cloned().unwrap_or(Value::Null);
-        let user = video.get("user").cloned().unwrap_or(Value::Null);
-        let file_id = file
-            .get("id")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
-        let author_username = user.get("username").cloned().unwrap_or(Value::Null);
-        let author_name = user.get("name").cloned().unwrap_or(Value::Null);
-        let title = video.get("title").cloned().unwrap_or(Value::Null);
-        let host = Url::parse(&resolved.url)
-            .ok()
-            .and_then(|url| url.host_str().map(str::to_string))
-            .unwrap_or_default();
-        eprintln!(
-            "Downloading: {} ({}) [attempt {}/{CDN_RETRIES}, host={host}]",
-            title.as_str().unwrap_or(video_id),
-            quality,
-            attempt + 1
-        );
-
-        let meta_path = format!("{output_path}.part.meta");
-        let resume_meta = read_resume_meta(&meta_path);
-        match try_download_once(
-            client,
-            &resolved.url,
-            output_path,
-            &file_id,
-            resume_meta.as_ref(),
-            token,
-            site,
-        ) {
-            DownloadKind::Success(size) => {
-                eprintln!("Progress: 100%");
-                return Ok(json!({
-                    "success": true,
-                    "path": output_path,
-                    "size": size,
-                    "quality": quality,
-                    "file_id": file_id,
-                    "author_username": author_username,
-                    "author_name": author_name,
-                    "title": title,
-                    "cdn_retries": attempt
-                }));
-            }
-            DownloadKind::AuthError(error) => {
-                return Err(json_error_string(&error, "ACCESS_DENIED"));
-            }
-            DownloadKind::HardError(error) => return Err(error),
-            DownloadKind::CdnError(error) => {
-                last_error = error.clone();
-                tried_hosts.push(format!("{host}={error}"));
-                eprintln!("CDN error ({error}), retrying with fresh URL...");
-                thread::sleep(Duration::from_secs_f64(
-                    (1.0 + attempt as f64 * 0.5).min(3.0),
-                ));
-            }
-        }
-    }
-
-    Err(format!(
-        "All CDN candidates failed ({} retries): {}",
-        tried_hosts.len(),
-        if tried_hosts.is_empty() {
-            last_error
-        } else {
-            tried_hosts.join(" | ")
-        }
-    ))
-}
-
-fn try_download_once(
-    client: &Client,
-    download_url: &str,
-    output_path: &str,
-    file_id: &str,
-    resume_meta: Option<&Value>,
-    token: &Option<String>,
-    site: &str,
-) -> DownloadKind {
-    let part_path = format!("{output_path}.part");
-    let meta_path = format!("{output_path}.part.meta");
-    let mut resume_from = 0_u64;
-    if let (Some(meta), Ok(part_size)) = (resume_meta, fs::metadata(&part_path).map(|m| m.len())) {
-        let meta_file_id = meta
-            .get("file_id")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        if meta_file_id == file_id && part_size > RESUME_REWIND_BYTES {
-            resume_from = part_size - RESUME_REWIND_BYTES;
-            eprintln!("Resuming from {resume_from} bytes (part size={part_size}, file_id match)");
-        } else if meta_file_id != file_id {
-            eprintln!("file_id mismatch; discarding .part");
-            remove_if_exists(&part_path);
-            remove_if_exists(&meta_path);
-        }
-    }
-
-    let mut headers = request_headers(token, site);
-    if resume_from > 0 {
-        if let Ok(value) = HeaderValue::from_str(&format!("bytes={resume_from}-")) {
-            headers.insert(RANGE, value);
-        }
-    }
-    let response = match client.get(download_url).headers(headers).send() {
-        Ok(response) => response,
-        Err(error) => {
-            return DownloadKind::CdnError(format!(
-                "Connection failed: {}",
-                truncate(&error.to_string(), 200)
-            ))
-        }
-    };
-    let status = response.status().as_u16();
-    if status == 403 {
-        return DownloadKind::AuthError("Download blocked (403)".to_string());
-    }
-    if matches!(status, 404 | 410 | 500 | 502 | 503 | 504) {
-        return DownloadKind::CdnError(format!("CDN returned {status}"));
-    }
-    if resume_from > 0 && status == 200 {
-        eprintln!("Server ignored Range header, restarting from 0");
-        resume_from = 0;
-    } else if resume_from > 0 && status == 416 {
-        eprintln!("Range Not Satisfiable (416), discarding .part");
-        remove_if_exists(&part_path);
-        remove_if_exists(&meta_path);
-        return DownloadKind::CdnError("Range not satisfiable; retry from 0".to_string());
-    } else if resume_from > 0 && status != 206 {
-        return DownloadKind::HardError(format!("Unexpected status {status} for Range request"));
-    } else if resume_from == 0 && status != 200 && status != 206 {
-        return DownloadKind::HardError(format!("Download failed: HTTP {status}"));
-    }
-
-    let headers = response.headers().clone();
-    let total_size = content_range_total(&headers)
-        .or_else(|| {
-            headers
-                .get(CONTENT_LENGTH)
-                .and_then(|value| value.to_str().ok())
-                .and_then(|value| value.parse::<u64>().ok())
-                .map(|value| value + resume_from)
-        })
-        .unwrap_or(0);
-    let server_etag = headers
-        .get(ETAG)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_string();
-
-    if let (Some(meta), true) = (resume_meta, resume_from > 0) {
-        let meta_size = meta.get("size").and_then(Value::as_u64).unwrap_or(0);
-        let meta_etag = meta.get("etag").and_then(Value::as_str).unwrap_or_default();
-        if meta_size > 0 && total_size > 0 && meta_size != total_size {
-            remove_if_exists(&part_path);
-            remove_if_exists(&meta_path);
-            return DownloadKind::CdnError("Resume size mismatch".to_string());
-        }
-        if !meta_etag.is_empty() && !server_etag.is_empty() && meta_etag != server_etag {
-            remove_if_exists(&part_path);
-            remove_if_exists(&meta_path);
-            return DownloadKind::CdnError("Resume etag mismatch".to_string());
-        }
-    }
-
-    if let Some(parent) = Path::new(&part_path).parent() {
-        if let Err(error) = fs::create_dir_all(parent) {
-            return DownloadKind::HardError(format!("Cannot create output directory: {error}"));
-        }
-    }
-    if !file_id.is_empty() {
-        let meta = json!({
-            "file_id": file_id,
-            "size": total_size,
-            "etag": server_etag,
-            "last_modified": headers.get("last-modified").and_then(|v| v.to_str().ok()).unwrap_or_default()
-        });
-        if let Err(error) = write_resume_meta(&meta_path, &meta) {
-            eprintln!("Failed to write resume meta: {error}");
-        }
-    }
-
-    let mut file = if resume_from > 0 {
-        match OpenOptions::new().read(true).write(true).open(&part_path) {
-            Ok(mut file) => {
-                if let Err(error) = file
-                    .set_len(resume_from)
-                    .and_then(|_| file.seek(SeekFrom::Start(resume_from)))
-                {
-                    return DownloadKind::HardError(format!("Cannot prepare .part file: {error}"));
-                }
-                file
-            }
-            Err(error) => {
-                return DownloadKind::HardError(format!("Cannot open .part file: {error}"))
-            }
-        }
-    } else {
-        match File::create(&part_path) {
-            Ok(file) => file,
-            Err(error) => {
-                return DownloadKind::HardError(format!("Cannot create .part file: {error}"))
-            }
-        }
-    };
-
-    let mut response = response;
-    let mut downloaded = resume_from;
-    let mut last_percent = -1_i64;
-    let mut buffer = vec![0_u8; CHUNK_SIZE];
-    loop {
-        match response.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(read) => {
-                if let Err(error) = file.write_all(&buffer[..read]) {
-                    return DownloadKind::HardError(format!("Write error: {error}"));
-                }
-                downloaded += read as u64;
-                if total_size > 0 {
-                    let percent = (downloaded.saturating_mul(100) / total_size) as i64;
-                    if percent > last_percent {
-                        eprintln!("Progress: {percent}%");
-                        last_percent = percent;
-                    }
-                }
-            }
-            Err(error) => {
-                return DownloadKind::CdnError(format!(
-                    "Stream error ({downloaded} bytes): {}",
-                    truncate(&error.to_string(), 200)
-                ));
-            }
-        }
-    }
-
-    if total_size > 0 && downloaded != total_size {
-        return DownloadKind::CdnError(format!(
-            "Size mismatch: got {downloaded}, expected {total_size}"
-        ));
-    }
-    drop(file);
-    if Path::new(output_path).exists() {
-        if let Err(error) = fs::remove_file(output_path) {
-            return DownloadKind::HardError(format!("Cannot replace existing output: {error}"));
-        }
-    }
-    if let Err(error) = fs::rename(&part_path, output_path) {
-        return DownloadKind::HardError(format!("Failed to finalize output: {error}"));
-    }
-    remove_if_exists(&meta_path);
-    DownloadKind::Success(downloaded)
-}
-
-fn resolve_yt_dlp(configured_path: &str) -> Option<PathBuf> {
-    let configured = if configured_path.trim().is_empty() {
-        "yt-dlp"
-    } else {
-        configured_path
-    };
-    let configured_path = Path::new(configured);
-    if configured_path.is_absolute() && configured_path.is_file() {
-        return Some(configured_path.to_path_buf());
-    }
-    if configured_path.components().count() > 1 && configured_path.is_file() {
-        return Some(configured_path.to_path_buf());
-    }
-    if let Ok(current_exe) = env::current_exe() {
-        if let Some(parent) = current_exe.parent() {
-            for name in ["yt-dlp.exe", "yt-dlp"] {
-                let bundled = parent.join(name);
-                if bundled.is_file() {
-                    return Some(bundled);
-                }
-            }
-        }
-    }
-    Some(PathBuf::from(configured))
-}
-
-fn run_yt_dlp(path: &Path, embed_url: &str, output_path: &str) -> Result<String, String> {
-    let output_template = if Path::new(output_path).extension().is_none() {
-        format!("{output_path}.%(ext)s")
-    } else {
-        output_path.to_string()
-    };
-    let mut command = std::process::Command::new(path);
-    command
-        .arg("-o")
-        .arg(&output_template)
-        .arg("--no-playlist")
-        .arg("--no-warnings")
-        .arg("--newline")
-        .arg("--merge-output-format")
-        .arg("mp4")
-        .arg(embed_url)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped());
-    eprintln!("yt-dlp: {}", path.display());
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("yt-dlp start failed: {error}"))?;
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
-    let (sender, receiver) = mpsc::channel::<String>();
-    for stream in [
-        stdout.map(|s| Box::new(s) as Box<dyn Read + Send>),
-        stderr.map(|s| Box::new(s) as Box<dyn Read + Send>),
-    ] {
-        if let Some(stream) = stream {
-            let sender = sender.clone();
-            thread::spawn(move || {
-                let reader = BufReader::new(stream);
-                for line in reader.lines().map_while(Result::ok) {
-                    let _ = sender.send(line);
-                }
-            });
-        }
-    }
-    drop(sender);
-    let mut recent = Vec::new();
-    for line in receiver {
-        eprintln!("{line}");
-        if let Some(percent) = parse_download_percent(&line) {
-            eprintln!("Progress: {percent}%");
-        }
-        recent.push(line);
-        if recent.len() > 20 {
-            recent.remove(0);
-        }
-    }
-    let status = child
-        .wait()
-        .map_err(|error| format!("yt-dlp wait failed: {error}"))?;
-    if !status.success() {
-        return Err(format!(
-            "yt-dlp failed (exit={}): {}",
-            status.code().unwrap_or(-1),
-            recent
-                .into_iter()
-                .rev()
-                .take(5)
-                .collect::<Vec<_>>()
-                .join("\n")
-        ));
-    }
-    Ok(find_saved_file(output_path))
-}
-
-fn find_saved_file(base_path: &str) -> String {
-    if Path::new(base_path).is_file() {
-        return base_path.to_string();
-    }
-    let parent = Path::new(base_path)
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
-    let prefix = Path::new(base_path)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or_default();
-    let mut candidates = Vec::new();
-    if let Ok(entries) = fs::read_dir(parent) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let name = path
-                .file_name()
-                .and_then(|value| value.to_str())
-                .unwrap_or_default();
-            if name.starts_with(&format!("{prefix}.")) && path.is_file() {
-                let modified = path
-                    .metadata()
-                    .and_then(|m| m.modified())
-                    .unwrap_or(SystemTime::UNIX_EPOCH);
-                candidates.push((modified, path));
-            }
-        }
-    }
-    candidates.sort_by_key(|(modified, _)| *modified);
-    candidates
-        .last()
-        .map(|(_, path)| path.to_string_lossy().into_owned())
-        .unwrap_or_else(|| base_path.to_string())
+    Err("filesq response did not contain a file list".to_string())
 }
 
 fn command_download_test(args: &[String]) -> Result<Value, String> {
-    let url = args.first().ok_or("Usage: download-test <url> [output]")?;
+    let url = args.first().ok_or("download-test requires a direct URL")?;
     let http = client()?;
     range_probe(&http, url, args.get(1).map(String::as_str))
 }
@@ -1262,39 +507,40 @@ fn command_download_test_video(
     args: &[String],
     token: &Option<String>,
     site: &str,
-    rate_config: &RateConfig,
     secret_override: Option<&str>,
 ) -> Result<Value, String> {
     let video_id = args
         .first()
-        .ok_or("Usage: download-test-video <video_id> [quality]")?;
-    if token.is_none() {
-        return Ok(login_required());
-    }
-    let quality = args.get(1).map(String::as_str).unwrap_or("Source");
+        .ok_or("download-test-video requires video id")?;
+    let requested_quality = args.get(1).map(String::as_str).unwrap_or("Source");
     let http = client()?;
-    let mut rate = RateLimiter::new(rate_config);
     let resolved = resolve_download_url(
         &http,
         video_id,
-        quality,
+        requested_quality,
         token,
         site,
-        &mut rate,
         secret_override,
     )?;
     let mut result = range_probe(&http, &resolved.url, None)?;
     if let Some(object) = result.as_object_mut() {
-        object.insert("video_id".to_string(), json!(video_id));
-        object.insert("quality".to_string(), json!(resolved.quality));
-        object.insert("secret_source".to_string(), json!(resolved.secret_source));
+        object.insert("video_id".to_string(), Value::String(video_id.to_string()));
+        object.insert("quality".to_string(), Value::String(resolved.quality));
+        object.insert(
+            "available_qualities".to_string(),
+            Value::Array(resolved.available),
+        );
+        object.insert(
+            "secret_source".to_string(),
+            Value::String(resolved.secret_source),
+        );
     }
     Ok(result)
 }
 
 fn range_probe(client: &Client, url: &str, output: Option<&str>) -> Result<Value, String> {
     let parsed = Url::parse(url).map_err(|error| format!("invalid URL: {error}"))?;
-    let end = RESUME_REWIND_BYTES - 1;
+    let end = RANGE_TEST_BYTES - 1;
     let response = client
         .get(url)
         .header(RANGE, format!("bytes=0-{end}"))
@@ -1304,11 +550,11 @@ fn range_probe(client: &Client, url: &str, output: Option<&str>) -> Result<Value
     let headers = response.headers().clone();
     let mut body = Vec::new();
     response
-        .take(RESUME_REWIND_BYTES)
+        .take(RANGE_TEST_BYTES)
         .read_to_end(&mut body)
         .map_err(|error| format!("range body read failed: {error}"))?;
     if let Some(output) = output {
-        let mut file = File::create(output)
+        let mut file = fs::File::create(output)
             .map_err(|error| format!("partial output create failed: {error}"))?;
         file.write_all(&body)
             .map_err(|error| format!("partial output write failed: {error}"))?;
@@ -1319,6 +565,7 @@ fn range_probe(client: &Client, url: &str, output: Option<&str>) -> Result<Value
         "host": parsed.host_str().unwrap_or_default(),
         "range_requested": format!("bytes=0-{end}"),
         "bytes_read": body.len(),
+        "accept_ranges": headers.get(ACCEPT_RANGES).and_then(|value| value.to_str().ok()).unwrap_or_default(),
         "content_length": headers.get(CONTENT_LENGTH).and_then(|value| value.to_str().ok()).unwrap_or_default(),
         "content_range": headers.get(CONTENT_RANGE).and_then(|value| value.to_str().ok()).unwrap_or_default(),
         "etag_present": headers.get(ETAG).is_some(),
@@ -1327,7 +574,7 @@ fn range_probe(client: &Client, url: &str, output: Option<&str>) -> Result<Value
 }
 
 fn command_probe(args: &[String], token: &Option<String>, site: &str) -> Result<Value, String> {
-    let url = args.first().ok_or("Usage: probe <url>")?;
+    let url = args.first().ok_or("probe requires a URL")?;
     let http = client()?;
     let response = http
         .get(url)
@@ -1342,7 +589,7 @@ fn command_probe(args: &[String], token: &Option<String>, site: &str) -> Result<
         .map_err(|error| format!("probe body read failed: {error}"))?;
     let lower = String::from_utf8_lossy(&body).to_ascii_lowercase();
     Ok(json!({
-        "success": (200..400).contains(&status),
+        "success": status >= 200 && status < 400,
         "status": status,
         "final_url": final_url,
         "body_len": body.len(),
@@ -1356,74 +603,29 @@ fn command_probe(args: &[String], token: &Option<String>, site: &str) -> Result<
     }))
 }
 
-fn map_search_video(video: &Value) -> Value {
-    let user = video.get("user").cloned().unwrap_or(Value::Null);
-    let file = video.get("file").cloned().unwrap_or(Value::Null);
+fn summarize_video(video_id: &str, video: &Value, status: u16) -> Value {
+    let user = video.get("user").and_then(Value::as_object);
+    let file = video.get("file").and_then(Value::as_object);
+    let thumbnail_present = file.and_then(|obj| obj.get("id")).is_some();
     json!({
-        "id": video.get("id").cloned().unwrap_or(Value::Null),
-        "title": video.get("title").cloned().unwrap_or(json!("")),
-        "thumbnail": thumbnail_url(video),
-        "duration": file.get("duration").cloned().unwrap_or(json!(0)),
-        "rating": video.get("rating").cloned().unwrap_or(json!("")),
-        "author_username": user.get("username").cloned().unwrap_or(json!("")),
-        "author_name": user.get("name").cloned().unwrap_or(json!("")),
-        "embed_url": video.get("embedUrl").cloned().unwrap_or(json!("")),
-        "private": video.get("private").cloned().unwrap_or(json!(false)),
-        "created_at": video.get("createdAt").cloned().unwrap_or(Value::Null)
+        "success": true,
+        "status": status,
+        "id": video.get("id").cloned().unwrap_or(Value::String(video_id.to_string())),
+        "title": video.get("title").cloned().unwrap_or(Value::String(String::new())),
+        "author_present": user.is_some(),
+        "rating": video.get("rating").cloned().unwrap_or(Value::String(String::new())),
+        "thumbnail_present": thumbnail_present,
+        "file_url_present": video.get("fileUrl").and_then(Value::as_str).is_some(),
+        "embed_url_present": video.get("embedUrl").and_then(Value::as_str).is_some(),
+        "private": video.get("private").cloned().unwrap_or(Value::Bool(false)),
+        "raw_keys": object_keys(video)
     })
 }
 
-fn map_user_video(video: &Value) -> Value {
-    let file = video.get("file").cloned().unwrap_or(Value::Null);
-    json!({
-        "id": video.get("id").cloned().unwrap_or(Value::Null),
-        "title": video.get("title").cloned().unwrap_or(Value::Null),
-        "slug": video.get("slug").cloned().unwrap_or(Value::Null),
-        "thumbnail": thumbnail_url(video),
-        "duration": file.get("duration").cloned().unwrap_or(json!(0)),
-        "created_at": video.get("createdAt").cloned().unwrap_or(Value::Null),
-        "private": video.get("private").cloned().unwrap_or(json!(false)),
-        "embed_url": video.get("embedUrl").cloned().unwrap_or(json!("")),
-        "rating": video.get("rating").cloned().unwrap_or(json!("")),
-        "raw": prune_video_raw(video)
-    })
-}
-
-fn thumbnail_url(video: &Value) -> Value {
-    video
-        .get("file")
-        .and_then(|file| file.get("id"))
-        .and_then(Value::as_str)
-        .map(|id| {
-            Value::String(format!(
-                "https://i.iwara.tv/image/thumbnail/{id}/thumbnail-00.jpg"
-            ))
-        })
-        .unwrap_or_else(|| json!(""))
-}
-
-fn prune_video_raw(video: &Value) -> Value {
-    let Some(object) = video.as_object() else {
-        return video.clone();
-    };
-    let mut pruned = object.clone();
-    pruned.remove("siteId");
-    if let Some(user) = pruned.get("user").and_then(Value::as_object) {
-        let mut reduced = Map::new();
-        for key in ["id", "name", "username"] {
-            if let Some(value) = user.get(key) {
-                reduced.insert(key.to_string(), value.clone());
-            }
-        }
-        pruned.insert("user".to_string(), Value::Object(reduced));
-    }
-    Value::Object(pruned)
-}
-
-fn resolve_secret(client: &Client) -> Result<(String, String), String> {
+fn resolve_secret(client: &Client) -> Result<(String, &'static str), String> {
     if let Ok(secret) = env::var("IWARA_X_VERSION_SECRET") {
-        if !secret.trim().is_empty() {
-            return Ok((secret.trim().to_string(), "env".to_string()));
+        if !secret.is_empty() {
+            return Ok((secret, "env"));
         }
     }
     let path = secret_cache_path();
@@ -1436,22 +638,15 @@ fn resolve_secret(client: &Client) -> Result<(String, String), String> {
             {
                 if let Ok(secret) = fs::read_to_string(&path) {
                     if !secret.trim().is_empty() {
-                        return Ok((secret.trim().to_string(), "cache".to_string()));
+                        return Ok((secret.trim().to_string(), "cache"));
                     }
                 }
             }
         }
     }
-    match extract_secret_from_main_js(client) {
-        Ok((secret, _)) => {
-            let _ = save_cached_secret(&secret);
-            Ok((secret, "main_js".to_string()))
-        }
-        Err(error) => {
-            eprintln!("Failed to extract X-Version secret, using bundled fallback: {error}");
-            Ok((DEFAULT_X_VERSION_SECRET.to_string(), "bundled".to_string()))
-        }
-    }
+    let (secret, _) = extract_secret_from_main_js(client)?;
+    let _ = fs::write(path, &secret);
+    Ok((secret, "main_js"))
 }
 
 fn extract_secret_from_main_js(client: &Client) -> Result<(String, String), String> {
@@ -1487,22 +682,7 @@ fn secret_cache_path() -> PathBuf {
     if let Ok(path) = env::var("IWARA_RUST_SECRET_CACHE") {
         return PathBuf::from(path);
     }
-    if let Ok(appdata) = env::var("APPDATA") {
-        return PathBuf::from(appdata)
-            .join("IwaraDownloader")
-            .join("x_version_secret.txt");
-    }
-    env::temp_dir()
-        .join("IwaraDownloader")
-        .join("x_version_secret.txt")
-}
-
-fn save_cached_secret(secret: &str) -> io::Result<()> {
-    let path = secret_cache_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(path, secret)
+    env::temp_dir().join("iwara-rust-poc-x-version-secret.txt")
 }
 
 fn has_high_quality(files: &[Value]) -> bool {
@@ -1514,68 +694,16 @@ fn has_high_quality(files: &[Value]) -> bool {
     })
 }
 
-fn video_error(status: u16, body: &Value, video_id: &str) -> Value {
-    let mut error = json!({
-        "success": false,
-        "error": video_error_message(status, body, video_id)
-    });
-    if status == 403 && safe_error_message(body, "").contains("privateVideo") {
-        error["code"] = json!("PRIVATE_VIDEO");
-    }
-    error
+fn safe_host(value: &str) -> Value {
+    Url::parse(value)
+        .ok()
+        .and_then(|url| url.host_str().map(|host| Value::String(host.to_string())))
+        .unwrap_or(Value::Null)
 }
 
-fn video_error_message(status: u16, body: &Value, video_id: &str) -> String {
-    match status {
-        404 => format!("Video not found: {video_id}"),
-        403 => format!(
-            "Access denied: {}",
-            safe_error_message(body, "Private video or login required")
-        ),
-        _ => format!("HTTP {status}: {}", safe_error_message(body, "")),
-    }
-}
-
-fn login_required() -> Value {
-    json!({"success": false, "error": "Login required", "code": "LOGIN_REQUIRED"})
-}
-
-fn json_error_string(error: &str, code: &str) -> String {
-    format!("{error} [{code}]")
-}
-
-fn is_retryable_rate_limit(result: &HttpResult) -> bool {
-    if result.status == 429 {
-        return true;
-    }
-    if result.status != 403 {
-        return false;
-    }
-    let text = result.body.to_ascii_lowercase();
-    ["rate limit", "too many", "cloudflare", "blocked", "captcha"]
-        .iter()
-        .any(|keyword| text.contains(keyword))
-}
-
-fn safe_error_message(value: &Value, fallback: &str) -> String {
-    value
-        .get("message")
-        .or_else(|| value.get("error"))
-        .and_then(Value::as_str)
-        .map(|value| truncate(value, 200))
-        .unwrap_or_else(|| {
-            if value.is_null() {
-                fallback.to_string()
-            } else {
-                truncate(&value.to_string(), 200)
-            }
-        })
-}
-
-fn safe_error_message_text(text: &str) -> String {
-    let body: Value = serde_json::from_str(text).unwrap_or(Value::Null);
-    let fallback = truncate(text, 200);
-    safe_error_message(&body, &fallback)
+fn safe_url(url: &Url) -> String {
+    let host = url.host_str().unwrap_or_default();
+    format!("{}://{}{}", url.scheme(), host, url.path())
 }
 
 fn normalize_download_url(value: &str) -> String {
@@ -1591,28 +719,31 @@ fn normalize_download_url(value: &str) -> String {
         .unwrap_or_else(|_| value.to_string())
 }
 
-fn safe_url(url: &Url) -> String {
-    let host = url.host_str().unwrap_or_default();
-    format!("{}://{}{}", url.scheme(), host, url.path())
+fn safe_error_message(value: &Value) -> String {
+    value
+        .get("message")
+        .or_else(|| value.get("error"))
+        .and_then(Value::as_str)
+        .unwrap_or("request failed")
+        .chars()
+        .take(200)
+        .collect()
+}
+
+fn object_keys(value: &Value) -> Vec<String> {
+    value
+        .as_object()
+        .map(|object| object.keys().cloned().collect())
+        .unwrap_or_default()
 }
 
 fn decode_jwt_payload(token: &str) -> Option<Value> {
-    let parts: Vec<&str> = token.split('.').collect();
-    if parts.len() != 3 {
-        return None;
-    }
+    let segment = token.split('.').nth(1)?;
     let bytes = URL_SAFE_NO_PAD
-        .decode(parts[1])
-        .or_else(|_| URL_SAFE.decode(parts[1]))
+        .decode(segment)
+        .or_else(|_| URL_SAFE.decode(segment))
         .ok()?;
     serde_json::from_slice(&bytes).ok()
-}
-
-fn unix_now() -> i64 {
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
 }
 
 fn sha1_hex(value: &str) -> String {
@@ -1625,47 +756,6 @@ fn sha1_bytes(value: &[u8]) -> String {
     let mut hasher = Sha1::new();
     hasher.update(value);
     format!("{:x}", hasher.finalize())
-}
-
-fn content_range_total(headers: &HeaderMap) -> Option<u64> {
-    let value = headers.get(CONTENT_RANGE)?.to_str().ok()?;
-    let total = value.rsplit('/').next()?;
-    if total == "*" {
-        None
-    } else {
-        total.parse().ok()
-    }
-}
-
-fn read_resume_meta(path: &str) -> Option<Value> {
-    let text = fs::read_to_string(path).ok()?;
-    serde_json::from_str(&text).ok()
-}
-
-fn write_resume_meta(path: &str, value: &Value) -> io::Result<()> {
-    let temp_path = format!("{path}.tmp");
-    fs::write(&temp_path, serde_json::to_vec(value).unwrap_or_default())?;
-    if Path::new(path).exists() {
-        let _ = fs::remove_file(path);
-    }
-    fs::rename(temp_path, path)
-}
-
-fn remove_if_exists(path: &str) {
-    if Path::new(path).exists() {
-        let _ = fs::remove_file(path);
-    }
-}
-
-fn parse_download_percent(line: &str) -> Option<String> {
-    let regex = Regex::new(r"\[download\]\s+([0-9]+(?:\.[0-9]+)?)%").ok()?;
-    regex
-        .captures(line)
-        .and_then(|captures| captures.get(1).map(|value| value.as_str().to_string()))
-}
-
-fn truncate(value: &str, max_chars: usize) -> String {
-    value.chars().take(max_chars).collect()
 }
 
 #[cfg(test)]
@@ -1698,10 +788,19 @@ mod tests {
             json!({"name": "Source", "src": {"view": "https://cdn/source"}}),
         ];
         let requested = "360";
+        let mut found = None;
         let order = [requested, "Source", "540", "360", "preview"];
-        let found = order
-            .into_iter()
-            .find(|quality| files.iter().any(|file| file["name"] == *quality));
+        for quality in order {
+            if found.is_some() {
+                break;
+            }
+            for file in &files {
+                if file["name"] == quality {
+                    found = Some(quality);
+                    break;
+                }
+            }
+        }
         assert_eq!(found, Some("360"));
     }
 
@@ -1713,26 +812,5 @@ mod tests {
             re.captures(js).unwrap().get(1).unwrap().as_str(),
             "fixtureSecret123456789012345678"
         );
-    }
-
-    #[test]
-    fn content_range_total_is_parsed() {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            CONTENT_RANGE,
-            HeaderValue::from_static("bytes 0-65535/262104033"),
-        );
-        assert_eq!(content_range_total(&headers), Some(262104033));
-    }
-
-    #[test]
-    fn resume_meta_round_trip_uses_json() {
-        let path = env::temp_dir().join(format!("iwara-rust-test-{}.meta", std::process::id()));
-        let path_string = path.to_string_lossy().into_owned();
-        let value = json!({"file_id": "fixture", "size": 42, "etag": "abc"});
-        write_resume_meta(&path_string, &value).unwrap();
-        assert_eq!(read_resume_meta(&path_string).unwrap(), value);
-        remove_if_exists(&path_string);
-        remove_if_exists(&format!("{path_string}.tmp"));
     }
 }

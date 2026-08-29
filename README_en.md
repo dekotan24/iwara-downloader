@@ -219,8 +219,8 @@ A hidden `.iwara_index.json` is created in each download folder to speed up UUID
 <details>
 <summary><b>Setup / login fails</b></summary>
 
-- Check your internet connection (needed for the bundled Rust helper to reach iwara)
-- If you selected a custom helper, verify the path to `iwara-helper.exe`
+- Check your internet connection (needed to fetch Python and install cloudscraper)
+- If you pointed the wizard at an existing Python, verify the path (full path to `python.exe`)
 - Confirm you can log in to iwara.tv directly
 - Make sure your antivirus is not blocking the app
 
@@ -266,7 +266,7 @@ dotnet test IwaraDownloader.sln -c Debug
 | Desktop app | C# / WinForms (.NET 10.0) |
 | Web server | ASP.NET Core Kestrel (Minimal API) + vanilla JS |
 | Database | SQLite (Microsoft.Data.Sqlite) |
-| iwara API | Bundled Rust `iwara-helper.exe` (reqwest + rustls) |
+| iwara API | Python 3.10+ / [cloudscraper](https://github.com/VeNoMouS/cloudscraper) (Cloudflare bypass) |
 | Metadata | [TagLibSharp](https://github.com/mono/taglib-sharp) (UUID embedding into mp4) |
 | Misc | NAudio (notification sounds), DPAPI (credential encryption) |
 
@@ -284,5 +284,5 @@ dotnet test IwaraDownloader.sln -c Debug
 ## 🙏 Acknowledgements
 
 - [iwara-python-api](https://github.com/xiatg/iwara-python-api)
-- [Rust](https://www.rust-lang.org/) / [reqwest](https://github.com/seanmonstar/reqwest)
+- [cloudscraper](https://github.com/VeNoMouS/cloudscraper)
 - Parts of this project were developed with assistance from [Claude](https://claude.ai) by Anthropic

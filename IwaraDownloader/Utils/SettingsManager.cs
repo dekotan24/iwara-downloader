@@ -142,7 +142,7 @@ namespace IwaraDownloader.Utils
                 AutoCheckEnabled = Settings.AutoCheckEnabled,
                 AutoDownloadOnCheck = Settings.AutoDownloadOnCheck,
                 DownloadExternalVideosDefault = Settings.DownloadExternalVideosDefault,
-                RustHelperPath = Settings.RustHelperPath,
+                PythonPath = Settings.PythonPath,
                 YtDlpPath = Settings.YtDlpPath,
                 IwaraEmail = Settings.IwaraEmail,
                 IwaraUsername = Settings.IwaraUsername,

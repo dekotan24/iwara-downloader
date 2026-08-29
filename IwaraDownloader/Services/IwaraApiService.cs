@@ -18,12 +18,12 @@ namespace IwaraDownloader.Services
     }
 
     /// <summary>
-    /// 同梱Rust iwara-helper.exeを呼び出すサービス。stdout JSON / stderr進捗契約を維持する。
+    /// Python iwara_helper.py を呼び出すサービス(Embeddable Python対応)
     /// </summary>
     public class IwaraApiService
     {
         private readonly string _appDir;
-        private readonly string _rustHelperPath;
+        private readonly string _scriptPath;
         private string? _token;
 
         /// <summary>トークン(JWT)を保持しており、かつ JWT の exp が有効期限内である</summary>
@@ -35,56 +35,91 @@ namespace IwaraDownloader.Services
         /// <summary>トークン</summary>
         public string? Token => _token;
 
-        /// <summary>Rust helperの実行パス。設定値が無効なら同梱exeを使う。</summary>
-        private string RustHelperPath
+        /// <summary>Pythonパス(設定から取得)</summary>
+        private string PythonPath => Utils.SettingsManager.Instance.Settings.PythonPath;
+
+        /// <summary>Pythonが設定されているか</summary>
+        public bool IsPythonConfigured
         {
             get
             {
-                var configured = Utils.SettingsManager.Instance.Settings.RustHelperPath;
-                if (!string.IsNullOrWhiteSpace(configured))
-                {
-                    var path = Path.IsPathRooted(configured)
-                        ? configured
-                        : Path.Combine(_appDir, configured);
-                    if (File.Exists(path)) return path;
-                }
-                return _rustHelperPath;
+                var pythonPath = PythonPath;
+                if (string.IsNullOrEmpty(pythonPath)) return false;
+                // フルパスの場合はファイル存在チェック
+                if (Path.IsPathRooted(pythonPath))
+                    return File.Exists(pythonPath);
+                // "python"などPATH上のコマンドの場合は存在するとみなす
+                return true;
             }
         }
 
-        /// <summary>Rust helperが設定されているか</summary>
-        public bool IsRustConfigured => File.Exists(RustHelperPath);
-
-        /// <summary>Rust helperが存在するか</summary>
-        public bool IsScriptReady => IsRustConfigured;
+        /// <summary>スクリプトが存在するか</summary>
+        public bool IsScriptReady => File.Exists(_scriptPath);
 
         /// <summary>セットアップ完了マーカー</summary>
-        private string SetupMarkerPath => Path.Combine(_appDir, ".rust_setup_done");
+        private string SetupMarkerPath => Path.Combine(_appDir, ".python_setup_done");
 
         /// <summary>セットアップ済みか</summary>
-        public bool IsSetupDone => IsRustConfigured;
+        public bool IsSetupDone => File.Exists(SetupMarkerPath);
 
         public IwaraApiService()
         {
             _appDir = AppDomain.CurrentDomain.BaseDirectory;
-            _rustHelperPath = Path.Combine(_appDir, "iwara-helper.exe");
+            _scriptPath = Path.Combine(_appDir, "iwara_helper.py");
             
             // 保存されたトークンを読み込み
             LoadToken();
             
-            // Rust移行後は旧Pythonパス設定を参照しない。
+            // 旧形式のPythonパスファイルがあれば設定に移行
+            MigratePythonPath();
         }
 
-        #region Rust helper Path Management
+        #region Python Path Management
 
         /// <summary>
-        /// Rust helperパスを保存(設定に保存)
+        /// Pythonパスを保存(設定に保存)
         /// </summary>
-        public void SaveRustHelperPath(string helperPath)
+        public void SavePythonPath(string pythonPath)
         {
             var settings = Utils.SettingsManager.Instance.Settings;
-            settings.RustHelperPath = helperPath;
+            settings.PythonPath = pythonPath;
             Utils.SettingsManager.Instance.Save();
+        }
+
+        /// <summary>
+        /// 旧形式のPythonパスファイルから設定に移行
+        /// </summary>
+        private void MigratePythonPath()
+        {
+            try
+            {
+                var oldConfigPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "IwaraDownloader",
+                    "python_path.txt");
+                
+                if (File.Exists(oldConfigPath))
+                {
+                    var pythonPath = File.ReadAllText(oldConfigPath).Trim();
+                    if (!string.IsNullOrEmpty(pythonPath))
+                    {
+                        // 設定がデフォルトの場合のみ移行
+                        var settings = Utils.SettingsManager.Instance.Settings;
+                        if (settings.PythonPath == "python")
+                        {
+                            settings.PythonPath = pythonPath;
+                            Utils.SettingsManager.Instance.Save();
+                            Debug.WriteLine($"Pythonパスを設定に移行しました: {pythonPath}");
+                        }
+                    }
+                    // 旧ファイルを削除
+                    File.Delete(oldConfigPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Pythonパス移行エラー: {ex.Message}");
+            }
         }
 
         #endregion
@@ -195,42 +230,44 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// Rust helperを実行 (site 指定可)
+        /// Pythonスクリプトを実行 (site 指定可)
         /// </summary>
-        private Task<JsonDocument?> RunRustAsync(string action, params string[] args)
-            => RunRustAsync(action, null, CancellationToken.None, args);
+        private Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
+            => RunPythonAsync(action, null, CancellationToken.None, args);
 
-        private Task<JsonDocument?> RunRustAsync(string action, string? site, params string[] args)
-            => RunRustAsync(action, site, CancellationToken.None, args);
+        private Task<JsonDocument?> RunPythonAsync(string action, string? site, params string[] args)
+            => RunPythonAsync(action, site, CancellationToken.None, args);
 
-        private Task<JsonDocument?> RunRustAsync(string action, string? site, CancellationToken ct, params string[] args)
-            => RunRustProcessAsync(action, site, ct, null, args);
-
-        private Task<JsonDocument?> RunRustWithEnvironmentAsync(
-            string action,
-            IReadOnlyDictionary<string, string> environment,
-            params string[] args)
-            => RunRustProcessAsync(action, null, CancellationToken.None, environment, args);
-
-        private async Task<JsonDocument?> RunRustProcessAsync(
-            string action,
-            string? site,
-            CancellationToken ct,
-            IReadOnlyDictionary<string, string>? environment,
-            params string[] args)
+        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, params string[] args)
         {
-            if (!IsRustConfigured)
+            if (!IsPythonConfigured)
             {
-                var msg = $"Rust helperが見つかりません ({RustHelperPath})。アプリのインストールが破損している可能性があります。";
+                var msg = $"Pythonが設定されていません (PythonPath=\"{PythonPath}\")。設定画面で正しいPythonパスを指定してください。" +
+                          " インストール直後の場合、PATHを反映するためにPCの再起動が必要なことがあります。";
                 Debug.WriteLine(msg);
-                LoggingService.Instance.Error($"[Rust実行] {msg} (action={action})");
+                LoggingService.Instance.Error($"[Python実行] {msg} (action={action})");
                 return null;
             }
 
-            var allArgs = new List<string> { action };
-            allArgs.AddRange(args);
+            if (!IsScriptReady)
+            {
+                var msg = $"iwara_helper.py が見つかりません ({_scriptPath})。インストールが破損している可能性があります。";
+                Debug.WriteLine(msg);
+                LoggingService.Instance.Error($"[Python実行] {msg} (action={action})");
+                return null;
+            }
 
-            // トークンは環境変数 IWARA_TOKEN 経由で渡す。Rust helperはこの値をログに出さない。
+            if (!IsSetupDone)
+            {
+                LoggingService.Instance.Warn($"[Python実行] セットアップマーカーが見つかりません (.python_setup_done)。" +
+                    "ライブラリ未インストールの可能性があります。設定画面から再セットアップを実行してください。 (action={action})");
+            }
+
+            var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
+            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
+
+            // トークンは環境変数 IWARA_TOKEN 経由で渡す (tasklist /v / WMI で他プロセスから
+            // コマンドラインを読まれた時の JWT 漏洩を防ぐ)。Python 側は環境変数フォールバック対応済み。
 
             // レート制限設定を追加
             allArgs.AddRange(GetRateLimitArgs());
@@ -245,12 +282,13 @@ namespace IwaraDownloader.Services
             if (!string.IsNullOrEmpty(site))
             {
                 allArgs.Add("--site");
-                allArgs.Add(site);
+                allArgs.Add($"\"{site}\"");
             }
 
             var psi = new ProcessStartInfo
             {
-                FileName = RustHelperPath,
+                FileName = PythonPath,
+                Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -259,19 +297,12 @@ namespace IwaraDownloader.Services
                 StandardErrorEncoding = System.Text.Encoding.UTF8,
                 WorkingDirectory = _appDir
             };
-            foreach (var argument in allArgs)
-                psi.ArgumentList.Add(argument);
             if (!string.IsNullOrEmpty(_token))
             {
                 psi.EnvironmentVariables["IWARA_TOKEN"] = _token;
             }
-            if (environment != null)
-            {
-                foreach (var pair in environment)
-                    psi.EnvironmentVariables[pair.Key] = pair.Value;
-            }
 
-            Debug.WriteLine($"Running Rust helper: {RustHelperPath} {action}");
+            Debug.WriteLine($"Running: {PythonPath} {psi.Arguments}");
 
             using var process = new Process { StartInfo = psi };
             var output = new System.Text.StringBuilder();
@@ -286,18 +317,18 @@ namespace IwaraDownloader.Services
                 if (e.Data != null)
                 {
                     error.AppendLine(e.Data);
-                    Debug.WriteLine($"Rust stderr: {e.Data}");
+                    Debug.WriteLine($"Python stderr: {e.Data}");
                     
                     // LoggingServiceにも出力(エラーレベルの判定)
                     if (e.Data.Contains("Error") || e.Data.Contains("error") || 
                         e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
                         e.Data.Contains("403") || e.Data.Contains("429"))
                     {
-                        LoggingService.Instance.Warn($"Rust: {e.Data}");
+                        LoggingService.Instance.Warn($"Python: {e.Data}");
                     }
                     else if (!e.Data.StartsWith("Progress:"))
                     {
-                        LoggingService.Instance.Debug($"Rust: {e.Data}");
+                        LoggingService.Instance.Debug($"Python: {e.Data}");
                     }
                 }
             };
@@ -313,7 +344,7 @@ namespace IwaraDownloader.Services
             }
             catch (OperationCanceledException)
             {
-            // タイムアウト/アプリ終了: Rust helperとその子プロセスをKill
+                // タイムアウト/アプリ終了: プロセスツリーごと Kill (RunPythonWithProgressAsync と同じ対応)
                 try
                 {
                     if (!process.HasExited)
@@ -327,26 +358,26 @@ namespace IwaraDownloader.Services
                     }
                     catch (OperationCanceledException)
                     {
-                        Debug.WriteLine("Rust helper did not exit within 5s after Kill");
+                        Debug.WriteLine("Python process did not exit within 5s after Kill");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Rust helper Kill failed: {ex.Message}");
+                    Debug.WriteLine($"Python process Kill failed: {ex.Message}");
                 }
                 throw;
             }
 
             var outputStr = output.ToString().Trim();
-            Debug.WriteLine($"Rust output received ({outputStr.Length} chars)");
+            Debug.WriteLine($"Python output: {outputStr}");
 
             if (string.IsNullOrEmpty(outputStr))
             {
                 var errorStr = error.ToString().Trim();
-                Debug.WriteLine($"Rust error: {errorStr}");
+                Debug.WriteLine($"Python error: {errorStr}");
                 if (!string.IsNullOrEmpty(errorStr))
                 {
-                    LoggingService.Instance.Error($"Rust helper実行エラー (action={action}):\n{errorStr}");
+                    LoggingService.Instance.Error($"Pythonスクリプト実行エラー (action={action}):\n{errorStr}");
                 }
                 return null;
             }
@@ -357,7 +388,7 @@ namespace IwaraDownloader.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Rust JSON parse error: {ex.Message}");
+                Debug.WriteLine($"JSON parse error: {ex.Message}");
                 return null;
             }
         }
@@ -367,16 +398,10 @@ namespace IwaraDownloader.Services
         /// </summary>
         public async Task<(bool Success, string? Error)> LoginAsync(string email, string password)
         {
-            var result = await RunRustWithEnvironmentAsync(
-                "login",
-                new Dictionary<string, string>
-                {
-                    ["IWARA_EMAIL"] = email,
-                    ["IWARA_PASSWORD"] = password,
-                });
+            var result = await RunPythonAsync("login", new[] { email, password });
             
             if (result == null)
-                return (false, "Rust helperの実行に失敗しました。アプリの配置を確認してください。");
+                return (false, "Pythonスクリプトの実行に失敗しました。環境セットアップを確認してください。");
 
             var root = result.RootElement;
             
@@ -431,9 +456,9 @@ namespace IwaraDownloader.Services
                 return (false, "トークンの有効期限が切れています");
             }
 
-            var result = await RunRustAsync("verify_token");
+            var result = await RunPythonAsync("verify_token");
             if (result == null)
-                return (false, "トークンの検証に失敗しました(Rust helper実行エラー)");
+                return (false, "トークンの検証に失敗しました(Python実行エラー)");
 
             var root = result.RootElement;
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
@@ -452,21 +477,6 @@ namespace IwaraDownloader.Services
             return (false, error);
         }
 
-        /// <summary>検索APIのJSONをRust helperから取得する。</summary>
-        public Task<JsonDocument?> SearchVideosAsync(
-            string query,
-            int page = 0,
-            int limit = 32,
-            string? site = null,
-            CancellationToken ct = default)
-            => RunRustAsync(
-                "search",
-                site,
-                ct,
-                query,
-                page.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                limit.ToString(System.Globalization.CultureInfo.InvariantCulture));
-
         /// <summary>
         /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)。
         /// Status は Success/UserNotFound(確定) と Failed(ログイン未済・通信エラー等、今回は
@@ -483,9 +493,7 @@ namespace IwaraDownloader.Services
 
             progress?.Report(L.T("SvcIwaraApiService_D001", username));
 
-            // Rust helperの正式なアクション名は kebab-case。旧Python互換の
-            // snake_caseをここで渡すと、ヘルパー側で Unknown action になる。
-            var result = await RunRustAsync("get-videos", site, ct, username);
+            var result = await RunPythonAsync("get_videos", site, ct, username);
 
             if (result == null)
             {
@@ -580,8 +588,7 @@ namespace IwaraDownloader.Services
 
         private async Task<VideoUrlInfo> GetDownloadUrlInternalAsync(string videoId, string? site)
         {
-            // Rust helperの正式なアクション名は get-url。
-            var result = await RunRustAsync("get-url", site, videoId);
+            var result = await RunPythonAsync("get_url", site, videoId);
 
             if (result == null)
                 return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
@@ -650,7 +657,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 動画をダウンロード(Rust helper、site で iwara.tv / iwara.ai 切替)
+        /// 動画をダウンロード(Pythonに任せる、site で iwara.tv / iwara.ai 切替)
         /// </summary>
         public async Task<(bool Success, string? Error)> DownloadVideoAsync(
             string videoId,
@@ -665,10 +672,10 @@ namespace IwaraDownloader.Services
 
             progress?.Report(L.T("SvcIwaraApiService_D005", videoId));
 
-            var result = await RunRustWithProgressAsync("download", percentProgress, ct, site, videoId, outputPath);
+            var result = await RunPythonWithProgressAsync("download", percentProgress, ct, site, videoId, outputPath);
             
             if (result == null)
-                return (false, "Rust helperの実行に失敗しました");
+                return (false, "Pythonスクリプトの実行に失敗しました");
 
             var root = result.RootElement;
             
@@ -704,7 +711,7 @@ namespace IwaraDownloader.Services
             if (string.IsNullOrWhiteSpace(ytDlpPath))
                 ytDlpPath = "yt-dlp";
 
-            var result = await RunRustWithProgressAsync(
+            var result = await RunPythonWithProgressAsync(
                 "download_external",
                 percentProgress,
                 ct,
@@ -714,7 +721,7 @@ namespace IwaraDownloader.Services
                 ytDlpPath);
 
             if (result == null)
-                return (false, "Rust helperの実行に失敗しました", null);
+                return (false, "Pythonスクリプトの実行に失敗しました", null);
 
             var root = result.RootElement;
 
@@ -733,35 +740,40 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// Rust helperを実行(進捗リアルタイム取得、site 指定可)
+        /// Pythonスクリプトを実行(進捗リアルタイム取得、site 指定可)
         /// </summary>
-        private Task<JsonDocument?> RunRustWithProgressAsync(string action, IProgress<double>? percentProgress, CancellationToken ct, params string[] args)
-            => RunRustWithProgressAsync(action, percentProgress, ct, null, args);
+        private Task<JsonDocument?> RunPythonWithProgressAsync(string action, IProgress<double>? percentProgress, CancellationToken ct, params string[] args)
+            => RunPythonWithProgressAsync(action, percentProgress, ct, null, args);
 
-        private async Task<JsonDocument?> RunRustWithProgressAsync(string action, IProgress<double>? percentProgress, CancellationToken ct, string? site, params string[] args)
+        private async Task<JsonDocument?> RunPythonWithProgressAsync(string action, IProgress<double>? percentProgress, CancellationToken ct, string? site, params string[] args)
         {
-            if (!IsRustConfigured)
+            if (!IsPythonConfigured)
             {
-                Debug.WriteLine("Rust helper not configured");
+                Debug.WriteLine("Python not configured");
                 return null;
             }
 
-            var allArgs = new List<string> { action };
-            allArgs.AddRange(args);
+            if (!IsScriptReady)
+            {
+                Debug.WriteLine("Script not found");
+                return null;
+            }
+
+            var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
+            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
+
+            // トークンは環境変数経由 (コマンドライン引数からの漏洩防止)
 
             if (!string.IsNullOrEmpty(site))
             {
                 allArgs.Add("--site");
-                allArgs.Add(site);
+                allArgs.Add($"\"{site}\"");
             }
-
-            allArgs.AddRange(GetRateLimitArgs());
-            if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
-                allArgs.Add("--no-backoff");
 
             var psi = new ProcessStartInfo
             {
-                FileName = RustHelperPath,
+                FileName = PythonPath,
+                Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -770,8 +782,6 @@ namespace IwaraDownloader.Services
                 StandardErrorEncoding = System.Text.Encoding.UTF8,
                 WorkingDirectory = _appDir
             };
-            foreach (var argument in allArgs)
-                psi.ArgumentList.Add(argument);
             if (!string.IsNullOrEmpty(_token))
             {
                 psi.EnvironmentVariables["IWARA_TOKEN"] = _token;
@@ -792,7 +802,7 @@ namespace IwaraDownloader.Services
                 if (e.Data != null)
                 {
                     errorOutput.AppendLine(e.Data);
-                    Debug.WriteLine($"Rust stderr: {e.Data}");
+                    Debug.WriteLine($"Python stderr: {e.Data}");
                     
                     // Progress: XX.X% 形式をパース
                     if (e.Data.StartsWith("Progress:") && percentProgress != null)
@@ -808,7 +818,7 @@ namespace IwaraDownloader.Services
                              e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
                              e.Data.Contains("403") || e.Data.Contains("429"))
                     {
-                        LoggingService.Instance.Warn($"Rust: {e.Data}");
+                        LoggingService.Instance.Warn($"Python: {e.Data}");
                     }
                 }
             };
@@ -838,12 +848,12 @@ namespace IwaraDownloader.Services
                     }
                     catch (OperationCanceledException)
                     {
-                        Debug.WriteLine("Rust helper did not exit within 5s after Kill");
+                        Debug.WriteLine("Python process did not exit within 5s after Kill");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Rust helper Kill failed: {ex.Message}");
+                    Debug.WriteLine($"Python process Kill failed: {ex.Message}");
                 }
                 throw;
             }
@@ -855,7 +865,7 @@ namespace IwaraDownloader.Services
                 var errorStr = errorOutput.ToString().Trim();
                 if (!string.IsNullOrEmpty(errorStr))
                 {
-                    LoggingService.Instance.Error($"Rust helper実行エラー (action={action}):\n{errorStr}");
+                    LoggingService.Instance.Error($"Pythonスクリプト実行エラー (action={action}):\n{errorStr}");
                 }
                 return null;
             }
@@ -866,52 +876,159 @@ namespace IwaraDownloader.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Rust JSON parse error: {ex.Message}");
-                LoggingService.Instance.Error($"Rust出力JSONパースエラー: {ex.Message}");
+                Debug.WriteLine($"JSON parse error: {ex.Message}");
+                LoggingService.Instance.Error($"Python出力JSONパースエラー: {ex.Message}\nOutput: {outputStr}");
                 return null;
             }
         }
 
         /// <summary>
-        /// 同梱Rust helperの配置を確認し、セットアップ完了を記録する。
+        /// セットアップバッチを実行
         /// </summary>
-        public async Task<bool> RunSetupAsync(string? helperPath, IProgress<string>? progress = null)
+        public async Task<bool> RunSetupAsync(string pythonPath, IProgress<string>? progress = null)
         {
-            await Task.Yield();
-            var candidate = string.IsNullOrWhiteSpace(helperPath)
-                ? _rustHelperPath
-                : (Path.IsPathRooted(helperPath) ? helperPath : Path.Combine(_appDir, helperPath));
-            progress?.Report("Rust helperを確認しています...");
-            if (!File.Exists(candidate))
+            var setupBat = Path.Combine(_appDir, "iwara_setup.bat");
+
+            LoggingService.Instance.Info($"[セットアップ開始] pythonPath={pythonPath}, setupBat={setupBat}, appDir={_appDir}");
+
+            if (!File.Exists(setupBat))
             {
-                var message = $"Rust helperが見つかりません: {candidate}";
-                LoggingService.Instance.Error($"[セットアップ] {message}");
-                progress?.Report(message);
+                var msg = $"iwara_setup.batが見つかりません ({setupBat})";
+                progress?.Report(msg);
+                LoggingService.Instance.Error($"[セットアップ] {msg}");
                 return false;
             }
 
-            Utils.SettingsManager.Instance.Settings.RustHelperPath = candidate;
-            Utils.SettingsManager.Instance.Save();
+            // Pythonパスを保存
+            SavePythonPath(pythonPath);
+            LoggingService.Instance.Info($"[セットアップ] Pythonパスを保存: {pythonPath}");
+
+            // 事前にPython自体の起動を試行(PATH 反映漏れの早期検出)
             try
             {
-                await File.WriteAllTextAsync(
-                    SetupMarkerPath,
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\nhelper={candidate}\n");
+                var checkPsi = new ProcessStartInfo
+                {
+                    FileName = pythonPath,
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                };
+                using var checkProc = Process.Start(checkPsi);
+                if (checkProc != null)
+                {
+                    await checkProc.WaitForExitAsync();
+                    var versionOut = (await checkProc.StandardOutput.ReadToEndAsync()).Trim();
+                    var versionErr = (await checkProc.StandardError.ReadToEndAsync()).Trim();
+                    if (checkProc.ExitCode == 0)
+                    {
+                        LoggingService.Instance.Info($"[セットアップ] Pythonバージョン確認OK: {versionOut} {versionErr}");
+                    }
+                    else
+                    {
+                        LoggingService.Instance.Warn($"[セットアップ] Python --version 失敗 (exit={checkProc.ExitCode}): out={versionOut} err={versionErr}");
+                    }
+                }
             }
             catch (Exception ex)
             {
-                LoggingService.Instance.Warn($"[セットアップ] マーカー作成失敗: {ex.Message}");
+                LoggingService.Instance.Error($"[セットアップ] Python起動チェック失敗: {ex.Message}。PATH反映のためPC再起動が必要かも。{ex.GetType().Name}");
             }
-            progress?.Report("Rust helperのセットアップが完了しました。");
-            return true;
+
+            // 古いマーカーファイルを削除(再セットアップ対応)
+            if (File.Exists(SetupMarkerPath))
+            {
+                try { File.Delete(SetupMarkerPath); LoggingService.Instance.Info("[セットアップ] 既存マーカー削除"); } catch (Exception ex) { LoggingService.Instance.Warn($"[セットアップ] マーカー削除失敗: {ex.Message}"); }
+            }
+
+            progress?.Report(L.T("SvcIwaraApiService_D009"));
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{setupBat}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = false, // セットアップ中は表示
+                WorkingDirectory = _appDir
+            };
+
+            // 環境変数を設定
+            psi.Environment["PYTHON_PATH"] = pythonPath;
+
+            using var process = new Process { StartInfo = psi };
+
+            var setupOutput = new System.Text.StringBuilder();
+            var setupError = new System.Text.StringBuilder();
+
+            process.OutputDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Debug.WriteLine($"Setup: {e.Data}");
+                    setupOutput.AppendLine(e.Data);
+                    LoggingService.Instance.Info($"[セットアップ stdout] {e.Data}");
+                    progress?.Report(e.Data);
+                }
+            };
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Debug.WriteLine($"Setup stderr: {e.Data}");
+                    setupError.AppendLine(e.Data);
+                    LoggingService.Instance.Warn($"[セットアップ stderr] {e.Data}");
+                }
+            };
+
+            process.Start();
+            Utils.ChildProcessJob.AssignProcess(process); // 親死亡で自動 Kill
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            await process.WaitForExitAsync();
+
+            LoggingService.Instance.Info($"[セットアップ] プロセス終了 ExitCode={process.ExitCode}");
+
+            // プロセス終了後、少し待ってからマーカーファイルを確認
+            await Task.Delay(500);
+
+            var setupSuccess = process.ExitCode == 0 && File.Exists(SetupMarkerPath);
+            
+            if (!setupSuccess && process.ExitCode == 0)
+            {
+                // ExitCode=0だがマーカーがない場合、少し待ってリトライ
+                await Task.Delay(1000);
+                setupSuccess = File.Exists(SetupMarkerPath);
+            }
+
+            if (setupSuccess)
+            {
+                LoggingService.Instance.Info("[セットアップ] 成功");
+                progress?.Report(L.T("SvcIwaraApiService_D010"));
+            }
+            else
+            {
+                var errSummary = setupError.ToString().Trim();
+                var outSummary = setupOutput.ToString().Trim();
+                LoggingService.Instance.Error(
+                    $"[セットアップ] 失敗 ExitCode={process.ExitCode}, マーカー={File.Exists(SetupMarkerPath)}, " +
+                    $"PathHint='Pythonが新規インストール直後ならPC再起動でPATHを反映してください'\n" +
+                    $"--- stderr ---\n{errSummary}\n--- stdout(末尾) ---\n{(outSummary.Length > 1500 ? outSummary[^1500..] : outSummary)}");
+                progress?.Report(L.T("SvcIwaraApiService_D011"));
+            }
+
+            return setupSuccess;
         }
 
         /// <summary>
         /// 環境チェック
         /// </summary>
-        public (bool RustReady, bool HelperReady) CheckEnvironment()
+        public (bool PythonReady, bool ScriptReady) CheckEnvironment()
         {
-            return (IsRustConfigured, IsScriptReady);
+            return (IsPythonConfigured && IsSetupDone, IsScriptReady);
         }
     }
 }

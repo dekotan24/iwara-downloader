@@ -1576,7 +1576,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>Open the app settings</value>
   </data>
   <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
-    <value>Run the initial setup (Rust helper, login, etc.)</value>
+    <value>Run the initial setup (Python environment, login, etc.)</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
     <value>Start the download queue</value>
@@ -1648,7 +1648,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>Environment Setup</value>
   </data>
   <data name="MainForm_btnSetup_Tip" xml:space="preserve">
-    <value>Setup wizard for the Rust helper and yt-dlp</value>
+    <value>Setup wizard for Python and dependencies</value>
   </data>
   <data name="MainForm_btnStartAll" xml:space="preserve">
     <value>▶ Start DL</value>
@@ -2396,7 +2396,7 @@ Current: {0}</value>
 {0}</value>
   </data>
   <data name="SettingsForm_D088" xml:space="preserve">
-    <value>Select the Rust helper</value>
+    <value>Select the Python executable</value>
   </data>
   <data name="SettingsForm_D089" xml:space="preserve">
     <value>Select the yt-dlp executable</value>
@@ -2600,7 +2600,7 @@ Current: {0}</value>
     <value>Notifications &amp;&amp; startup</value>
   </data>
   <data name="SettingsForm_grpPython" xml:space="preserve">
-    <value>Rust / yt-dlp environment</value>
+    <value>Python environment</value>
   </data>
   <data name="SettingsForm_grpRateLimit" xml:space="preserve">
     <value>Rate limits</value>
@@ -2707,10 +2707,10 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Preset:</value>
   </data>
   <data name="SettingsForm_lblPythonNote" xml:space="preserve">
-    <value>* Leave blank to use the bundled iwara-helper.exe</value>
+    <value>* If setup has already been completed, only the path is changed (no library reinstall needed)</value>
   </data>
   <data name="SettingsForm_lblPythonPath" xml:space="preserve">
-    <value>Rust helper path:</value>
+    <value>Python path:</value>
   </data>
   <data name="SettingsForm_lblQuality" xml:space="preserve">
     <value>Default quality:</value>
@@ -2749,7 +2749,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Username:</value>
   </data>
   <data name="SettingsForm_lblYtDlpNote" xml:space="preserve">
-    <value>* Uses "yt-dlp" from PATH or the configured standalone executable</value>
+    <value>* "yt-dlp" (from PATH) is fine. If not installed, pip install is attempted automatically</value>
   </data>
   <data name="SettingsForm_lblYtDlpPath" xml:space="preserve">
     <value>yt-dlp path:</value>
@@ -2791,7 +2791,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Welcome</value>
   </data>
   <data name="SetupWizardForm_D003" xml:space="preserve">
-    <value>Rust helper setup method</value>
+    <value>How to obtain Python</value>
   </data>
   <data name="SetupWizardForm_D004" xml:space="preserve">
     <value>Running setup</value>
@@ -2806,7 +2806,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Next &gt;</value>
   </data>
   <data name="SetupWizardForm_D008" xml:space="preserve">
-    <value>Enter the Rust helper path.</value>
+    <value>Enter the Python path.</value>
   </data>
   <data name="SetupWizardForm_D009" xml:space="preserve">
     <value>Input error</value>
@@ -2822,7 +2822,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Confirm</value>
   </data>
   <data name="SetupWizardForm_D013" xml:space="preserve">
-    <value>Rust helper (*.exe)|*.exe|All files|*.*</value>
+    <value>Python executable|python.exe|All files|*.*</value>
   </data>
   <data name="SetupWizardForm_D014" xml:space="preserve">
     <value>Starting setup...</value>
@@ -2841,7 +2841,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
 </value>
   </data>
   <data name="SetupWizardForm_D018" xml:space="preserve">
-    <value>Check that iwara-helper.exe is present, or specify another helper.</value>
+    <value>Check your network connection, or try another Python with "Use existing Python".</value>
   </data>
   <data name="SetupWizardForm_D019" xml:space="preserve">
     <value>Setup error</value>
@@ -2850,7 +2850,7 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Setup is running. Closing will abort it. Continue?</value>
   </data>
   <data name="SetupWizardForm_D021" xml:space="preserve">
-    <value>Select iwara-helper.exe</value>
+    <value>Select python.exe</value>
   </data>
   <data name="SetupWizardForm_D022" xml:space="preserve">
     <value>=== Setup started ===</value>
@@ -2883,8 +2883,8 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
     <value>Next &gt;</value>
   </data>
   <data name="SetupWizardForm_lblAutoDesc" xml:space="preserve">
-    <value>Uses the bundled iwara-helper.exe.
-No additional runtime or library installation is required.</value>
+    <value>Downloads Python 3.10.11 (Embeddable amd64) from python.org
+</value>
   </data>
   <data name="SetupWizardForm_lblComplete" xml:space="preserve">
     <value>Setup complete!</value>
@@ -2894,7 +2894,7 @@ No additional runtime or library installation is required.</value>
 </value>
   </data>
   <data name="SetupWizardForm_lblExistingDesc" xml:space="preserve">
-    <value>Specify the path to iwara-helper.exe.</value>
+    <value>Specify the path to python.exe.</value>
   </data>
   <data name="SetupWizardForm_lblProgressMsg" xml:space="preserve">
     <value>Preparing...</value>
@@ -2903,7 +2903,7 @@ No additional runtime or library installation is required.</value>
     <value>Step 1/4: Welcome</value>
   </data>
   <data name="SetupWizardForm_lblStep2Title" xml:space="preserve">
-    <value>Choose the Rust helper setup method</value>
+    <value>Choose how to obtain Python</value>
   </data>
   <data name="SetupWizardForm_lblStep3Title" xml:space="preserve">
     <value>Running setup</value>
@@ -2922,7 +2922,7 @@ No additional runtime or library installation is required.</value>
     <value>Automatic download (recommended)</value>
   </data>
   <data name="SetupWizardForm_rbExistingPython" xml:space="preserve">
-    <value>Use another Rust helper</value>
+    <value>Use existing Python</value>
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>Starting...</value>
@@ -3353,28 +3353,28 @@ No additional runtime or library installation is required.</value>
     <value>Thumbnail backfill</value>
   </data>
   <data name="SvcEnvironmentSetupService_D001" xml:space="preserve">
-    <value>Checking the Rust helper...</value>
+    <value>Downloading Python embeddable...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D002" xml:space="preserve">
-    <value>Checking the Rust helper...</value>
+    <value>Python DL {0}MB / {1}MB</value>
   </data>
   <data name="SvcEnvironmentSetupService_D003" xml:space="preserve">
-    <value>Validating the Rust helper...</value>
+    <value>Extracting Python...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D004" xml:space="preserve">
-    <value>Checking the Rust helper configuration...</value>
+    <value>Adjusting Python config (._pth)...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D005" xml:space="preserve">
-    <value>Checking Rust helper startup...</value>
+    <value>Installing pip...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D006" xml:space="preserve">
-    <value>Rust helper check completed</value>
+    <value>pip is already installed</value>
   </data>
   <data name="SvcEnvironmentSetupService_D007" xml:space="preserve">
-    <value>Checking executable placement...</value>
+    <value>Downloading get-pip.py...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D008" xml:space="preserve">
-    <value>Checking whether the Rust helper can start...</value>
+    <value>Running pip install...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D009" xml:space="preserve">
     <value>Installing {0}...</value>
@@ -3383,7 +3383,7 @@ No additional runtime or library installation is required.</value>
     <value>Verifying {0}...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D011" xml:space="preserve">
-    <value>Checking the specified Rust helper...</value>
+    <value>Checking the specified Python...</value>
   </data>
   <data name="SvcEnvironmentSetupService_D012" xml:space="preserve">
     <value>Creating setup marker...</value>
@@ -3466,7 +3466,7 @@ Destination free space: {0} / Required: {1}</value>
     <value>Fetching video list of {0}...</value>
   </data>
   <data name="SvcIwaraApiService_D002" xml:space="preserve">
-    <value>Failed to run the Rust helper</value>
+    <value>Failed to run the Python script</value>
   </data>
   <data name="SvcIwaraApiService_D003" xml:space="preserve">
     <value>Error: {0}</value>
