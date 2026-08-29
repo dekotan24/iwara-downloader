@@ -53,10 +53,12 @@ fn main() {
         Some("verify-token") | Some("verify_token") => command_verify_token(&token, &site, &rate),
         Some("get-video") => command_get_video(&args[1..], &token, &site, &rate),
         Some("search") => command_search(&args[1..], &token, &site, &rate),
-        Some("user-videos") | Some("get-videos") => {
+        // C#側の正式名は kebab-case。snake_caseも受け付けて、旧ビルドや
+        // 外部から直接呼び出す利用者との互換性を保つ。
+        Some("user-videos") | Some("get-videos") | Some("get_videos") => {
             command_user_videos(&args[1..], &token, &site, &rate)
         }
-        Some("get-url") => {
+        Some("get-url") | Some("get_url") => {
             command_get_url(&args[1..], &token, &site, &rate, secret_override.as_deref())
         }
         Some("download") => {

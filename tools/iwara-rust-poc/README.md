@@ -17,12 +17,12 @@ cargo build --release --manifest-path tools/iwara-rust-poc/Cargo.toml
 
 ```text
 iwara-helper login [email] [password]
-iwara-helper verify_token
-iwara-helper get_videos USERNAME
+iwara-helper verify-token
+iwara-helper get-videos USERNAME
 iwara-helper search QUERY [PAGE] [LIMIT]
-iwara-helper get_url VIDEO_ID [QUALITY]
+iwara-helper get-url VIDEO_ID [QUALITY]
 iwara-helper download VIDEO_ID OUTPUT_PATH
-iwara-helper download_external EMBED_URL OUTPUT_PATH --yt-dlp-path PATH
+iwara-helper download-external EMBED_URL OUTPUT_PATH --yt-dlp-path PATH
 
 # 検証用
 iwara-helper get-video VIDEO_ID
@@ -30,6 +30,8 @@ iwara-helper download-test DIRECT_URL [OUTPUT_PATH]
 iwara-helper download-test-video VIDEO_ID [QUALITY]
 iwara-helper probe URL
 ```
+
+`verify_token`、`get_videos`、`get_url`、`download_external` も旧呼び出しとの互換性のため利用できます。
 
 認証情報は `IWARA_EMAIL`、`IWARA_PASSWORD`、`IWARA_TOKEN` で渡せます。X-Version secretの検証用overrideは `IWARA_X_VERSION_SECRET`、rate-limit設定は現行helperと同じ `--api-delay` 等を使えます。`login` はC#がtokenを受け取るためstdoutにtokenを返しますが、C#側ではstdout全体をログ出力しません。直接実行時は出力を保存・共有しないでください。
 

@@ -26,7 +26,7 @@ python.exe iwara_helper.py <action>
 - `IwaraDownloader/Services/IwaraSearch.cs` はsearch時に別途Pythonプロセスを起動する。
 - tokenはC#のコマンドラインではなく `IWARA_TOKEN` 環境変数で渡される。Python helperも `--token` と環境変数の両方を受け付ける。
 - `IwaraDownloader/iwara_setup.bat` はpipを用意し、`cloudscraper` とPython版 `yt-dlp` をインストールし、`.python_setup_done`を作る。
-- 現行CLI action名は `login`、`verify_token`、`get_videos`、`download`、`get_url`、`search`、`download_external` であり、`get-video`ではない。
+- 現行CLIの正式なaction名は `login`、`verify-token`、`get-videos`、`download`、`get-url`、`search`、`download-external` であり、旧snake_case (`verify_token` 等) も互換受付する。`get-video` は検証用コマンドである。
 
 ## Python helper feature inventory
 

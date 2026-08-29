@@ -483,7 +483,9 @@ namespace IwaraDownloader.Services
 
             progress?.Report(L.T("SvcIwaraApiService_D001", username));
 
-            var result = await RunRustAsync("get_videos", site, ct, username);
+            // Rust helperの正式なアクション名は kebab-case。旧Python互換の
+            // snake_caseをここで渡すと、ヘルパー側で Unknown action になる。
+            var result = await RunRustAsync("get-videos", site, ct, username);
 
             if (result == null)
             {
@@ -578,7 +580,8 @@ namespace IwaraDownloader.Services
 
         private async Task<VideoUrlInfo> GetDownloadUrlInternalAsync(string videoId, string? site)
         {
-            var result = await RunRustAsync("get_url", site, videoId);
+            // Rust helperの正式なアクション名は get-url。
+            var result = await RunRustAsync("get-url", site, videoId);
 
             if (result == null)
                 return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
