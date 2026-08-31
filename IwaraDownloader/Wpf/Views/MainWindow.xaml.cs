@@ -1,8 +1,15 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
+using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using IwaraDownloader.Services;
 using IwaraDownloader.Utils;
 using IwaraDownloader.Wpf.Theme;
@@ -27,6 +34,10 @@ namespace IwaraDownloader.Wpf.Views
         private bool _isClosing;
         private bool _clipboardListenerRegistered;
 
+        private readonly string _normalTitle = "IwaraDownloader";
+        private readonly Random _partyRandom = new();
+        private DispatcherTimer? _confettiTimer;
+
         public MainWindow(DownloadManager downloadManager)
         {
             InitializeComponent();
@@ -46,9 +57,13 @@ namespace IwaraDownloader.Wpf.Views
             SourceInitialized += MainWindow_SourceInitialized;
             StateChanged += MainWindow_StateChanged;
             Closing += MainWindow_Closing;
+            PartyModeService.Changed += OnPartyModeChanged;
+            if (PartyModeService.IsEnabled) StartPartyMode();
             Closed += (_, _) =>
             {
                 viewModel.ClipboardMonitorToggled -= OnClipboardMonitorToggled;
+                PartyModeService.Changed -= OnPartyModeChanged;
+                StopPartyMode();
                 _notifyIcon?.Dispose();
             };
         }
@@ -309,5 +324,225 @@ namespace IwaraDownloader.Wpf.Views
             }
             return false;
         }
+
+        #region パーティーモード(隠しイースターエッグ、機能には無関係)
+
+        private static readonly System.Windows.Media.Color[] PartyConfettiColors =
+        {
+            System.Windows.Media.Color.FromRgb(0xFF, 0x4D, 0x4D), System.Windows.Media.Color.FromRgb(0xFF, 0xB8, 0x4D), System.Windows.Media.Color.FromRgb(0xFF, 0xF2, 0x4D),
+            System.Windows.Media.Color.FromRgb(0x4D, 0xFF, 0x88), System.Windows.Media.Color.FromRgb(0x4D, 0xC8, 0xFF), System.Windows.Media.Color.FromRgb(0x9B, 0x4D, 0xFF),
+            System.Windows.Media.Color.FromRgb(0xFF, 0x4D, 0xD2),
+        };
+        private static readonly string[] PartyConfettiEmoji = { "🎉", "🎊", "✨", "🥳", "🎈", "⭐" };
+
+        // ディスコ化するテーマブラシ。キーごとにアニメ開始をずらして「色が波状に流れる」ようにする。
+        // 見た目のチャンネル(Accent系/枠線/ホバー背景)だけを対象にし、Text/Background/Success等の
+        // 状態色は読みやすさのため素のままにする。
+        private static readonly (string Key, double PhaseSeconds)[] PartyDiscoTargets =
+        {
+            ("Brush.Accent", 0.0), ("Brush.AccentHover", 0.5), ("Brush.Border", 1.0),
+            ("Brush.BackgroundHover", 1.5), ("Brush.Favorite", 2.0),
+        };
+        private readonly List<SolidColorBrush> _partyDiscoBrushes = new();
+        private readonly List<(ButtonBase Button, Transform OriginalTransform)> _partyWobbleButtons = new();
+        private DispatcherTimer? _titleCycleTimer;
+        private int _titleCycleIndex;
+        private static readonly string[] PartyTitles =
+        {
+            "🎉 IwaraDownloader 🎉", "🎊 IwaraDownloader 🎊", "🥳 IwaraDownloader 🥳",
+            "✨ IwaraDownloader ✨", "🎈 IwaraDownloader 🎈",
+        };
+
+        private void OnPartyModeChanged(bool enabled)
+        {
+            if (enabled) StartPartyMode();
+            else StopPartyMode();
+        }
+
+        private void StartPartyMode()
+        {
+            _titleCycleIndex = 0;
+            Title = PartyTitles[0];
+            _titleCycleTimer?.Stop();
+            _titleCycleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+            _titleCycleTimer.Tick += (_, _) =>
+            {
+                _titleCycleIndex = (_titleCycleIndex + 1) % PartyTitles.Length;
+                Title = PartyTitles[_titleCycleIndex];
+            };
+            _titleCycleTimer.Start();
+
+            PartyRainbowBorder.Visibility = Visibility.Visible;
+            PartyRainbowRotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation
+            {
+                From = 0,
+                To = 360,
+                Duration = TimeSpan.FromSeconds(3),
+                RepeatBehavior = RepeatBehavior.Forever,
+            });
+
+            ConfettiCanvas.Visibility = Visibility.Visible;
+            ConfettiCanvas.Children.Clear();
+            _confettiTimer?.Stop();
+            _confettiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
+            _confettiTimer.Tick += SpawnConfettiPiece;
+            _confettiTimer.Start();
+
+            // テーマブラシ(DynamicResourceでウィンドウ全体のボタン枠・ホバー背景・お気に入り色等に
+            // 使われている)を直接アニメーションさせ、ウィンドウ全体をディスコ調に染める。
+            // XAML(pack URI)から読み込んだ元のSolidColorBrushはシール(フリーズ)済みで
+            // 直接アニメーションできないため、必ずClone()してからウィンドウのResourcesへ
+            // 上書きする(Cloneは常にフリーズ解除された状態で返る)。あくまで見た目だけの
+            // おまけなので、万一失敗しても紙吹雪/虹枠は道連れにしない。
+            _partyDiscoBrushes.Clear();
+            foreach (var (key, phase) in PartyDiscoTargets)
+            {
+                try
+                {
+                    if (TryFindResource(key) is not SolidColorBrush baseBrush) continue;
+                    var animatableBrush = baseBrush.Clone();
+                    Resources[key] = animatableBrush;
+                    _partyDiscoBrushes.Add(animatableBrush);
+
+                    var hueCycle = new ColorAnimationUsingKeyFrames
+                    {
+                        Duration = TimeSpan.FromSeconds(3),
+                        RepeatBehavior = RepeatBehavior.Forever,
+                        BeginTime = TimeSpan.FromSeconds(phase),
+                    };
+                    var cycleColors = PartyConfettiColors.Append(PartyConfettiColors[0]).ToArray();
+                    for (int i = 0; i < cycleColors.Length; i++)
+                    {
+                        hueCycle.KeyFrames.Add(new LinearColorKeyFrame(cycleColors[i],
+                            KeyTime.FromPercent((double)i / (cycleColors.Length - 1))));
+                    }
+                    animatableBrush.BeginAnimation(SolidColorBrush.ColorProperty, hueCycle);
+                }
+                catch (InvalidOperationException)
+                {
+                    // フリーズ済みリソースのクローンに失敗した等、環境依存の想定外ケース。
+                    // このキーのディスコ演出だけ諦めて他は続行する。
+                }
+            }
+
+            // ツールバー等、今画面に出ている全ボタンをランダムな周期・位相でぷるぷる揺らす。
+            // 同期させず個々にバラバラのタイミングにすることで「お祭り騒ぎ」感を出す。
+            _partyWobbleButtons.Clear();
+            foreach (var button in FindVisualChildren<ButtonBase>(this))
+            {
+                _partyWobbleButtons.Add((button, button.RenderTransform));
+                button.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+
+                var group = new TransformGroup();
+                var rotate = new RotateTransform();
+                var scale = new ScaleTransform();
+                group.Children.Add(rotate);
+                group.Children.Add(scale);
+                button.RenderTransform = group;
+
+                var period = TimeSpan.FromMilliseconds(_partyRandom.Next(350, 750));
+                var beginOffset = TimeSpan.FromMilliseconds(_partyRandom.Next(0, 600));
+                var maxAngle = _partyRandom.Next(4, 9);
+
+                rotate.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(-maxAngle, maxAngle, period)
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    BeginTime = beginOffset,
+                    EasingFunction = new SineEase(),
+                });
+                var scaleAnim = new DoubleAnimation(0.92, 1.08, period)
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    BeginTime = beginOffset,
+                    EasingFunction = new SineEase(),
+                };
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+            }
+        }
+
+        private void StopPartyMode()
+        {
+            Title = _normalTitle;
+            _titleCycleTimer?.Stop();
+            _titleCycleTimer = null;
+
+            _confettiTimer?.Stop();
+            _confettiTimer = null;
+            ConfettiCanvas.Children.Clear();
+            ConfettiCanvas.Visibility = Visibility.Collapsed;
+
+            PartyRainbowRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            PartyRainbowBorder.Visibility = Visibility.Collapsed;
+
+            foreach (var brush in _partyDiscoBrushes)
+            {
+                // Start側と同じ理由(環境依存でシール済みになるケースがある)で1件ずつガードする。
+                // 止め損ねても見た目のおまけが1色回り続けるだけで実害はない。
+                try { brush.BeginAnimation(SolidColorBrush.ColorProperty, null); }
+                catch (InvalidOperationException) { }
+            }
+            _partyDiscoBrushes.Clear();
+
+            foreach (var (button, originalTransform) in _partyWobbleButtons)
+            {
+                button.RenderTransform = originalTransform;
+            }
+            _partyWobbleButtons.Clear();
+        }
+
+        /// <summary>ビジュアルツリーを再帰的に辿って指定型の子要素を全て集める。</summary>
+        private static List<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            var result = new List<T>();
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typed) result.Add(typed);
+                result.AddRange(FindVisualChildren<T>(child));
+            }
+            return result;
+        }
+
+        /// <summary>紙吹雪を1つ生成し、上から下へ回転させながら降らせてフェードアウトさせる。</summary>
+        private void SpawnConfettiPiece(object? sender, EventArgs e)
+        {
+            if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+            var text = new TextBlock
+            {
+                Text = PartyConfettiEmoji[_partyRandom.Next(PartyConfettiEmoji.Length)],
+                FontSize = _partyRandom.Next(14, 28),
+                RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
+                RenderTransform = new RotateTransform(),
+            };
+            if (_partyRandom.Next(2) == 0)
+            {
+                text.Foreground = new SolidColorBrush(PartyConfettiColors[_partyRandom.Next(PartyConfettiColors.Length)]);
+            }
+
+            var startX = _partyRandom.NextDouble() * ActualWidth;
+            Canvas.SetLeft(text, startX);
+            Canvas.SetTop(text, -30);
+            ConfettiCanvas.Children.Add(text);
+
+            var fallDuration = TimeSpan.FromSeconds(_partyRandom.Next(4, 7));
+            var fall = new DoubleAnimation(-30, ActualHeight + 30, fallDuration);
+            var sway = new DoubleAnimation(startX, startX + _partyRandom.Next(-60, 60), fallDuration)
+            {
+                AutoReverse = false,
+            };
+            var spin = new DoubleAnimation(0, _partyRandom.Next(-720, 720), fallDuration);
+            fall.Completed += (_, _) => ConfettiCanvas.Children.Remove(text);
+
+            text.BeginAnimation(Canvas.TopProperty, fall);
+            text.BeginAnimation(Canvas.LeftProperty, sway);
+            ((RotateTransform)text.RenderTransform).BeginAnimation(RotateTransform.AngleProperty, spin);
+        }
+
+        #endregion
     }
 }

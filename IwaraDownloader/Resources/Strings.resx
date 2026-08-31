@@ -41,6 +41,14 @@
   <data name="AboutForm_D008" xml:space="preserve">
     <value>エラー</value>
   </data>
+  <data name="AboutForm_D009" xml:space="preserve">
+    <value>🎉 パーティーモードを有効にしますか？
+
+ボタンが揺れたり紙吹雪が降ったりする、見た目だけのお遊び機能です。ダウンロード等の動作には影響しません。</value>
+  </data>
+  <data name="AboutForm_D010" xml:space="preserve">
+    <value>ひみつのモード</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>バージョン情報</value>
   </data>

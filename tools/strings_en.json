@@ -7,6 +7,8 @@
   "AboutForm_D006": "Check failed",
   "AboutForm_D007": "Update check failed:\n{0}",
   "AboutForm_D008": "Error",
+  "AboutForm_D009": "🎉 Enable party mode?\n\nIt's a purely cosmetic easter egg — buttons wobble and confetti falls. It doesn't affect downloads or anything else.",
+  "AboutForm_D010": "Secret mode",
   "AboutForm_Title": "About",
   "AboutForm_btnCheckUpdate": "Check for Updates",
   "AboutForm_lblDescription": "A desktop application for downloading videos from iwara.tv.",

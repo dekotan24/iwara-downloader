@@ -41,6 +41,14 @@ Open the release page?</value>
   <data name="AboutForm_D008" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="AboutForm_D009" xml:space="preserve">
+    <value>🎉 Enable party mode?
+
+It's a purely cosmetic easter egg — buttons wobble and confetti falls. It doesn't affect downloads or anything else.</value>
+  </data>
+  <data name="AboutForm_D010" xml:space="preserve">
+    <value>Secret mode</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>About</value>
   </data>

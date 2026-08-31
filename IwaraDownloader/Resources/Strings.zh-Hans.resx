@@ -41,6 +41,14 @@
   <data name="AboutForm_D008" xml:space="preserve">
     <value>错误</value>
   </data>
+  <data name="AboutForm_D009" xml:space="preserve">
+    <value>🎉 要启用派对模式吗？
+
+这只是纯装饰性的彩蛋——按钮会摇摆、彩纸会飘落，不影响下载等任何功能。</value>
+  </data>
+  <data name="AboutForm_D010" xml:space="preserve">
+    <value>隐藏模式</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>关于</value>
   </data>

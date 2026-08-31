@@ -7,6 +7,8 @@
   "AboutForm_D006": "確認に失敗しました",
   "AboutForm_D007": "更新確認に失敗しました:\n{0}",
   "AboutForm_D008": "エラー",
+  "AboutForm_D009": "🎉 パーティーモードを有効にしますか？\n\nボタンが揺れたり紙吹雪が降ったりする、見た目だけのお遊び機能です。ダウンロード等の動作には影響しません。",
+  "AboutForm_D010": "ひみつのモード",
   "AboutForm_Title": "バージョン情報",
   "AboutForm_btnCheckUpdate": "更新を確認",
   "AboutForm_lblDescription": "iwara.tv から動画をダウンロードするためのデスクトップアプリケーションです。",

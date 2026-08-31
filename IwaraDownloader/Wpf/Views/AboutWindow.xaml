@@ -55,7 +55,8 @@
                 <Image Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
                        Source="pack://siteoforigin:,,,/icon.ico"
                        Width="56" Height="56" Margin="0,0,16,0"
-                       VerticalAlignment="Top" />
+                       VerticalAlignment="Top"
+                       MouseLeftButtonDown="AppIcon_MouseLeftButtonDown" />
 
                 <TextBlock Grid.Row="0" Grid.Column="1" Text="IwaraDownloader"
                            FontSize="20" FontWeight="Bold" />

@@ -7,6 +7,8 @@
   "AboutForm_D006": "检查失败",
   "AboutForm_D007": "更新检查失败：\n{0}",
   "AboutForm_D008": "错误",
+  "AboutForm_D009": "🎉 要启用派对模式吗？\n\n这只是纯装饰性的彩蛋——按钮会摇摆、彩纸会飘落，不影响下载等任何功能。",
+  "AboutForm_D010": "隐藏模式",
   "AboutForm_Title": "关于",
   "AboutForm_btnCheckUpdate": "检查更新",
   "AboutForm_lblDescription": "用于从 iwara.tv 下载视频的桌面应用程序。",

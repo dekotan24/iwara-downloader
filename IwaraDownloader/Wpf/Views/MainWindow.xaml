@@ -53,9 +53,9 @@
         </Style>
 
         <!--
-            ComboBoxは展開時のPopup(ItemsPresenter)はOS標準のまま(白背景に項目文字色は黒固定、
-            ComboBox.ItemContainerStyle側で対応済み)にしつつ、閉じた状態の本体だけをダークテーマに
-            合わせる。本体側までPopupごとダーク化すると、既に黒固定した項目文字色と衝突するため。
+            ComboBoxの本体・展開Popupとも明示的にダークテーマの色を敷く。
+            Popup配下のBorderにBackgroundを指定しないとAllowsTransparency=Trueの効果で
+            背景が完全に透明になり、後ろの一覧が透けて見えてしまう(実機確認済みの不具合)。
         -->
         <Style x:Key="FlatComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Padding" Value="6,4" />
@@ -99,25 +99,60 @@
                                     </ControlTemplate>
                                 </ToggleButton.Template>
                             </ToggleButton>
-                            <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False"
-                                               Content="{TemplateBinding SelectionBoxItem}"
-                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                               Margin="{TemplateBinding Padding}"
-                                               HorizontalAlignment="Left" VerticalAlignment="Center"
-                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                            <!--
+                                SelectionBoxItem/ContentPresenterは、項目がComboBoxItemの場合
+                                ComboBoxItemオブジェクトそのものを指すため、ItemContainerStyleの
+                                Foreground(Popup用の黒固定)がここにも効いてしまい閉状態が読めなくなる
+                                (実機確認済みの不具合)。SelectedItem.Contentを直接テキスト表示することで
+                                ComboBoxItemの見た目を一切継承しない。
+                            -->
+                            <TextBlock x:Name="ContentSite" IsHitTestVisible="False"
+                                       Text="{Binding SelectedItem.Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                       Margin="{TemplateBinding Padding}"
+                                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Brush.Text}" />
                             <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True"
                                    Focusable="False" PopupAnimation="None"
                                    IsOpen="{TemplateBinding IsDropDownOpen}">
                                 <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                         MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Background="{DynamicResource Brush.BackgroundElevated}"
+                                        BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                        CornerRadius="4"
                                         SnapsToDevicePixels="True">
-                                    <ScrollViewer SnapsToDevicePixels="True">
+                                    <ScrollViewer SnapsToDevicePixels="True" Margin="2">
                                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
                                     </ScrollViewer>
                                 </Border>
                             </Popup>
                         </Grid>
                     </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Padding" Value="6,4" />
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -249,6 +284,7 @@
           contentSplitContainer(左=チャンネルツリー, 右=動画一覧) / statusStrip(下)
     -->
     <Grid>
+        <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" x:Name="ToolbarRow" />
             <RowDefinition Height="Auto" x:Name="UrlInputRow" />
@@ -554,12 +590,6 @@
                             <ComboBox Width="110" Margin="0,0,12,0"
                                       Style="{StaticResource FlatComboBoxStyle}"
                                       SelectedIndex="{Binding NsfwFilterMode}">
-                                <!-- ドロップダウン展開部分はOS標準の白背景で描画されるため、項目文字色は黒固定にする -->
-                                <ComboBox.ItemContainerStyle>
-                                    <Style TargetType="ComboBoxItem">
-                                        <Setter Property="Foreground" Value="Black" />
-                                    </Style>
-                                </ComboBox.ItemContainerStyle>
                                 <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item0}" />
                                 <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item1}" />
                                 <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item2}" />
@@ -742,5 +772,32 @@
                            VerticalAlignment="Center" Margin="12,0,0,0" />
             </Grid>
         </Border>
+        </Grid>
+
+        <!--
+            パーティーモード(隠しイースターエッグ、AboutWindowのアイコン連打で発火)の演出。
+            ダウンロード機能とは無関係な見た目だけの要素。既定は非表示、MainWindow.xaml.csが
+            PartyModeService.Changed購読でVisibility/アニメーションを切り替える。
+            マウス操作を奪わないよう両方IsHitTestVisible=Falseにする。
+        -->
+        <Border x:Name="PartyRainbowBorder" IsHitTestVisible="False" Visibility="Collapsed"
+                BorderThickness="2">
+            <Border.BorderBrush>
+                <LinearGradientBrush x:Name="PartyRainbowBrush" StartPoint="0,0" EndPoint="1,1">
+                    <LinearGradientBrush.RelativeTransform>
+                        <RotateTransform x:Name="PartyRainbowRotate" CenterX="0.5" CenterY="0.5" Angle="0" />
+                    </LinearGradientBrush.RelativeTransform>
+                    <GradientStop Color="#FF0000" Offset="0.0" />
+                    <GradientStop Color="#FF8000" Offset="0.14" />
+                    <GradientStop Color="#FFFF00" Offset="0.28" />
+                    <GradientStop Color="#00FF40" Offset="0.42" />
+                    <GradientStop Color="#00C0FF" Offset="0.57" />
+                    <GradientStop Color="#4040FF" Offset="0.71" />
+                    <GradientStop Color="#C000FF" Offset="0.86" />
+                    <GradientStop Color="#FF0000" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.BorderBrush>
+        </Border>
+        <Canvas x:Name="ConfettiCanvas" IsHitTestVisible="False" Visibility="Collapsed" ClipToBounds="True" />
     </Grid>
 </Window>
