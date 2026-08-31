@@ -127,13 +127,19 @@ namespace IwaraDownloader.Utils
 
             // マップ解除中にキュー投入済みのタスクが残っていると、直後に書き込む Status=Paused が
             // 古いタスクの完了/失敗ハンドラに上書きされることがあるため、先にキャンセルしておく。
+            // ただしCancelTaskは非同期I/Oの中断を待たないため、この対策自体が完全ではない
+            // (完了処理と競合する可能性が残る)。そのため下のUpdateVideoは全カラムUPDATEの
+            // UpdateVideo(video)ではなく、Unmapが本来触るべき4カラムだけに絞ったスコープ付き
+            // UPDATEを使う。これにより、たとえ競合してもTags/Memo/Priority等の無関係な
+            // フィールドまで巻き戻されることはない(LocalFilePath/Status等の食い違いは
+            // 後勝ちのまま残るが、影響範囲をUnmapの意図した4カラムだけに限定できる)。
             downloadManager.CancelTask(video.VideoId);
 
             video.LocalFilePath = string.Empty;
             video.FileSize = 0;
             video.DownloadedAt = null;
             video.Status = DownloadStatus.Paused;
-            database.UpdateVideo(video);
+            database.UpdateVideoUnmapFields(video.Id, video.LocalFilePath, video.FileSize, video.DownloadedAt, video.Status);
 
             InvalidateDir(oldPath);
 

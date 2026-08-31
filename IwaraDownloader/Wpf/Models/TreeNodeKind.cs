@@ -12,7 +12,6 @@ namespace IwaraDownloader.Wpf.Models
         Downloaded,
         Skipped,
         FailedVideos,
-        SingleVideos,
         Excluded,
         Channel,
     }

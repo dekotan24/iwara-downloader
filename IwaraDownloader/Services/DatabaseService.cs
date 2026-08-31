@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.Data.Sqlite;
 using IwaraDownloader.Models;
+using IwaraDownloader.Utils;
 
 namespace IwaraDownloader.Services
 {
@@ -219,6 +220,59 @@ namespace IwaraDownloader.Services
 
             // マイグレーション結果の最終検証: 期待するカラムが全て存在するか確認
             VerifyRequiredColumns(connection);
+
+            // 「単発動画」分類の廃止: 既存DBに残る SubscribedUserId無し動画を作者チャンネルへ集約
+            MergeSingleVideosIntoAuthorChannels(connection);
+        }
+
+        /// <summary>
+        /// 「単発動画」(SubscribedUserId無し)を作者(AuthorUsername)ごとのチャンネルへ集約する、
+        /// 旧DBデータ向けのマイグレーション。起動のたびに走るが、対象0件ならSELECT一発で
+        /// 即終了するため通常時は無害。
+        /// AuthorUsername が空の動画(URL取得に失敗した仮登録行等、作者不明)は対象外のまま残る。
+        /// </summary>
+        private void MergeSingleVideosIntoAuthorChannels(SqliteConnection connection)
+        {
+            var authors = new List<string>();
+            using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT DISTINCT AuthorUsername FROM Videos
+                    WHERE SubscribedUserId IS NULL AND AuthorUsername IS NOT NULL AND AuthorUsername != ''";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    authors.Add(reader.GetString(0));
+            }
+            if (authors.Count == 0) return;
+
+            LoggingService.Instance.Info($"単発動画の作者チャンネル集約を開始: 対象作者 {authors.Count} 件");
+
+            foreach (var authorUsername in authors)
+            {
+                string site;
+                using (var siteCmd = connection.CreateCommand())
+                {
+                    // 作者ごとにサイト(iwara.tv/iwara.ai)は通常同一なので代表1件で決める
+                    siteCmd.CommandText = @"
+                        SELECT Site FROM Videos
+                        WHERE SubscribedUserId IS NULL AND AuthorUsername = @AuthorUsername
+                            AND Site IS NOT NULL AND Site != ''
+                        LIMIT 1";
+                    siteCmd.Parameters.AddWithValue("@AuthorUsername", authorUsername);
+                    site = siteCmd.ExecuteScalar() as string ?? "";
+                }
+
+                var channel = EnsureChannelForAuthor(authorUsername, site);
+
+                using var updateCmd = connection.CreateCommand();
+                updateCmd.CommandText = @"
+                    UPDATE Videos SET SubscribedUserId = @ChannelId, AuthorUserId = @AuthorUsername
+                    WHERE SubscribedUserId IS NULL AND AuthorUsername = @AuthorUsername";
+                updateCmd.Parameters.AddWithValue("@ChannelId", channel.Id);
+                updateCmd.Parameters.AddWithValue("@AuthorUsername", authorUsername);
+                var updated = updateCmd.ExecuteNonQuery();
+                LoggingService.Instance.Info($"単発動画 {updated} 件を作者チャンネル '{authorUsername}' (Id={channel.Id}) へ集約しました");
+            }
         }
 
         /// <summary>
@@ -608,6 +662,33 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 動画の作者(AuthorUsername)に対応するチャンネル(SubscribedUsers行)を取得し、
+        /// 無ければ新規作成して返す。個別追加した動画を「単発動画」という別分類に逃さず、
+        /// 必ずどこかのチャンネル(アーティスト)に属させるための一本化ポイント。
+        /// 既に購読済みならそこへ合流、未購読なら自動チェックOFF(IsEnabled=false)のチャンネルとして
+        /// 新規作成する。あとで手動で有効化すれば通常の購読チャンネルとして新着チェック対象になる。
+        /// </summary>
+        public SubscribedUser EnsureChannelForAuthor(string authorUsername, string site)
+        {
+            var existing = GetSubscribedUserByUserId(authorUsername);
+            if (existing != null) return existing;
+
+            var siteHost = string.IsNullOrEmpty(site) ? Helpers.SiteTv : site;
+            var user = new SubscribedUser
+            {
+                UserId = authorUsername,
+                Username = authorUsername,
+                ProfileUrl = $"https://{siteHost}/profile/{authorUsername}/videos",
+                CreatedAt = DateTime.Now,
+                IsEnabled = false,
+                Site = siteHost,
+                VideosLoaded = false,
+            };
+            user.Id = AddSubscribedUser(user);
+            return user;
+        }
+
+        /// <summary>
         /// 購読ユーザーをIDで取得
         /// </summary>
         public SubscribedUser? GetSubscribedUserById(int id)
@@ -726,23 +807,39 @@ namespace IwaraDownloader.Services
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
-            var command = connection.CreateCommand();
-            // 明示的に追加/インポートされた動画は除外(ゴミ箱)から出す = 不変条件を維持。
-            // 間違えて削除しても、URL 貼り直しやインポートで普通に戻せる。
-            command.CommandText = @"
-                DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
-                INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
-                    DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
-                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson, Priority)
-                VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
-                    @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
-                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson, @Priority);
-                SELECT last_insert_rowid();
-            ";
-            AddVideoParameters(command, video);
-            command.Parameters.AddWithValue("@CreatedAt", video.CreatedAt.ToString("o"));
+            // ExcludedVideosからのDELETEとVideosへのINSERTが1コマンド内の複数ステートメントで
+            // 実行されるが、明示的なトランザクションで囲まないと、途中でプロセスが落ちた場合に
+            // 「DELETEだけ実行されINSERTは未実行」の状態が残り、動画がVideos/ExcludedVideos
+            // どちらにも存在しなくなる(Videos/ExcludedVideosの排他不変条件が崩れる)。
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                // 明示的に追加/インポートされた動画は除外(ゴミ箱)から出す = 不変条件を維持。
+                // 間違えて削除しても、URL 貼り直しやインポートで普通に戻せる。
+                command.CommandText = @"
+                    DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
+                    INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
+                        DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
+                        RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson, Priority)
+                    VALUES (@VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
+                        @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
+                        @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson, @Priority);
+                    SELECT last_insert_rowid();
+                ";
+                AddVideoParameters(command, video);
+                command.Parameters.AddWithValue("@CreatedAt", video.CreatedAt.ToString("o"));
 
-            return Convert.ToInt32(command.ExecuteScalar());
+                var newId = Convert.ToInt32(command.ExecuteScalar());
+                transaction.Commit();
+                return newId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         /// <summary>
@@ -786,6 +883,52 @@ namespace IwaraDownloader.Services
             command.Parameters.AddWithValue("@Id", video.Id);
             AddVideoParameters(command, video);
 
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// タグ・メモ・お気に入りだけを更新する(VideoDetailsFormの保存用)。
+        /// UpdateVideo(全カラムUPDATE)を使うと、フォームを開いた時点のVideoInfoスナップショットの
+        /// Status/LocalFilePath等(古い値)で、その間にバックグラウンドDLスレッドが書き込んだ
+        /// 最新値を上書きしてしまう(ロストアップデート)ため専用にした。
+        /// </summary>
+        public void UpdateVideoTagsMemoFavorite(int videoId, string tags, string memo, bool isFavorite)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET Tags = @Tags, Memo = @Memo, IsFavorite = @IsFavorite WHERE Id = @Id";
+            command.Parameters.AddWithValue("@Tags", tags);
+            command.Parameters.AddWithValue("@Memo", memo);
+            command.Parameters.AddWithValue("@IsFavorite", isFavorite ? 1 : 0);
+            command.Parameters.AddWithValue("@Id", videoId);
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// ローカルファイルとの紐付け解除(Unmap)用: LocalFilePath/FileSize/DownloadedAt/Statusだけを
+        /// 更新する。UpdateVideo(全カラムUPDATE)だと、Unmap実行中にバックグラウンドDLスレッドが
+        /// 書き込んだ他カラム(Tags/Memo/Priority等)を巻き戻してしまう範囲が不必要に広いため、
+        /// マップ解除が本来触るべきフィールドだけに絞った。
+        /// </summary>
+        public void UpdateVideoUnmapFields(int videoId, string localFilePath, long fileSize, DateTime? downloadedAt, DownloadStatus status)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                UPDATE Videos SET
+                    LocalFilePath = @LocalFilePath,
+                    FileSize = @FileSize,
+                    DownloadedAt = @DownloadedAt,
+                    Status = @Status
+                WHERE Id = @Id
+            ";
+            command.Parameters.AddWithValue("@LocalFilePath", localFilePath);
+            command.Parameters.AddWithValue("@FileSize", fileSize);
+            command.Parameters.AddWithValue("@DownloadedAt", (object?)downloadedAt?.ToString("o") ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Status", (int)status);
+            command.Parameters.AddWithValue("@Id", videoId);
             command.ExecuteNonQuery();
         }
 
@@ -1009,11 +1152,9 @@ namespace IwaraDownloader.Services
                 if (status != DownloadStatus.Completed && status != DownloadStatus.Skipped)
                     result.NotDownloaded += count;
 
-                if (subId == null)
-                {
-                    result.SingleVideos += count;
-                    continue;
-                }
+                // 作者不明(AuthorUsername空)で購読チャンネルに集約できなかった動画のみここに来る。
+                // (通常の単発追加動画は EnsureChannelForAuthor で必ずチャンネルに紐付く)
+                if (subId == null) continue;
 
                 if (!result.ByChannel.TryGetValue(subId.Value, out var ch))
                 {
@@ -1109,26 +1250,6 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 購読外(単発追加)の動画を取得
-        /// </summary>
-        public List<VideoInfo> GetSingleVideos()
-        {
-            var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId IS NULL ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                videos.Add(ReadVideo(reader));
-            }
-            return videos;
-        }
-
-        /// <summary>
         /// お気に入り動画を取得
         /// </summary>
         public List<VideoInfo> GetFavoriteVideos()
@@ -1181,6 +1302,36 @@ namespace IwaraDownloader.Services
             command.CommandText = "UPDATE Videos SET Status = @to WHERE Status = @from";
             command.Parameters.AddWithValue("@to", (int)to);
             command.Parameters.AddWithValue("@from", (int)from);
+            return command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// 復旧操作用: 指定ステータスの件数を数える(GetVideosByStatusと違い行の実体化をしない軽量版)。
+        /// DbTool の復旧タブで対象件数のプレビュー表示に使う。
+        /// </summary>
+        public int CountVideosByStatus(DownloadStatus status)
+        {
+            using var connection = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM Videos WHERE Status = @Status";
+            command.Parameters.AddWithValue("@Status", (int)status);
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+
+        /// <summary>
+        /// 復旧操作用: Failed動画を一括でPendingに戻す。単純なBulkUpdateStatusと違い
+        /// RetryCount/LastErrorMessageもリセットする(残したままだと、MaxRetryCountに達していた動画が
+        /// 再エンキュー直後にまたリトライ上限扱いで即失敗になる)。
+        /// </summary>
+        public int BulkResetFailedToPending()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET Status = @pending, RetryCount = 0, LastErrorMessage = NULL WHERE Status = @failed";
+            command.Parameters.AddWithValue("@pending", (int)DownloadStatus.Pending);
+            command.Parameters.AddWithValue("@failed", (int)DownloadStatus.Failed);
             return command.ExecuteNonQuery();
         }
 

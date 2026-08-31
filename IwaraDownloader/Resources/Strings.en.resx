@@ -610,6 +610,9 @@ Error log:
   <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
     <value>Merged: {0}</value>
   </data>
+  <data name="ImportFromFolderWizard_NewPlaceholderChannel" xml:space="preserve">
+    <value>+ Added channel (auto-check off): {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
     <value>+ New subscription: {0} (@{1})</value>
   </data>
@@ -801,7 +804,8 @@ iwara's custom tag to import them into the DB.
     <value>Scanning</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
-    <value>Checked authors will be added as subscribed channels.
+    <value>Checked authors are added as subscribed channels with auto-check on.
+Unchecked authors are also imported as channels, but with auto-check off (you can enable it later).
 </value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">

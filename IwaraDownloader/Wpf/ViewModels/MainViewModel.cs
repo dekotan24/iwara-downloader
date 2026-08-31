@@ -1503,7 +1503,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             IsUserNodeSelected = node?.Kind == TreeNodeKind.Channel;
             CanCheckChannelFiles = IsUserNodeSelected || node?.Kind == TreeNodeKind.Downloaded;
             CanDownloadAllChannel = IsUserNodeSelected
-                || node?.Kind is TreeNodeKind.NotDownloaded or TreeNodeKind.FailedVideos or TreeNodeKind.SingleVideos;
+                || node?.Kind is TreeNodeKind.NotDownloaded or TreeNodeKind.FailedVideos;
             CanDeleteNotFoundChannel = node?.Kind == TreeNodeKind.FailedVideos;
 
             var user = node?.Channel;
@@ -1602,14 +1602,6 @@ namespace IwaraDownloader.Wpf.ViewModels
                     video.LastErrorMessage = null;
                     _database.UpdateVideo(video);
                 }
-                EnqueueEach(videos);
-            }
-            else if (node?.Kind == TreeNodeKind.SingleVideos)
-            {
-                videos = _database.GetAllVideos()
-                    .Where(v => !v.SubscribedUserId.HasValue && v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
-                             && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
-                    .ToList();
                 EnqueueEach(videos);
             }
             else
@@ -1901,7 +1893,6 @@ namespace IwaraDownloader.Wpf.ViewModels
                 TreeNodeKind.Downloaded => _database.GetVideosByStatus(DownloadStatus.Completed),
                 TreeNodeKind.Skipped => _database.GetVideosByStatus(DownloadStatus.Skipped),
                 TreeNodeKind.FailedVideos => _database.GetVideosByStatus(DownloadStatus.Failed),
-                TreeNodeKind.SingleVideos => _database.GetSingleVideos(),
                 TreeNodeKind.Favorites => _database.GetFavoriteVideos(),
                 TreeNodeKind.Excluded => _database.GetExcludedVideos(),
                 _ => new List<VideoInfo>(),
@@ -2172,15 +2163,6 @@ namespace IwaraDownloader.Wpf.ViewModels
                     Kind = TreeNodeKind.FailedVideos,
                     Text = L.T("MainForm_D183", counts.Failed),
                     Foreground = ThemeManager.GetBrush("Brush.Danger"),
-                });
-            }
-
-            if (counts.SingleVideos > 0)
-            {
-                nodes.Add(new ChannelTreeNodeViewModel
-                {
-                    Kind = TreeNodeKind.SingleVideos,
-                    Text = L.T("MainForm_D184", counts.SingleVideos),
                 });
             }
 

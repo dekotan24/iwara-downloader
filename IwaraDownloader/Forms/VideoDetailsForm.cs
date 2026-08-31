@@ -151,7 +151,7 @@ namespace IwaraDownloader.Forms
             _video.Tags = normalizedTags;
             _video.Memo = txtMemo.Text ?? "";
             _video.IsFavorite = chkFavorite.Checked;
-            _database.UpdateVideo(_video);
+            _database.UpdateVideoTagsMemoFavorite(_video.Id, _video.Tags, _video.Memo, _video.IsFavorite);
         }
     }
 }

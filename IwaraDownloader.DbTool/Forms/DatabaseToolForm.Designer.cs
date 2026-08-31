@@ -39,6 +39,20 @@ namespace IwaraDownloader.Forms
             this.cmbTable = new ComboBox();
             this.lblTable = new Label();
             this.lblBrowserStatus = new Label();
+            this.tabRecovery = new TabPage();
+            this.panelRecoveryContent = new Panel();
+            this.lblRecoveryHint = new Label();
+            this.grpDownloading = new GroupBox();
+            this.lblDownloadingCount = new Label();
+            this.btnResetDownloadingToPending = new Button();
+            this.grpFailed = new GroupBox();
+            this.lblFailedCount = new Label();
+            this.btnResetFailedToPending = new Button();
+            this.grpPaused = new GroupBox();
+            this.lblPausedCount = new Label();
+            this.btnResetPausedToPending = new Button();
+            this.btnRefreshRecoveryCounts = new Button();
+            this.lblRecoveryStatus = new Label();
 
             this.panelHeader.SuspendLayout();
             this.tabControl.SuspendLayout();
@@ -50,6 +64,11 @@ namespace IwaraDownloader.Forms
             this.tabBrowser.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gridBrowser)).BeginInit();
             this.panelBrowserTop.SuspendLayout();
+            this.tabRecovery.SuspendLayout();
+            this.panelRecoveryContent.SuspendLayout();
+            this.grpDownloading.SuspendLayout();
+            this.grpFailed.SuspendLayout();
+            this.grpPaused.SuspendLayout();
             this.SuspendLayout();
 
             //
@@ -99,6 +118,7 @@ namespace IwaraDownloader.Forms
             //
             this.tabControl.Controls.Add(this.tabSql);
             this.tabControl.Controls.Add(this.tabBrowser);
+            this.tabControl.Controls.Add(this.tabRecovery);
             this.tabControl.Dock = DockStyle.Fill;
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
@@ -325,6 +345,156 @@ namespace IwaraDownloader.Forms
             this.lblBrowserStatus.Size = new Size(930, 24);
 
             //
+            // tabRecovery
+            //
+            this.tabRecovery.Controls.Add(this.panelRecoveryContent);
+            this.tabRecovery.Controls.Add(this.lblRecoveryStatus);
+            this.tabRecovery.Location = new Point(4, 24);
+            this.tabRecovery.Name = "tabRecovery";
+            this.tabRecovery.Padding = new Padding(6);
+            this.tabRecovery.Size = new Size(942, 452);
+            this.tabRecovery.TabIndex = 2;
+            this.tabRecovery.Text = "復旧";
+            this.tabRecovery.UseVisualStyleBackColor = true;
+
+            //
+            // panelRecoveryContent
+            //
+            this.panelRecoveryContent.Controls.Add(this.grpPaused);
+            this.panelRecoveryContent.Controls.Add(this.grpFailed);
+            this.panelRecoveryContent.Controls.Add(this.grpDownloading);
+            this.panelRecoveryContent.Controls.Add(this.btnRefreshRecoveryCounts);
+            this.panelRecoveryContent.Controls.Add(this.lblRecoveryHint);
+            this.panelRecoveryContent.Dock = DockStyle.Fill;
+            this.panelRecoveryContent.Name = "panelRecoveryContent";
+            this.panelRecoveryContent.Size = new Size(930, 420);
+            this.panelRecoveryContent.TabIndex = 0;
+
+            //
+            // lblRecoveryHint
+            //
+            this.lblRecoveryHint.ForeColor = Color.Gray;
+            this.lblRecoveryHint.Location = new Point(6, 6);
+            this.lblRecoveryHint.Name = "lblRecoveryHint";
+            this.lblRecoveryHint.Size = new Size(900, 40);
+            this.lblRecoveryHint.Text = "本体アプリの起動時レジューム相当の復旧操作を、アプリを再起動せずに一括で行います。書き込みモードを有効にしてから使用してください。";
+
+            //
+            // grpDownloading
+            //
+            this.grpDownloading.Controls.Add(this.btnResetDownloadingToPending);
+            this.grpDownloading.Controls.Add(this.lblDownloadingCount);
+            this.grpDownloading.Location = new Point(6, 52);
+            this.grpDownloading.Name = "grpDownloading";
+            this.grpDownloading.Size = new Size(900, 80);
+            this.grpDownloading.TabIndex = 1;
+            this.grpDownloading.TabStop = false;
+            this.grpDownloading.Text = "ダウンロード中 → 待機中に戻す (異常終了で固まった行の復旧)";
+
+            //
+            // lblDownloadingCount
+            //
+            this.lblDownloadingCount.AutoSize = true;
+            this.lblDownloadingCount.Location = new Point(15, 35);
+            this.lblDownloadingCount.Name = "lblDownloadingCount";
+            this.lblDownloadingCount.Text = "対象: -件";
+
+            //
+            // btnResetDownloadingToPending
+            //
+            this.btnResetDownloadingToPending.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnResetDownloadingToPending.Location = new Point(700, 25);
+            this.btnResetDownloadingToPending.Name = "btnResetDownloadingToPending";
+            this.btnResetDownloadingToPending.Size = new Size(180, 30);
+            this.btnResetDownloadingToPending.TabIndex = 0;
+            this.btnResetDownloadingToPending.Text = "待機中に戻す";
+            this.btnResetDownloadingToPending.UseVisualStyleBackColor = true;
+            this.btnResetDownloadingToPending.Click += new EventHandler(this.btnResetDownloadingToPending_Click);
+
+            //
+            // grpFailed
+            //
+            this.grpFailed.Controls.Add(this.btnResetFailedToPending);
+            this.grpFailed.Controls.Add(this.lblFailedCount);
+            this.grpFailed.Location = new Point(6, 140);
+            this.grpFailed.Name = "grpFailed";
+            this.grpFailed.Size = new Size(900, 80);
+            this.grpFailed.TabIndex = 2;
+            this.grpFailed.TabStop = false;
+            this.grpFailed.Text = "失敗 → 待機中に戻す (リトライ回数・エラーもリセット)";
+
+            //
+            // lblFailedCount
+            //
+            this.lblFailedCount.AutoSize = true;
+            this.lblFailedCount.Location = new Point(15, 35);
+            this.lblFailedCount.Name = "lblFailedCount";
+            this.lblFailedCount.Text = "対象: -件";
+
+            //
+            // btnResetFailedToPending
+            //
+            this.btnResetFailedToPending.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnResetFailedToPending.Location = new Point(700, 25);
+            this.btnResetFailedToPending.Name = "btnResetFailedToPending";
+            this.btnResetFailedToPending.Size = new Size(180, 30);
+            this.btnResetFailedToPending.TabIndex = 0;
+            this.btnResetFailedToPending.Text = "待機中に戻す";
+            this.btnResetFailedToPending.UseVisualStyleBackColor = true;
+            this.btnResetFailedToPending.Click += new EventHandler(this.btnResetFailedToPending_Click);
+
+            //
+            // grpPaused
+            //
+            this.grpPaused.Controls.Add(this.btnResetPausedToPending);
+            this.grpPaused.Controls.Add(this.lblPausedCount);
+            this.grpPaused.Location = new Point(6, 228);
+            this.grpPaused.Name = "grpPaused";
+            this.grpPaused.Size = new Size(900, 80);
+            this.grpPaused.TabIndex = 3;
+            this.grpPaused.TabStop = false;
+            this.grpPaused.Text = "一時停止 → 待機中に戻す (「後で」保存分の一括再開)";
+
+            //
+            // lblPausedCount
+            //
+            this.lblPausedCount.AutoSize = true;
+            this.lblPausedCount.Location = new Point(15, 35);
+            this.lblPausedCount.Name = "lblPausedCount";
+            this.lblPausedCount.Text = "対象: -件";
+
+            //
+            // btnResetPausedToPending
+            //
+            this.btnResetPausedToPending.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnResetPausedToPending.Location = new Point(700, 25);
+            this.btnResetPausedToPending.Name = "btnResetPausedToPending";
+            this.btnResetPausedToPending.Size = new Size(180, 30);
+            this.btnResetPausedToPending.TabIndex = 0;
+            this.btnResetPausedToPending.Text = "待機中に戻す";
+            this.btnResetPausedToPending.UseVisualStyleBackColor = true;
+            this.btnResetPausedToPending.Click += new EventHandler(this.btnResetPausedToPending_Click);
+
+            //
+            // btnRefreshRecoveryCounts
+            //
+            this.btnRefreshRecoveryCounts.Location = new Point(6, 316);
+            this.btnRefreshRecoveryCounts.Name = "btnRefreshRecoveryCounts";
+            this.btnRefreshRecoveryCounts.Size = new Size(160, 30);
+            this.btnRefreshRecoveryCounts.TabIndex = 4;
+            this.btnRefreshRecoveryCounts.Text = "件数を再取得";
+            this.btnRefreshRecoveryCounts.UseVisualStyleBackColor = true;
+            this.btnRefreshRecoveryCounts.Click += new EventHandler(this.btnRefreshRecoveryCounts_Click);
+
+            //
+            // lblRecoveryStatus
+            //
+            this.lblRecoveryStatus.Dock = DockStyle.Bottom;
+            this.lblRecoveryStatus.Name = "lblRecoveryStatus";
+            this.lblRecoveryStatus.Padding = new Padding(0, 4, 0, 0);
+            this.lblRecoveryStatus.Size = new Size(930, 24);
+
+            //
             // DatabaseToolForm
             //
             this.AutoScaleDimensions = new SizeF(7F, 15F);
@@ -352,6 +522,15 @@ namespace IwaraDownloader.Forms
             ((System.ComponentModel.ISupportInitialize)(this.gridBrowser)).EndInit();
             this.panelBrowserTop.ResumeLayout(false);
             this.panelBrowserTop.PerformLayout();
+            this.tabRecovery.ResumeLayout(false);
+            this.panelRecoveryContent.ResumeLayout(false);
+            this.panelRecoveryContent.PerformLayout();
+            this.grpDownloading.ResumeLayout(false);
+            this.grpDownloading.PerformLayout();
+            this.grpFailed.ResumeLayout(false);
+            this.grpFailed.PerformLayout();
+            this.grpPaused.ResumeLayout(false);
+            this.grpPaused.PerformLayout();
             this.ResumeLayout(false);
         }
 
@@ -379,5 +558,19 @@ namespace IwaraDownloader.Forms
         private Button btnDeleteSelectedRow;
         private DataGridView gridBrowser;
         private Label lblBrowserStatus;
+        private TabPage tabRecovery;
+        private Panel panelRecoveryContent;
+        private Label lblRecoveryHint;
+        private GroupBox grpDownloading;
+        private Label lblDownloadingCount;
+        private Button btnResetDownloadingToPending;
+        private GroupBox grpFailed;
+        private Label lblFailedCount;
+        private Button btnResetFailedToPending;
+        private GroupBox grpPaused;
+        private Label lblPausedCount;
+        private Button btnResetPausedToPending;
+        private Button btnRefreshRecoveryCounts;
+        private Label lblRecoveryStatus;
     }
 }

@@ -614,6 +614,9 @@ IwaraDownloaderを終了してから使うことを強く推奨します。
   <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
     <value>≈ マージ: {0}</value>
   </data>
+  <data name="ImportFromFolderWizard_NewPlaceholderChannel" xml:space="preserve">
+    <value>+ チャンネル追加 (自動チェックOFF): {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
     <value>+ 新規購読: {0} (@{1})</value>
   </data>
@@ -805,7 +808,8 @@ videoId を取得して DB に取り込みます。
     <value>スキャン中</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
-    <value>チェックを入れた作者がチャンネル (購読) として追加されます。
+    <value>チェックを入れた作者は自動チェックONのチャンネル (購読) として追加されます。
+チェックを外した作者も自動チェックOFFのチャンネルとして取り込まれます (あとで有効化できます)。
 </value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">

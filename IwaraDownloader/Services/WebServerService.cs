@@ -91,12 +91,12 @@ namespace IwaraDownloader.Services
             // (RunAsync = StartAsync + WaitForShutdownAsync の分解)。
             try
             {
-                await _app.StartAsync();
+                await _app.StartAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.Error($"Web media server failed to start: {ex.Message}");
-                try { await _app.DisposeAsync(); } catch { /* 起動失敗直後のdisposeは元の例外を優先 */ }
+                try { await _app.DisposeAsync().ConfigureAwait(false); } catch { /* 起動失敗直後のdisposeは元の例外を優先 */ }
                 _app = null;
                 BaseUrl = null;
                 _cts?.Dispose();
@@ -118,10 +118,14 @@ namespace IwaraDownloader.Services
                 // 先に _runTask を待つと必ず 5 秒タイムアウトまでブロックしていた
                 // (アプリ終了が常に約5秒遅くなる原因だった)
                 using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await _app.StopAsync(stopCts.Token);
+                // ConfigureAwait(false): 呼び出し元(WPFのDispose)がUIスレッドから同期的に.Wait()する。
+                // これを付けないと継続がDispatcherのメッセージループを待つため、そのメッセージループ
+                // 自体を.Wait()でブロックしているUIスレッドとデッドロックし、毎回タイムアウトまで
+                // 終了処理が固まる(通常終了のたびに再現する確定的なハング)。
+                await _app.StopAsync(stopCts.Token).ConfigureAwait(false);
                 if (_runTask != null)
                 {
-                    try { await _runTask.WaitAsync(TimeSpan.FromSeconds(2)); }
+                    try { await _runTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); }
                     catch (OperationCanceledException) { }
                     catch (TimeoutException) { }
                 }

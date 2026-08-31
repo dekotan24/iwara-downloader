@@ -610,6 +610,9 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
     <value>已合并: {0}</value>
   </data>
+  <data name="ImportFromFolderWizard_NewPlaceholderChannel" xml:space="preserve">
+    <value>+ 已添加频道 (自动检查关闭): {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
     <value>+ 新增订阅: {0} (@{1})</value>
   </data>
@@ -801,7 +804,8 @@ videoId 后导入数据库。
     <value>扫描中</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
-    <value>勾选的作者将被添加为订阅频道。
+    <value>勾选的作者将被添加为自动检查开启的订阅频道。
+未勾选的作者也会作为频道导入，但自动检查为关闭状态 (之后可手动启用)。
 </value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">

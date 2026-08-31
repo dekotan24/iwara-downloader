@@ -1,4 +1,5 @@
 using System.Data;
+using IwaraDownloader.Models;
 using IwaraDownloader.Services;
 using IwaraDownloader.Utils;
 
@@ -47,6 +48,7 @@ namespace IwaraDownloader.Forms
             UpdateBanner();
             RefreshIntegrityWarning();
             LoadTableNames();
+            RefreshRecoveryCounts();
         }
 
         #region 書き込みモード切替
@@ -71,6 +73,10 @@ namespace IwaraDownloader.Forms
             gridBrowser.ReadOnly = !_writeModeEnabled;
             btnDeleteSelectedRow.Enabled = _writeModeEnabled;
             UpdateBrowserColumnEditability();
+
+            btnResetDownloadingToPending.Enabled = _writeModeEnabled;
+            btnResetFailedToPending.Enabled = _writeModeEnabled;
+            btnResetPausedToPending.Enabled = _writeModeEnabled;
         }
 
         private void btnToggleWriteMode_Click(object sender, EventArgs e)
@@ -331,6 +337,84 @@ namespace IwaraDownloader.Forms
                 RefreshIntegrityWarning();
             }
         }
+
+        #endregion
+
+        #region 復旧
+
+        /// <summary>
+        /// 本体アプリの起動時レジューム相当(Downloading→Pending等)を、アプリを起動せずに一括で行う。
+        /// 本体側のバグ(タスクがメモリ上の待機キューから消えたまま残る等)の応急復旧を、
+        /// アプリの再起動なしにDBレベルで済ませたい場合に使う。
+        /// </summary>
+        private void RefreshRecoveryCounts()
+        {
+            try
+            {
+                lblDownloadingCount.Text = L.T("DatabaseToolForm_D029", _database.CountVideosByStatus(DownloadStatus.Downloading));
+                lblFailedCount.Text = L.T("DatabaseToolForm_D029", _database.CountVideosByStatus(DownloadStatus.Failed));
+                lblPausedCount.Text = L.T("DatabaseToolForm_D029", _database.CountVideosByStatus(DownloadStatus.Paused));
+            }
+            catch (Exception ex)
+            {
+                lblRecoveryStatus.ForeColor = Color.OrangeRed;
+                lblRecoveryStatus.Text = L.T("DatabaseToolForm_D015", ex.Message);
+            }
+        }
+
+        private void btnRefreshRecoveryCounts_Click(object sender, EventArgs e) => RefreshRecoveryCounts();
+
+        /// <summary>件数プレビュー付きの確認ダイアログを出し、OKならactionを実行して結果を表示する共通処理。</summary>
+        private void RunRecoveryBulkAction(int targetCount, Func<int> action)
+        {
+            if (!_writeModeEnabled) return;
+            if (targetCount == 0)
+            {
+                MessageBox.Show(L.T("DatabaseToolForm_D030"), L.T("DatabaseToolForm_D007"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var confirmed = MessageBox.Show(
+                L.T("DatabaseToolForm_D031", targetCount),
+                L.T("DatabaseToolForm_D007"),
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            if (confirmed != DialogResult.OK) return;
+
+            try
+            {
+                var affected = action();
+                lblRecoveryStatus.ForeColor = SystemColors.ControlText;
+                lblRecoveryStatus.Text = L.T("DatabaseToolForm_D032", affected);
+            }
+            catch (Exception ex)
+            {
+                lblRecoveryStatus.ForeColor = Color.OrangeRed;
+                lblRecoveryStatus.Text = L.T("DatabaseToolForm_D015", ex.Message);
+            }
+            finally
+            {
+                RefreshRecoveryCounts();
+                RefreshIntegrityWarning();
+                if (_browserTableName == "Videos")
+                    LoadBrowserTable();
+            }
+        }
+
+        private void btnResetDownloadingToPending_Click(object sender, EventArgs e) =>
+            RunRecoveryBulkAction(
+                _database.CountVideosByStatus(DownloadStatus.Downloading),
+                () => _database.BulkUpdateStatus(DownloadStatus.Downloading, DownloadStatus.Pending));
+
+        private void btnResetFailedToPending_Click(object sender, EventArgs e) =>
+            RunRecoveryBulkAction(
+                _database.CountVideosByStatus(DownloadStatus.Failed),
+                () => _database.BulkResetFailedToPending());
+
+        private void btnResetPausedToPending_Click(object sender, EventArgs e) =>
+            RunRecoveryBulkAction(
+                _database.CountVideosByStatus(DownloadStatus.Paused),
+                () => _database.BulkUpdateStatus(DownloadStatus.Paused, DownloadStatus.Pending));
 
         #endregion
     }

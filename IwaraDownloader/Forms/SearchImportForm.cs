@@ -240,8 +240,20 @@ namespace IwaraDownloader.Forms
                     Status = DownloadStatus.Pending,
                     CreatedAt = DateTime.Now,
                 };
+
+                // 「単発動画」という別分類は廃止。作者が判明していれば必ずチャンネル(アーティスト)に
+                // 紐付ける。既に購読済みならそこへ合流、未購読なら自動チェックOFFの新規チャンネルとして
+                // 作成する。
+                SubscribedUser? channel = null;
+                if (!string.IsNullOrEmpty(video.AuthorUsername))
+                {
+                    channel = _database.EnsureChannelForAuthor(video.AuthorUsername, _currentSite);
+                    video.AuthorUserId = channel.UserId;
+                    video.SubscribedUserId = channel.Id;
+                }
+
                 video.Id = _database.AddVideo(video);
-                _downloadManager.EnqueueDownload(video, isSubscriptionDownload: false);
+                _downloadManager.EnqueueDownload(video, channel != null, channel);
                 addedNew++;
             }
 

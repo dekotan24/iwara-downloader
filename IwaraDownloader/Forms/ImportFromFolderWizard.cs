@@ -798,6 +798,16 @@ namespace IwaraDownloader.Forms
                                     subUser = newUser;
                                     AppendImportLog(L.T("ImportFromFolderWizard_NewSubscription", sv.AuthorName ?? sv.AuthorUsername, newUser.Username));
                                 }
+                                else
+                                {
+                                    // チェックを外した作者も「単発動画」という別分類には逃さず、
+                                    // 自動チェックOFFのチャンネルとして取り込む(あとで手動で有効化すれば
+                                    // 通常の購読チャンネルになる)。
+                                    var placeholderUser = _database.EnsureChannelForAuthor(sv.AuthorUsername!, sv.Site);
+                                    existingUsers[authorKey] = placeholderUser;
+                                    subUser = placeholderUser;
+                                    AppendImportLog(L.T("ImportFromFolderWizard_NewPlaceholderChannel", sv.AuthorName ?? sv.AuthorUsername, placeholderUser.Username));
+                                }
                             }
 
                             // 既存videoIdチェック
@@ -1208,7 +1218,8 @@ namespace IwaraDownloader.Forms
             public bool DurationOk;
             /// <summary>
             /// アーティストフォルダ選択検索で、対象アーティストが既に購読済みだった場合の SubscribedUser。
-            /// 取り込み時に新規動画の SubscribedUserId 補完へ渡す (null = 単発扱い)。
+            /// 取り込み時に新規動画の SubscribedUserId 補完へ渡す。null (未購読) でも
+            /// TitleMatchImporter 側が作者名から自動チェックOFFのチャンネルを起こして紐付ける。
             /// </summary>
             public Models.SubscribedUser? SubUser;
 

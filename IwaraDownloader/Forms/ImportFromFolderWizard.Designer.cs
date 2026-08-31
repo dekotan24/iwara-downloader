@@ -218,8 +218,8 @@ namespace IwaraDownloader.Forms
             this.lblStep3Desc.Name = "lblStep3Desc";
             this.lblStep3Desc.Size = new System.Drawing.Size(670, 40);
             this.lblStep3Desc.Text =
-                "チェックを入れた作者がチャンネル (購読) として追加されます。\r\n" +
-                "チェックを外した作者の動画は『単発動画』として取り込まれます。";
+                "チェックを入れた作者は自動チェックONのチャンネル (購読) として追加されます。\r\n" +
+                "チェックを外した作者も自動チェックOFFのチャンネルとして取り込まれます (あとで有効化できます)。";
 
             this.clbAuthors.CheckOnClick = true;
             this.clbAuthors.Font = new System.Drawing.Font("Segoe UI", 9.5F);

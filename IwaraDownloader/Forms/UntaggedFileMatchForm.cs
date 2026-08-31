@@ -33,7 +33,9 @@ namespace IwaraDownloader.Forms
 
         /// <summary>
         /// アーティストモードで既に購読済みだった場合の SubscribedUser。
-        /// 取り込み時、新規追加される動画の SubscribedUserId 補完に使う (未購読なら null のまま = 単発扱い)。
+        /// 取り込み時、新規追加される動画の SubscribedUserId 補完に使う。未購読なら null のまま返すが、
+        /// 実際の取り込みは TitleMatchImporter 側が作者名から EnsureChannelForAuthor で
+        /// 自動チェックOFFのチャンネルへ紐付けるため、「単発動画」扱いにはならない。
         /// </summary>
         public SubscribedUser? ResolvedSubUser { get; private set; }
 

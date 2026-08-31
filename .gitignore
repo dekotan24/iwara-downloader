@@ -4,6 +4,8 @@
 /.vs
 /IwaraDownloader/obj
 /IwaraDownloader/bin
+/IwaraDownloader.DbTool/obj
+/IwaraDownloader.DbTool/bin
 /IwaraDownloader.Tests/
 *.user
 
