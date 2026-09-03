@@ -104,16 +104,20 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 開いた接続を返す。PRAGMA synchronous / busy_timeout は接続ごとの設定なので、
-        /// 初期化時の1接続だけに適用しても他の読み書きには効かない。ここで毎回適用する。
+        /// 開いた接続を返す。busy_timeout は接続ごとの設定なので、初期化時の1接続だけに
+        /// 設定しても他の読み書きには効かない。ここで毎回適用する。
         /// (journal_mode=WAL はDBファイルに永続化されるため初期化時の1回で足りる)
+        ///
+        /// synchronous はここでは設定しない。既定の FULL のままにしてある。
+        /// WAL + NORMAL はコミットのfsyncを省いて書き込みを速くするが、
+        /// 電源断で直近のコミットを失いうる耐久性のトレードオフになるため。
         /// </summary>
         private SqliteConnection OpenConnection()
         {
             var connection = new SqliteConnection(_connectionString);
             connection.Open();
             using var pragma = connection.CreateCommand();
-            pragma.CommandText = "PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;";
+            pragma.CommandText = "PRAGMA busy_timeout=5000;";
             pragma.ExecuteNonQuery();
             return connection;
         }
@@ -127,7 +131,7 @@ namespace IwaraDownloader.Services
 
             // WAL モード有効化: 並行書込/読込で "database is locked" を減らす。
             // DBファイルに永続化される設定なので、ここで1回だけ設定する。
-            // (接続ごとの synchronous / busy_timeout は OpenConnection 側で毎回適用する)
+            // (接続ごとの busy_timeout は OpenConnection 側で毎回適用する)
             using (var pragma = connection.CreateCommand())
             {
                 pragma.CommandText = "PRAGMA journal_mode=WAL;";
@@ -1850,8 +1854,13 @@ namespace IwaraDownloader.Services
                 while (reader.Read())
                 {
                     var video = ReadVideo(reader);
-                    if (!string.IsNullOrEmpty(video.VideoId))
-                        result.TryAdd(video.VideoId, video);
+                    if (string.IsNullOrEmpty(video.VideoId)) continue;
+
+                    // バッチをまたいでも代表が変わらないよう、Id の小さい行を優先する
+                    // (バッチ内の ORDER BY だけでは、同一 VideoId が別バッチに分かれたときに
+                    //  どちらが先に来るかがバッチ境界で決まってしまう)
+                    if (!result.TryGetValue(video.VideoId, out var existing) || video.Id < existing.Id)
+                        result[video.VideoId] = video;
                 }
             }
 

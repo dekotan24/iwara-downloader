@@ -17,6 +17,12 @@ namespace IwaraDownloader.Forms
         private bool _busy;
         private bool _mapInProgress;
 
+        // 直前のスキャンで欠損が上限に達したか。ドライブが「認識はされているが応答しない」
+        // 状態だと Directory.Exists は true を返してしまい、到達性チェックをすり抜ける。
+        // その場合に残る唯一の異常サインが「欠損が異常に多い」ことなので、
+        // 一括再ダウンロードの前にもう一段の確認を挟む。
+        private bool _lastScanTruncated;
+
         public LocalFileIntegrityForm(DatabaseService database, DownloadManager downloadManager)
         {
             _database = database;
@@ -55,6 +61,7 @@ namespace IwaraDownloader.Forms
                 if (IsDisposed) return;
                 _issues.Clear();
                 _issues.AddRange(result.Issues);
+                _lastScanTruncated = result.Truncated;
                 PopulateGrid();
                 lblStatus.Text = BuildScanStatus(result);
 
@@ -245,6 +252,18 @@ namespace IwaraDownloader.Forms
         {
             var selected = GetSelectedIssues();
             if (selected.Count == 0) return;
+
+            if (_lastScanTruncated)
+            {
+                var proceed = MessageBox.Show(
+                    this,
+                    L.T("LocalFileIntegrityForm_D019", selected.Count),
+                    L.T("LocalFileIntegrityForm_D011"),
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2);
+                if (proceed != DialogResult.Yes) return;
+            }
 
             var confirmed = MessageBox.Show(
                 this,

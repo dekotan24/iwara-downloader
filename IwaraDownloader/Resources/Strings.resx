@@ -4013,6 +4013,13 @@ downloaderは終了してから使うことを強く推奨します。</value>
   <data name="LocalFileIntegrityForm_D018" xml:space="preserve">
     <value>{1} 件の欠損を検出しました (表示は先頭 {0} 件のみ)。件数が多すぎる場合はドライブ未接続を疑ってください。</value>
   </data>
+  <data name="LocalFileIntegrityForm_D019" xml:space="preserve">
+    <value>直前のスキャンで欠損が上限に達しました。ドライブが接続されていても応答していない場合、実際には存在するファイルまで「欠損」と判定されている可能性があります。
+
+このまま {0} 件を再ダウンロードすると、既にあるファイルを取り直すことになります。
+
+本当に続行しますか？（先にドライブの状態を確認して再スキャンすることを強く推奨します）</value>
+  </data>
   <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>待機中</value></data>
   <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>ダウンロード中</value></data>
   <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>タグ書き込み中</value></data>

@@ -3952,6 +3952,11 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
 The {1} item(s) stored there were excluded from the check instead of being reported as missing. An external drive may be disconnected. Reconnect it and scan again.</value></data>
   <data name="LocalFileIntegrityForm_D017" xml:space="preserve"><value>Waiting for the mapping operation to finish. The window cannot be closed until it completes.</value></data>
   <data name="LocalFileIntegrityForm_D018" xml:space="preserve"><value>Found {1} missing file(s) (showing the first {0}). A very large count usually means a drive is disconnected.</value></data>
+  <data name="LocalFileIntegrityForm_D019" xml:space="preserve"><value>The last scan hit the reported-issue limit. If a drive is connected but not responding, files that actually exist may have been reported as missing.
+
+Re-downloading {0} item(s) now would re-fetch files you may already have.
+
+Continue anyway? (Checking the drive and scanning again first is strongly recommended.)</value></data>
   <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>Pending</value></data>
   <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>Downloading</value></data>
   <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>Writing tags</value></data>
