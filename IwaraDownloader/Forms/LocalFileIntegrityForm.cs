@@ -44,19 +44,31 @@ namespace IwaraDownloader.Forms
 
             try
             {
-                var issues = await Task.Run(
+                var result = await Task.Run(
                     () =>
                     {
                         var videos = _database.GetAllVideos();
                         ct.ThrowIfCancellationRequested();
-                        return LocalFileIntegrityService.FindIssues(videos, ct);
+                        return LocalFileIntegrityService.Scan(videos, cancellationToken: ct);
                     }, ct);
 
                 if (IsDisposed) return;
                 _issues.Clear();
-                _issues.AddRange(issues);
+                _issues.AddRange(result.Issues);
                 PopulateGrid();
-                lblStatus.Text = L.T("LocalFileIntegrityForm_D002", _issues.Count);
+                lblStatus.Text = BuildScanStatus(result);
+
+                // 未接続の外付けドライブを「全部消えた」と誤認したまま一括再ダウンロードを
+                // 押されるのが最悪ケースなので、無視できない警告として明示する。
+                if (result.UnreachableRoots.Count > 0)
+                {
+                    MessageBox.Show(this,
+                        L.T("LocalFileIntegrityForm_D016",
+                            string.Join(", ", result.UnreachableRoots),
+                            result.SkippedOnUnreachableRoots),
+                        L.T("LocalFileIntegrityForm_D006"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -198,7 +210,11 @@ namespace IwaraDownloader.Forms
                     allowForeignTag: false,
                     useAtomicExistingUpdate: true);
                 if (result == LocalFileMapHelper.MapResult.Mapped)
+                {
+                    // 全件再スキャンは数万件の File.Exists を伴うため、解決した行だけ取り除く。
+                    RemoveResolvedRows(new[] { issue.Video.Id });
                     lblStatus.Text = L.T("LocalFileIntegrityForm_D009", video.Title);
+                }
             }
             finally
             {
@@ -206,8 +222,23 @@ namespace IwaraDownloader.Forms
                 _busy = false;
                 UpdateActionState();
             }
+        }
 
-            await ScanAsync();
+        /// <summary>解決済みの動画IDを一覧から取り除く。</summary>
+        private void RemoveResolvedRows(IReadOnlyCollection<int> videoIds)
+        {
+            if (IsDisposed || videoIds.Count == 0) return;
+
+            var ids = videoIds.ToHashSet();
+            _issues.RemoveAll(issue => ids.Contains(issue.Video.Id));
+            for (int i = dgvIssues.Rows.Count - 1; i >= 0; i--)
+            {
+                if (dgvIssues.Rows[i].Tag is LocalFileIntegrityService.Issue issue
+                    && ids.Contains(issue.Video.Id))
+                {
+                    dgvIssues.Rows.RemoveAt(i);
+                }
+            }
         }
 
         private async void btnRedownload_Click(object? sender, EventArgs e)
@@ -229,6 +260,7 @@ namespace IwaraDownloader.Forms
             var queued = 0;
             var skipped = 0;
             var errors = new List<string>();
+            var resolvedIds = new List<int>();
             try
             {
                 foreach (var issue in selected)
@@ -264,9 +296,14 @@ namespace IwaraDownloader.Forms
                             : null;
                         var task = _downloadManager.EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
                         if (task.Status == DownloadStatus.Skipped)
+                        {
                             skipped++;
+                        }
                         else
+                        {
                             queued++;
+                            resolvedIds.Add(video.Id);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -275,6 +312,7 @@ namespace IwaraDownloader.Forms
                     }
                 }
 
+                RemoveResolvedRows(resolvedIds);
                 lblStatus.Text = skipped == 0 && errors.Count == 0
                     ? L.T("LocalFileIntegrityForm_D012", queued)
                     : L.T("LocalFileIntegrityForm_D013", queued, skipped);
@@ -289,8 +327,6 @@ namespace IwaraDownloader.Forms
                 _busy = false;
                 UpdateActionState();
             }
-
-            await ScanAsync();
         }
 
         private void btnClose_Click(object? sender, EventArgs e) => Close();
@@ -301,12 +337,20 @@ namespace IwaraDownloader.Forms
             {
                 // API取得中にフォームだけ破棄すると、await後のUI更新が破棄済みコントロールへ
                 // 到達するため、マップ処理が終わるまで閉じる操作を保留する。
+                // 無反応に見えないよう、保留していることを伝える。
                 e.Cancel = true;
+                lblStatus.Text = L.T("LocalFileIntegrityForm_D017");
                 return;
             }
 
             _scanCts?.Cancel();
             base.OnFormClosing(e);
         }
+
+        /// <summary>打ち切りの有無を含めてスキャン結果の一行サマリを組み立てる。</summary>
+        private static string BuildScanStatus(LocalFileIntegrityService.ScanResult result)
+            => result.Truncated
+                ? L.T("LocalFileIntegrityForm_D018", result.Issues.Count, result.TotalIssueCount)
+                : L.T("LocalFileIntegrityForm_D002", result.Issues.Count);
     }
 }

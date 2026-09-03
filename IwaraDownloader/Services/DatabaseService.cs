@@ -173,6 +173,10 @@ namespace IwaraDownloader.Services
                 CREATE INDEX IF NOT EXISTS idx_videos_subscribed_user ON Videos(SubscribedUserId);
                 CREATE INDEX IF NOT EXISTS idx_videos_video_id ON Videos(VideoId);
                 CREATE INDEX IF NOT EXISTS idx_videos_file_uuid ON Videos(FileUuid);
+                -- ローカルパスの重複判定は Windows のファイル名規則に合わせて NOCASE で行うため、
+                -- 索引側も NOCASE で作らないと全表走査になる。
+                CREATE INDEX IF NOT EXISTS idx_videos_local_file_path_nocase
+                    ON Videos(LocalFilePath COLLATE NOCASE);
                 -- Rating カラムのインデックスは MigrateVideosTable 内 (ALTER TABLE 後) で作成する
 
                 -- 除外(ゴミ箱)テーブル: Videos と同じ列構成 + ExcludedAt。
@@ -1119,7 +1123,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE FileUuid COLLATE NOCASE = @FileUuid LIMIT 1";
+            command.CommandText = "SELECT * FROM Videos WHERE FileUuid = @FileUuid LIMIT 1";
             command.Parameters.AddWithValue("@FileUuid", fileUuid);
 
             using var reader = command.ExecuteReader();

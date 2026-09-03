@@ -4002,6 +4002,17 @@ downloaderは終了してから使うことを強く推奨します。</value>
   <data name="LocalFileIntegrityForm_D015" xml:space="preserve">
     <value>この動画は現在キューで処理中のため、一覧を更新しました。</value>
   </data>
+  <data name="LocalFileIntegrityForm_D016" xml:space="preserve">
+    <value>次のドライブ・共有に接続できませんでした: {0}
+
+そこにある {1} 件は「欠損」ではなく判定対象外として扱いました。外付けドライブが未接続の可能性があります。接続してから再スキャンしてください。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D017" xml:space="preserve">
+    <value>マップ処理の完了を待っています。終わるまで閉じられません。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D018" xml:space="preserve">
+    <value>{1} 件の欠損を検出しました (表示は先頭 {0} 件のみ)。件数が多すぎる場合はドライブ未接続を疑ってください。</value>
+  </data>
   <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>待機中</value></data>
   <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>ダウンロード中</value></data>
   <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>タグ書き込み中</value></data>

@@ -3827,6 +3827,11 @@ videoId 后导入数据库。
   <data name="LocalFileIntegrityForm_D014" xml:space="preserve"><value>重新下载失败：
 {0}</value></data>
   <data name="LocalFileIntegrityForm_D015" xml:space="preserve"><value>该视频当前正在队列中或处理中，列表已刷新。</value></data>
+  <data name="LocalFileIntegrityForm_D016" xml:space="preserve"><value>无法连接以下驱动器或共享: {0}
+
+其中的 {1} 个项目未被判定为“缺失”，而是排除在检查之外。外接驱动器可能未连接，请连接后重新扫描。</value></data>
+  <data name="LocalFileIntegrityForm_D017" xml:space="preserve"><value>正在等待映射操作完成，完成前无法关闭窗口。</value></data>
+  <data name="LocalFileIntegrityForm_D018" xml:space="preserve"><value>检测到 {1} 个缺失项 (仅显示前 {0} 个)。数量过多通常意味着驱动器未连接。</value></data>
   <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>等待中</value></data>
   <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>下载中</value></data>
   <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>写入标签中</value></data>
