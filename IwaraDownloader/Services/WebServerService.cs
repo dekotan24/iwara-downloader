@@ -301,6 +301,25 @@ namespace IwaraDownloader.Services
             return false;
         }
 
+        private static bool FixedTimeStringEquals(string? left, string? right)
+            => CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(left ?? ""),
+                Encoding.UTF8.GetBytes(right ?? ""));
+
+        /// <summary>
+        /// 期限切れセッションを掃除する。IsAuthenticated はヒットしたトークンしか消さないため、
+        /// 二度と使われないトークンが残り続ける。
+        /// </summary>
+        private void PruneExpiredSessions()
+        {
+            var now = DateTime.UtcNow;
+            foreach (var pair in _sessions)
+            {
+                if (now - pair.Value.CreatedAt >= SessionTimeout)
+                    _sessions.TryRemove(pair.Key, out _);
+            }
+        }
+
         private IResult RequireAuth(HttpContext ctx)
         {
             if (!IsAuthenticated(ctx))
@@ -321,10 +340,12 @@ namespace IwaraDownloader.Services
             if (string.IsNullOrEmpty(expectedPass))
                 return Results.BadRequest(new { error = "Server password not configured" });
 
-            if (body.Username != expectedUser ||
-                body.Password != expectedPass)
+            // 資格情報の比較は一致した接頭辞の長さが応答時間に出ないよう定数時間で行う。
+            if (!FixedTimeStringEquals(body.Username, expectedUser)
+                || !FixedTimeStringEquals(body.Password, expectedPass))
                 return Results.Json(new { error = "Invalid credentials" }, statusCode: 401);
 
+            PruneExpiredSessions();
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             _sessions[token] = new SessionInfo { CreatedAt = DateTime.UtcNow, Username = body.Username };
 
@@ -716,27 +737,24 @@ namespace IwaraDownloader.Services
             var authResult = RequireAuth(ctx);
             if (authResult != null) return authResult;
 
-            var allVideos = _database.GetAllVideos();
-            var channels = _database.GetAllSubscribedUsers();
-
-            var completed = allVideos.Where(v => v.Status == DownloadStatus.Completed).ToList();
-            long totalSize = completed.Sum(v => v.FileSize);
+            // 全件ロード + LINQ 集計は動画数万件だとリクエストごとに数十MBを読み込むため、
+            // 集計は SQL 側 (GROUP BY / SUM / LIMIT) に寄せる。
+            var stats = _database.GetDownloadStatistics();
+            long totalSize = stats.TotalDownloadedSize;
 
             return Results.Json(new
             {
-                totalVideos = allVideos.Count,
-                downloadedVideos = completed.Count,
-                failedVideos = allVideos.Count(v => v.Status == DownloadStatus.Failed),
-                pendingVideos = allVideos.Count(v => v.Status == DownloadStatus.Pending),
-                skippedVideos = allVideos.Count(v => v.Status == DownloadStatus.Skipped),
-                totalChannels = channels.Count,
-                enabledChannels = channels.Count(c => c.IsEnabled),
+                totalVideos = stats.TotalVideoCount,
+                downloadedVideos = stats.CompletedCount,
+                failedVideos = stats.FailedCount,
+                pendingVideos = stats.PendingCount,
+                skippedVideos = stats.SkippedCount,
+                totalChannels = stats.ChannelCount,
+                enabledChannels = stats.EnabledChannelCount,
                 totalSizeBytes = totalSize,
                 totalSizeFormatted = FormatFileSize(totalSize),
-                favoriteCount = allVideos.Count(v => v.IsFavorite),
-                recentDownloads = completed
-                    .OrderByDescending(v => v.DownloadedAt)
-                    .Take(10)
+                favoriteCount = stats.FavoriteCount,
+                recentDownloads = _database.GetRecentCompletedVideos(10)
                     .Select(MapVideoDto)
                     .ToList()
             }, JsonOpts);

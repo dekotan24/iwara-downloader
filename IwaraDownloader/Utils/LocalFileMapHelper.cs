@@ -165,7 +165,9 @@ namespace IwaraDownloader.Utils
                 try
                 {
                     var site = string.IsNullOrEmpty(video.Site) ? null : video.Site;
-                    var info = await api.GetDownloadUrlAsync(video.VideoId, site);
+                    // 必要なのは file_id だけなので、filesq/CDN 問い合わせを伴う
+                    // ダウンロードURL取得ではなくメタデータ取得を使う。
+                    var info = await api.GetVideoInfoAsync(video.VideoId, site);
                     if (info.Success && !string.IsNullOrEmpty(info.FileUuid))
                         resolvedFileUuid = info.FileUuid;
                 }

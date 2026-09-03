@@ -46,6 +46,7 @@ namespace IwaraDownloader.Services
 
             // Pooling=true で接続再利用、Cache=Shared で WAL の効果を最大化
             _connectionString = $"Data Source={_dbPath};Pooling=True;Cache=Shared";
+
             InitializeDatabase();
             BackupDatabaseIfNeeded();
         }
@@ -103,18 +104,33 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 開いた接続を返す。PRAGMA synchronous / busy_timeout は接続ごとの設定なので、
+        /// 初期化時の1接続だけに適用しても他の読み書きには効かない。ここで毎回適用する。
+        /// (journal_mode=WAL はDBファイルに永続化されるため初期化時の1回で足りる)
+        /// </summary>
+        private SqliteConnection OpenConnection()
+        {
+            var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var pragma = connection.CreateCommand();
+            pragma.CommandText = "PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;";
+            pragma.ExecuteNonQuery();
+            return connection;
+        }
+
+        /// <summary>
         /// データベースを初期化
         /// </summary>
         private void InitializeDatabase()
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             // WAL モード有効化: 並行書込/読込で "database is locked" を減らす。
-            // synchronous=NORMAL は WAL と組み合わせて電源断耐性と速度のバランスを取る。
+            // DBファイルに永続化される設定なので、ここで1回だけ設定する。
+            // (接続ごとの synchronous / busy_timeout は OpenConnection 側で毎回適用する)
             using (var pragma = connection.CreateCommand())
             {
-                pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;";
+                pragma.CommandText = "PRAGMA journal_mode=WAL;";
                 pragma.ExecuteNonQuery();
             }
 
@@ -514,8 +530,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public int AddSubscribedUser(SubscribedUser user)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -547,8 +562,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void UpdateSubscribedUser(SubscribedUser user)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -595,8 +609,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void DeleteSubscribedUser(int id)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM SubscribedUsers WHERE Id = @Id";
@@ -610,8 +623,7 @@ namespace IwaraDownloader.Services
         public List<SubscribedUser> GetAllSubscribedUsers()
         {
             var users = new List<SubscribedUser>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             // チャンネルツリー / Web のチャンネル一覧の表示順 (名前昇順)
@@ -631,8 +643,7 @@ namespace IwaraDownloader.Services
         public List<SubscribedUser> GetEnabledSubscribedUsers()
         {
             var users = new List<SubscribedUser>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM SubscribedUsers WHERE IsEnabled = 1 ORDER BY CreatedAt DESC";
@@ -650,8 +661,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public SubscribedUser? GetSubscribedUserByUserId(string userId)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM SubscribedUsers WHERE UserId = @UserId";
@@ -697,8 +707,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public SubscribedUser? GetSubscribedUserById(int id)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM SubscribedUsers WHERE Id = @Id";
@@ -789,8 +798,7 @@ namespace IwaraDownloader.Services
         public List<SubscribedUser> GetUsersWithVideosNotLoaded()
         {
             var users = new List<SubscribedUser>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM SubscribedUsers WHERE VideosLoaded = 0 AND IsEnabled = 1 ORDER BY CreatedAt ASC";
             using var reader = command.ExecuteReader();
@@ -808,8 +816,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public int AddVideo(VideoInfo video)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             // ExcludedVideosからのDELETEとVideosへのINSERTが1コマンド内の複数ステートメントで
             // 実行されるが、明示的なトランザクションで囲まないと、途中でプロセスが落ちた場合に
@@ -851,8 +858,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void UpdateVideo(VideoInfo video)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -898,8 +904,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void UpdateVideoTagsMemoFavorite(int videoId, string tags, string memo, bool isFavorite)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "UPDATE Videos SET Tags = @Tags, Memo = @Memo, IsFavorite = @IsFavorite WHERE Id = @Id";
             command.Parameters.AddWithValue("@Tags", tags);
@@ -917,8 +922,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void UpdateVideoUnmapFields(int videoId, string localFilePath, long fileSize, DateTime? downloadedAt, DownloadStatus status)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = @"
                 UPDATE Videos SET
@@ -954,8 +958,7 @@ namespace IwaraDownloader.Services
         {
             if (videoId <= 0 || string.IsNullOrWhiteSpace(localFilePath)) return false;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = @"
                 UPDATE Videos SET
@@ -991,8 +994,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void UpdateThumbnailStatus(int videoId, int status)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "UPDATE Videos SET ThumbnailStatus = @Status WHERE Id = @Id";
             command.Parameters.AddWithValue("@Status", status);
@@ -1005,8 +1007,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void UpdateThumbnailStatusByVideoId(string videoId, int status)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "UPDATE Videos SET ThumbnailStatus = @Status WHERE VideoId = @VideoId";
             command.Parameters.AddWithValue("@Status", status);
@@ -1019,8 +1020,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void SetVideoFavorite(int videoId, bool isFavorite)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "UPDATE Videos SET IsFavorite = @IsFavorite WHERE Id = @Id";
             command.Parameters.AddWithValue("@IsFavorite", isFavorite ? 1 : 0);
@@ -1036,8 +1036,7 @@ namespace IwaraDownloader.Services
             var idList = videoIds.Distinct().ToList();
             if (idList.Count == 0) return;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             using var transaction = connection.BeginTransaction();
             try
@@ -1077,8 +1076,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void BackfillExistingVideoMetadata(IEnumerable<(string VideoId, DateTime? PostedAt, string? ApiRawJson)> items)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             using var transaction = connection.BeginTransaction();
             try
@@ -1119,8 +1117,7 @@ namespace IwaraDownloader.Services
         {
             if (string.IsNullOrEmpty(fileUuid)) return null;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE FileUuid = @FileUuid LIMIT 1";
@@ -1139,8 +1136,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void DeleteVideo(int id)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "DELETE FROM Videos WHERE Id = @Id";
@@ -1154,8 +1150,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetAllVideos()
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
@@ -1175,8 +1170,7 @@ namespace IwaraDownloader.Services
         public VideoTreeCounts GetVideoTreeCounts()
         {
             var result = new VideoTreeCounts();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -1235,8 +1229,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public (int Downloading, int Pending, int Completed, long CompletedSize) GetDownloadCountSummary()
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -1268,8 +1261,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetVideosBySubscribedUser(int subscribedUserId)
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE SubscribedUserId = @SubscribedUserId ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
@@ -1289,8 +1281,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetNotDownloadedVideos()
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE Status != @Completed AND Status != @Skipped AND Status != @Failed ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
@@ -1312,8 +1303,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetFavoriteVideos()
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE IsFavorite = 1 ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
@@ -1332,8 +1322,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetVideosByStatus(DownloadStatus status)
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE Status = @Status ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
@@ -1353,8 +1342,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public int BulkUpdateStatus(DownloadStatus from, DownloadStatus to)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "UPDATE Videos SET Status = @to WHERE Status = @from";
             command.Parameters.AddWithValue("@to", (int)to);
@@ -1383,8 +1371,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public int BulkResetFailedToPending()
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "UPDATE Videos SET Status = @pending, RetryCount = 0, LastErrorMessage = NULL WHERE Status = @failed";
             command.Parameters.AddWithValue("@pending", (int)DownloadStatus.Pending);
@@ -1397,8 +1384,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public VideoInfo? GetVideoByVideoId(string videoId)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE VideoId = @VideoId";
@@ -1417,8 +1403,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public VideoInfo? GetVideoById(int id)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM Videos WHERE Id = @Id";
@@ -1440,8 +1425,7 @@ namespace IwaraDownloader.Services
         {
             if (string.IsNullOrWhiteSpace(localFilePath)) return null;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -1462,8 +1446,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public bool VideoExists(string videoId)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM Videos WHERE VideoId = @VideoId";
@@ -1478,8 +1461,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetRetryableVideos(int maxRetryCount)
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
@@ -1626,8 +1608,7 @@ namespace IwaraDownloader.Services
         /// <returns>追加された動画数</returns>
         public int AddVideosBatch(IEnumerable<VideoInfo> videos)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             using var transaction = connection.BeginTransaction();
             int addedCount = 0;
@@ -1727,8 +1708,7 @@ namespace IwaraDownloader.Services
         /// <returns>更新された動画数</returns>
         public int UpdateVideosBatch(IEnumerable<VideoInfo> videos)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             using var transaction = connection.BeginTransaction();
             int updatedCount = 0;
@@ -1842,6 +1822,42 @@ namespace IwaraDownloader.Services
         /// 複数のVideoIdの存在確認を一括で行う(高速化)
         /// </summary>
         /// <param name="videoIds">確認するVideoIdリスト</param>
+        /// <summary>
+        /// 指定した VideoId の行をまとめて取得する。
+        /// VideoId ごとに接続を開く GetVideoByVideoId のループを避けるためのバッチ版。
+        /// 旧DBに同一 VideoId の重複行がある場合は、GetVideoByVideoId と同じく Id の小さい行を代表とする。
+        /// </summary>
+        public Dictionary<string, VideoInfo> GetVideosByVideoIds(IEnumerable<string> videoIds)
+        {
+            var result = new Dictionary<string, VideoInfo>(StringComparer.Ordinal);
+            var videoIdList = videoIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
+            if (videoIdList.Count == 0) return result;
+
+            using var connection = OpenConnection();
+
+            const int batchSize = 500;
+            for (int i = 0; i < videoIdList.Count; i += batchSize)
+            {
+                var batch = videoIdList.Skip(i).Take(batchSize).ToList();
+                var placeholders = string.Join(",", batch.Select((_, idx) => $"@id{idx}"));
+
+                var command = connection.CreateCommand();
+                command.CommandText = $"SELECT * FROM Videos WHERE VideoId IN ({placeholders}) ORDER BY Id";
+                for (int j = 0; j < batch.Count; j++)
+                    command.Parameters.AddWithValue($"@id{j}", batch[j]);
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    var video = ReadVideo(reader);
+                    if (!string.IsNullOrEmpty(video.VideoId))
+                        result.TryAdd(video.VideoId, video);
+                }
+            }
+
+            return result;
+        }
+
         /// <returns>存在するVideoIdのHashSet</returns>
         public HashSet<string> GetExistingVideoIds(IEnumerable<string> videoIds)
         {
@@ -1851,8 +1867,7 @@ namespace IwaraDownloader.Services
             if (videoIdList.Count == 0)
                 return existingIds;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             // SQLiteはINクエリのパラメータ数に制限があるため、バッチで処理
             const int batchSize = 500;
@@ -1891,8 +1906,7 @@ namespace IwaraDownloader.Services
             if (idList.Count == 0)
                 return 0;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             using var transaction = connection.BeginTransaction();
             int deletedCount = 0;
@@ -1971,8 +1985,7 @@ namespace IwaraDownloader.Services
             var idList = ids.Distinct().ToList();
             if (idList.Count == 0) return 0;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var cols = GetSharedVideoColumnList(connection);
             var now = DateTime.Now.ToString("o");
 
@@ -2026,8 +2039,7 @@ namespace IwaraDownloader.Services
             var idList = videoIds.Distinct().ToList();
             if (idList.Count == 0) return 0;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var cols = GetSharedVideoColumnList(connection);
 
             using var transaction = connection.BeginTransaction();
@@ -2072,8 +2084,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public bool IsVideoExcluded(string videoId)
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM ExcludedVideos WHERE VideoId = @VideoId";
             command.Parameters.AddWithValue("@VideoId", videoId);
@@ -2086,8 +2097,7 @@ namespace IwaraDownloader.Services
         public List<VideoInfo> GetExcludedVideos()
         {
             var videos = new List<VideoInfo>();
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "SELECT * FROM ExcludedVideos ORDER BY ExcludedAt DESC";
             using var reader = command.ExecuteReader();
@@ -2101,8 +2111,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public int GetExcludedCount()
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM ExcludedVideos";
             return Convert.ToInt32(command.ExecuteScalar());
@@ -2117,8 +2126,7 @@ namespace IwaraDownloader.Services
             var idList = videoIds.Distinct().ToList();
             if (idList.Count == 0) return 0;
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             using var transaction = connection.BeginTransaction();
             int deleted = 0;
             try
@@ -2154,8 +2162,7 @@ namespace IwaraDownloader.Services
         /// </summary>
         public DownloadStatistics GetDownloadStatistics()
         {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
 
             var stats = new DownloadStatistics();
 
@@ -2190,7 +2197,33 @@ namespace IwaraDownloader.Services
             cmd.CommandText = "SELECT COUNT(*) FROM SubscribedUsers WHERE IsEnabled = 1";
             stats.EnabledChannelCount = Convert.ToInt32(cmd.ExecuteScalar());
 
+            // お気に入り数
+            cmd.CommandText = "SELECT COUNT(*) FROM Videos WHERE IsFavorite = 1";
+            stats.FavoriteCount = Convert.ToInt32(cmd.ExecuteScalar());
+
             return stats;
+        }
+
+        /// <summary>直近にダウンロードが完了した動画を取得する。</summary>
+        public List<VideoInfo> GetRecentCompletedVideos(int limit)
+        {
+            var videos = new List<VideoInfo>();
+            if (limit <= 0) return videos;
+
+            using var connection = OpenConnection();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT * FROM Videos
+                WHERE Status = @Status
+                ORDER BY DownloadedAt DESC
+                LIMIT @Limit";
+            command.Parameters.AddWithValue("@Status", (int)DownloadStatus.Completed);
+            command.Parameters.AddWithValue("@Limit", limit);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read()) videos.Add(ReadVideo(reader));
+            return videos;
         }
 
         #endregion
@@ -2252,8 +2285,7 @@ namespace IwaraDownloader.Services
             Directory.CreateDirectory(backupDir);
             var backupPath = Path.Combine(backupDir, $"data_backup_manual_{DateTime.Now:yyyyMMdd_HHmmss}.db");
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             using var cmd = connection.CreateCommand();
             cmd.CommandText = $"VACUUM INTO '{backupPath.Replace("'", "''")}'";
             cmd.ExecuteNonQuery();
@@ -2360,8 +2392,7 @@ namespace IwaraDownloader.Services
             if (primaryKeyValues.Count == 0)
                 throw new InvalidOperationException("主キーが無いテーブルはセル編集できません。");
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             using var cmd = connection.CreateCommand();
             var where = string.Join(" AND ", primaryKeyValues.Keys.Select((k, i) => $"\"{k.Replace("\"", "\"\"")}\" = @pk{i}"));
             cmd.CommandText = $"UPDATE \"{tableName.Replace("\"", "\"\"")}\" SET \"{columnName.Replace("\"", "\"\"")}\" = @value WHERE {where}";
@@ -2378,8 +2409,7 @@ namespace IwaraDownloader.Services
             if (primaryKeyValues.Count == 0)
                 throw new InvalidOperationException("主キーが無いテーブルは行削除できません。");
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+            using var connection = OpenConnection();
             using var cmd = connection.CreateCommand();
             var where = string.Join(" AND ", primaryKeyValues.Keys.Select((k, i) => $"\"{k.Replace("\"", "\"\"")}\" = @pk{i}"));
             cmd.CommandText = $"DELETE FROM \"{tableName.Replace("\"", "\"\"")}\" WHERE {where}";
@@ -2430,6 +2460,12 @@ namespace IwaraDownloader.Services
         
         /// <summary>有効なチャンネル数</summary>
         public int EnabledChannelCount { get; set; }
+
+        /// <summary>お気に入り数</summary>
+        public int FavoriteCount { get; set; }
+
+        /// <summary>スキップ数</summary>
+        public int SkippedCount => StatusCounts.GetValueOrDefault(DownloadStatus.Skipped, 0);
 
         /// <summary>完了数</summary>
         public int CompletedCount => StatusCounts.GetValueOrDefault(DownloadStatus.Completed, 0);

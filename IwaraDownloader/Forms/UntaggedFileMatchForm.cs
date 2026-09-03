@@ -420,7 +420,11 @@ namespace IwaraDownloader.Forms
                     else
                     {
                         // 既存行は最新のDB実体を使い、新規動画はAPIのId=0行をそのまま候補にする。
-                        videos = fetched.Select(v => _database.GetVideoByVideoId(v.VideoId) ?? v).ToList();
+                        // 1件ずつ接続を開くと動画数に比例して遅くなるため、まとめて引く。
+                        var existingByVideoId = _database.GetVideosByVideoIds(fetched.Select(v => v.VideoId));
+                        videos = fetched
+                            .Select(v => existingByVideoId.TryGetValue(v.VideoId ?? "", out var existing) ? existing : v)
+                            .ToList();
                         lblArtistResolved.Text = L.T("UntaggedFileMatchForm_D011", username, videos.Count);
                     }
                     btnRefetchArtist.Visible = subUser != null;

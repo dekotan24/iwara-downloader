@@ -608,24 +608,7 @@ namespace IwaraDownloader.Forms
                         apiSkipped++;
 
                         // 重複videoIdの他のScannedにも伝播
-                        foreach (var s in scannedByVideoId[item.VideoId])
-                        {
-                            if (ReferenceEquals(s, item)) continue;
-                            s.Title = item.Title;
-                            s.Url = item.Url;
-                            s.ThumbnailUrl = item.ThumbnailUrl;
-                            s.DurationSeconds = item.DurationSeconds;
-                            s.PostedAt = item.PostedAt;
-                            s.Rating = item.Rating;
-                            s.EmbedUrl = item.EmbedUrl;
-                            s.ApiRawJson = item.ApiRawJson;
-                            s.AuthorUsername = item.AuthorUsername;
-                            s.AuthorName = item.AuthorName;
-                            s.FileUuid = string.IsNullOrEmpty(s.FileUuid) ? item.FileUuid : s.FileUuid;
-                            s.Site = item.Site;
-                            s.ApiOk = item.ApiOk;
-                            s.ApiError = item.ApiError;
-                        }
+                        PropagateToDuplicates(item, scannedByVideoId[item.VideoId]);
                         // API 叩いてないので apiDelayMs もスキップ
                         continue;
                     }
@@ -677,24 +660,7 @@ namespace IwaraDownloader.Forms
                     }
 
                     // 重複videoIdの他のScannedにもAPI結果を伝播
-                    foreach (var s in scannedByVideoId[item.VideoId])
-                    {
-                        if (ReferenceEquals(s, item)) continue;
-                        s.Title = item.Title;
-                        s.Url = item.Url;
-                        s.ThumbnailUrl = item.ThumbnailUrl;
-                        s.DurationSeconds = item.DurationSeconds;
-                        s.PostedAt = item.PostedAt;
-                        s.Rating = item.Rating;
-                        s.EmbedUrl = item.EmbedUrl;
-                        s.ApiRawJson = item.ApiRawJson;
-                        s.AuthorUsername = item.AuthorUsername;
-                        s.AuthorName = item.AuthorName;
-                        s.FileUuid = string.IsNullOrEmpty(s.FileUuid) ? item.FileUuid : s.FileUuid;
-                        s.Site = item.Site;
-                        s.ApiOk = item.ApiOk;
-                        s.ApiError = item.ApiError;
-                    }
+                    PropagateToDuplicates(item, scannedByVideoId[item.VideoId]);
 
                     if (apiDelayMs > 0) await Task.Delay(apiDelayMs, ct);
                 }
@@ -1379,6 +1345,33 @@ namespace IwaraDownloader.Forms
 
             summaryStopwatch.Stop();
             TraceImport($"SUMMARY_END elapsedMs={summaryStopwatch.ElapsedMilliseconds}");
+        }
+
+        /// <summary>
+        /// 同じ videoId を持つ他の走査結果へ、解決済みのメタデータをコピーする。
+        /// API は videoId ごとに1回しか叩かないため、代表以外はこの伝播でしか値を得られない。
+        /// FileUuid だけはファイルのタグから読めている場合があるので、既存値を優先する。
+        /// </summary>
+        private static void PropagateToDuplicates(ScannedVideo item, IEnumerable<ScannedVideo> group)
+        {
+            foreach (var s in group)
+            {
+                if (ReferenceEquals(s, item)) continue;
+                s.Title = item.Title;
+                s.Url = item.Url;
+                s.ThumbnailUrl = item.ThumbnailUrl;
+                s.DurationSeconds = item.DurationSeconds;
+                s.PostedAt = item.PostedAt;
+                s.Rating = item.Rating;
+                s.EmbedUrl = item.EmbedUrl;
+                s.ApiRawJson = item.ApiRawJson;
+                s.AuthorUsername = item.AuthorUsername;
+                s.AuthorName = item.AuthorName;
+                s.FileUuid = string.IsNullOrEmpty(s.FileUuid) ? item.FileUuid : s.FileUuid;
+                s.Site = item.Site;
+                s.ApiOk = item.ApiOk;
+                s.ApiError = item.ApiError;
+            }
         }
 
         private void BeginImportTrace()
