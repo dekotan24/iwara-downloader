@@ -114,12 +114,34 @@ namespace IwaraDownloader.Forms
         private readonly List<(string Title, string VideoId, string Error)> _dbFailedItems = new();
         private string? _lastErrorLogPath;
 
+        // 大量取り込み時の停止箇所をアプリ全体ログで追跡するための実行単位。
+        // 1ファイルごとのInfoログは性能とログサイズに影響するため出力しない。
+        private string? _importTraceId;
+        private Stopwatch? _importTraceStopwatch;
+
+        // 進捗表示は最新値だけをUIタイマーで反映する。1ファイルごとのBeginInvokeは、
+        // 4万件規模だとUIキューを埋め尽くして完了処理を遅延させるため行わない。
+        private readonly object _importProgressLock = new();
+        private System.Windows.Forms.Timer? _importProgressTimer;
+        private bool _hasPendingImportProgress;
+        private string _pendingImportStatus = "";
+        private int _pendingImportProcessed;
+        private int _pendingImportTotal;
+
         public ImportFromFolderWizard(DownloadManager downloadManager)
         {
             InitializeComponent();
             Utils.Localizer.Apply(this);
             _downloadManager = downloadManager;
             _database = DatabaseService.Instance;
+            _importProgressTimer = new System.Windows.Forms.Timer { Interval = 200 };
+            _importProgressTimer.Tick += (_, _) => FlushPendingImportProgress();
+            FormClosed += (_, _) =>
+            {
+                _importProgressTimer?.Stop();
+                _importProgressTimer?.Dispose();
+                _importProgressTimer = null;
+            };
             UpdateStepUi();
         }
 
@@ -371,77 +393,146 @@ namespace IwaraDownloader.Forms
                 progressScan.Style = ProgressBarStyle.Marquee;
                 lblScanStatus.Text = L.T("ImportFromFolderWizard_D017");
 
-                var taggedItems = await Task.Run(() =>
+                var scanResult = await Task.Run(() =>
                 {
-                    var list = new List<ScannedVideo>();
-                    int processed = 0;
-                    var files = Directory.EnumerateFiles(folder, "*.*", searchOpt)
-                        .Where(p =>
-                        {
-                            var ext = Path.GetExtension(p).ToLowerInvariant();
-                            return ext == ".mp4";
-                        })
-                        .ToList();
-
+                    // 拡張子の判定をLINQで全ファイルに対して行わず、列挙段階でmp4だけに絞る。
+                    var files = Directory.EnumerateFiles(folder, "*.mp4", searchOpt).ToList();
                     ReportScan(L.T("ImportFromFolderWizard_ScanTarget", files.Count), null, files.Count);
 
-                    foreach (var f in files)
+                    var scanResults = new (string VideoId, string FileUuid)[files.Count];
+                    var cacheEntries = new ImportScanCacheService.Entry[files.Count];
+                    var cache = ImportScanCacheService.Load(folder);
+                    int processed = 0;
+
+                    // TagLib#はファイル単位で完結するため、同時実行数を抑えて読み取りだけ並列化する。
+                    // 無制限並列はHDDやネットワークドライブで逆に遅くなり、ファイルハンドルも圧迫する。
+                    Parallel.For(
+                        0,
+                        files.Count,
+                        new ParallelOptions
+                        {
+                            CancellationToken = ct,
+                            MaxDegreeOfParallelism = 4,
+                        },
+                        i =>
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            var filePath = files[i];
+                            string videoId = "";
+                            string fileUuid = "";
+                            long fileSize = 0;
+                            long mtimeTicks = 0;
+                            bool stampRead = false;
+
+                            try
+                            {
+                                var info = new FileInfo(filePath);
+                                fileSize = info.Length;
+                                mtimeTicks = info.LastWriteTimeUtc.Ticks;
+                                stampRead = true;
+                            }
+                            catch
+                            {
+                                // ReadIwaraTags側で従来通り再判定する。stampが取れないファイルはキャッシュしない。
+                            }
+
+                            if (!stampRead
+                                || !ImportScanCacheService.TryGet(
+                                    cache, folder, filePath, fileSize, mtimeTicks,
+                                    out videoId, out fileUuid))
+                            {
+                                (videoId, fileUuid) = MetadataService.ReadIwaraTags(filePath);
+                            }
+
+                            scanResults[i] = (videoId ?? "", fileUuid ?? "");
+                            // 空の結果は「本当にタグ無し」と「一時的な読み取り失敗」を
+                            // 区別できないため、次回再試行できるよう保存しない。
+                            if (stampRead && !string.IsNullOrEmpty(videoId))
+                            {
+                                cacheEntries[i] = ImportScanCacheService.CreateEntry(
+                                    fileSize, mtimeTicks, videoId, fileUuid);
+                            }
+
+                            var done = System.Threading.Interlocked.Increment(ref processed);
+                            if (done % 20 == 0 || done == files.Count)
+                            {
+                                ReportScan(
+                                    L.T("ImportFromFolderWizard_TagReading", done, files.Count),
+                                    null, files.Count);
+                            }
+                        });
+
+                    var taggedItems = new List<ScannedVideo>();
+                    var untaggedFiles = new List<string>();
+                    var cacheToSave = new Dictionary<string, ImportScanCacheService.Entry>(
+                        StringComparer.OrdinalIgnoreCase);
+
+                    // 結果は元の列挙順に組み立て、従来の表示・重複判定の順序を変えない。
+                    for (int i = 0; i < files.Count; i++)
                     {
-                        ct.ThrowIfCancellationRequested();
-                        var (videoId, fileUuid) = MetadataService.ReadIwaraTags(f);
+                        var filePath = files[i];
+                        var (videoId, fileUuid) = scanResults[i];
                         if (string.IsNullOrEmpty(videoId))
                         {
-                            System.Threading.Interlocked.Increment(ref _untaggedCount);
-                            lock (_untaggedFiles) _untaggedFiles.Add(f);
+                            untaggedFiles.Add(filePath);
                         }
                         else
                         {
-                            list.Add(new ScannedVideo
+                            taggedItems.Add(new ScannedVideo
                             {
-                                FilePath = f,
+                                FilePath = filePath,
                                 VideoId = videoId,
-                                FileUuid = fileUuid ?? "",
+                                FileUuid = fileUuid,
                             });
                         }
-                        processed++;
-                        if (processed % 20 == 0 || processed == files.Count)
-                            ReportScan(L.T("ImportFromFolderWizard_TagReading", processed, files.Count), null, files.Count);
+
+                        if (cacheEntries[i] != null)
+                        {
+                            cacheToSave[ImportScanCacheService.GetRelativeKey(folder, filePath)] = cacheEntries[i];
+                        }
                     }
-                    return list;
+
+                    // キャンセル中はここまで到達しないため、不完全なキャッシュは保存しない。
+                    ImportScanCacheService.Save(folder, cacheToSave);
+                    return (TaggedItems: taggedItems, UntaggedFiles: untaggedFiles);
                 }, ct);
 
-                _scanned.AddRange(taggedItems);
+                _scanned.AddRange(scanResult.TaggedItems);
+                _untaggedFiles.AddRange(scanResult.UntaggedFiles);
+                _untaggedCount = _untaggedFiles.Count;
 
                 ReportScan(L.T("ImportFromFolderWizard_TaggedUntaggedCount", _scanned.Count, _untaggedCount), null, _scanned.Count);
 
-                // Phase A2: タグ無しファイルの照合方法をユーザーに選ばせる
+                // Phase A2: タグ無しファイルを一覧表示し、ファイル/フォルダ単位で照合方法を割り当てる。
                 // (アーティストフォルダ選択検索 / ファイル名による検索(最終手段) / スキップ)。
-                // ファイル名だけを頼りにした全体検索は誤マッチの温床になるため、既定の自動実行はしない。
+                // ファイル名だけを頼りにした全体検索は誤マッチの温床になるため、ユーザーが明示的に割り当てる。
                 if (_untaggedFiles.Count > 0)
                 {
                     var scanRoot = txtFolder.Text.Trim();
-                    FilenameMatchResult? raw;
-                    Models.SubscribedUser? resolvedSubUser;
+                    IReadOnlyList<UntaggedFileMatchForm.UntaggedMatchPlan>? matchPlans;
                     using (var matchForm = new UntaggedFileMatchForm(_untaggedFiles.ToList(), _database, _downloadManager, scanRoot))
                     {
                         var dr = matchForm.ShowDialog(this);
-                        raw = dr == DialogResult.OK ? matchForm.Result : null;
-                        resolvedSubUser = matchForm.ResolvedSubUser;
+                        matchPlans = dr == DialogResult.OK ? matchForm.Plans : null;
                     }
 
-                    if (raw != null)
+                    if (matchPlans != null)
                     {
-                        var displayItems = await Task.Run(() => BuildTitleMatchDisplayItems(raw.Matches, resolvedSubUser, ct), ct);
+                        foreach (var plan in matchPlans)
+                        {
+                            var displayItems = await Task.Run(
+                                () => BuildTitleMatchDisplayItems(plan.Result.Matches, plan.ResolvedSubUser, ct), ct);
 
-                        // マッチ / 重複判明したファイルは「タグ無しスキップ」から除外する
-                        // (拾えたのに失敗扱いのままだと後のエラーログで混乱するため)
-                        var resolvedFiles = displayItems.Select(m => m.Candidate.FilePath)
-                            .Concat(raw.AlreadyOwnedFiles)
-                            .ToHashSet();
-                        _untaggedFiles.RemoveAll(f => resolvedFiles.Contains(f));
+                            // マッチ / 重複判明したファイルは「タグ無しスキップ」から除外する
+                            // (拾えたのに失敗扱いのままだと後のエラーログで混乱するため)
+                            var resolvedFiles = displayItems.Select(m => m.Candidate.FilePath)
+                                .Concat(plan.Result.AlreadyOwnedFiles)
+                                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                            _untaggedFiles.RemoveAll(f => resolvedFiles.Contains(f));
+                            _titleMatches.AddRange(displayItems);
+                            _alreadyOwnedFiles.AddRange(plan.Result.AlreadyOwnedFiles);
+                        }
                         _untaggedCount = _untaggedFiles.Count;
-                        _titleMatches.AddRange(displayItems);
-                        _alreadyOwnedFiles.AddRange(raw.AlreadyOwnedFiles);
 
                         ReportScan(
                             L.T("ImportFromFolderWizard_TitleMatchSummary",
@@ -452,11 +543,27 @@ namespace IwaraDownloader.Forms
                     // スキップ/キャンセルなら _untaggedFiles はそのまま (従来通りエラーログに記録される)
                 }
 
-                // Phase B: 重複videoIdの集約 (同じvideoIdが複数あれば1つだけAPI叩く)
-                var uniqueVideoIds = _scanned
+                // Phase B: 重複videoIdの集約 (同じvideoIdが複数あれば1つだけAPI叩く)。
+                // グループも保持しておき、API結果の伝播で全件走査(O(動画数×ユニークID数))に
+                // ならないようにする。
+                var scannedGroups = _scanned
                     .GroupBy(s => s.VideoId)
-                    .Select(g => g.First())
                     .ToList();
+                var uniqueVideoIds = scannedGroups.Select(g => g.First()).ToList();
+                var scannedByVideoId = scannedGroups.ToDictionary(
+                    g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+
+                // APIスキップ判定用のDB参照を動画IDごとの接続開閉から1回の読み取りにまとめる。
+                // 参照時点のスナップショットは従来のループ開始時と同じで、APIの判定条件は変えない。
+                var existingVideosById = uniqueVideoIds.Count == 0
+                    ? new Dictionary<string, VideoInfo>(StringComparer.Ordinal)
+                    : await Task.Run(() => _database.GetAllVideos()
+                        .Where(v => !string.IsNullOrEmpty(v.VideoId))
+                        // GetVideoByVideoId() に ORDER BY は無く、旧DBに重複行がある場合は
+                        // 通常最初に作られた行(Idの小さい行)が代表になるため、その順序を維持する。
+                        .OrderBy(v => v.Id)
+                        .GroupBy(v => v.VideoId, StringComparer.Ordinal)
+                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal), ct);
 
                 // Phase C: iwara API で逆引き
                 progressScan.Style = ProgressBarStyle.Continuous;
@@ -478,10 +585,19 @@ namespace IwaraDownloader.Forms
                     // 差分インポート: DB に既に video が存在し、author 情報も埋まってる場合は
                     // API スキップ。中断後の再実行・連続インポートで API 連打を防ぐ。
                     // (API レート制限警告対策にもなる)
-                    var existingVideoForApi = _database.GetVideoByVideoId(item.VideoId);
+                    existingVideosById.TryGetValue(item.VideoId, out var existingVideoForApi);
                     if (existingVideoForApi != null && !string.IsNullOrEmpty(existingVideoForApi.AuthorUsername))
                     {
-                        item.Title = existingVideoForApi.Title ?? "";
+                        item.Title = string.IsNullOrEmpty(existingVideoForApi.Title)
+                            ? item.VideoId : existingVideoForApi.Title;
+                        item.Url = existingVideoForApi.Url;
+                        item.Site = existingVideoForApi.Site;
+                        item.ThumbnailUrl = existingVideoForApi.ThumbnailUrl;
+                        item.DurationSeconds = existingVideoForApi.DurationSeconds;
+                        item.PostedAt = existingVideoForApi.PostedAt;
+                        item.Rating = existingVideoForApi.Rating;
+                        item.EmbedUrl = existingVideoForApi.EmbedUrl;
+                        item.ApiRawJson = existingVideoForApi.ApiRawJson;
                         item.AuthorUsername = existingVideoForApi.AuthorUsername;
                         // AuthorName は API 専用の表示名なので、DB に保存されてない。
                         // 代用として AuthorUsername をそのまま使う。
@@ -492,12 +608,21 @@ namespace IwaraDownloader.Forms
                         apiSkipped++;
 
                         // 重複videoIdの他のScannedにも伝播
-                        foreach (var s in _scanned.Where(s => s.VideoId == item.VideoId && s != item))
+                        foreach (var s in scannedByVideoId[item.VideoId])
                         {
+                            if (ReferenceEquals(s, item)) continue;
                             s.Title = item.Title;
+                            s.Url = item.Url;
+                            s.ThumbnailUrl = item.ThumbnailUrl;
+                            s.DurationSeconds = item.DurationSeconds;
+                            s.PostedAt = item.PostedAt;
+                            s.Rating = item.Rating;
+                            s.EmbedUrl = item.EmbedUrl;
+                            s.ApiRawJson = item.ApiRawJson;
                             s.AuthorUsername = item.AuthorUsername;
                             s.AuthorName = item.AuthorName;
                             s.FileUuid = string.IsNullOrEmpty(s.FileUuid) ? item.FileUuid : s.FileUuid;
+                            s.Site = item.Site;
                             s.ApiOk = item.ApiOk;
                             s.ApiError = item.ApiError;
                         }
@@ -508,16 +633,29 @@ namespace IwaraDownloader.Forms
                     try
                     {
                         // site 未指定で叩く → IwaraApiService 内で iwara.ai に自動フォールバックする
-                        var info = await _downloadManager.IwaraApi.GetDownloadUrlAsync(item.VideoId);
+                        // ファイルタグにUUIDがある場合、取り込みに必要なのは動画メタデータだけ。
+                        // filesq/CDN問い合わせを含むダウンロードURL取得を避ける。
+                        var info = string.IsNullOrEmpty(item.FileUuid)
+                            ? await _downloadManager.IwaraApi.GetDownloadUrlAsync(item.VideoId)
+                            : await _downloadManager.IwaraApi.GetVideoInfoAsync(item.VideoId);
                         if (info.Success)
                         {
-                            item.Title = info.Title ?? "";
+                            item.Title = string.IsNullOrEmpty(info.Title) ? item.VideoId : info.Title;
+                            item.ThumbnailUrl = info.ThumbnailUrl ?? "";
+                            item.DurationSeconds = info.DurationSeconds;
+                            item.PostedAt = info.PostedAt;
+                            item.Rating = info.Rating ?? "";
+                            item.EmbedUrl = info.EmbedUrl ?? "";
+                            item.ApiRawJson = info.ApiRawJson ?? "";
                             item.AuthorUsername = info.AuthorUsername ?? "";
                             item.AuthorName = info.AuthorName ?? "";
                             if (!string.IsNullOrEmpty(info.FileUuid))
                                 item.FileUuid = info.FileUuid;
                             if (!string.IsNullOrEmpty(info.ResolvedSite))
                                 item.Site = info.ResolvedSite;
+                            // get_url の Url は期限付きのDL URLなのでDBには保存せず、
+                            // 常に現在のサイトに対する動画ページURLを保存する。
+                            item.Url = $"https://{(string.IsNullOrEmpty(item.Site) ? Helpers.SiteTv : item.Site)}/video/{item.VideoId}";
                             item.ApiOk = true;
                         }
                         else
@@ -539,12 +677,21 @@ namespace IwaraDownloader.Forms
                     }
 
                     // 重複videoIdの他のScannedにもAPI結果を伝播
-                    foreach (var s in _scanned.Where(s => s.VideoId == item.VideoId && s != item))
+                    foreach (var s in scannedByVideoId[item.VideoId])
                     {
+                        if (ReferenceEquals(s, item)) continue;
                         s.Title = item.Title;
+                        s.Url = item.Url;
+                        s.ThumbnailUrl = item.ThumbnailUrl;
+                        s.DurationSeconds = item.DurationSeconds;
+                        s.PostedAt = item.PostedAt;
+                        s.Rating = item.Rating;
+                        s.EmbedUrl = item.EmbedUrl;
+                        s.ApiRawJson = item.ApiRawJson;
                         s.AuthorUsername = item.AuthorUsername;
                         s.AuthorName = item.AuthorName;
                         s.FileUuid = string.IsNullOrEmpty(s.FileUuid) ? item.FileUuid : s.FileUuid;
+                        s.Site = item.Site;
                         s.ApiOk = item.ApiOk;
                         s.ApiError = item.ApiError;
                     }
@@ -725,6 +872,20 @@ namespace IwaraDownloader.Forms
             progressImport.Value = 0;
             lblImportStatus.Text = L.T("ImportFromFolderWizard_D001");
 
+            lock (_importProgressLock)
+            {
+                _hasPendingImportProgress = false;
+                _pendingImportStatus = "";
+                _pendingImportProcessed = 0;
+                _pendingImportTotal = 0;
+            }
+            _importProgressTimer?.Stop();
+            _importProgressTimer?.Start();
+
+            BeginImportTrace();
+            TraceImport($"START folder=\"{txtFolder.Text}\" scanned={_scanned.Count} " +
+                $"titleMatches={_titleMatches.Count} untagged={_untaggedFiles.Count}");
+
             // チェックされた作者ユーザー名を取得
             var authorEntries = clbAuthors.Tag as List<AuthorEntry> ?? new List<AuthorEntry>();
             var selectedUsernames = new HashSet<string>();
@@ -747,15 +908,31 @@ namespace IwaraDownloader.Forms
                         .GroupBy(u => (u.Username ?? "").ToLowerInvariant())
                         .ToDictionary(g => g.Key, g => g.First());
 
-                    int total = _scanned.Count(s => s.ApiOk);
-                    int processed = 0;
-                    progressImport.Maximum = Math.Max(1, total);
+                    var importVideos = _scanned.Where(s => s.ApiOk).ToList();
+                    // 同じvideoIdが複数ある場合は、従来の逐次処理で「1件目を登録し、
+                    // 2件目以降を既存実体としてスキップする」挙動を維持する。
+                    // 一意な取り込みだけをバッチ化し、重複の意味を変えない。
+                    bool canBatchNewVideos = !importVideos
+                        .GroupBy(s => s.VideoId, StringComparer.Ordinal)
+                        .Any(g => g.Count() > 1);
+                    var pendingNewVideos = new List<VideoInfo>();
 
-                    foreach (var sv in _scanned.Where(s => s.ApiOk))
+                    int total = importVideos.Count;
+                    int processed = 0;
+                    var dbImportStopwatch = Stopwatch.StartNew();
+                    TraceImport($"DB_IMPORT_BEGIN total={total} apiOk={importVideos.Count} " +
+                        $"canBatchNew={canBatchNewVideos}");
+
+                    foreach (var sv in importVideos)
                     {
                         ct.ThrowIfCancellationRequested();
                         processed++;
                         ReportImport($"({processed}/{total}) {sv.Title}", processed, total);
+                        if (processed == 1 || processed % 1000 == 0 || processed == total)
+                        {
+                            TraceImport($"DB_IMPORT_PROGRESS itemStart={processed}/{total} " +
+                                $"new={_importedNew} merged={_mergedCount} skipped={_skippedExistingCount} failed={_failedCount}");
+                        }
 
                         try
                         {
@@ -787,7 +964,8 @@ namespace IwaraDownloader.Forms
                                     {
                                         Username = sv.AuthorUsername!,
                                         UserId = sv.AuthorUsername!,
-                                        ProfileUrl = $"https://www.iwara.tv/profile/{sv.AuthorUsername}/videos",
+                                        ProfileUrl = $"https://{(string.IsNullOrEmpty(sv.Site) ? Helpers.SiteTv : sv.Site)}/profile/{sv.AuthorUsername}/videos",
+                                        Site = sv.Site,
                                         IsEnabled = true,
                                         CreatedAt = DateTime.Now,
                                         LastCheckedAt = DateTime.Now,
@@ -828,6 +1006,20 @@ namespace IwaraDownloader.Forms
                                     try { existingVideo.FileSize = new FileInfo(sv.FilePath).Length; } catch { }
                                     if (string.IsNullOrEmpty(existingVideo.FileUuid) && !string.IsNullOrEmpty(sv.FileUuid))
                                         existingVideo.FileUuid = sv.FileUuid;
+                                    if (string.IsNullOrEmpty(existingVideo.Url))
+                                        existingVideo.Url = sv.Url;
+                                    if (string.IsNullOrEmpty(existingVideo.ThumbnailUrl))
+                                        existingVideo.ThumbnailUrl = sv.ThumbnailUrl;
+                                    if (existingVideo.DurationSeconds <= 0)
+                                        existingVideo.DurationSeconds = sv.DurationSeconds;
+                                    if (!existingVideo.PostedAt.HasValue)
+                                        existingVideo.PostedAt = sv.PostedAt;
+                                    if (string.IsNullOrEmpty(existingVideo.Rating))
+                                        existingVideo.Rating = sv.Rating;
+                                    if (string.IsNullOrEmpty(existingVideo.EmbedUrl))
+                                        existingVideo.EmbedUrl = sv.EmbedUrl;
+                                    if (string.IsNullOrEmpty(existingVideo.ApiRawJson))
+                                        existingVideo.ApiRawJson = sv.ApiRawJson;
                                     // 既存 video の author 情報が欠けてる場合は今回解決した分で補完
                                     if (string.IsNullOrEmpty(existingVideo.AuthorUsername) && !string.IsNullOrEmpty(sv.AuthorUsername))
                                         existingVideo.AuthorUsername = sv.AuthorUsername;
@@ -856,21 +1048,34 @@ namespace IwaraDownloader.Forms
                             {
                                 VideoId = sv.VideoId,
                                 Title = sv.Title,
+                                Url = sv.Url,
+                                ThumbnailUrl = sv.ThumbnailUrl,
                                 AuthorUserId = sv.AuthorUsername ?? "",   // UserId = username 運用
                                 AuthorUsername = sv.AuthorUsername ?? "",
+                                DurationSeconds = sv.DurationSeconds,
+                                PostedAt = sv.PostedAt,
                                 FileUuid = sv.FileUuid,
+                                EmbedUrl = sv.EmbedUrl,
+                                Rating = sv.Rating,
                                 Site = sv.Site,
+                                ApiRawJson = sv.ApiRawJson,
                                 LocalFilePath = sv.FilePath,
                                 Status = DownloadStatus.Completed,
                                 SubscribedUserId = subUser?.Id,
                                 DownloadedAt = DateTime.Now,
                                 CreatedAt = DateTime.Now,
-                                PostedAt = null,
                             };
                             try { v.FileSize = new FileInfo(sv.FilePath).Length; } catch { }
-                            _database.AddVideo(v);
-                            _importedNew++;
-                            AppendImportLog(L.T("ImportFromFolderWizard_Imported", sv.Title));
+                            if (canBatchNewVideos)
+                            {
+                                pendingNewVideos.Add(v);
+                            }
+                            else
+                            {
+                                _database.AddVideo(v);
+                                _importedNew++;
+                                AppendImportLog(L.T("ImportFromFolderWizard_Imported", sv.Title));
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -880,34 +1085,132 @@ namespace IwaraDownloader.Forms
                             LoggingService.Instance.Warn($"Import 失敗 ({sv.VideoId}): {ex.Message}");
                         }
                     }
+
+                    if (pendingNewVideos.Count > 0)
+                    {
+                        var batchStopwatch = Stopwatch.StartNew();
+                        TraceImport($"DB_BATCH_BEGIN count={pendingNewVideos.Count}");
+                        try
+                        {
+                            var addedCount = _database.AddVideosBatch(pendingNewVideos);
+                            batchStopwatch.Stop();
+                            TraceImport($"DB_BATCH_END elapsedMs={batchStopwatch.ElapsedMilliseconds} " +
+                                $"requested={pendingNewVideos.Count} added={addedCount}");
+                            if (addedCount == pendingNewVideos.Count)
+                            {
+                                _importedNew += addedCount;
+                                foreach (var video in pendingNewVideos)
+                                    AppendImportLog(L.T("ImportFromFolderWizard_Imported", video.Title));
+                            }
+                            else
+                            {
+                                // 外部経路が同じvideoIdを先に追加した等の競合時だけ、状態を再確認する。
+                                // 通常経路では一意性チェックによりここには来ない。
+                                var presentIds = _database.GetAllVideos()
+                                    .Select(v => v.VideoId)
+                                    .ToHashSet(StringComparer.Ordinal);
+                                foreach (var video in pendingNewVideos)
+                                {
+                                    if (presentIds.Contains(video.VideoId))
+                                    {
+                                        _skippedExistingCount++;
+                                        AppendImportLog(L.T("ImportFromFolderWizard_SkippedExisting", video.Title));
+                                        continue;
+                                    }
+
+                                    try
+                                    {
+                                        _database.AddVideo(video);
+                                        _importedNew++;
+                                        AppendImportLog(L.T("ImportFromFolderWizard_Imported", video.Title));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _failedCount++;
+                                        _dbFailedItems.Add((video.Title, video.VideoId, ex.Message));
+                                        AppendImportLog(L.T("ImportFromFolderWizard_FailedLog", video.Title, ex.Message));
+                                        LoggingService.Instance.Warn($"Import 失敗 ({video.VideoId}): {ex.Message}");
+                                    }
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            batchStopwatch.Stop();
+                            TraceImport($"DB_BATCH_FAILED elapsedMs={batchStopwatch.ElapsedMilliseconds} " +
+                                $"count={pendingNewVideos.Count}; fallback=perItem");
+                            // バッチ全体が失敗した場合はトランザクションがロールバックされるため、
+                            // 1件ずつの旧経路へ戻して、従来通り他の動画の取り込みを継続する。
+                            foreach (var video in pendingNewVideos)
+                            {
+                                try
+                                {
+                                    _database.AddVideo(video);
+                                    _importedNew++;
+                                    AppendImportLog(L.T("ImportFromFolderWizard_Imported", video.Title));
+                                }
+                                catch (Exception ex)
+                                {
+                                    _failedCount++;
+                                    _dbFailedItems.Add((video.Title, video.VideoId, ex.Message));
+                                    AppendImportLog(L.T("ImportFromFolderWizard_FailedLog", video.Title, ex.Message));
+                                    LoggingService.Instance.Warn($"Import 失敗 ({video.VideoId}): {ex.Message}");
+                                }
+                            }
+                        }
+                    }
+
+                    dbImportStopwatch.Stop();
+                    TraceImport($"DB_IMPORT_END elapsedMs={dbImportStopwatch.ElapsedMilliseconds} " +
+                        $"new={_importedNew} merged={_mergedCount} skipped={_skippedExistingCount} " +
+                        $"failed={_failedCount} pendingNew={pendingNewVideos.Count}");
                 }, ct);
 
+                // UIキューにまだ反映されていない最後の進捗を、完了後処理の前に反映する。
+                FlushPendingImportProgress();
+                TraceImport("DB_IMPORT_WORKER_COMPLETED");
                 await ImportCheckedTitleMatchesAsync(ct);
 
+                FlushPendingImportProgress();
+                TraceImport("SUMMARY_CALL_BEGIN");
                 ShowSummary();
+                TraceImport("SUMMARY_CALL_END");
                 _step = 5;
             }
             catch (OperationCanceledException)
             {
+                TraceImport("CANCELED");
                 AppendImportLog(L.T("ImportFromFolderWizard_ImportCancelled"));
                 ShowSummary();
                 _step = 5;
             }
             catch (Exception ex)
             {
+                TraceImport($"FAILED exception={ex.GetType().Name}: {ex.Message}");
                 AppendImportLog(L.T("ImportFromFolderWizard_ErrorLog", ex.Message));
                 MessageBox.Show(this, L.T("ImportFromFolderWizard_D021", ex.Message),
                     L.T("ImportFromFolderWizard_D020"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
+                _importProgressTimer?.Stop();
+                FlushPendingImportProgress();
+
                 // バッファに残ってる最後のログを必ず吐き出す
+                var finalizeStopwatch = Stopwatch.StartNew();
+                TraceImport("FINALIZE_BEGIN logFlush");
                 _lastImportLogFlush = DateTime.MinValue;
                 FlushImportLog();
+                finalizeStopwatch.Stop();
+                TraceImport($"FINALIZE_LOG_FLUSH_END elapsedMs={finalizeStopwatch.ElapsedMilliseconds}");
                 _busy = false;
                 _cts?.Dispose();
                 _cts = null;
                 UpdateStepUi();
+                TraceImport($"END totalMs={_importTraceStopwatch?.ElapsedMilliseconds ?? 0} " +
+                    $"step={_step} new={_importedNew} merged={_mergedCount} " +
+                    $"skipped={_skippedExistingCount} failed={_failedCount} titleMatch={_titleMatchImported}");
+                EndImportTrace();
             }
         }
 
@@ -918,6 +1221,7 @@ namespace IwaraDownloader.Forms
         /// </summary>
         private async Task ImportCheckedTitleMatchesAsync(CancellationToken ct)
         {
+            var titleMatchStopwatch = Stopwatch.StartNew();
             var checkedItems = new List<TitleMatchDisplayItem>();
             foreach (DataGridViewRow row in dgvTitleMatches.Rows)
             {
@@ -925,7 +1229,13 @@ namespace IwaraDownloader.Forms
                     && row.Cells[colTMChecked.Index].Value is bool isChecked && isChecked)
                     checkedItems.Add(item);
             }
-            if (checkedItems.Count == 0) return;
+            TraceImport($"TITLE_MATCH_BEGIN checked={checkedItems.Count} totalCandidates={_titleMatches.Count}");
+            if (checkedItems.Count == 0)
+            {
+                titleMatchStopwatch.Stop();
+                TraceImport($"TITLE_MATCH_END elapsedMs={titleMatchStopwatch.ElapsedMilliseconds} imported=0");
+                return;
+            }
 
             var apiDelayMs = SettingsManager.Instance.Settings.ApiRequestDelayMs;
             int processed = 0;
@@ -993,6 +1303,11 @@ namespace IwaraDownloader.Forms
                     LoggingService.Instance.Warn($"TitleMatch Import 失敗 ({chosen.VideoId}): {ex.Message}");
                 }
             }
+
+            titleMatchStopwatch.Stop();
+            TraceImport($"TITLE_MATCH_END elapsedMs={titleMatchStopwatch.ElapsedMilliseconds} " +
+                $"checked={checkedItems.Count} imported={_titleMatchImported} apiFailed={_titleMatchApiFailed} " +
+                $"failed={_failedCount}");
         }
 
         private void ShowSummary()
@@ -1000,12 +1315,19 @@ namespace IwaraDownloader.Forms
             if (IsDisposed) return;
             if (InvokeRequired) { try { BeginInvoke((Action)ShowSummary); } catch { } return; }
 
+            var summaryStopwatch = Stopwatch.StartNew();
+            TraceImport("SUMMARY_BEGIN");
+
             var apiFailed = _scanned.Count(s => !s.ApiOk);
 
             // エラー詳細を永続ログファイルに書き出す
             // (UI 上の txtImportLog はウィザード閉じると消えるので、
             //  後から「何が失敗したか」追跡できるように)
+            var errorLogStopwatch = Stopwatch.StartNew();
             _lastErrorLogPath = WriteImportErrorLog();
+            errorLogStopwatch.Stop();
+            TraceImport($"SUMMARY_ERROR_LOG_END elapsedMs={errorLogStopwatch.ElapsedMilliseconds} " +
+                $"path={(string.IsNullOrEmpty(_lastErrorLogPath) ? "none" : "written")}");
 
             lblSummary.Text =
                 L.T("ImportFromFolderWizard_D022", _importedNew) +
@@ -1043,12 +1365,44 @@ namespace IwaraDownloader.Forms
             //  MainViewModel.Currentホルダー経由に置き換え)
             try
             {
+                var refreshStopwatch = Stopwatch.StartNew();
+                TraceImport("SUMMARY_MAIN_REFRESH_BEGIN");
                 Wpf.ViewModels.MainViewModel.Current?.RefreshAfterImport();
+                refreshStopwatch.Stop();
+                TraceImport($"SUMMARY_MAIN_REFRESH_END elapsedMs={refreshStopwatch.ElapsedMilliseconds}");
             }
             catch (Exception ex)
             {
+                TraceImport($"SUMMARY_MAIN_REFRESH_FAILED exception={ex.GetType().Name}: {ex.Message}");
                 Debug.WriteLine($"MainForm refresh 通知失敗: {ex.Message}");
             }
+
+            summaryStopwatch.Stop();
+            TraceImport($"SUMMARY_END elapsedMs={summaryStopwatch.ElapsedMilliseconds}");
+        }
+
+        private void BeginImportTrace()
+        {
+            _importTraceId = Guid.NewGuid().ToString("N")[..8];
+            _importTraceStopwatch = Stopwatch.StartNew();
+            LoggingService.Instance.Info($"FolderImport[{_importTraceId}] TRACE_CREATED");
+        }
+
+        private void TraceImport(string message)
+        {
+            var traceId = _importTraceId;
+            var stopwatch = _importTraceStopwatch;
+            if (traceId == null || stopwatch == null) return;
+
+            LoggingService.Instance.Info(
+                $"FolderImport[{traceId}] +{stopwatch.ElapsedMilliseconds}ms {message}");
+        }
+
+        private void EndImportTrace()
+        {
+            _importTraceStopwatch?.Stop();
+            _importTraceId = null;
+            _importTraceStopwatch = null;
         }
 
         /// <summary>
@@ -1127,7 +1481,38 @@ namespace IwaraDownloader.Forms
         private void ReportImport(string status, int processed, int total)
         {
             if (IsDisposed) return;
-            if (InvokeRequired) { try { BeginInvoke((Action)(() => ReportImport(status, processed, total))); } catch { } return; }
+
+            // ワーカースレッドからはUIを直接触らず、最新値だけを保持する。
+            // 反映は200ms間隔のWinForms Timer (UIスレッド) と完了時の明示flushで行う。
+            lock (_importProgressLock)
+            {
+                _pendingImportStatus = status;
+                _pendingImportProcessed = processed;
+                _pendingImportTotal = total;
+                _hasPendingImportProgress = true;
+            }
+        }
+
+        private void FlushPendingImportProgress()
+        {
+            if (IsDisposed)
+            {
+                lock (_importProgressLock) _hasPendingImportProgress = false;
+                return;
+            }
+
+            string status;
+            int processed;
+            int total;
+            lock (_importProgressLock)
+            {
+                if (!_hasPendingImportProgress) return;
+                status = _pendingImportStatus;
+                processed = _pendingImportProcessed;
+                total = _pendingImportTotal;
+                _hasPendingImportProgress = false;
+            }
+
             lblImportStatus.Text = status;
             progressImport.Maximum = Math.Max(1, total);
             progressImport.Value = Math.Min(progressImport.Maximum, processed);
@@ -1136,6 +1521,8 @@ namespace IwaraDownloader.Forms
         // ログを大量出力するとBeginInvokeのコストでUIが詰まるのでバッファリング。
         // 200ms ごと or バッファに50行たまったら一括フラッシュ。
         private readonly StringBuilder _importLogBuffer = new();
+        private int _importLogBufferedLines;
+        private bool _importLogFlushScheduled;
         private DateTime _lastImportLogFlush = DateTime.MinValue;
         private const int ImportLogFlushIntervalMs = 200;
         private const int ImportLogFlushBatchLines = 50;
@@ -1143,27 +1530,34 @@ namespace IwaraDownloader.Forms
         private void AppendImportLog(string msg)
         {
             if (IsDisposed) return;
-            int lineCount;
+            bool requestFlush;
             lock (_importLogBuffer)
             {
                 _importLogBuffer.AppendLine(msg);
-                lineCount = _importLogBuffer.Length > 0 ? CountNewLines(_importLogBuffer) : 0;
+                _importLogBufferedLines++;
+
+                var elapsed = (DateTime.Now - _lastImportLogFlush).TotalMilliseconds;
+                requestFlush = (elapsed >= ImportLogFlushIntervalMs
+                    || _importLogBufferedLines >= ImportLogFlushBatchLines)
+                    && !_importLogFlushScheduled;
+                if (requestFlush)
+                {
+                    _importLogFlushScheduled = true;
+                    _lastImportLogFlush = DateTime.Now;
+                }
             }
-            var elapsed = (DateTime.Now - _lastImportLogFlush).TotalMilliseconds;
-            if (elapsed < ImportLogFlushIntervalMs && lineCount < ImportLogFlushBatchLines)
+
+            if (!requestFlush) return;
+            if (InvokeRequired)
+            {
+                try { BeginInvoke((Action)FlushImportLog); }
+                catch
+                {
+                    lock (_importLogBuffer) _importLogFlushScheduled = false;
+                }
                 return;
-
-            _lastImportLogFlush = DateTime.Now;
-            if (InvokeRequired) { try { BeginInvoke((Action)FlushImportLog); } catch { } return; }
+            }
             FlushImportLog();
-        }
-
-        private static int CountNewLines(StringBuilder sb)
-        {
-            int n = 0;
-            for (int i = 0; i < sb.Length; i++)
-                if (sb[i] == '\n') n++;
-            return n;
         }
 
         private void FlushImportLog()
@@ -1172,9 +1566,15 @@ namespace IwaraDownloader.Forms
             string text;
             lock (_importLogBuffer)
             {
-                if (_importLogBuffer.Length == 0) return;
+                if (_importLogBuffer.Length == 0)
+                {
+                    _importLogFlushScheduled = false;
+                    return;
+                }
                 text = _importLogBuffer.ToString();
                 _importLogBuffer.Clear();
+                _importLogBufferedLines = 0;
+                _importLogFlushScheduled = false;
             }
             txtImportLog.AppendText(text);
         }
@@ -1199,6 +1599,13 @@ namespace IwaraDownloader.Forms
             public string VideoId = "";
             public string FileUuid = "";
             public string Title = "";
+            public string Url = "";
+            public string ThumbnailUrl = "";
+            public int DurationSeconds;
+            public DateTime? PostedAt;
+            public string Rating = "";
+            public string EmbedUrl = "";
+            public string ApiRawJson = "";
             public string? AuthorUsername;
             public string? AuthorName;
             public string Site = "";  // 自動 site フォールバックで判明した場合に格納

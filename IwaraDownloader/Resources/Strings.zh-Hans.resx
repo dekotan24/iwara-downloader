@@ -1821,6 +1821,9 @@ videoId 后导入数据库。
   <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
     <value>重新链接已移动文件...</value>
   </data>
+  <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
+    <value>本地文件完整性检查...</value>
+  </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>批量移动未迁移文件...</value>
   </data>
@@ -3557,6 +3560,25 @@ videoId 后导入数据库。
   <data name="SvcLocalFileMap_D011" xml:space="preserve">
     <value>确认取消映射</value>
   </data>
+  <data name="SvcLocalFileMap_D012" xml:space="preserve">
+    <value>此文件已关联到另一个视频“{1}”:
+{0}
+同一个文件不能关联到多个视频。</value>
+  </data>
+  <data name="SvcLocalFileMap_D013" xml:space="preserve">
+    <value>本地文件重复</value>
+  </data>
+  <data name="SvcLocalFileMap_D014" xml:space="preserve">
+    <value>所选文件包含另一个视频“{1}”的标签:
+{0}
+为安全起见，无法关联此文件。</value>
+  </data>
+  <data name="SvcLocalFileMap_D015" xml:space="preserve">
+    <value>文件属于另一个视频</value>
+  </data>
+  <data name="SvcLocalFileMap_D016" xml:space="preserve">
+    <value>数据库项目已改变或文件已不可用。请重新扫描。</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>下载完成</value>
   </data>
@@ -3776,4 +3798,42 @@ videoId 后导入数据库。
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>保存位置</value>
   </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve"><value>本地文件完整性检查</value></data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve"><value>查找数据库中本地文件缺失的视频。选择项目后，可以重新关联本地文件或重新下载。</value></data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve"><value>重新扫描</value></data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve"><value>重新关联本地文件...</value></data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve"><value>重新下载</value></data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve"><value>关闭</value></data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve"><value>等待扫描</value></data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve"><value>标题</value></data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve"><value>Video ID</value></data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve"><value>状态</value></data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve"><value>数据库路径</value></data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve"><value>原因</value></data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve"><value>正在检查本地文件完整性...</value></data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve"><value>存在问题的视频：{0} 个</value></data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve"><value>扫描已取消</value></data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve"><value>错误：{0}</value></data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve"><value>本地文件完整性检查失败：
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve"><value>本地文件完整性检查</value></data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve"><value>请选择一个视频进行重新关联。</value></data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve"><value>项目状态已改变，列表已刷新。</value></data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve"><value>已将“{0}”重新关联到本地文件。</value></data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve"><value>要将选中的 {0} 个项目加入重新下载队列吗？</value></data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve"><value>确认重新下载</value></data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve"><value>已将 {0} 个项目加入重新下载队列。</value></data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve"><value>已加入 {0} 个项目。{1} 个因状态改变或正在处理而跳过。</value></data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve"><value>重新下载失败：
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve"><value>该视频当前正在队列中或处理中，列表已刷新。</value></data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>等待中</value></data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>下载中</value></data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>写入标签中</value></data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>已完成</value></data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>失败</value></data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>已跳过</value></data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>已暂停</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>已完成但数据库路径为空</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>数据库路径中的文件不存在</value></data>
 </root>

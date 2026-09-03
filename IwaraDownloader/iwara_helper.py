@@ -635,6 +635,33 @@ class IwaraAPI:
         except Exception as e:
             return {"success": False, "error": f"Exception: {str(e)}"}
 
+    def get_video_metadata(self, video_id: str) -> dict:
+        """動画の表示用メタデータを取得する (filesq/CDN問い合わせは行わない)。
+
+        フォルダ取り込みでは動画URLそのものは不要で、タイトル・作者・file_idだけが必要なため、
+        get_download_url()より軽い経路を用意する。
+        """
+        video_info = self.get_video_info(video_id)
+        if not video_info.get("success"):
+            return video_info
+
+        video_data = video_info.get("data") or {}
+        user_obj = video_data.get("user") or {}
+        file_obj = video_data.get("file") or {}
+        return {
+            "success": True,
+            "title": video_data.get("title") or video_id,
+            "file_id": file_obj.get("id"),
+            "author_username": user_obj.get("username"),
+            "author_name": user_obj.get("name"),
+            "rating": video_data.get("rating") or "",
+            "thumbnail": self._get_thumbnail_url(video_data),
+            "duration": file_obj.get("duration", 0),
+            "embed_url": video_data.get("embedUrl") or "",
+            "created_at": video_data.get("createdAt"),
+            "raw": _prune_video_raw(video_data),
+        }
+
     def get_download_url(self, video_id: str, quality: str = "Source") -> dict:
         """ダウンロードURLを取得"""
         if not self.token:
@@ -729,12 +756,14 @@ class IwaraAPI:
                 "success": True,
                 "url": download_url,
                 "quality": quality,
-                "title": video_data.get("title", video_id),
+                "title": video_data.get("title") or video_id,
                 "file_id": file_obj.get("id"),
                 "author_username": user_obj.get("username"),
                 "author_name": user_obj.get("name"),
                 "rating": video_data.get("rating") or "",
                 "thumbnail": self._get_thumbnail_url(video_data),
+                "duration": file_obj.get("duration", 0),
+                "embed_url": video_data.get("embedUrl") or "",
                 "created_at": video_data.get("createdAt"),
                 "raw": _prune_video_raw(video_data),
             }
@@ -1265,6 +1294,12 @@ def main():
             print(json.dumps({"success": False, "error": "Usage: get_url <video_id>"}))
             sys.exit(1)
         result = api.get_download_url(sys.argv[2])
+
+    elif action == "get_info":
+        if len(sys.argv) < 3:
+            print(json.dumps({"success": False, "error": "Usage: get_info <video_id>"}))
+            sys.exit(1)
+        result = api.get_video_metadata(sys.argv[2])
 
     elif action == "search":
         if len(sys.argv) < 3:

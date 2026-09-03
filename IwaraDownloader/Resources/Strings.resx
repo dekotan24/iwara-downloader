@@ -1825,6 +1825,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
     <value>移動済みファイルの再リンク...</value>
   </data>
+  <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
+    <value>ローカルファイル整合性チェック...</value>
+  </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>未移動ファイルの一括移動...</value>
   </data>
@@ -3561,6 +3564,25 @@ downloaderは終了してから使うことを強く推奨します。</value>
   <data name="SvcLocalFileMap_D011" xml:space="preserve">
     <value>マッピング解除の確認</value>
   </data>
+  <data name="SvcLocalFileMap_D012" xml:space="preserve">
+    <value>このファイルは既に別の動画「{1}」に紐付いています:
+{0}
+同じファイルを複数の動画へ紐付けることはできません。</value>
+  </data>
+  <data name="SvcLocalFileMap_D013" xml:space="preserve">
+    <value>重複するローカルファイル</value>
+  </data>
+  <data name="SvcLocalFileMap_D014" xml:space="preserve">
+    <value>選択したファイルには別の動画「{1}」のタグがあります:
+{0}
+安全のため、このファイルは紐付けできません。</value>
+  </data>
+  <data name="SvcLocalFileMap_D015" xml:space="preserve">
+    <value>別動画のタグがあるファイル</value>
+  </data>
+  <data name="SvcLocalFileMap_D016" xml:space="preserve">
+    <value>対象のDB状態が変わったか、ファイルが利用できなくなりました。再スキャンしてください。</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>ダウンロード完了</value>
   </data>
@@ -3577,7 +3599,7 @@ downloaderは終了してから使うことを強く推奨します。</value>
     <value>ログインが必要です。設定画面からログインしてください。</value>
   </data>
   <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
-    <value>タグの無いファイルが {0} 件見つかりました。検索方法を選んでください。</value>
+    <value>タグの無いファイルが {0} 件見つかりました。ファイル一覧を確認し、ファイル/フォルダ単位で処理方法を割り当ててください。</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
     <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
@@ -3693,6 +3715,123 @@ downloaderは終了してから使うことを強く推奨します。</value>
   <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
     <value>スキップ (取り込まない)</value>
   </data>
+  <data name="UntaggedFileMatchForm_grpFiles" xml:space="preserve">
+    <value>タグの無いファイル一覧</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFileList" xml:space="preserve">
+    <value>対象列にチェックを付けて、下の処理方法を適用します。相対パスとフルパスで対象を確認できます。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectAllFiles" xml:space="preserve">
+    <value>全て選択</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnClearFileSelection" xml:space="preserve">
+    <value>選択解除</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblScopeFolder" xml:space="preserve">
+    <value>フォルダ配下を選択:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseScopeFolder" xml:space="preserve">
+    <value>参照...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectScope" xml:space="preserve">
+    <value>配下を選択</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSelectionStatus" xml:space="preserve">
+    <value>選択状況</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colSelected" xml:space="preserve">
+    <value>対象</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFileName" xml:space="preserve">
+    <value>ファイル名</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colRelativePath" xml:space="preserve">
+    <value>相対パス</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFullPath" xml:space="preserve">
+    <value>フルパス</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedMethod" xml:space="preserve">
+    <value>割り当て方法</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedDetail" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpRule" xml:space="preserve">
+    <value>選択したファイルへ適用する処理</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblMethod" xml:space="preserve">
+    <value>処理方法:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item0" xml:space="preserve">
+    <value>アーティストフォルダ選択検索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item1" xml:space="preserve">
+    <value>ファイル名検索 (DB全体)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item2" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpArtist" xml:space="preserve">
+    <value>アーティスト検索設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpFilename" xml:space="preserve">
+    <value>ファイル名検索設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleHelp" xml:space="preserve">
+    <value>選択したファイルに設定を適用します。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleSummary" xml:space="preserve">
+    <value>割り当て済みの処理は一覧に表示されます。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnApplyRule" xml:space="preserve">
+    <value>選択ファイルに適用</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D021" xml:space="preserve">
+    <value>処理方法が未設定のファイルが {0} 件あります。未設定のファイルをスキップとして続行しますか?</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D022" xml:space="preserve">
+    <value>フォルダはスキャン対象フォルダ自身またはその配下を指定してください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D023" xml:space="preserve">
+    <value>{0} 件のファイルを選択しました。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D024" xml:space="preserve">
+    <value>{0} 件に「{1}」を割り当てました。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D025" xml:space="preserve">
+    <value>処理方法を適用するファイルにチェックを付けてください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D026" xml:space="preserve">
+    <value>未設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027" xml:space="preserve">
+    <value>指定した作者の最新動画一覧を取得し、この選択範囲だけを照合します。新規動画にも対応します。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028" xml:space="preserve">
+    <value>DB全体を対象にファイル名で照合します。DB未登録動画は対象外です。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029" xml:space="preserve">
+    <value>この選択範囲は取り込みません。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D030" xml:space="preserve">
+    <value>チェック中: {0} 件 / 割り当て済み: {1} 件 / 未設定: {2} 件</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D031" xml:space="preserve">
+    <value>テンプレートなし</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D032" xml:space="preserve">
+    <value>{0} 件を照合中...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027_Short" xml:space="preserve">
+    <value>作者検索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028_Short" xml:space="preserve">
+    <value>ファイル名検索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029_Short" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>待機中</value>
   </data>
@@ -3780,4 +3919,96 @@ downloaderは終了してから使うことを強く推奨します。</value>
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>保存先</value>
   </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve">
+    <value>ローカルファイル整合性チェック</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve">
+    <value>DBが保持するローカルファイルの不整合を検出します。対象を選択して、ローカルファイルの再紐付けまたは再ダウンロードを実行できます。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve">
+    <value>再スキャン</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve">
+    <value>ローカルを再紐付け...</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve">
+    <value>再ダウンロード</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve">
+    <value>スキャン待機中</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve">
+    <value>Video ID</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve">
+    <value>状態</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve">
+    <value>DBの保存先</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve">
+    <value>不整合理由</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve">
+    <value>ローカルファイルの整合性を確認中...</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve">
+    <value>不整合がある動画: {0} 件</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve">
+    <value>スキャンを中止しました</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve">
+    <value>ファイル整合性チェックに失敗しました:
+{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve">
+    <value>ファイル整合性チェック</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve">
+    <value>再紐付けする動画を1件選択してください。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve">
+    <value>対象の状態が変わったため、一覧を更新しました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve">
+    <value>「{0}」をローカルファイルに再紐付けしました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve">
+    <value>選択した {0} 件を再ダウンロードキューに追加します。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve">
+    <value>再ダウンロード確認</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve">
+    <value>{0} 件を再ダウンロードキューに追加しました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve">
+    <value>{0} 件をキューに追加しました。{1} 件は状態が変わったか、既に処理中のためスキップしました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve">
+    <value>再ダウンロード処理に失敗しました:
+{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve">
+    <value>この動画は現在キューで処理中のため、一覧を更新しました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>待機中</value></data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>ダウンロード中</value></data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>タグ書き込み中</value></data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>完了</value></data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>失敗</value></data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>スキップ</value></data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>一時停止</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>完了扱いだがDBの保存先が空</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>DBの保存先ファイルが存在しない</value></data>
 </root>

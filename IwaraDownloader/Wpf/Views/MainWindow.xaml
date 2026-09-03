@@ -388,6 +388,7 @@
                             <Separator />
                             <MenuItem Header="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
                             <MenuItem Header="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsLocalFileIntegrity}" Command="{Binding OpenLocalFileIntegrityCommand}" />
                             <Separator Visibility="{Binding IsAdvancedDbToolEnabled, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuToolsDatabaseTool}" Command="{Binding OpenDatabaseToolCommand}"
                                       Visibility="{Binding IsAdvancedDbToolEnabled, Converter={StaticResource BoolToVis}}" />

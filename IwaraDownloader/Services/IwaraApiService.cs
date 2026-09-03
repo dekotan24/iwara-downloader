@@ -586,6 +586,68 @@ namespace IwaraDownloader.Services
             return info;
         }
 
+        /// <summary>
+        /// 動画の表示用メタデータだけを取得する。
+        /// ダウンロードURLは必要ないため、get_url の filesq/CDN問い合わせを省略する。
+        /// フォルダ取り込みなど、タイトル・作者・file_idだけが必要な処理で使用する。
+        /// </summary>
+        public async Task<VideoUrlInfo> GetVideoInfoAsync(string videoId, string? site = null)
+        {
+            if (!IsLoggedIn)
+                return VideoUrlInfo.FromError("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
+
+            var info = await GetVideoInfoInternalAsync(videoId, site);
+            // GetDownloadUrlAsync と同じ site 自動フォールバックを維持する。
+            if (!info.Success
+                && string.IsNullOrEmpty(site)
+                && (info.Error?.Contains("differentSite", StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                Debug.WriteLine($"GetVideoInfo: differentSite detected for {videoId}, retrying with www.iwara.ai");
+                var retry = await GetVideoInfoInternalAsync(videoId, Utils.Helpers.SiteAi);
+                if (retry.Success)
+                {
+                    retry.ResolvedSite = Utils.Helpers.SiteAi;
+                    return retry;
+                }
+            }
+            return info;
+        }
+
+        private async Task<VideoUrlInfo> GetVideoInfoInternalAsync(string videoId, string? site)
+        {
+            var result = await RunPythonAsync("get_info", site, videoId);
+            if (result == null)
+                return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
+
+            var root = result.RootElement;
+            if (!(root.TryGetProperty("success", out var success) && success.GetBoolean()))
+                return VideoUrlInfo.FromError(GetString(root, "error") ?? "Unknown error");
+
+            DateTime? postedAt = null;
+            if (root.TryGetProperty("created_at", out var ca)
+                && ca.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(ca.GetString(), out var caDt))
+            {
+                postedAt = caDt;
+            }
+
+            return new VideoUrlInfo
+            {
+                Success = true,
+                Url = $"https://{(string.IsNullOrEmpty(site) ? Utils.Helpers.SiteTv : site)}/video/{videoId}",
+                Title = GetString(root, "title"),
+                FileUuid = GetString(root, "file_id"),
+                AuthorUsername = GetString(root, "author_username"),
+                AuthorName = GetString(root, "author_name"),
+                Rating = GetString(root, "rating"),
+                ThumbnailUrl = GetString(root, "thumbnail"),
+                DurationSeconds = GetInt(root, "duration"),
+                EmbedUrl = GetString(root, "embed_url"),
+                PostedAt = postedAt,
+                ApiRawJson = root.TryGetProperty("raw", out var rawEl) ? rawEl.GetRawText() : null,
+            };
+        }
+
         private async Task<VideoUrlInfo> GetDownloadUrlInternalAsync(string videoId, string? site)
         {
             var result = await RunPythonAsync("get_url", site, videoId);
@@ -617,6 +679,8 @@ namespace IwaraDownloader.Services
                     AuthorName = GetString(root, "author_name"),
                     Rating = GetString(root, "rating"),
                     ThumbnailUrl = GetString(root, "thumbnail"),
+                    DurationSeconds = GetInt(root, "duration"),
+                    EmbedUrl = GetString(root, "embed_url"),
                     PostedAt = postedAt,
                     ApiRawJson = apiRawJson,
                 };
@@ -627,6 +691,20 @@ namespace IwaraDownloader.Services
 
         private static string? GetString(JsonElement root, string name)
             => root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+
+        private static int GetInt(JsonElement root, string name)
+        {
+            if (!root.TryGetProperty(name, out var p)) return 0;
+            if (p.ValueKind == JsonValueKind.Number)
+            {
+                if (p.TryGetInt32(out var value)) return value;
+                if (p.TryGetDouble(out var doubleValue)) return Math.Max(0, (int)doubleValue);
+            }
+            if (p.ValueKind == JsonValueKind.String
+                && int.TryParse(p.GetString(), out var stringValue))
+                return Math.Max(0, stringValue);
+            return 0;
+        }
 
         /// <summary>
         /// GetDownloadUrlAsync の戻り値
@@ -642,6 +720,8 @@ namespace IwaraDownloader.Services
             public string? AuthorName { get; set; }
             public string? Rating { get; set; }
             public string? ThumbnailUrl { get; set; }
+            public int DurationSeconds { get; set; }
+            public string? EmbedUrl { get; set; }
             public DateTime? PostedAt { get; set; }
             public string? ApiRawJson { get; set; }
             public string? Error { get; set; }

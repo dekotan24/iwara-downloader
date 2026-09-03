@@ -48,6 +48,7 @@
     <Compile Include="..\IwaraDownloader\Models\VideoTreeCounts.cs" Link="Models\VideoTreeCounts.cs" />
     <Compile Include="..\IwaraDownloader\Utils\L.cs" Link="Utils\L.cs" />
     <Compile Include="..\IwaraDownloader\Utils\Localizer.cs" Link="Utils\Localizer.cs" />
+    <Compile Include="..\IwaraDownloader\Utils\Helpers.cs" Link="Utils\Helpers.cs" />
     <!-- 本体と同じUI言語設定(settings.jsonのLanguage)を再現するために必要 -->
     <Compile Include="..\IwaraDownloader\Utils\SettingsManager.cs" Link="Utils\SettingsManager.cs" />
     <Compile Include="..\IwaraDownloader\Utils\CryptoHelper.cs" Link="Utils\CryptoHelper.cs" />

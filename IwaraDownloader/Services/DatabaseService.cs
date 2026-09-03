@@ -933,6 +933,56 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 既存動画のローカルファイルを安全にマップするための限定更新。
+        /// 期待した旧状態とファイルパスの重複を同一UPDATE内で確認し、別動画が同じパスを
+        /// 参照することや、画面を開いている間のDB変更を上書きすることを防ぐ。
+        /// </summary>
+        public bool TryUpdateVideoLocalFileFields(
+            int videoId,
+            string localFilePath,
+            long fileSize,
+            DateTime? downloadedAt,
+            DownloadStatus status,
+            string fileUuid,
+            string expectedLocalFilePath,
+            DownloadStatus expectedStatus,
+            string expectedFileUuid)
+        {
+            if (videoId <= 0 || string.IsNullOrWhiteSpace(localFilePath)) return false;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                UPDATE Videos SET
+                    LocalFilePath = @LocalFilePath,
+                    FileSize = @FileSize,
+                    DownloadedAt = @DownloadedAt,
+                    Status = @Status,
+                    FileUuid = @FileUuid
+                WHERE Id = @Id
+                  AND COALESCE(LocalFilePath, '') = @ExpectedLocalFilePath
+                  AND Status = @ExpectedStatus
+                  AND COALESCE(FileUuid, '') = @ExpectedFileUuid
+                  AND NOT EXISTS (
+                      SELECT 1 FROM Videos other
+                      WHERE other.Id <> @Id
+                        AND other.LocalFilePath COLLATE NOCASE = @LocalFilePath
+                  )
+            ";
+            command.Parameters.AddWithValue("@LocalFilePath", localFilePath);
+            command.Parameters.AddWithValue("@FileSize", fileSize);
+            command.Parameters.AddWithValue("@DownloadedAt", (object?)downloadedAt?.ToString("o") ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Status", (int)status);
+            command.Parameters.AddWithValue("@FileUuid", fileUuid ?? "");
+            command.Parameters.AddWithValue("@Id", videoId);
+            command.Parameters.AddWithValue("@ExpectedLocalFilePath", expectedLocalFilePath ?? "");
+            command.Parameters.AddWithValue("@ExpectedStatus", (int)expectedStatus);
+            command.Parameters.AddWithValue("@ExpectedFileUuid", expectedFileUuid ?? "");
+            return command.ExecuteNonQuery() == 1;
+        }
+
+        /// <summary>
         /// サムネイル取得ステータスだけを高速に更新する。
         /// </summary>
         public void UpdateThumbnailStatus(int videoId, int status)
@@ -1069,7 +1119,7 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE FileUuid = @FileUuid LIMIT 1";
+            command.CommandText = "SELECT * FROM Videos WHERE FileUuid COLLATE NOCASE = @FileUuid LIMIT 1";
             command.Parameters.AddWithValue("@FileUuid", fileUuid);
 
             using var reader = command.ExecuteReader();
@@ -1149,7 +1199,9 @@ namespace IwaraDownloader.Services
                     case DownloadStatus.Failed: result.Failed += count; break;
                     case DownloadStatus.Skipped: result.Skipped += count; break;
                 }
-                if (status != DownloadStatus.Completed && status != DownloadStatus.Skipped)
+                // Failed は「失敗」ノードで扱うため、未DLには含めない。
+                if (status != DownloadStatus.Completed && status != DownloadStatus.Skipped
+                    && status != DownloadStatus.Failed)
                     result.NotDownloaded += count;
 
                 // 作者不明(AuthorUsername空)で購読チャンネルに集約できなかった動画のみここに来る。
@@ -1228,7 +1280,7 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 未DL (Completed / Skipped を除く) の動画を取得
+        /// 未DL (Completed / Skipped / Failed を除く) の動画を取得
         /// </summary>
         public List<VideoInfo> GetNotDownloadedVideos()
         {
@@ -1237,9 +1289,10 @@ namespace IwaraDownloader.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Videos WHERE Status != @Completed AND Status != @Skipped ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
+            command.CommandText = "SELECT * FROM Videos WHERE Status != @Completed AND Status != @Skipped AND Status != @Failed ORDER BY COALESCE(PostedAt, CreatedAt) DESC";
             command.Parameters.AddWithValue("@Completed", (int)DownloadStatus.Completed);
             command.Parameters.AddWithValue("@Skipped", (int)DownloadStatus.Skipped);
+            command.Parameters.AddWithValue("@Failed", (int)DownloadStatus.Failed);
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -1373,6 +1426,31 @@ namespace IwaraDownloader.Services
                 return ReadVideo(reader);
             }
             return null;
+        }
+
+        /// <summary>
+        /// 指定したローカルパスを別の動画が使用しているか確認する。
+        /// Windowsのファイルパスは大文字小文字を区別しないため、NOCASEで比較する。
+        /// </summary>
+        public VideoInfo? GetVideoByLocalFilePath(string localFilePath, int excludeVideoId = 0)
+        {
+            if (string.IsNullOrWhiteSpace(localFilePath)) return null;
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT * FROM Videos
+                WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
+                  AND Id <> @ExcludeVideoId
+                LIMIT 1
+            ";
+            command.Parameters.AddWithValue("@LocalFilePath", localFilePath);
+            command.Parameters.AddWithValue("@ExcludeVideoId", excludeVideoId);
+
+            using var reader = command.ExecuteReader();
+            return reader.Read() ? ReadVideo(reader) : null;
         }
 
         /// <summary>

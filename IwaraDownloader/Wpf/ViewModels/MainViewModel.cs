@@ -817,6 +817,15 @@ namespace IwaraDownloader.Wpf.ViewModels
         private void OpenImportFromFolder() => ImportFromFolderWizard.ShowOrActivate(null, _downloadManager);
 
         [RelayCommand]
+        private void OpenLocalFileIntegrity()
+        {
+            using var form = new LocalFileIntegrityForm(_database, _downloadManager);
+            form.ShowDialog(GetOwnerWin32Window());
+            RefreshTree();
+            LoadVideos();
+        }
+
+        [RelayCommand]
         private void OpenDuplicateCheck()
         {
             using var form = new DuplicateCheckForm();
@@ -1589,6 +1598,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             {
                 videos = _database.GetAllVideos()
                     .Where(v => v.Status != DownloadStatus.Completed && v.Status != DownloadStatus.Downloading
+                             && v.Status != DownloadStatus.Failed
                              && (v.Status != DownloadStatus.Pending || _downloadManager.GetTask(v.VideoId) == null))
                     .ToList();
                 EnqueueEach(videos);

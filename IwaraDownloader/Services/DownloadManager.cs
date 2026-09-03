@@ -854,9 +854,22 @@ namespace IwaraDownloader.Services
         {
             try
             {
-                // pending → active へ同タイミングで切り替え (UI 表示に死角を作らない)
-                _pendingTasks.TryRemove(task.Video.VideoId, out _);
-                _activeTasks[task.Video.VideoId] = task;
+                // pending → active の切り替えを EnqueueDownload と同じロックで行う。
+                // この間に再DL操作が GetTask() を通過して新しいタスクを投入すると、
+                // 旧タスクと新タスクが同じ VideoId で並行する競合窓が生じるため。
+                // キャンセル後に同じVideoIdが再投入された場合は、旧タスクが新タスクの
+                // _pendingTasksエントリを奪わないよう参照一致も確認する。
+                lock (_enqueueLock)
+                {
+                    if (!_pendingTasks.TryGetValue(task.Video.VideoId, out var pendingTask)
+                        || !ReferenceEquals(pendingTask, task))
+                    {
+                        return;
+                    }
+
+                    _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                    _activeTasks[task.Video.VideoId] = task;
+                }
 
                 // EnqueueDownload/バルク投入時点で既に生成済みのはずだが、古いデータ等での
                 // 念のためのフォールバックとして無ければここで生成する(既存があれば使い回すことで、
@@ -1276,7 +1289,16 @@ namespace IwaraDownloader.Services
             }
             finally
             {
-                _activeTasks.TryRemove(task.Video.VideoId, out _);
+                // 同じVideoIdの新しいタスクが既に登録されている場合、旧タスクの終了処理で
+                // 新タスクを削除しないよう、参照一致を確認してから除去する。
+                lock (_enqueueLock)
+                {
+                    if (_activeTasks.TryGetValue(task.Video.VideoId, out var activeTask)
+                        && ReferenceEquals(activeTask, task))
+                    {
+                        _activeTasks.TryRemove(task.Video.VideoId, out _);
+                    }
+                }
                 Interlocked.Decrement(ref _activeDownloadCount);
                 _slotAvailableSignal.Release();
                 TaskStatusChanged?.Invoke(this, task);
@@ -1459,24 +1481,38 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void CancelTask(string videoId)
         {
-            // アクティブなタスクをキャンセル
-            if (_activeTasks.TryGetValue(videoId, out var task))
-            {
-                task.Cancel();
-            }
+            DownloadTask? activeTask = null;
+            DownloadTask? pendingTask = null;
 
-            // 待機中のタスクも削除。
+            // アクティブ/待機中の状態取得と待機中タスクの削除をEnqueue/実行開始と
+            // 同じロックで直列化し、旧タスクと再投入タスクの入れ替わりを防ぐ。
             // TryDequeueNextでバケットから取り出された後、ExecuteDownloadAsyncが_activeTasksへ
             // 登録するまでの間(レート制限待機中)は_pendingTasksにだけ存在し、バケットには残らない。
             // この窓でキャンセルされた場合に備え、まずCancellationTokenSourceをキャンセルしておく
             // ことで、ProcessQueueAsync側がTask.Run直前にIsCancellationRequestedを見て
             // ダウンロード開始そのものを取りやめられるようにする(そうしないと、この窓でのキャンセルは
             // 単に無視されてダウンロードが強行されてしまう)。
-            if (_pendingTasks.TryRemove(videoId, out var pendingTask))
+            lock (_enqueueLock)
             {
-                pendingTask.Cancel();
-                pendingTask.Video.Status = DownloadStatus.Paused;
-                _database.UpdateVideo(pendingTask.Video);
+                _activeTasks.TryGetValue(videoId, out activeTask);
+                _pendingTasks.TryRemove(videoId, out pendingTask);
+
+                // 新しいEnqueueDownloadがDBをPendingへ書き換える前に、キャンセルした
+                // 待機タスクのPaused状態を確定させる。DB更新はイベント発火を伴わないため、
+                // この短い区間だけロック内で行い、旧タスクの状態が新タスクへ巻き戻る競合を防ぐ。
+                if (pendingTask != null)
+                {
+                    pendingTask.Cancel();
+                    pendingTask.Video.Status = DownloadStatus.Paused;
+                    _database.UpdateVideo(pendingTask.Video);
+                }
+            }
+
+            // イベント発火はロック外で行う。activeTaskのキャンセル通知は実行側が行い、
+            // pendingTaskだけここで状態確定済みなので、待機タスクのイベントを1回発火する。
+            activeTask?.Cancel();
+            if (pendingTask != null)
+            {
                 TaskStatusChanged?.Invoke(this, pendingTask);
             }
         }

@@ -1821,6 +1821,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
     <value>Relink Moved Files...</value>
   </data>
+  <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
+    <value>Local File Integrity Check...</value>
+  </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>Move Unrelocated Files...</value>
   </data>
@@ -3556,6 +3559,25 @@ Continue?</value>
   <data name="SvcLocalFileMap_D011" xml:space="preserve">
     <value>Confirm unmap</value>
   </data>
+  <data name="SvcLocalFileMap_D012" xml:space="preserve">
+    <value>This file is already linked to another video "{1}":
+{0}
+The same file cannot be linked to multiple videos.</value>
+  </data>
+  <data name="SvcLocalFileMap_D013" xml:space="preserve">
+    <value>Duplicate local file</value>
+  </data>
+  <data name="SvcLocalFileMap_D014" xml:space="preserve">
+    <value>The selected file has tags for another video "{1}":
+{0}
+For safety, this file cannot be linked.</value>
+  </data>
+  <data name="SvcLocalFileMap_D015" xml:space="preserve">
+    <value>File tagged for another video</value>
+  </data>
+  <data name="SvcLocalFileMap_D016" xml:space="preserve">
+    <value>The database entry changed or the file is no longer available. Please rescan.</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>Download complete</value>
   </data>
@@ -3572,7 +3594,7 @@ Continue?</value>
     <value>Login required. Please log in from the settings screen.</value>
   </data>
   <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
-    <value>Found {0} file(s) without a tag. Choose how to search for matches.</value>
+    <value>Found {0} file(s) without a tag. Review the list and assign a method per file or folder.</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
     <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
@@ -3688,6 +3710,123 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
     <value>Skip (do not import)</value>
   </data>
+  <data name="UntaggedFileMatchForm_grpFiles" xml:space="preserve">
+    <value>Untagged files</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFileList" xml:space="preserve">
+    <value>Check files in the Target column, then apply a method below. Relative and full paths are shown for verification.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectAllFiles" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnClearFileSelection" xml:space="preserve">
+    <value>Clear selection</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblScopeFolder" xml:space="preserve">
+    <value>Select folder contents:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseScopeFolder" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectScope" xml:space="preserve">
+    <value>Select contents</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSelectionStatus" xml:space="preserve">
+    <value>Selection status</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colSelected" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFileName" xml:space="preserve">
+    <value>Filename</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colRelativePath" xml:space="preserve">
+    <value>Relative path</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFullPath" xml:space="preserve">
+    <value>Full path</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedMethod" xml:space="preserve">
+    <value>Assigned method</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedDetail" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpRule" xml:space="preserve">
+    <value>Apply to selected files</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblMethod" xml:space="preserve">
+    <value>Method:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item0" xml:space="preserve">
+    <value>Search by artist folder</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item1" xml:space="preserve">
+    <value>Search by filename (whole DB)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item2" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpArtist" xml:space="preserve">
+    <value>Artist search settings</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpFilename" xml:space="preserve">
+    <value>Filename search settings</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleHelp" xml:space="preserve">
+    <value>Apply the settings to the checked files.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleSummary" xml:space="preserve">
+    <value>Assigned methods are shown in the list.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnApplyRule" xml:space="preserve">
+    <value>Apply to selected</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D021" xml:space="preserve">
+    <value>{0} file(s) have no method assigned. Continue and skip unassigned files?</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D022" xml:space="preserve">
+    <value>The folder must be the scan folder itself or a folder under it.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D023" xml:space="preserve">
+    <value>{0} file(s) selected.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D024" xml:space="preserve">
+    <value>Assigned "{1}" to {0} file(s).</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D025" xml:space="preserve">
+    <value>Check the files to which you want to apply the method.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D026" xml:space="preserve">
+    <value>Unassigned</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027" xml:space="preserve">
+    <value>Fetches the selected artist's latest videos and matches only this selection. New videos are supported.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028" xml:space="preserve">
+    <value>Matches filenames against the whole DB. Videos not registered in the DB are excluded.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029" xml:space="preserve">
+    <value>This selection will not be imported.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D030" xml:space="preserve">
+    <value>Checked: {0} / Assigned: {1} / Unassigned: {2}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D031" xml:space="preserve">
+    <value>No template</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D032" xml:space="preserve">
+    <value>Matching {0} file(s)...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027_Short" xml:space="preserve">
+    <value>Artist search</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028_Short" xml:space="preserve">
+    <value>Filename search</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029_Short" xml:space="preserve">
+    <value>Skip</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>Pending</value>
   </data>
@@ -3775,4 +3914,46 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>Save location</value>
   </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve">
+    <value>Local File Integrity Check</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve">
+    <value>Finds database entries whose local file is missing. Select entries to relink them to a local file or redownload them.</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve"><value>Rescan</value></data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve"><value>Relink Local File...</value></data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve"><value>Redownload</value></data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve"><value>Close</value></data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve"><value>Waiting to scan</value></data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve"><value>Title</value></data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve"><value>Video ID</value></data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve"><value>DB path</value></data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve"><value>Reason</value></data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve"><value>Checking local file integrity...</value></data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve"><value>Videos with issues: {0}</value></data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve"><value>Scan canceled</value></data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve"><value>Error: {0}</value></data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve"><value>Local file integrity check failed:
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve"><value>Local File Integrity Check</value></data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve"><value>Select exactly one video to relink.</value></data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve"><value>The item changed while this window was open. The list was refreshed.</value></data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve"><value>Relinked "{0}" to the local file.</value></data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve"><value>Add the selected {0} item(s) to the redownload queue?</value></data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve"><value>Confirm Redownload</value></data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve"><value>Added {0} item(s) to the redownload queue.</value></data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve"><value>Queued {0} item(s). Skipped {1} because their state changed or they are already processing.</value></data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve"><value>Redownload failed:
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve"><value>This video is currently queued or processing. The list was refreshed.</value></data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>Pending</value></data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>Downloading</value></data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>Writing tags</value></data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>Completed</value></data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>Failed</value></data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>Paused</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>Completed but DB path is empty</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>DB path does not exist</value></data>
 </root>
