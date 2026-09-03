@@ -50,6 +50,7 @@ logs/
 # ローカルテストデータ・スクラッチ
 scratch/
 sandbox/
+work/
 *.local.*
 
 # OS / IDE 雑多
