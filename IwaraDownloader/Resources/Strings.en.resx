@@ -41,6 +41,14 @@ Open the release page?</value>
   <data name="AboutForm_D008" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="AboutForm_D009" xml:space="preserve">
+    <value>🎉 Enable party mode?
+
+It's a purely cosmetic easter egg — buttons wobble and confetti falls. It doesn't affect downloads or anything else.</value>
+  </data>
+  <data name="AboutForm_D010" xml:space="preserve">
+    <value>Secret mode</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>About</value>
   </data>
@@ -167,6 +175,189 @@ https://www.iwara.tv/profile/username/videos</value>
   </data>
   <data name="Common_Unknown" xml:space="preserve">
     <value>Unknown</value>
+  </data>
+  <data name="DatabaseToolForm_D001" xml:space="preserve">
+    <value>🔒 Read-only mode</value>
+  </data>
+  <data name="DatabaseToolForm_D002" xml:space="preserve">
+    <value>⚠ Write mode enabled (backup: {0})</value>
+  </data>
+  <data name="DatabaseToolForm_D003" xml:space="preserve">
+    <value>Enable Write Mode</value>
+  </data>
+  <data name="DatabaseToolForm_D004" xml:space="preserve">
+    <value>Return to Read-Only</value>
+  </data>
+  <data name="DatabaseToolForm_D005" xml:space="preserve">
+    <value>Enabling write mode allows SQL execution and table edits to change the database directly.
+
+A forced backup will be created before it is enabled.
+
+Continue?</value>
+  </data>
+  <data name="DatabaseToolForm_D007" xml:space="preserve">
+    <value>Database Tool</value>
+  </data>
+  <data name="DatabaseToolForm_D008" xml:space="preserve">
+    <value>Backup created:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D009" xml:space="preserve">
+    <value>Could not start write mode because the backup failed:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D010" xml:space="preserve">
+    <value>This is an advanced feature that edits the database directly.
+
+- A mistaken SQL statement or edit can corrupt or lose data
+- Video files are not changed in sync, which can cause the DB and the actual files to fall out of sync
+- A backup is created automatically when entering write mode, but it is not a complete guarantee
+
+Do you understand and want to continue?</value>
+  </data>
+  <data name="DatabaseToolForm_D011" xml:space="preserve">
+    <value>Advanced Feature Confirmation</value>
+  </data>
+  <data name="DatabaseToolForm_D012" xml:space="preserve">
+    <value>{0} row(s) retrieved</value>
+  </data>
+  <data name="DatabaseToolForm_D013" xml:space="preserve">
+    <value>{0} row(s) retrieved (capped — adjust "Max rows" above if you need more)</value>
+  </data>
+  <data name="DatabaseToolForm_D014" xml:space="preserve">
+    <value>{0} row(s) affected</value>
+  </data>
+  <data name="DatabaseToolForm_D015" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D017" xml:space="preserve">
+    <value>⚠ Integrity error: {0} video(s) exist in both Videos and ExcludedVideos. This is an unexpected state.</value>
+  </data>
+  <data name="DatabaseToolForm_D018" xml:space="preserve">
+    <value>Showing {0} row(s) (table: {1})</value>
+  </data>
+  <data name="DatabaseToolForm_D019" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="DatabaseToolForm_D020" xml:space="preserve">
+    <value>Update failed: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D021" xml:space="preserve">
+    <value>Delete the selected {0} row(s)?
+This cannot be undone (only a backup restore can recover it).</value>
+  </data>
+  <data name="DatabaseToolForm_D022" xml:space="preserve">
+    <value>Confirm Row Deletion</value>
+  </data>
+  <data name="DatabaseToolForm_D023" xml:space="preserve">
+    <value>{0} row(s) deleted</value>
+  </data>
+  <data name="DatabaseToolForm_D024" xml:space="preserve">
+    <value>Delete failed: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D025" xml:space="preserve">
+    <value>This table has no primary key, so cells cannot be edited and rows cannot be deleted (view only)</value>
+  </data>
+  <data name="DatabaseToolForm_D027" xml:space="preserve">
+    <value>Please select row(s) to delete</value>
+  </data>
+  <data name="DatabaseToolForm_D028" xml:space="preserve">
+    <value>(capped)</value>
+  </data>
+  <data name="DatabaseToolForm_D029" xml:space="preserve">
+    <value>Target: {0} row(s)</value>
+  </data>
+  <data name="DatabaseToolForm_D030" xml:space="preserve">
+    <value>There are no matching rows</value>
+  </data>
+  <data name="DatabaseToolForm_D031" xml:space="preserve">
+    <value>Reset {0} row(s) to Pending?</value>
+  </data>
+  <data name="DatabaseToolForm_D032" xml:space="preserve">
+    <value>{0} row(s) reset to Pending</value>
+  </data>
+  <data name="DatabaseToolForm_Title" xml:space="preserve">
+    <value>Database Tool (Advanced)</value>
+  </data>
+  <data name="DatabaseToolForm_btnDeleteSelectedRow" xml:space="preserve">
+    <value>Delete Selected Row(s)</value>
+  </data>
+  <data name="DatabaseToolForm_btnExecuteSql" xml:space="preserve">
+    <value>Execute (F5)</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshRecoveryCounts" xml:space="preserve">
+    <value>Refresh Counts</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshTable" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetDownloadingToPending" xml:space="preserve">
+    <value>Reset to Pending</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetFailedToPending" xml:space="preserve">
+    <value>Reset to Pending</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetPausedToPending" xml:space="preserve">
+    <value>Reset to Pending</value>
+  </data>
+  <data name="DatabaseToolForm_btnToggleWriteMode" xml:space="preserve">
+    <value>Enable Write Mode</value>
+  </data>
+  <data name="DatabaseToolForm_chkApplyRowLimit" xml:space="preserve">
+    <value>Apply row limit</value>
+  </data>
+  <data name="DatabaseToolForm_grpDownloading" xml:space="preserve">
+    <value>Downloading -&gt; Pending (recover rows left stuck by an abnormal exit)</value>
+  </data>
+  <data name="DatabaseToolForm_grpFailed" xml:space="preserve">
+    <value>Failed -&gt; Pending (also resets the retry count and error)</value>
+  </data>
+  <data name="DatabaseToolForm_grpPaused" xml:space="preserve">
+    <value>Paused -&gt; Pending (resume everything saved as "later" at once)</value>
+  </data>
+  <data name="DatabaseToolForm_lblBanner" xml:space="preserve">
+    <value>Read-only mode</value>
+  </data>
+  <data name="DatabaseToolForm_lblDownloadingCount" xml:space="preserve">
+    <value>Target: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblFailedCount" xml:space="preserve">
+    <value>Target: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblMaxRows" xml:space="preserve">
+    <value>Max rows:</value>
+  </data>
+  <data name="DatabaseToolForm_lblPausedCount" xml:space="preserve">
+    <value>Target: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblRecoveryHint" xml:space="preserve">
+    <value>Performs the same recovery as the main app does on startup, in bulk and without restarting it. Enable write mode before using it.</value>
+  </data>
+  <data name="DatabaseToolForm_lblSqlHint" xml:space="preserve">
+    <value>Enter SQL and execute it. In read-only mode, only SELECT statements return results; write statements are rejected automatically.</value>
+  </data>
+  <data name="DatabaseToolForm_lblTable" xml:space="preserve">
+    <value>Table:</value>
+  </data>
+  <data name="DatabaseToolForm_tabBrowser" xml:space="preserve">
+    <value>Table Browser</value>
+  </data>
+  <data name="DatabaseToolForm_tabRecovery" xml:space="preserve">
+    <value>Recovery</value>
+  </data>
+  <data name="DatabaseToolForm_tabSql" xml:space="preserve">
+    <value>SQL Editor</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunning" xml:space="preserve">
+    <value>IwaraDownloader is currently running.
+
+Using the database tool while it's running may cause data inconsistencies due to conflicts with download processing.
+We strongly recommend closing IwaraDownloader first.
+
+Continue anyway?</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunningTitle" xml:space="preserve">
+    <value>Running Confirmation</value>
   </data>
   <data name="DuplicateCheckForm_D001" xml:space="preserve">
     <value>Scanning...</value>
@@ -349,6 +540,12 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>Moving files...</value>
   </data>
+  <data name="ImportFromFolderWizard_ApiFailedLog" xml:space="preserve">
+    <value>[API Failed] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ApiQuerying" xml:space="preserve">
+    <value>Querying iwara API {0}/{1}: {2}</value>
+  </data>
   <data name="ImportFromFolderWizard_D001" xml:space="preserve">
     <value>Preparing...</value>
   </data>
@@ -454,11 +651,80 @@ Error log:
     <value>Title-matched:      {0}
 </value>
   </data>
+  <data name="ImportFromFolderWizard_ErrorLog" xml:space="preserve">
+    <value>[Error] {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionLog" xml:space="preserve">
+    <value>[Exception] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionPrefix" xml:space="preserve">
+    <value>Exception: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_FailedLog" xml:space="preserve">
+    <value>[Failed] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ImportCancelled" xml:space="preserve">
+    <value>[Cancelled] Import cancelled</value>
+  </data>
+  <data name="ImportFromFolderWizard_Imported" xml:space="preserve">
+    <value>+ Imported: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
+    <value>Merged: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewPlaceholderChannel" xml:space="preserve">
+    <value>+ Added channel (auto-check off): {0} (@{1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
+    <value>+ New subscription: {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} videos</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} videos  [already registered]</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCancelled" xml:space="preserve">
+    <value>[Cancelled] Scan cancelled</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCompleteHeader" xml:space="preserve">
+    <value>=== Scan complete ===</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanTarget" xml:space="preserve">
+    <value>Scan target: {0} files</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedAlreadyDownloaded" xml:space="preserve">
+    <value>Skipped (already downloaded): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedExisting" xml:space="preserve">
+    <value>Skipped (file already exists): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiFailed" xml:space="preserve">
+    <value>  API fetch failed: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiSkipped" xml:space="preserve">
+    <value>  API query skipped (already in DB): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryDup" xml:space="preserve">
+    <value>  Duplicate (already downloaded elsewhere): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryNewAuthors" xml:space="preserve">
+    <value>  New authors: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummarySingleVideos" xml:space="preserve">
+    <value>  Single videos: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTagged" xml:space="preserve">
+    <value>  Tagged files: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTitleMatch" xml:space="preserve">
+    <value>  Title match (needs review): {0} (high confidence {1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUniqueId" xml:space="preserve">
+    <value>  Unique videoId: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUntagged" xml:space="preserve">
+    <value>  Untagged (unmatched, skipped): {0}</value>
   </data>
   <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
     <value>matches multiple candidates</value>
@@ -502,8 +768,38 @@ Error log:
   <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
     <value>partial match</value>
   </data>
+  <data name="ImportFromFolderWizard_TagReading" xml:space="preserve">
+    <value>Reading tags {0}/{1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TaggedUntaggedCount" xml:space="preserve">
+    <value>Tagged files {0} / Untagged {1}</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>Import from Folder</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchFailedLog" xml:space="preserve">
+    <value>[Failed] Title match: {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedTagged" xml:space="preserve">
+    <value>Imported via title match (tag written): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedUntagged" xml:space="preserve">
+    <value>Imported via title match (tag not written - UUID resolve failed: {0}): {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImporting" xml:space="preserve">
+    <value>Importing title match ({0}/{1}) {2}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchLostFromDb" xml:space="preserve">
+    <value>[Failed] Title match: {0} (missing from DB)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchSummary" xml:space="preserve">
+    <value>Title match {0} (high confidence {1}) / Duplicate (already downloaded) {2} / Untagged (unmatched) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ToastSummary" xml:space="preserve">
+    <value>New {0} / Merged {1} / Title match {2} / Skipped (existing) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_UserIdRepaired" xml:space="preserve">
+    <value>~ Repaired UserId: @{0}</value>
   </data>
   <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
     <value>&lt; Back</value>
@@ -570,7 +866,8 @@ iwara's custom tag to import them into the DB.
     <value>Scanning</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
-    <value>Checked authors will be added as subscribed channels.
+    <value>Checked authors are added as subscribed channels with auto-check on.
+Unchecked authors are also imported as channels, but with auto-check off (you can enable it later).
 </value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">
@@ -956,10 +1253,10 @@ Downloaded files will be deleted (restorable later)</value>
     <value>Download</value>
   </data>
   <data name="MainForm_D106" xml:space="preserve">
-    <value>★ Remove from Favorites</value>
+    <value>Remove from Favorites</value>
   </data>
   <data name="MainForm_D107" xml:space="preserve">
-    <value>★ Add to Favorites</value>
+    <value>Add to Favorites</value>
   </data>
   <data name="MainForm_D108" xml:space="preserve">
     <value>Added {0} videos to the retry queue</value>
@@ -1001,7 +1298,7 @@ Downloaded files will be deleted (restorable later)</value>
     <value>
 
 Moves to the exclusion list (bin).
-Downloaded files will be deleted (restorable later)</value>
+Downloaded files will be deleted (re-download required to restore)</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
     <value>Moved {0} videos to the bin</value>
@@ -1226,6 +1523,26 @@ Downloaded files will be deleted (restorable later)</value>
   <data name="MainForm_D190" xml:space="preserve">
     <value>⏸Auto-DL: OFF</value>
   </data>
+  <data name="MainForm_D191" xml:space="preserve">
+    <value>Changed priority for {0} item(s)</value>
+  </data>
+  <data name="MainForm_D192" xml:space="preserve">
+    <value>Changed default priority for "{0}"</value>
+  </data>
+  <data name="MainForm_D193" xml:space="preserve">
+    <value>Copied {0} author names</value>
+  </data>
+  <data name="MainForm_D200" xml:space="preserve">
+    <value>The database tool (DBMaintenanceTool.exe) was not found.
+Please check that the build completed correctly.</value>
+  </data>
+  <data name="MainForm_D201" xml:space="preserve">
+    <value>Database Tool</value>
+  </data>
+  <data name="MainForm_D202" xml:space="preserve">
+    <value>Failed to start the database tool:
+{0}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1265,11 +1582,14 @@ Moves to those drives will fail and files will remain in place.</value>
   <data name="MainForm_QueuePending" xml:space="preserve">
     <value>{0} pending</value>
   </data>
-  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
-    <value> | Queue: {0} downloading avg {1}% / {2} pending</value>
+  <data name="MainForm_QueueResumedDiskSpace" xml:space="preserve">
+    <value>Disk space recovered — download queue resumed automatically.</value>
   </data>
-  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
-    <value> | Queue: {0} pending</value>
+  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
+    <value> | avg {0}%</value>
+  </data>
+  <data name="MainForm_QueueSuspendedDiskSpace" xml:space="preserve">
+    <value>Download queue paused: disk space is low ({0} tasks pending). It will resume automatically once space is freed.</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0} writing tags</value>
@@ -1305,6 +1625,36 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_SourceNico" xml:space="preserve">
     <value>Niconico</value>
+  </data>
+  <data name="MainForm_ToolbarHint_CheckNow" xml:space="preserve">
+    <value>Check all channels for new videos right now</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ClipboardMonitor" xml:space="preserve">
+    <value>Watch the clipboard and auto-add videos when an iwara URL is copied</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Help" xml:space="preserve">
+    <value>Open the help menu (about, log folder, etc.)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ImmediateDownload" xml:space="preserve">
+    <value>Toggle whether newly added videos start downloading immediately</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Settings" xml:space="preserve">
+    <value>Open the app settings</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
+    <value>Run the initial setup (Python environment, login, etc.)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
+    <value>Start the download queue</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
+    <value>Pause running downloads</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
+    <value>Open the tools menu (bulk import, search import, duplicate check, etc.)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ViewMode" xml:space="preserve">
+    <value>Switch the video list between detail list and thumbnail tiles</value>
   </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>+ Channel</value>
@@ -1400,7 +1750,10 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>NSFW only</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
-    <value>Added</value>
+    <value>Published</value>
+  </data>
+  <data name="MainForm_colVideoPriority" xml:space="preserve">
+    <value>Priority</value>
   </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>Progress</value>
@@ -1426,6 +1779,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_lblLoginStatus" xml:space="preserve">
     <value>(not logged in)</value>
   </data>
+  <data name="MainForm_lblNsfwFilterLabel" xml:space="preserve">
+    <value>NSFW:</value>
+  </data>
   <data name="MainForm_lblStatus" xml:space="preserve">
     <value>Ready</value>
   </data>
@@ -1440,6 +1796,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuChCheckNow" xml:space="preserve">
     <value>Check Now</value>
+  </data>
+  <data name="MainForm_menuChDefaultPriority" xml:space="preserve">
+    <value>Default priority</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
     <value>Delete</value>
@@ -1486,11 +1845,26 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
     <value>Open Log Folder</value>
   </data>
+  <data name="MainForm_menuPriorityHigh" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="MainForm_menuPriorityHighest" xml:space="preserve">
+    <value>Highest</value>
+  </data>
+  <data name="MainForm_menuPriorityLow" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="MainForm_menuPriorityNormal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
   <data name="MainForm_menuShow" xml:space="preserve">
     <value>Show</value>
   </data>
   <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
     <value>Bulk URL Import...</value>
+  </data>
+  <data name="MainForm_menuToolsDatabaseTool" xml:space="preserve">
+    <value>Database Tool (Advanced)...</value>
   </data>
   <data name="MainForm_menuToolsDuplicateCheck" xml:space="preserve">
     <value>Duplicate Check...</value>
@@ -1500,6 +1874,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
     <value>Relink Moved Files...</value>
+  </data>
+  <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
+    <value>Local File Integrity Check...</value>
   </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>Move Unrelocated Files...</value>
@@ -1515,6 +1892,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
     <value>Check File Existence</value>
+  </data>
+  <data name="MainForm_menuVidCopyAuthor" xml:space="preserve">
+    <value>Copy Author Name</value>
   </data>
   <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
     <value>Copy Title</value>
@@ -1532,7 +1912,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>Download</value>
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
-    <value>★ Add to Favorites</value>
+    <value>Add to Favorites</value>
   </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>Map local file...</value>
@@ -1551,6 +1931,9 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>Play</value>
+  </data>
+  <data name="MainForm_menuVidPriority" xml:space="preserve">
+    <value>Priority</value>
   </data>
   <data name="MainForm_menuVidReDownload" xml:space="preserve">
     <value>Re-download...</value>
@@ -1719,6 +2102,12 @@ Existing files will be deleted. Continue?</value>
   </data>
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>Import complete: {0} new / {1} re-queued</value>
+  </data>
+  <data name="SearchImportForm_D012" xml:space="preserve">
+    <value>Page -</value>
+  </data>
+  <data name="SearchImportForm_D013" xml:space="preserve">
+    <value>Page {0} / {1}</value>
   </data>
   <data name="SearchImportForm_Registered" xml:space="preserve">
     <value>[Registered] {0}</value>
@@ -2099,6 +2488,9 @@ Current: {0}</value>
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>Select an error sound file</value>
   </data>
+  <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
+    <value>download folder</value>
+  </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>Settings</value>
   </data>
@@ -2183,6 +2575,9 @@ Current: {0}</value>
   <data name="SettingsForm_chkDownloadExternal" xml:space="preserve">
     <value>Also download external videos (YouTube embeds etc.) — can be overridden per channel</value>
   </data>
+  <data name="SettingsForm_chkEnableAdvancedDbTool" xml:space="preserve">
+    <value>Show the database tool (SQL editor / table browser) in the Tools menu</value>
+  </data>
   <data name="SettingsForm_chkEnableErrorSound" xml:space="preserve">
     <value>Play a sound when a download fails</value>
   </data>
@@ -2243,6 +2638,9 @@ Current: {0}</value>
   <data name="SettingsForm_grpAccount" xml:space="preserve">
     <value>iwara account</value>
   </data>
+  <data name="SettingsForm_grpAdvancedDbTool" xml:space="preserve">
+    <value>Database Tool (Advanced)</value>
+  </data>
   <data name="SettingsForm_grpAutoCheck" xml:space="preserve">
     <value>Auto check</value>
   </data>
@@ -2295,6 +2693,11 @@ Current: {0}</value>
     <value>* Logging in with an iwara account is required to download
    R-18 content and private videos.
 * After changing email/password, click "Re-login".</value>
+  </data>
+  <data name="SettingsForm_lblAdvancedDbToolWarning" xml:space="preserve">
+    <value>⚠ This is an advanced feature that edits the database directly.
+A mistaken operation can corrupt or lose data. It launches as a
+separate process — please close IwaraDownloader before using it.</value>
   </data>
   <data name="SettingsForm_lblAdvancedNote" xml:space="preserve">
     <value>* Rate limit settings reduce server load and prevent 403/429 errors.
@@ -2429,6 +2832,9 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SettingsForm_tabBackup" xml:space="preserve">
     <value>Backup</value>
   </data>
+  <data name="SettingsForm_tabDatabase" xml:space="preserve">
+    <value>Database</value>
+  </data>
   <data name="SettingsForm_tabGeneral" xml:space="preserve">
     <value>General</value>
   </data>
@@ -2515,6 +2921,21 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SetupWizardForm_D021" xml:space="preserve">
     <value>Select python.exe</value>
   </data>
+  <data name="SetupWizardForm_D022" xml:space="preserve">
+    <value>=== Setup started ===</value>
+  </data>
+  <data name="SetupWizardForm_D023" xml:space="preserve">
+    <value>Working directory: {0}</value>
+  </data>
+  <data name="SetupWizardForm_D024" xml:space="preserve">
+    <value>=== Setup complete ===</value>
+  </data>
+  <data name="SetupWizardForm_D025" xml:space="preserve">
+    <value>[Cancelled] Aborted by user</value>
+  </data>
+  <data name="SetupWizardForm_D026" xml:space="preserve">
+    <value>[Error] {0}</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader Setup</value>
   </data>
@@ -2574,6 +2995,33 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>Starting...</value>
+  </data>
+  <data name="StatisticsForm_CsvAuthorRankingHeader" xml:space="preserve">
+    <value>Rank,Author,Videos,Size(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvChannelHeader" xml:space="preserve">
+    <value>Channel,Total Videos,Completed,Failed,Size,Status</value>
+  </data>
+  <data name="StatisticsForm_CsvErrorHeader" xml:space="preserve">
+    <value>Error Type,Count</value>
+  </data>
+  <data name="StatisticsForm_CsvMonthlyHeader" xml:space="preserve">
+    <value>Year-Month,Downloads,Size(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionAuthorRanking" xml:space="preserve">
+    <value># Author Ranking (Top 50)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionByChannel" xml:space="preserve">
+    <value># By Channel</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionErrors" xml:space="preserve">
+    <value># Failures by Error Type</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionMonthly" xml:space="preserve">
+    <value># Monthly Trend</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionSummary" xml:space="preserve">
+    <value># Summary</value>
   </data>
   <data name="StatisticsForm_D001" xml:space="preserve">
     <value>Failed to load statistics:
@@ -2826,6 +3274,24 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>Monthly</value>
   </data>
+  <data name="StyleGuide_ButtonSample" xml:space="preserve">
+    <value>Sample Button</value>
+  </data>
+  <data name="StyleGuide_Description" xml:space="preserve">
+    <value>A development window to verify the WPF migration foundation (theming, i18n, MVVM) works correctly.</value>
+  </data>
+  <data name="StyleGuide_Heading" xml:space="preserve">
+    <value>Control Style Check</value>
+  </data>
+  <data name="StyleGuide_TextBoxLabel" xml:space="preserve">
+    <value>Text Input Sample</value>
+  </data>
+  <data name="StyleGuide_Title" xml:space="preserve">
+    <value>WPF Style Guide (Dev)</value>
+  </data>
+  <data name="StyleGuide_ToggleTheme" xml:space="preserve">
+    <value>Toggle Dark/Light</value>
+  </data>
   <data name="SvcDownloadManager_D001" xml:space="preserve">
     <value>Skipped: external video DL is off</value>
   </data>
@@ -3053,6 +3519,18 @@ Tagged files can be re-discovered even after DB loss or renaming.</value>
   <data name="SvcFileMove_D015" xml:space="preserve">
     <value>Confirm file move</value>
   </data>
+  <data name="SvcFileMove_D016" xml:space="preserve">
+    <value>
+Same drive, so this will complete instantly.</value>
+  </data>
+  <data name="SvcFileMove_D017" xml:space="preserve">
+    <value>
+Destination free space: {0} / Required: {1}</value>
+  </data>
+  <data name="SvcFileMove_D018" xml:space="preserve">
+    <value>
+(Failed to get free space: {0})</value>
+  </data>
   <data name="SvcIwaraApiService_D001" xml:space="preserve">
     <value>Fetching video list of {0}...</value>
   </data>
@@ -3135,6 +3613,25 @@ Continue?</value>
   <data name="SvcLocalFileMap_D011" xml:space="preserve">
     <value>Confirm unmap</value>
   </data>
+  <data name="SvcLocalFileMap_D012" xml:space="preserve">
+    <value>This file is already linked to another video "{1}":
+{0}
+The same file cannot be linked to multiple videos.</value>
+  </data>
+  <data name="SvcLocalFileMap_D013" xml:space="preserve">
+    <value>Duplicate local file</value>
+  </data>
+  <data name="SvcLocalFileMap_D014" xml:space="preserve">
+    <value>The selected file has tags for another video "{1}":
+{0}
+For safety, this file cannot be linked.</value>
+  </data>
+  <data name="SvcLocalFileMap_D015" xml:space="preserve">
+    <value>File tagged for another video</value>
+  </data>
+  <data name="SvcLocalFileMap_D016" xml:space="preserve">
+    <value>The database entry changed or the file is no longer available. Please rescan.</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>Download complete</value>
   </data>
@@ -3151,7 +3648,7 @@ Continue?</value>
     <value>Login required. Please log in from the settings screen.</value>
   </data>
   <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
-    <value>Found {0} file(s) without a tag. Choose how to search for matches.</value>
+    <value>Found {0} file(s) without a tag. Review the list and assign a method per file or folder.</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
     <value>e.g. "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (leave blank for the plain heuristic search)</value>
@@ -3267,6 +3764,123 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
     <value>Skip (do not import)</value>
   </data>
+  <data name="UntaggedFileMatchForm_grpFiles" xml:space="preserve">
+    <value>Untagged files</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFileList" xml:space="preserve">
+    <value>Check files in the Target column, then apply a method below. Relative and full paths are shown for verification.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectAllFiles" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnClearFileSelection" xml:space="preserve">
+    <value>Clear selection</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblScopeFolder" xml:space="preserve">
+    <value>Select folder contents:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseScopeFolder" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectScope" xml:space="preserve">
+    <value>Select contents</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSelectionStatus" xml:space="preserve">
+    <value>Selection status</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colSelected" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFileName" xml:space="preserve">
+    <value>Filename</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colRelativePath" xml:space="preserve">
+    <value>Relative path</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFullPath" xml:space="preserve">
+    <value>Full path</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedMethod" xml:space="preserve">
+    <value>Assigned method</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedDetail" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpRule" xml:space="preserve">
+    <value>Apply to selected files</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblMethod" xml:space="preserve">
+    <value>Method:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item0" xml:space="preserve">
+    <value>Search by artist folder</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item1" xml:space="preserve">
+    <value>Search by filename (whole DB)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item2" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpArtist" xml:space="preserve">
+    <value>Artist search settings</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpFilename" xml:space="preserve">
+    <value>Filename search settings</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleHelp" xml:space="preserve">
+    <value>Apply the settings to the checked files.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleSummary" xml:space="preserve">
+    <value>Assigned methods are shown in the list.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnApplyRule" xml:space="preserve">
+    <value>Apply to selected</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D021" xml:space="preserve">
+    <value>{0} file(s) have no method assigned. Continue and skip unassigned files?</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D022" xml:space="preserve">
+    <value>The folder must be the scan folder itself or a folder under it.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D023" xml:space="preserve">
+    <value>{0} file(s) selected.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D024" xml:space="preserve">
+    <value>Assigned "{1}" to {0} file(s).</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D025" xml:space="preserve">
+    <value>Check the files to which you want to apply the method.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D026" xml:space="preserve">
+    <value>Unassigned</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027" xml:space="preserve">
+    <value>Fetches the selected artist's latest videos and matches only this selection. New videos are supported.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028" xml:space="preserve">
+    <value>Matches filenames against the whole DB. Videos not registered in the DB are excluded.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029" xml:space="preserve">
+    <value>This selection will not be imported.</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D030" xml:space="preserve">
+    <value>Checked: {0} / Assigned: {1} / Unassigned: {2}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D031" xml:space="preserve">
+    <value>No template</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D032" xml:space="preserve">
+    <value>Matching {0} file(s)...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027_Short" xml:space="preserve">
+    <value>Artist search</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028_Short" xml:space="preserve">
+    <value>Filename search</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029_Short" xml:space="preserve">
+    <value>Skip</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>Pending</value>
   </data>
@@ -3354,4 +3968,56 @@ e.g. "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>Save location</value>
   </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve">
+    <value>Local File Integrity Check</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve">
+    <value>Finds database entries whose local file is missing. Select entries to relink them to a local file or redownload them.</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve"><value>Rescan</value></data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve"><value>Relink Local File...</value></data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve"><value>Redownload</value></data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve"><value>Close</value></data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve"><value>Waiting to scan</value></data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve"><value>Title</value></data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve"><value>Video ID</value></data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve"><value>DB path</value></data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve"><value>Reason</value></data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve"><value>Checking local file integrity...</value></data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve"><value>Videos with issues: {0}</value></data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve"><value>Scan canceled</value></data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve"><value>Error: {0}</value></data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve"><value>Local file integrity check failed:
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve"><value>Local File Integrity Check</value></data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve"><value>Select exactly one video to relink.</value></data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve"><value>The item changed while this window was open. The list was refreshed.</value></data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve"><value>Relinked "{0}" to the local file.</value></data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve"><value>Add the selected {0} item(s) to the redownload queue?</value></data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve"><value>Confirm Redownload</value></data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve"><value>Added {0} item(s) to the redownload queue.</value></data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve"><value>Queued {0} item(s). Skipped {1} because their state changed or they are already processing.</value></data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve"><value>Redownload failed:
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve"><value>This video is currently queued or processing. The list was refreshed.</value></data>
+  <data name="LocalFileIntegrityForm_D016" xml:space="preserve"><value>Could not reach the following drives or shares: {0}
+
+The {1} item(s) stored there were excluded from the check instead of being reported as missing. An external drive may be disconnected. Reconnect it and scan again.</value></data>
+  <data name="LocalFileIntegrityForm_D017" xml:space="preserve"><value>Waiting for the mapping operation to finish. The window cannot be closed until it completes.</value></data>
+  <data name="LocalFileIntegrityForm_D018" xml:space="preserve"><value>Found {1} missing file(s) (showing the first {0}). A very large count usually means a drive is disconnected.</value></data>
+  <data name="LocalFileIntegrityForm_D019" xml:space="preserve"><value>The last scan hit the reported-issue limit. If a drive is connected but not responding, files that actually exist may have been reported as missing.
+
+Re-downloading {0} item(s) now would re-fetch files you may already have.
+
+Continue anyway? (Checking the drive and scanning again first is strongly recommended.)</value></data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>Pending</value></data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>Downloading</value></data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>Writing tags</value></data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>Completed</value></data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>Failed</value></data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>Paused</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>Completed but DB path is empty</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>DB path does not exist</value></data>
 </root>

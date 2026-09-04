@@ -218,8 +218,8 @@ namespace IwaraDownloader.Forms
             this.lblStep3Desc.Name = "lblStep3Desc";
             this.lblStep3Desc.Size = new System.Drawing.Size(670, 40);
             this.lblStep3Desc.Text =
-                "チェックを入れた作者がチャンネル (購読) として追加されます。\r\n" +
-                "チェックを外した作者の動画は『単発動画』として取り込まれます。";
+                "チェックを入れた作者は自動チェックONのチャンネル (購読) として追加されます。\r\n" +
+                "チェックを外した作者も自動チェックOFFのチャンネルとして取り込まれます (あとで有効化できます)。";
 
             this.clbAuthors.CheckOnClick = true;
             this.clbAuthors.Font = new System.Drawing.Font("Segoe UI", 9.5F);
@@ -383,14 +383,15 @@ namespace IwaraDownloader.Forms
             this.lblSummary.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.lblSummary.Location = new System.Drawing.Point(10, 65);
             this.lblSummary.Name = "lblSummary";
-            this.lblSummary.Size = new System.Drawing.Size(670, 160);
+            // エラー詳細ログの案内行も表示できるように、サマリー領域を十分確保する。
+            this.lblSummary.Size = new System.Drawing.Size(670, 260);
             this.lblSummary.Text = "";
 
             this.lblDupNotice.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.lblDupNotice.ForeColor = System.Drawing.Color.FromArgb(200, 80, 40);
-            this.lblDupNotice.Location = new System.Drawing.Point(10, 230);
+            this.lblDupNotice.Location = new System.Drawing.Point(10, 335);
             this.lblDupNotice.Name = "lblDupNotice";
-            this.lblDupNotice.Size = new System.Drawing.Size(670, 60);
+            this.lblDupNotice.Size = new System.Drawing.Size(670, 45);
             this.lblDupNotice.Text = "";
 
             // pnlFooter

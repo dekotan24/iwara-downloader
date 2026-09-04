@@ -226,7 +226,19 @@ namespace IwaraDownloader.Forms
                                     CreatedAt = DateTime.Now
                                 });
                             }
-                            this.Invoke(() => progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum));
+                            // インポート中にユーザーがウィンドウを閉じると、破棄済み/ハンドル破棄済みの
+                            // コントロールへのInvokeが例外を投げてバックグラウンドスレッドをクラッシュ
+                            // させるため、IsDisposedチェックとtry-catchの両方でガードする
+                            // (チェック直後にDisposeされるTOCTOUの余地があるためtry-catchも必須)。
+                            if (!this.IsDisposed)
+                            {
+                                try
+                                {
+                                    this.Invoke(() => progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum));
+                                }
+                                catch (ObjectDisposedException) { }
+                                catch (InvalidOperationException) { }
+                            }
                         }
                     });
 

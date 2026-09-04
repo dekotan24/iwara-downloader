@@ -23,8 +23,9 @@ namespace IwaraDownloader.Utils
         /// 1件をマージする。
         /// video.Id が 0 (DB未登録。例: 未購読アーティストを iwara API から直接取得した場合) なら
         /// AddVideo で新規追加し、そうでなければ既存行を UpdateVideo で更新する。
-        /// subUser を渡した場合、新規追加時に SubscribedUserId/AuthorUserId/AuthorUsername を補完する
-        /// (呼び出し側で作者の SubscribedUser 解決・新規作成を済ませておくこと)。
+        /// subUser を渡した場合はそれを優先して SubscribedUserId/AuthorUserId/AuthorUsername を補完する。
+        /// 渡さなかった場合でも、動画の作者(AuthorUsername)が判明していれば
+        /// EnsureChannelForAuthor で必ずチャンネルへ紐付ける(未購読アーティストのみ)。
         /// </summary>
         public static async Task<ImportOutcome> ImportOneAsync(
             VideoInfo existingVideo, string filePath, IwaraApiService api, DatabaseService database,
@@ -81,6 +82,15 @@ namespace IwaraDownloader.Utils
                 if (!existingVideo.SubscribedUserId.HasValue) existingVideo.SubscribedUserId = subUser.Id;
                 if (string.IsNullOrEmpty(existingVideo.AuthorUserId)) existingVideo.AuthorUserId = subUser.UserId;
                 if (string.IsNullOrEmpty(existingVideo.AuthorUsername)) existingVideo.AuthorUsername = subUser.Username;
+            }
+            else if (!existingVideo.SubscribedUserId.HasValue && !string.IsNullOrEmpty(existingVideo.AuthorUsername))
+            {
+                // 呼び出し側が作者の SubscribedUser を解決していない場合(未購読アーティストの
+                // タイトル照合等)も、作者が判明していれば必ずチャンネルへ紐付ける。
+                // 既に購読済みならそこへ合流、未購読なら自動チェックOFFの新規チャンネルとして作成する。
+                var channel = database.EnsureChannelForAuthor(existingVideo.AuthorUsername, existingVideo.Site);
+                existingVideo.SubscribedUserId = channel.Id;
+                if (string.IsNullOrEmpty(existingVideo.AuthorUserId)) existingVideo.AuthorUserId = channel.UserId;
             }
 
             if (existingVideo.Id == 0)

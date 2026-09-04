@@ -175,11 +175,24 @@ namespace IwaraDownloader.Models
 
         #endregion
 
+        #region Advanced Settings
+
+        /// <summary>DB操作ツール(SQLエディタ/テーブルブラウザ)をツールメニューに表示する。上級者向け機能、既定は無効</summary>
+        public bool EnableAdvancedDbTool { get; set; } = false;
+
+        #endregion
+
         /// <summary>
         /// UI言語: "auto"(OS言語に従う) / "ja" / "en" / "zh-Hans"。
         /// 変更はアプリ再起動で反映される。WebUIにも同じ設定が適用される。
         /// </summary>
         public string Language { get; set; } = "auto";
+
+        /// <summary>
+        /// WPF画面のテーマ: "dark" / "light"。既定はダーク(2026年のデザイン方針に基づく)。
+        /// 変更はウィンドウ再表示で反映(アプリ全体の再起動は不要)。
+        /// </summary>
+        public string Theme { get; set; } = "dark";
 
         /// <summary>設定ファイルのパス</summary>
         [JsonIgnore]

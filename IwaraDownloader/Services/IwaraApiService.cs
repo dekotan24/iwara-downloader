@@ -6,6 +6,18 @@ using IwaraDownloader.Models;
 namespace IwaraDownloader.Services
 {
     /// <summary>
+    /// チャンネル動画一覧取得の結果種別。Success/UserNotFound は確定した状態、Failed は
+    /// ログイン未済・レート制限・一時的な通信エラー等の「今回は分からなかった」を表す。
+    /// 呼び出し側は Failed のとき、それ以前に確定していたアカウント消滅フラグ等を変更してはいけない。
+    /// </summary>
+    public enum ChannelFetchStatus
+    {
+        Success,
+        UserNotFound,
+        Failed,
+    }
+
+    /// <summary>
     /// Python iwara_helper.py を呼び出すサービス(Embeddable Python対応)
     /// </summary>
     public class IwaraApiService
@@ -466,35 +478,40 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)
+        /// ユーザーの動画リストを取得 (site で iwara.tv / iwara.ai 切替)。
+        /// Status は Success/UserNotFound(確定) と Failed(ログイン未済・通信エラー等、今回は
+        /// 判定できなかった) を区別する。呼び出し側はアカウント消滅フラグ等の永続状態を
+        /// Failed のときには変更してはいけない(一時的な403/レート制限を消滅と誤判定するため)。
         /// </summary>
-        public async Task<List<VideoInfo>> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default)
+        public async Task<(List<VideoInfo> Videos, ChannelFetchStatus Status)> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default)
         {
             if (!IsLoggedIn)
             {
                 progress?.Report("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
-                return new List<VideoInfo>();
+                return (new List<VideoInfo>(), ChannelFetchStatus.Failed);
             }
 
             progress?.Report(L.T("SvcIwaraApiService_D001", username));
 
             var result = await RunPythonAsync("get_videos", site, ct, username);
-            
+
             if (result == null)
             {
                 progress?.Report(L.T("SvcIwaraApiService_D002"));
-                return new List<VideoInfo>();
+                return (new List<VideoInfo>(), ChannelFetchStatus.Failed);
             }
 
             var root = result.RootElement;
-            
+
             if (!root.TryGetProperty("success", out var success) || !success.GetBoolean())
             {
-                var error = root.TryGetProperty("error", out var errorProp) 
-                    ? errorProp.GetString() 
+                var error = root.TryGetProperty("error", out var errorProp)
+                    ? errorProp.GetString()
                     : "Unknown error";
                 progress?.Report(L.T("SvcIwaraApiService_D003", error));
-                return new List<VideoInfo>();
+                var code = root.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+                var status = code == "USER_NOT_FOUND" ? ChannelFetchStatus.UserNotFound : ChannelFetchStatus.Failed;
+                return (new List<VideoInfo>(), status);
             }
 
             var videos = new List<VideoInfo>();
@@ -503,6 +520,15 @@ namespace IwaraDownloader.Services
             {
                 foreach (var video in videosArray.EnumerateArray())
                 {
+                    DateTime? postedAt = null;
+                    if (video.TryGetProperty("created_at", out var ca) && ca.ValueKind == JsonValueKind.String
+                        && DateTime.TryParse(ca.GetString(), out var caDt))
+                    {
+                        postedAt = caDt;
+                    }
+
+                    var apiRawJson = video.TryGetProperty("raw", out var rawEl) ? rawEl.GetRawText() : "";
+
                     var videoInfo = new VideoInfo
                     {
                         VideoId = video.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
@@ -512,6 +538,8 @@ namespace IwaraDownloader.Services
                             ? (int)dur.GetDouble() : 0,
                         EmbedUrl = video.TryGetProperty("embed_url", out var embed) ? embed.GetString() ?? "" : "",
                         Rating = video.TryGetProperty("rating", out var rt) ? rt.GetString() ?? "" : "",
+                        PostedAt = postedAt,
+                        ApiRawJson = apiRawJson,
                         Site = site ?? Utils.Helpers.SiteTv,
                         AuthorUserId = username,
                         AuthorUsername = username
@@ -526,7 +554,7 @@ namespace IwaraDownloader.Services
             var count = root.TryGetProperty("count", out var countProp) ? countProp.GetInt32() : videos.Count;
             progress?.Report(L.T("SvcIwaraApiService_D004", count));
 
-            return videos;
+            return (videos, ChannelFetchStatus.Success);
         }
 
         /// <summary>
@@ -558,6 +586,68 @@ namespace IwaraDownloader.Services
             return info;
         }
 
+        /// <summary>
+        /// 動画の表示用メタデータだけを取得する。
+        /// ダウンロードURLは必要ないため、get_url の filesq/CDN問い合わせを省略する。
+        /// フォルダ取り込みなど、タイトル・作者・file_idだけが必要な処理で使用する。
+        /// </summary>
+        public async Task<VideoUrlInfo> GetVideoInfoAsync(string videoId, string? site = null)
+        {
+            if (!IsLoggedIn)
+                return VideoUrlInfo.FromError("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
+
+            var info = await GetVideoInfoInternalAsync(videoId, site);
+            // GetDownloadUrlAsync と同じ site 自動フォールバックを維持する。
+            if (!info.Success
+                && string.IsNullOrEmpty(site)
+                && (info.Error?.Contains("differentSite", StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                Debug.WriteLine($"GetVideoInfo: differentSite detected for {videoId}, retrying with www.iwara.ai");
+                var retry = await GetVideoInfoInternalAsync(videoId, Utils.Helpers.SiteAi);
+                if (retry.Success)
+                {
+                    retry.ResolvedSite = Utils.Helpers.SiteAi;
+                    return retry;
+                }
+            }
+            return info;
+        }
+
+        private async Task<VideoUrlInfo> GetVideoInfoInternalAsync(string videoId, string? site)
+        {
+            var result = await RunPythonAsync("get_info", site, videoId);
+            if (result == null)
+                return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
+
+            var root = result.RootElement;
+            if (!(root.TryGetProperty("success", out var success) && success.GetBoolean()))
+                return VideoUrlInfo.FromError(GetString(root, "error") ?? "Unknown error");
+
+            DateTime? postedAt = null;
+            if (root.TryGetProperty("created_at", out var ca)
+                && ca.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(ca.GetString(), out var caDt))
+            {
+                postedAt = caDt;
+            }
+
+            return new VideoUrlInfo
+            {
+                Success = true,
+                Url = $"https://{(string.IsNullOrEmpty(site) ? Utils.Helpers.SiteTv : site)}/video/{videoId}",
+                Title = GetString(root, "title"),
+                FileUuid = GetString(root, "file_id"),
+                AuthorUsername = GetString(root, "author_username"),
+                AuthorName = GetString(root, "author_name"),
+                Rating = GetString(root, "rating"),
+                ThumbnailUrl = GetString(root, "thumbnail"),
+                DurationSeconds = GetInt(root, "duration"),
+                EmbedUrl = GetString(root, "embed_url"),
+                PostedAt = postedAt,
+                ApiRawJson = root.TryGetProperty("raw", out var rawEl) ? rawEl.GetRawText() : null,
+            };
+        }
+
         private async Task<VideoUrlInfo> GetDownloadUrlInternalAsync(string videoId, string? site)
         {
             var result = await RunPythonAsync("get_url", site, videoId);
@@ -569,6 +659,15 @@ namespace IwaraDownloader.Services
 
             if (root.TryGetProperty("success", out var success) && success.GetBoolean())
             {
+                DateTime? postedAt = null;
+                if (root.TryGetProperty("created_at", out var ca) && ca.ValueKind == JsonValueKind.String
+                    && DateTime.TryParse(ca.GetString(), out var caDt))
+                {
+                    postedAt = caDt;
+                }
+
+                var apiRawJson = root.TryGetProperty("raw", out var rawEl) ? rawEl.GetRawText() : null;
+
                 return new VideoUrlInfo
                 {
                     Success = true,
@@ -580,6 +679,10 @@ namespace IwaraDownloader.Services
                     AuthorName = GetString(root, "author_name"),
                     Rating = GetString(root, "rating"),
                     ThumbnailUrl = GetString(root, "thumbnail"),
+                    DurationSeconds = GetInt(root, "duration"),
+                    EmbedUrl = GetString(root, "embed_url"),
+                    PostedAt = postedAt,
+                    ApiRawJson = apiRawJson,
                 };
             }
 
@@ -588,6 +691,20 @@ namespace IwaraDownloader.Services
 
         private static string? GetString(JsonElement root, string name)
             => root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+
+        private static int GetInt(JsonElement root, string name)
+        {
+            if (!root.TryGetProperty(name, out var p)) return 0;
+            if (p.ValueKind == JsonValueKind.Number)
+            {
+                if (p.TryGetInt32(out var value)) return value;
+                if (p.TryGetDouble(out var doubleValue)) return Math.Max(0, (int)doubleValue);
+            }
+            if (p.ValueKind == JsonValueKind.String
+                && int.TryParse(p.GetString(), out var stringValue))
+                return Math.Max(0, stringValue);
+            return 0;
+        }
 
         /// <summary>
         /// GetDownloadUrlAsync の戻り値
@@ -603,6 +720,10 @@ namespace IwaraDownloader.Services
             public string? AuthorName { get; set; }
             public string? Rating { get; set; }
             public string? ThumbnailUrl { get; set; }
+            public int DurationSeconds { get; set; }
+            public string? EmbedUrl { get; set; }
+            public DateTime? PostedAt { get; set; }
+            public string? ApiRawJson { get; set; }
             public string? Error { get; set; }
 
             /// <summary>

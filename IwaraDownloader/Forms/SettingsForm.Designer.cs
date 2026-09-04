@@ -24,6 +24,7 @@ namespace IwaraDownloader.Forms
             this.tabOther = new TabPage();
             this.tabBackup = new TabPage();
             this.tabMediaServer = new TabPage();
+            this.tabDatabase = new TabPage();
             this.grpWebServer = new GroupBox();
             this.chkWebServerAutoStart = new CheckBox();
             this.lblWebPort = new Label();
@@ -113,6 +114,9 @@ namespace IwaraDownloader.Forms
             this.numRateLimitMax = new NumericUpDown();
             this.lblRateLimitMaxUnit = new Label();
             this.chkExponentialBackoff = new CheckBox();
+            this.grpAdvancedDbTool = new GroupBox();
+            this.chkEnableAdvancedDbTool = new CheckBox();
+            this.lblAdvancedDbToolWarning = new Label();
             this.lblAdvancedNote = new Label();
 
             // バックアップ
@@ -162,6 +166,7 @@ namespace IwaraDownloader.Forms
             this.tabOther.SuspendLayout();
             this.tabBackup.SuspendLayout();
             this.tabMediaServer.SuspendLayout();
+            this.tabDatabase.SuspendLayout();
             this.grpWebServer.SuspendLayout();
             this.grpWebAuth.SuspendLayout();
             this.grpWebStatus.SuspendLayout();
@@ -173,6 +178,7 @@ namespace IwaraDownloader.Forms
             this.grpAccount.SuspendLayout();
             this.grpRateLimit.SuspendLayout();
             this.grpErrorHandling.SuspendLayout();
+            this.grpAdvancedDbTool.SuspendLayout();
             this.grpSound.SuspendLayout();
             this.grpFilename.SuspendLayout();
             this.grpMetadata.SuspendLayout();
@@ -199,6 +205,7 @@ namespace IwaraDownloader.Forms
             this.tabControl.Controls.Add(this.tabOther);
             this.tabControl.Controls.Add(this.tabBackup);
             this.tabControl.Controls.Add(this.tabMediaServer);
+            this.tabControl.Controls.Add(this.tabDatabase);
             this.tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.tabControl.Location = new Point(12, 12);
             this.tabControl.Name = "tabControl";
@@ -402,10 +409,10 @@ namespace IwaraDownloader.Forms
             //
             // lblMinFreeSpaceNote
             //
-            this.lblMinFreeSpaceNote.AutoSize = true;
-            this.lblMinFreeSpaceNote.Location = new Point(165, 175);
+            this.lblMinFreeSpaceNote.AutoSize = false;
+            this.lblMinFreeSpaceNote.Location = new Point(165, 172);
             this.lblMinFreeSpaceNote.Name = "lblMinFreeSpaceNote";
-            this.lblMinFreeSpaceNote.Size = new Size(200, 15);
+            this.lblMinFreeSpaceNote.Size = new Size(275, 30);
             this.lblMinFreeSpaceNote.TabIndex = 13;
             this.lblMinFreeSpaceNote.Text = "GB 未満ならDLを開始しない (0=無効)";
 
@@ -586,11 +593,11 @@ namespace IwaraDownloader.Forms
             this.btnBrowsePython.Click += new EventHandler(this.btnBrowsePython_Click);
 
             // lblPythonNote
-            this.lblPythonNote.AutoSize = true;
+            this.lblPythonNote.AutoSize = false;
             this.lblPythonNote.ForeColor = Color.Gray;
             this.lblPythonNote.Location = new Point(10, 60);
             this.lblPythonNote.Name = "lblPythonNote";
-            this.lblPythonNote.Size = new Size(400, 15);
+            this.lblPythonNote.Size = new Size(420, 30);
             this.lblPythonNote.Text = "※ 初回セットアップ済みの場合、パス変更のみ行います(ライブラリの再インストールは不要)";
 
             // lblYtDlpPath
@@ -616,11 +623,11 @@ namespace IwaraDownloader.Forms
             this.btnBrowseYtDlp.Click += new EventHandler(this.btnBrowseYtDlp_Click);
 
             // lblYtDlpNote
-            this.lblYtDlpNote.AutoSize = true;
+            this.lblYtDlpNote.AutoSize = false;
             this.lblYtDlpNote.ForeColor = Color.Gray;
             this.lblYtDlpNote.Location = new Point(10, 125);
             this.lblYtDlpNote.Name = "lblYtDlpNote";
-            this.lblYtDlpNote.Size = new Size(400, 15);
+            this.lblYtDlpNote.Size = new Size(420, 30);
             this.lblYtDlpNote.Text = "※ \"yt-dlp\" (PATH参照) でOK。未インストールなら自動で pip install を試行します";
 
             // 
@@ -941,6 +948,44 @@ namespace IwaraDownloader.Forms
             this.lblAdvancedNote.Name = "lblAdvancedNote";
             this.lblAdvancedNote.Size = new Size(420, 60);
             this.lblAdvancedNote.Text = "※ レート制限設定はサーバー負荷を軽減し、403/429エラーを防ぎます。\r\n※ 値が小さすぎるとアクセス制限される可能性があります。\r\n※ 大きすぎるとダウンロードに時間がかかります。";
+
+            //
+            // tabDatabase
+            //
+            this.tabDatabase.Controls.Add(this.grpAdvancedDbTool);
+            this.tabDatabase.Location = new Point(4, 24);
+            this.tabDatabase.Name = "tabDatabase";
+            this.tabDatabase.Padding = new Padding(3);
+            this.tabDatabase.Size = new Size(452, 472);
+            this.tabDatabase.TabIndex = 6;
+            this.tabDatabase.Text = "データベース";
+            this.tabDatabase.UseVisualStyleBackColor = true;
+
+            // grpAdvancedDbTool
+            this.grpAdvancedDbTool.Controls.Add(this.chkEnableAdvancedDbTool);
+            this.grpAdvancedDbTool.Controls.Add(this.lblAdvancedDbToolWarning);
+            this.grpAdvancedDbTool.Location = new Point(6, 6);
+            this.grpAdvancedDbTool.Name = "grpAdvancedDbTool";
+            this.grpAdvancedDbTool.Size = new Size(440, 130);
+            this.grpAdvancedDbTool.TabIndex = 0;
+            this.grpAdvancedDbTool.TabStop = false;
+            this.grpAdvancedDbTool.Text = "DB操作ツール (上級者向け)";
+
+            // chkEnableAdvancedDbTool
+            this.chkEnableAdvancedDbTool.AutoSize = true;
+            this.chkEnableAdvancedDbTool.Location = new Point(10, 25);
+            this.chkEnableAdvancedDbTool.Name = "chkEnableAdvancedDbTool";
+            this.chkEnableAdvancedDbTool.Size = new Size(320, 19);
+            this.chkEnableAdvancedDbTool.Text = "ツールメニューにDB操作ツール(SQLエディタ/テーブルブラウザ)を表示する";
+            this.chkEnableAdvancedDbTool.UseVisualStyleBackColor = true;
+
+            // lblAdvancedDbToolWarning
+            this.lblAdvancedDbToolWarning.AutoSize = true;
+            this.lblAdvancedDbToolWarning.ForeColor = Color.OrangeRed;
+            this.lblAdvancedDbToolWarning.Location = new Point(10, 50);
+            this.lblAdvancedDbToolWarning.Name = "lblAdvancedDbToolWarning";
+            this.lblAdvancedDbToolWarning.Size = new Size(420, 72);
+            this.lblAdvancedDbToolWarning.Text = "⚠ データベースを直接操作する上級者向け機能です。\r\n誤った操作でデータが破損・消失する可能性があります。\r\n別プロセスの独立ツールとして起動するため、\r\ndownloaderは終了してから使うことを強く推奨します。";
 
             // 
             // tabOther
@@ -1514,6 +1559,8 @@ namespace IwaraDownloader.Forms
             this.grpRateLimit.PerformLayout();
             this.grpErrorHandling.ResumeLayout(false);
             this.grpErrorHandling.PerformLayout();
+            this.grpAdvancedDbTool.ResumeLayout(false);
+            this.grpAdvancedDbTool.PerformLayout();
             this.grpSound.ResumeLayout(false);
             this.grpSound.PerformLayout();
             this.grpFilename.ResumeLayout(false);
@@ -1525,6 +1572,7 @@ namespace IwaraDownloader.Forms
             this.grpExport.ResumeLayout(false);
             this.grpImport.ResumeLayout(false);
             this.tabMediaServer.ResumeLayout(false);
+            this.tabDatabase.ResumeLayout(false);
             this.grpWebServer.ResumeLayout(false);
             this.grpWebServer.PerformLayout();
             this.grpWebAuth.ResumeLayout(false);
@@ -1633,6 +1681,9 @@ namespace IwaraDownloader.Forms
         private NumericUpDown numRateLimitMax;
         private Label lblRateLimitMaxUnit;
         private CheckBox chkExponentialBackoff;
+        private GroupBox grpAdvancedDbTool;
+        private CheckBox chkEnableAdvancedDbTool;
+        private Label lblAdvancedDbToolWarning;
         private Label lblAdvancedNote;
         private Label lblPreset;
         private Button btnPresetConservative;
@@ -1681,5 +1732,8 @@ namespace IwaraDownloader.Forms
         private Button btnWebStartStop;
         private Button btnWebOpenBrowser;
         private Label lblWebUrl;
+
+        // データベース (上級者向け)
+        private TabPage tabDatabase;
     }
 }

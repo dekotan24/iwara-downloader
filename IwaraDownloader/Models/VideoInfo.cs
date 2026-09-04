@@ -90,8 +90,21 @@ namespace IwaraDownloader.Models
         /// <summary>お気に入りフラグ</summary>
         public bool IsFavorite { get; set; }
 
+        /// <summary>
+        /// DLキューの優先度。null=未指定(EnqueueDownload時に所属チャンネルのDefaultPriority、
+        /// それも無ければNormalへ解決される)。値が入っているのはユーザーが個別に手動設定した場合のみ。
+        /// </summary>
+        public DownloadPriority? Priority { get; set; }
+
         /// <summary>サムネイル取得ステータス (0=未試行, 1=キャッシュ済, 2=失敗)</summary>
         public int ThumbnailStatus { get; set; }
+
+        /// <summary>
+        /// iwara APIの生レスポンス(著者アカウントの揮発的情報のみ間引いたJSON文字列)。
+        /// numLikes/numViews/tags/body等、現時点でDB専用カラムを持たない情報を将来使いたくなった時に
+        /// 再取得なしで参照できるようにするための保険。取得経路によっては空文字のままのこともある。
+        /// </summary>
+        public string ApiRawJson { get; set; } = string.Empty;
 
         /// <summary>
         /// 動画の長さを表示用にフォーマット

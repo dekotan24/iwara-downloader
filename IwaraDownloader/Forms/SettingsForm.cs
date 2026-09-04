@@ -105,6 +105,7 @@ namespace IwaraDownloader.Forms
             numRateLimitBase.Value = settings.RateLimitBaseDelayMs;
             numRateLimitMax.Value = settings.RateLimitMaxDelayMs;
             chkExponentialBackoff.Checked = settings.EnableExponentialBackoff;
+            chkEnableAdvancedDbTool.Checked = settings.EnableAdvancedDbTool;
 
             // その他設定
             chkEnableSound.Checked = settings.EnableCompletionSound;
@@ -185,6 +186,7 @@ namespace IwaraDownloader.Forms
             settings.RateLimitBaseDelayMs = (int)numRateLimitBase.Value;
             settings.RateLimitMaxDelayMs = (int)numRateLimitMax.Value;
             settings.EnableExponentialBackoff = chkExponentialBackoff.Checked;
+            settings.EnableAdvancedDbTool = chkEnableAdvancedDbTool.Checked;
 
             // その他設定
             settings.EnableCompletionSound = chkEnableSound.Checked;
@@ -401,7 +403,7 @@ namespace IwaraDownloader.Forms
                     _database.GetAllVideos(), oldFolder, excludeBases);
 
                 var decision = FileMoveHelper.ConfirmMove(
-                    this, "ダウンロード保存先", movable, oldFolder, newFolder);
+                    this, L.T("SettingsForm_MoveSubjectDownloadFolder"), movable, oldFolder, newFolder);
                 if (decision == FileMoveHelper.MoveDecision.Cancel) return false;
                 if (decision == FileMoveHelper.MoveDecision.Move)
                 {
@@ -1041,7 +1043,7 @@ namespace IwaraDownloader.Forms
     }
 
     /// <summary>
-    /// WebServerService のグローバルホルダー（MainForm で初期化、SettingsForm から参照）
+    /// WebServerService のグローバルホルダー（WPF側MainViewModelで初期化、SettingsForm から参照）
     /// </summary>
     public static class WebServerServiceHolder
     {

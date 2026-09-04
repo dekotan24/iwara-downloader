@@ -50,6 +50,15 @@ namespace IwaraDownloader.Models
         /// <summary>動画一覧の取得が完了しているか。false = 仮登録済みでAPIから未取得</summary>
         public bool VideosLoaded { get; set; } = false;
 
+        /// <summary>iwara側でアカウントが削除/BAN等で消滅していることが確認できたか(APIが404を返した)</summary>
+        public bool IsAccountDeleted { get; set; } = false;
+
+        /// <summary>
+        /// このチャンネルの動画がキューに入る際の既定優先度。null=Normal扱い。
+        /// 変更しても既にキューに入っている動画には遡及しない(投入時に解決するため)。
+        /// </summary>
+        public DownloadPriority? DefaultPriority { get; set; }
+
         /// <summary>
         /// グローバル設定を加味した実効値で「iwara外動画をDLするか」を返す
         /// </summary>

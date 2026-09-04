@@ -11,7 +11,6 @@ namespace IwaraDownloader.Models
         public int Skipped { get; set; }
         public int NotDownloaded { get; set; }
         public int Favorite { get; set; }
-        public int SingleVideos { get; set; }
 
         /// <summary>SubscribedUserId をキーにしたチャンネル別集計</summary>
         public Dictionary<int, ChannelVideoCounts> ByChannel { get; set; } = new();

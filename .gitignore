@@ -4,8 +4,9 @@
 /.vs
 /IwaraDownloader/obj
 /IwaraDownloader/bin
-/IwaraDownloader.Tests/obj
-/IwaraDownloader.Tests/bin
+/IwaraDownloader.DbTool/obj
+/IwaraDownloader.DbTool/bin
+/IwaraDownloader.Tests/
 *.user
 
 # Python embeddable runtime artifacts
@@ -49,6 +50,7 @@ logs/
 # ローカルテストデータ・スクラッチ
 scratch/
 sandbox/
+work/
 *.local.*
 
 # OS / IDE 雑多
@@ -57,3 +59,6 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Rust移行PoC(中止)の残骸
+/tools/iwara-rust-poc/

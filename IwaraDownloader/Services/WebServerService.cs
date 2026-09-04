@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IwaraDownloader.Services
@@ -84,7 +85,25 @@ namespace IwaraDownloader.Services
             BaseUrl = bindAll ? $"http://{GetLanDisplayHost()}:{port}" : $"http://127.0.0.1:{port}";
             _logger.Info($"Web media server starting on {BaseUrl}");
 
-            _runTask = _app.RunAsync();
+            // RunAsync()はawaitせず投げっぱなしにすると、ポート競合等で起動直後にフォルトしても
+            // 誰も観測せず IsRunning(_app!=null) が偽陽性を返し続ける。StartAsync()で実際に
+            // リッスン開始(または失敗)するまで待ち、以降のシャットダウン待機だけを_runTaskに持たせる
+            // (RunAsync = StartAsync + WaitForShutdownAsync の分解)。
+            try
+            {
+                await _app.StartAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Web media server failed to start: {ex.Message}");
+                try { await _app.DisposeAsync().ConfigureAwait(false); } catch { /* 起動失敗直後のdisposeは元の例外を優先 */ }
+                _app = null;
+                BaseUrl = null;
+                _cts?.Dispose();
+                _cts = null;
+                throw;
+            }
+            _runTask = _app.WaitForShutdownAsync();
         }
 
         public async Task StopAsync()
@@ -99,10 +118,14 @@ namespace IwaraDownloader.Services
                 // 先に _runTask を待つと必ず 5 秒タイムアウトまでブロックしていた
                 // (アプリ終了が常に約5秒遅くなる原因だった)
                 using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await _app.StopAsync(stopCts.Token);
+                // ConfigureAwait(false): 呼び出し元(WPFのDispose)がUIスレッドから同期的に.Wait()する。
+                // これを付けないと継続がDispatcherのメッセージループを待つため、そのメッセージループ
+                // 自体を.Wait()でブロックしているUIスレッドとデッドロックし、毎回タイムアウトまで
+                // 終了処理が固まる(通常終了のたびに再現する確定的なハング)。
+                await _app.StopAsync(stopCts.Token).ConfigureAwait(false);
                 if (_runTask != null)
                 {
-                    try { await _runTask.WaitAsync(TimeSpan.FromSeconds(2)); }
+                    try { await _runTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); }
                     catch (OperationCanceledException) { }
                     catch (TimeoutException) { }
                 }
@@ -278,6 +301,25 @@ namespace IwaraDownloader.Services
             return false;
         }
 
+        private static bool FixedTimeStringEquals(string? left, string? right)
+            => CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(left ?? ""),
+                Encoding.UTF8.GetBytes(right ?? ""));
+
+        /// <summary>
+        /// 期限切れセッションを掃除する。IsAuthenticated はヒットしたトークンしか消さないため、
+        /// 二度と使われないトークンが残り続ける。
+        /// </summary>
+        private void PruneExpiredSessions()
+        {
+            var now = DateTime.UtcNow;
+            foreach (var pair in _sessions)
+            {
+                if (now - pair.Value.CreatedAt >= SessionTimeout)
+                    _sessions.TryRemove(pair.Key, out _);
+            }
+        }
+
         private IResult RequireAuth(HttpContext ctx)
         {
             if (!IsAuthenticated(ctx))
@@ -298,10 +340,12 @@ namespace IwaraDownloader.Services
             if (string.IsNullOrEmpty(expectedPass))
                 return Results.BadRequest(new { error = "Server password not configured" });
 
-            if (body.Username != expectedUser ||
-                body.Password != expectedPass)
+            // 資格情報の比較は一致した接頭辞の長さが応答時間に出ないよう定数時間で行う。
+            if (!FixedTimeStringEquals(body.Username, expectedUser)
+                || !FixedTimeStringEquals(body.Password, expectedPass))
                 return Results.Json(new { error = "Invalid credentials" }, statusCode: 401);
 
+            PruneExpiredSessions();
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             _sessions[token] = new SessionInfo { CreatedAt = DateTime.UtcNow, Username = body.Username };
 
@@ -400,11 +444,11 @@ namespace IwaraDownloader.Services
             {
                 "title" => order == "asc" ? videos.OrderBy(v => v.Title).ToList() : videos.OrderByDescending(v => v.Title).ToList(),
                 "author" => order == "asc" ? videos.OrderBy(v => v.AuthorUsername).ToList() : videos.OrderByDescending(v => v.AuthorUsername).ToList(),
-                "date" => order == "asc" ? videos.OrderBy(v => v.PostedAt).ToList() : videos.OrderByDescending(v => v.PostedAt).ToList(),
+                "date" => order == "asc" ? videos.OrderBy(v => v.PostedAt ?? v.CreatedAt).ToList() : videos.OrderByDescending(v => v.PostedAt ?? v.CreatedAt).ToList(),
                 "size" => order == "asc" ? videos.OrderBy(v => v.FileSize).ToList() : videos.OrderByDescending(v => v.FileSize).ToList(),
                 "duration" => order == "asc" ? videos.OrderBy(v => v.DurationSeconds).ToList() : videos.OrderByDescending(v => v.DurationSeconds).ToList(),
                 "added" => order == "asc" ? videos.OrderBy(v => v.CreatedAt).ToList() : videos.OrderByDescending(v => v.CreatedAt).ToList(),
-                _ => videos.OrderByDescending(v => v.CreatedAt).ToList()
+                _ => videos.OrderByDescending(v => v.PostedAt ?? v.CreatedAt).ToList()
             };
 
             var items = videos.Skip((page - 1) * limit).Take(limit).Select(MapVideoDto).ToList();
@@ -693,27 +737,24 @@ namespace IwaraDownloader.Services
             var authResult = RequireAuth(ctx);
             if (authResult != null) return authResult;
 
-            var allVideos = _database.GetAllVideos();
-            var channels = _database.GetAllSubscribedUsers();
-
-            var completed = allVideos.Where(v => v.Status == DownloadStatus.Completed).ToList();
-            long totalSize = completed.Sum(v => v.FileSize);
+            // 全件ロード + LINQ 集計は動画数万件だとリクエストごとに数十MBを読み込むため、
+            // 集計は SQL 側 (GROUP BY / SUM / LIMIT) に寄せる。
+            var stats = _database.GetDownloadStatistics();
+            long totalSize = stats.TotalDownloadedSize;
 
             return Results.Json(new
             {
-                totalVideos = allVideos.Count,
-                downloadedVideos = completed.Count,
-                failedVideos = allVideos.Count(v => v.Status == DownloadStatus.Failed),
-                pendingVideos = allVideos.Count(v => v.Status == DownloadStatus.Pending),
-                skippedVideos = allVideos.Count(v => v.Status == DownloadStatus.Skipped),
-                totalChannels = channels.Count,
-                enabledChannels = channels.Count(c => c.IsEnabled),
+                totalVideos = stats.TotalVideoCount,
+                downloadedVideos = stats.CompletedCount,
+                failedVideos = stats.FailedCount,
+                pendingVideos = stats.PendingCount,
+                skippedVideos = stats.SkippedCount,
+                totalChannels = stats.ChannelCount,
+                enabledChannels = stats.EnabledChannelCount,
                 totalSizeBytes = totalSize,
                 totalSizeFormatted = FormatFileSize(totalSize),
-                favoriteCount = allVideos.Count(v => v.IsFavorite),
-                recentDownloads = completed
-                    .OrderByDescending(v => v.DownloadedAt)
-                    .Take(10)
+                favoriteCount = stats.FavoriteCount,
+                recentDownloads = _database.GetRecentCompletedVideos(10)
                     .Select(MapVideoDto)
                     .ToList()
             }, JsonOpts);

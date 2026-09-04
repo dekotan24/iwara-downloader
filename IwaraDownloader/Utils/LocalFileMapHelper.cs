@@ -25,7 +25,8 @@ namespace IwaraDownloader.Utils
         /// </summary>
         public static async Task<MapResult> MapAsync(
             IWin32Window owner, VideoInfo video, IwaraApiService api, DatabaseService database,
-            DownloadManager downloadManager)
+            DownloadManager downloadManager, bool allowForeignTag = true,
+            bool useAtomicExistingUpdate = false)
         {
             using var dialog = new OpenFileDialog
             {
@@ -46,15 +47,47 @@ namespace IwaraDownloader.Utils
             var selectedPath = dialog.FileName;
             var oldPath = video.LocalFilePath;
 
+            // DB上で別動画が同じ実ファイルを参照している場合、ここで紐付けると
+            // 片方の動画を修復したつもりで、もう片方の参照を壊してしまう。
+            // ファイル移動やタグ上書きは行わず、先に選択を取り消す。
+            var mappedVideo = database.GetVideoByLocalFilePath(selectedPath, video.Id);
+            if (mappedVideo != null)
+            {
+                MessageBox.Show(owner,
+                    L.T("SvcLocalFileMap_D012", selectedPath, mappedVideo.Title),
+                    L.T("SvcLocalFileMap_D013"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return MapResult.Cancelled;
+            }
+
             // 選択したファイルが既に別の動画の iwara タグを持っている場合、そのまま進むと
             // WriteIwaraTags で上書きされ、旧タグ先の動画の DB 行が「タグの無い実体」を
             // 指したまま迷子になる (再スキャンでも二度と自己修復できない)。書き込み前に検出して
             // 明示的に確認を取る。
-            var (existingTagVideoId, _) = MetadataService.ReadIwaraTags(selectedPath);
-            if (!string.IsNullOrEmpty(existingTagVideoId)
-                && !string.Equals(existingTagVideoId, video.VideoId, StringComparison.Ordinal))
+            var (existingTagVideoId, existingTagUuid) = MetadataService.ReadIwaraTags(selectedPath);
+            var taggedUuidOwner = !string.IsNullOrEmpty(existingTagUuid)
+                ? database.GetVideoByFileUuid(existingTagUuid)
+                : null;
+            var foreignVideoId = !string.IsNullOrEmpty(existingTagVideoId)
+                && !string.Equals(existingTagVideoId, video.VideoId, StringComparison.Ordinal);
+            var foreignFileUuid = !string.IsNullOrEmpty(existingTagUuid)
+                && ((!string.IsNullOrEmpty(video.FileUuid)
+                        && !string.Equals(existingTagUuid, video.FileUuid, StringComparison.OrdinalIgnoreCase))
+                    || (taggedUuidOwner != null && taggedUuidOwner.Id != video.Id));
+            if (foreignVideoId || foreignFileUuid)
             {
-                var otherTitle = database.GetVideoByVideoId(existingTagVideoId)?.Title ?? existingTagVideoId;
+                var otherVideo = !string.IsNullOrEmpty(existingTagVideoId)
+                    ? database.GetVideoByVideoId(existingTagVideoId)
+                    : taggedUuidOwner;
+                var otherTitle = otherVideo?.Title
+                    ?? (!string.IsNullOrEmpty(existingTagVideoId) ? existingTagVideoId : existingTagUuid);
+                if (!allowForeignTag)
+                {
+                    MessageBox.Show(owner,
+                        L.T("SvcLocalFileMap_D014", selectedPath, otherTitle),
+                        L.T("SvcLocalFileMap_D015"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return MapResult.Cancelled;
+                }
+
                 var warnConfirm = MessageBox.Show(owner,
                     L.T("SvcLocalFileMap_D008", selectedPath, otherTitle),
                     L.T("SvcLocalFileMap_D009"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
@@ -71,17 +104,31 @@ namespace IwaraDownloader.Utils
             if (confirm != DialogResult.Yes)
                 return MapResult.Cancelled;
 
-            // 未DL/待機中の動画にはダウンロードキューへ投入済みの DownloadTask が残っている
-            // ことがある。マップ後もタスクが Pending/Active のままだと、一覧の「状態」列が
-            // (video.Status ではなく task.Status を優先するため) 「待機中」のまま化けたり、
-            // 最悪キュー処理が拾って上書きダウンロードを始めてしまう。ImportOneAsync が
-            // Status=Completed を書き込む前に、まずタスクをキャンセルして最終的な DB 書き込みが
-            // 必ず ImportOneAsync 側 (Completed) で決着するようにする。
-            downloadManager.CancelTask(video.VideoId);
+            if (useAtomicExistingUpdate && downloadManager.GetTask(video.VideoId) != null)
+            {
+                MessageBox.Show(owner, L.T("SvcLocalFileMap_D016"),
+                    L.T("SvcLocalFileMap_D015"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return MapResult.Cancelled;
+            }
 
+            // 未DL/待機中の動画にはダウンロードキューへ投入済みの DownloadTask が残っている
+            // ことがある。通常のマップでは、ImportOneAsync が Status=Completed を書き込む前に
+            // キャンセルして最終的なDB書き込みがマップ側で決着するようにする。
+            // 整合性チェック画面の安全経路(useAtomicExistingUpdate)では、上の再確認後に
+            // タスクが無いことを前提にしてキャンセル処理自体を行わない。
             try
             {
-                await TitleMatchImporter.ImportOneAsync(video, selectedPath, api, database);
+                if (useAtomicExistingUpdate && video.Id > 0)
+                {
+                    var mapped = await MapExistingVideoSafelyAsync(
+                        owner, video, selectedPath, existingTagVideoId, existingTagUuid, api, database);
+                    if (!mapped) return MapResult.Cancelled;
+                }
+                else
+                {
+                    downloadManager.CancelTask(video.VideoId);
+                    await TitleMatchImporter.ImportOneAsync(video, selectedPath, api, database);
+                }
             }
             catch (Exception ex)
             {
@@ -96,6 +143,126 @@ namespace IwaraDownloader.Utils
             InvalidateDir(selectedPath);
 
             return MapResult.Mapped;
+        }
+
+        /// <summary>
+        /// 整合性チェック画面用の既存DB行マップ。
+        /// TitleMatchImporterの全カラム更新を使わず、期待したDB状態とパス重複を
+        /// 同一UPDATEで確認してからローカルファイル欄だけを更新する。
+        /// </summary>
+        private static async Task<bool> MapExistingVideoSafelyAsync(
+            IWin32Window owner,
+            VideoInfo video,
+            string selectedPath,
+            string existingTagVideoId,
+            string existingTagUuid,
+            IwaraApiService api,
+            DatabaseService database)
+        {
+            var resolvedFileUuid = video.FileUuid;
+            if (string.IsNullOrEmpty(resolvedFileUuid))
+            {
+                try
+                {
+                    var site = string.IsNullOrEmpty(video.Site) ? null : video.Site;
+                    // 必要なのは file_id だけなので、filesq/CDN 問い合わせを伴う
+                    // ダウンロードURL取得ではなくメタデータ取得を使う。
+                    var info = await api.GetVideoInfoAsync(video.VideoId, site);
+                    if (info.Success && !string.IsNullOrEmpty(info.FileUuid))
+                        resolvedFileUuid = info.FileUuid;
+                }
+                catch (Exception ex)
+                {
+                    // ローカルファイルのマップ自体はAPI障害で諦めない。UUIDが取れなければ
+                    // タグ書き込みだけ行わず、DB上のローカルパスを安全に確定する。
+                    LoggingService.Instance.Warn($"Local file map UUID resolve failed: {ex.Message}");
+                }
+            }
+
+            // 対象動画のDB側UUIDが空だった場合でも、API解決後のUUIDとファイルタグが
+            // 食い違っていれば別動画の実体なので、タグを上書きしない。
+            if (!string.IsNullOrEmpty(existingTagUuid)
+                && !string.IsNullOrEmpty(resolvedFileUuid)
+                && !string.Equals(existingTagUuid, resolvedFileUuid, StringComparison.OrdinalIgnoreCase))
+            {
+                var otherVideo = database.GetVideoByFileUuid(existingTagUuid);
+                var otherTitle = otherVideo?.Title
+                    ?? (!string.IsNullOrEmpty(existingTagVideoId) ? existingTagVideoId : existingTagUuid);
+                MessageBox.Show(owner,
+                    L.T("SvcLocalFileMap_D014", selectedPath, otherTitle),
+                    L.T("SvcLocalFileMap_D015"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!File.Exists(selectedPath))
+            {
+                MessageBox.Show(owner, L.T("SvcLocalFileMap_D016"),
+                    L.T("SvcLocalFileMap_D015"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            var fileSize = new FileInfo(selectedPath).Length;
+            var downloadedAt = SafeLastWriteTime(selectedPath);
+            var mapped = database.TryUpdateVideoLocalFileFields(
+                video.Id,
+                selectedPath,
+                fileSize,
+                downloadedAt,
+                DownloadStatus.Completed,
+                resolvedFileUuid,
+                video.LocalFilePath,
+                video.Status,
+                video.FileUuid);
+            if (!mapped)
+            {
+                MessageBox.Show(owner, L.T("SvcLocalFileMap_D016"),
+                    L.T("SvcLocalFileMap_D015"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            video.LocalFilePath = selectedPath;
+            video.FileSize = fileSize;
+            video.DownloadedAt = downloadedAt;
+            video.Status = DownloadStatus.Completed;
+            video.FileUuid = resolvedFileUuid;
+
+            // DB上のマップを確保した後にタグを書き込む。タグ書き込みでファイルサイズが
+            // 変わった場合だけ、同じ期待状態で限定更新する。
+            if (!string.IsNullOrEmpty(resolvedFileUuid)
+                && MetadataService.WriteIwaraTags(selectedPath, video.VideoId, resolvedFileUuid))
+            {
+                try
+                {
+                    var finalSize = new FileInfo(selectedPath).Length;
+                    if (finalSize != fileSize
+                        && database.TryUpdateVideoLocalFileFields(
+                            video.Id,
+                            selectedPath,
+                            finalSize,
+                            downloadedAt,
+                            DownloadStatus.Completed,
+                            resolvedFileUuid,
+                            selectedPath,
+                            DownloadStatus.Completed,
+                            resolvedFileUuid))
+                    {
+                        video.FileSize = finalSize;
+                    }
+                }
+                catch
+                {
+                    // タグ書き込み直後にファイルが移動/削除された場合でも、既に確定した
+                    // DBマップを別の全カラム更新で巻き戻さない。
+                }
+            }
+
+            return true;
+        }
+
+        private static DateTime SafeLastWriteTime(string path)
+        {
+            try { return File.GetLastWriteTime(path); }
+            catch { return DateTime.Now; }
         }
 
         private static void InvalidateDir(string? filePath)
@@ -127,13 +294,19 @@ namespace IwaraDownloader.Utils
 
             // マップ解除中にキュー投入済みのタスクが残っていると、直後に書き込む Status=Paused が
             // 古いタスクの完了/失敗ハンドラに上書きされることがあるため、先にキャンセルしておく。
+            // ただしCancelTaskは非同期I/Oの中断を待たないため、この対策自体が完全ではない
+            // (完了処理と競合する可能性が残る)。そのため下のUpdateVideoは全カラムUPDATEの
+            // UpdateVideo(video)ではなく、Unmapが本来触るべき4カラムだけに絞ったスコープ付き
+            // UPDATEを使う。これにより、たとえ競合してもTags/Memo/Priority等の無関係な
+            // フィールドまで巻き戻されることはない(LocalFilePath/Status等の食い違いは
+            // 後勝ちのまま残るが、影響範囲をUnmapの意図した4カラムだけに限定できる)。
             downloadManager.CancelTask(video.VideoId);
 
             video.LocalFilePath = string.Empty;
             video.FileSize = 0;
             video.DownloadedAt = null;
             video.Status = DownloadStatus.Paused;
-            database.UpdateVideo(video);
+            database.UpdateVideoUnmapFields(video.Id, video.LocalFilePath, video.FileSize, video.DownloadedAt, video.Status);
 
             InvalidateDir(oldPath);
 

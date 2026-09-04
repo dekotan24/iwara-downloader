@@ -9,7 +9,7 @@ namespace IwaraDownloader
         /// アプリケーションのメインエントリーポイント
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             // UI言語の適用。フォーム生成前(=文言が読まれる前)に必ず行う
             ApplyUiLanguage();
@@ -26,7 +26,8 @@ namespace IwaraDownloader
                 return;
             }
 
-            // アプリケーション設定
+            // アプリケーション設定 (WinFormsブリッジダイアログ群の視覚スタイル初期化。
+            // DPI対応そのものはapp.manifestのdpiAwareness宣言でプロセス全体へ担保する)
             ApplicationConfiguration.Initialize();
 
             // 子プロセス管理用 Job Object を初期化
@@ -43,21 +44,22 @@ namespace IwaraDownloader
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             // fire-and-forget Task 内の未捕捉例外 (await されない _ = Task.Run など)
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            // WPF側(MainWindow)のDispatcherループはApplication.ThreadExceptionでは捕捉されないため個別に登録する
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.UnhandledException += Dispatcher_UnhandledException;
 
             try
             {
-                // スプラッシュスクリーンを表示
-                SplashForm.ShowSplash();
-                SplashForm.UpdateStatus("初期化中...", 0);
-
-                // メインフォームを起動
-                Application.Run(new MainForm());
+                // Phase8c: メインウィンドウはWPF側(MainWindow)。DownloadManagerは1個だけここで生成し、
+                // MainWindow(→MainViewModel→WebServerService)へ同じ参照を渡す。
+                // System.Windows.Applicationオブジェクトは意図的に導入しない。
+                // Window.ShowDialog()内部のメッセージポンプ(PushFrame)のみで
+                // NotifyIcon/クリップボード監視/ブリッジダイアログ表示まで含めて動作することは
+                // Phase8bの--wpf-mainデバッグ経路で検証済みのため、追加の複雑性を避ける。
+                var sharedDownloadManager = new Services.DownloadManager();
+                new Wpf.Views.MainWindow(sharedDownloadManager).ShowDialog();
             }
             finally
             {
-                // スプラッシュが残っていれば閉じる
-                SplashForm.CloseSplash();
-
                 // ログサービス終了
                 logger.Dispose();
             }
@@ -117,6 +119,17 @@ namespace IwaraDownloader
             {
                 ShowErrorAndLog(ex);
             }
+        }
+
+        /// <summary>
+        /// WPF(MainWindow)のDispatcherループでの未処理例外。
+        /// Application.ThreadExceptionはWinFormsのメッセージループ専用でWPF側には効かないため、
+        /// Phase8cで個別に登録する。
+        /// </summary>
+        private static void Dispatcher_UnhandledException(object? sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            ShowErrorAndLog(e.Exception);
+            e.Handled = true;
         }
 
         /// <summary>

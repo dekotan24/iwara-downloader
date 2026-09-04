@@ -16,4 +16,10 @@
     </application>
   </compatibility>
 
+  <!-- Phase8c調査メモ: DPI対応(asmv3:windowsSettings)をここに手書きしたところビルド時にWFO0003警告
+       (「csprojのApplicationHighDpiModeと重複する。app.manifest側は消してApplicationHighDpiModeへ
+       寄せろ」)が出た。つまりSDKはカスタムapp.manifest使用時でもApplicationHighDpiModeの値を
+       ビルド時にこのファイルへ自動マージしている。よって明示宣言は不要かつ有害(警告)なため書かない。
+       csproj側のApplicationHighDpiMode=PerMonitorV2を正とする。 -->
+
 </assembly>

@@ -41,6 +41,14 @@
   <data name="AboutForm_D008" xml:space="preserve">
     <value>错误</value>
   </data>
+  <data name="AboutForm_D009" xml:space="preserve">
+    <value>🎉 要启用派对模式吗？
+
+这只是纯装饰性的彩蛋——按钮会摇摆、彩纸会飘落，不影响下载等任何功能。</value>
+  </data>
+  <data name="AboutForm_D010" xml:space="preserve">
+    <value>隐藏模式</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>关于</value>
   </data>
@@ -167,6 +175,189 @@ https://www.iwara.tv/profile/username/videos</value>
   </data>
   <data name="Common_Unknown" xml:space="preserve">
     <value>未知</value>
+  </data>
+  <data name="DatabaseToolForm_D001" xml:space="preserve">
+    <value>🔒 只读模式</value>
+  </data>
+  <data name="DatabaseToolForm_D002" xml:space="preserve">
+    <value>⚠ 写入模式已启用 (备份: {0})</value>
+  </data>
+  <data name="DatabaseToolForm_D003" xml:space="preserve">
+    <value>启用写入模式</value>
+  </data>
+  <data name="DatabaseToolForm_D004" xml:space="preserve">
+    <value>恢复为只读</value>
+  </data>
+  <data name="DatabaseToolForm_D005" xml:space="preserve">
+    <value>启用写入模式后，SQL执行和表格编辑将可以直接修改数据库。
+
+启用前会强制创建备份。
+
+是否继续？</value>
+  </data>
+  <data name="DatabaseToolForm_D007" xml:space="preserve">
+    <value>数据库操作工具</value>
+  </data>
+  <data name="DatabaseToolForm_D008" xml:space="preserve">
+    <value>已创建备份:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D009" xml:space="preserve">
+    <value>由于备份失败，无法启动写入模式:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D010" xml:space="preserve">
+    <value>这是直接操作数据库的高级功能。
+
+・错误的SQL或编辑可能导致数据损坏或丢失
+・视频文件本身不会随之改变，可能导致数据库与实际文件不一致
+・进入写入模式时会自动创建备份，但不是完全的保障
+
+您是否理解并要继续？</value>
+  </data>
+  <data name="DatabaseToolForm_D011" xml:space="preserve">
+    <value>高级功能确认</value>
+  </data>
+  <data name="DatabaseToolForm_D012" xml:space="preserve">
+    <value>已获取 {0} 行</value>
+  </data>
+  <data name="DatabaseToolForm_D013" xml:space="preserve">
+    <value>已获取 {0} 行 (已达上限，可在右上角的「最大取得行数」调整)</value>
+  </data>
+  <data name="DatabaseToolForm_D014" xml:space="preserve">
+    <value>已影响 {0} 行</value>
+  </data>
+  <data name="DatabaseToolForm_D015" xml:space="preserve">
+    <value>错误: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D017" xml:space="preserve">
+    <value>⚠ 完整性错误: 有 {0} 个视频同时存在于 Videos 和 ExcludedVideos 中。这是非预期状态。</value>
+  </data>
+  <data name="DatabaseToolForm_D018" xml:space="preserve">
+    <value>正在显示 {0} 行 (表格: {1})</value>
+  </data>
+  <data name="DatabaseToolForm_D019" xml:space="preserve">
+    <value>已更新</value>
+  </data>
+  <data name="DatabaseToolForm_D020" xml:space="preserve">
+    <value>更新失败: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D021" xml:space="preserve">
+    <value>将删除所选的 {0} 行。是否继续？
+此操作无法撤销(仅可通过备份恢复)。</value>
+  </data>
+  <data name="DatabaseToolForm_D022" xml:space="preserve">
+    <value>确认删除行</value>
+  </data>
+  <data name="DatabaseToolForm_D023" xml:space="preserve">
+    <value>已删除 {0} 行</value>
+  </data>
+  <data name="DatabaseToolForm_D024" xml:space="preserve">
+    <value>删除失败: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D025" xml:space="preserve">
+    <value>此表格没有主键，无法编辑单元格或删除行(仅可查看)</value>
+  </data>
+  <data name="DatabaseToolForm_D027" xml:space="preserve">
+    <value>请选择要删除的行</value>
+  </data>
+  <data name="DatabaseToolForm_D028" xml:space="preserve">
+    <value>(已达上限)</value>
+  </data>
+  <data name="DatabaseToolForm_D029" xml:space="preserve">
+    <value>对象: {0} 行</value>
+  </data>
+  <data name="DatabaseToolForm_D030" xml:space="preserve">
+    <value>没有符合条件的行</value>
+  </data>
+  <data name="DatabaseToolForm_D031" xml:space="preserve">
+    <value>将 {0} 行恢复为等待中。是否继续？</value>
+  </data>
+  <data name="DatabaseToolForm_D032" xml:space="preserve">
+    <value>已将 {0} 行恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_Title" xml:space="preserve">
+    <value>数据库操作工具 (高级)</value>
+  </data>
+  <data name="DatabaseToolForm_btnDeleteSelectedRow" xml:space="preserve">
+    <value>删除所选行</value>
+  </data>
+  <data name="DatabaseToolForm_btnExecuteSql" xml:space="preserve">
+    <value>执行 (F5)</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshRecoveryCounts" xml:space="preserve">
+    <value>重新获取数量</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshTable" xml:space="preserve">
+    <value>重新加载</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetDownloadingToPending" xml:space="preserve">
+    <value>恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetFailedToPending" xml:space="preserve">
+    <value>恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetPausedToPending" xml:space="preserve">
+    <value>恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_btnToggleWriteMode" xml:space="preserve">
+    <value>启用写入模式</value>
+  </data>
+  <data name="DatabaseToolForm_chkApplyRowLimit" xml:space="preserve">
+    <value>应用行数上限</value>
+  </data>
+  <data name="DatabaseToolForm_grpDownloading" xml:space="preserve">
+    <value>下载中 → 恢复为等待中 (恢复因异常结束而卡住的行)</value>
+  </data>
+  <data name="DatabaseToolForm_grpFailed" xml:space="preserve">
+    <value>失败 → 恢复为等待中 (同时重置重试次数和错误)</value>
+  </data>
+  <data name="DatabaseToolForm_grpPaused" xml:space="preserve">
+    <value>暂停 → 恢复为等待中 (批量恢复以「稍后」保存的项目)</value>
+  </data>
+  <data name="DatabaseToolForm_lblBanner" xml:space="preserve">
+    <value>只读模式</value>
+  </data>
+  <data name="DatabaseToolForm_lblDownloadingCount" xml:space="preserve">
+    <value>对象: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblFailedCount" xml:space="preserve">
+    <value>对象: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblMaxRows" xml:space="preserve">
+    <value>最大取得行数:</value>
+  </data>
+  <data name="DatabaseToolForm_lblPausedCount" xml:space="preserve">
+    <value>对象: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblRecoveryHint" xml:space="preserve">
+    <value>无需重启主程序，即可批量执行与主程序启动时恢复相同的操作。请先启用写入模式后再使用。</value>
+  </data>
+  <data name="DatabaseToolForm_lblSqlHint" xml:space="preserve">
+    <value>请输入SQL并执行。只读模式下仅SELECT语句会返回结果，写入类语句会被自动拒绝。</value>
+  </data>
+  <data name="DatabaseToolForm_lblTable" xml:space="preserve">
+    <value>表格:</value>
+  </data>
+  <data name="DatabaseToolForm_tabBrowser" xml:space="preserve">
+    <value>表格浏览器</value>
+  </data>
+  <data name="DatabaseToolForm_tabRecovery" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="DatabaseToolForm_tabSql" xml:space="preserve">
+    <value>SQL 编辑器</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunning" xml:space="preserve">
+    <value>IwaraDownloader正在运行。
+
+在运行状态下使用数据库操作工具，可能因与下载处理冲突而导致数据不一致。
+强烈建议先关闭IwaraDownloader。
+
+是否仍要继续？</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunningTitle" xml:space="preserve">
+    <value>运行状态确认</value>
   </data>
   <data name="DuplicateCheckForm_D001" xml:space="preserve">
     <value>扫描中...</value>
@@ -349,6 +540,12 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>正在移动文件...</value>
   </data>
+  <data name="ImportFromFolderWizard_ApiFailedLog" xml:space="preserve">
+    <value>[API失败] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ApiQuerying" xml:space="preserve">
+    <value>正在查询 iwara API {0}/{1}: {2}</value>
+  </data>
   <data name="ImportFromFolderWizard_D001" xml:space="preserve">
     <value>准备中...</value>
   </data>
@@ -454,11 +651,80 @@ https://www.iwara.tv/profile/username/videos</value>
     <value>标题匹配导入：      {0} 个
 </value>
   </data>
+  <data name="ImportFromFolderWizard_ErrorLog" xml:space="preserve">
+    <value>[错误] {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionLog" xml:space="preserve">
+    <value>[异常] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionPrefix" xml:space="preserve">
+    <value>异常: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_FailedLog" xml:space="preserve">
+    <value>[失败] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ImportCancelled" xml:space="preserve">
+    <value>[已中止] 导入已中止</value>
+  </data>
+  <data name="ImportFromFolderWizard_Imported" xml:space="preserve">
+    <value>+ 已导入: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
+    <value>已合并: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewPlaceholderChannel" xml:space="preserve">
+    <value>+ 已添加频道 (自动检查关闭): {0} (@{1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
+    <value>+ 新增订阅: {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} 个</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} 个  [已注册]</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCancelled" xml:space="preserve">
+    <value>[已中止] 扫描已中止</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCompleteHeader" xml:space="preserve">
+    <value>=== 扫描完成 ===</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanTarget" xml:space="preserve">
+    <value>扫描对象: {0} 个文件</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedAlreadyDownloaded" xml:space="preserve">
+    <value>跳过(已下载): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedExisting" xml:space="preserve">
+    <value>跳过(文件已存在): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiFailed" xml:space="preserve">
+    <value>  API获取失败: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiSkipped" xml:space="preserve">
+    <value>  跳过API查询(数据库已存在): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryDup" xml:space="preserve">
+    <value>  重复(已在其他位置下载): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryNewAuthors" xml:space="preserve">
+    <value>  新作者: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummarySingleVideos" xml:space="preserve">
+    <value>  单发视频: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTagged" xml:space="preserve">
+    <value>  含标签文件: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTitleMatch" xml:space="preserve">
+    <value>  标题匹配(需确认): {0} (高置信度 {1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUniqueId" xml:space="preserve">
+    <value>  唯一 videoId: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUntagged" xml:space="preserve">
+    <value>  无标签(无法匹配・跳过): {0}</value>
   </data>
   <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
     <value>匹配到多个候选</value>
@@ -502,8 +768,38 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
     <value>部分匹配</value>
   </data>
+  <data name="ImportFromFolderWizard_TagReading" xml:space="preserve">
+    <value>读取标签 {0}/{1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TaggedUntaggedCount" xml:space="preserve">
+    <value>含标签文件 {0} 个 / 无标签 {1} 个</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>从文件夹导入</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchFailedLog" xml:space="preserve">
+    <value>[失败] 标题匹配: {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedTagged" xml:space="preserve">
+    <value>通过标题匹配导入(已写入标签): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedUntagged" xml:space="preserve">
+    <value>通过标题匹配导入(未写入标签 - UUID解析失败: {0}): {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImporting" xml:space="preserve">
+    <value>正在导入标题匹配 ({0}/{1}) {2}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchLostFromDb" xml:space="preserve">
+    <value>[失败] 标题匹配: {0} (数据库中已消失)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchSummary" xml:space="preserve">
+    <value>标题匹配 {0} 个(其中高置信度 {1} 个) / 重复(已下载) {2} 个 / 无标签(无法匹配) {3} 个</value>
+  </data>
+  <data name="ImportFromFolderWizard_ToastSummary" xml:space="preserve">
+    <value>新增 {0} / 合并 {1} / 标题匹配 {2} / 跳过(已存在) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_UserIdRepaired" xml:space="preserve">
+    <value>~ 已修复 UserId: @{0}</value>
   </data>
   <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
     <value>&lt; 上一步</value>
@@ -570,7 +866,8 @@ videoId 后导入数据库。
     <value>扫描中</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
-    <value>勾选的作者将被添加为订阅频道。
+    <value>勾选的作者将被添加为自动检查开启的订阅频道。
+未勾选的作者也会作为频道导入，但自动检查为关闭状态 (之后可手动启用)。
 </value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">
@@ -956,10 +1253,10 @@ videoId 后导入数据库。
     <value>下载</value>
   </data>
   <data name="MainForm_D106" xml:space="preserve">
-    <value>★ 从收藏中删除</value>
+    <value>从收藏中删除</value>
   </data>
   <data name="MainForm_D107" xml:space="preserve">
-    <value>★ 添加到收藏</value>
+    <value>添加到收藏</value>
   </data>
   <data name="MainForm_D108" xml:space="preserve">
     <value>已将 {0} 个视频加入重试队列</value>
@@ -1001,7 +1298,7 @@ videoId 后导入数据库。
     <value>
 
 将移动到排除列表（回收站）。
-已下载的文件将被删除（之后可恢复）</value>
+已下载的文件将被删除（恢复需重新下载）</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
     <value>已将 {0} 个视频移动到回收站</value>
@@ -1226,6 +1523,26 @@ videoId 后导入数据库。
   <data name="MainForm_D190" xml:space="preserve">
     <value>⏸立即DL：关</value>
   </data>
+  <data name="MainForm_D191" xml:space="preserve">
+    <value>已更改 {0} 项的优先级</value>
+  </data>
+  <data name="MainForm_D192" xml:space="preserve">
+    <value>已更改「{0}」的默认优先级</value>
+  </data>
+  <data name="MainForm_D193" xml:space="preserve">
+    <value>已复制 {0} 个作者名</value>
+  </data>
+  <data name="MainForm_D200" xml:space="preserve">
+    <value>未找到数据库操作工具(DBMaintenanceTool.exe)。
+请确认构建是否正确完成。</value>
+  </data>
+  <data name="MainForm_D201" xml:space="preserve">
+    <value>数据库操作工具</value>
+  </data>
+  <data name="MainForm_D202" xml:space="preserve">
+    <value>启动数据库操作工具失败:
+{0}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1265,11 +1582,14 @@ videoId 后导入数据库。
   <data name="MainForm_QueuePending" xml:space="preserve">
     <value>{0} 等待</value>
   </data>
-  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
-    <value> | 队列: 下载中 {0} 个 平均{1}% / 等待 {2} 个</value>
+  <data name="MainForm_QueueResumedDiskSpace" xml:space="preserve">
+    <value>磁盘空间已恢复,下载队列已自动继续。</value>
   </data>
-  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
-    <value> | 队列: 等待 {0} 个</value>
+  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
+    <value> | 平均{0}%</value>
+  </data>
+  <data name="MainForm_QueueSuspendedDiskSpace" xml:space="preserve">
+    <value>磁盘空间不足,已暂停下载队列({0}个等待中)。空间恢复后将自动继续。</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0} 写入标签</value>
@@ -1305,6 +1625,36 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_SourceNico" xml:space="preserve">
     <value>Niconico</value>
+  </data>
+  <data name="MainForm_ToolbarHint_CheckNow" xml:space="preserve">
+    <value>立即检查所有频道的新视频</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ClipboardMonitor" xml:space="preserve">
+    <value>监视剪贴板,复制iwara链接时自动添加</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Help" xml:space="preserve">
+    <value>打开帮助菜单(版本信息、日志文件夹等)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ImmediateDownload" xml:space="preserve">
+    <value>切换添加视频时是否立即开始下载</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Settings" xml:space="preserve">
+    <value>打开应用设置画面</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
+    <value>进行Python环境、登录等初始设置</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
+    <value>开始下载队列</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
+    <value>暂停正在进行的下载</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
+    <value>打开工具菜单(批量导入、搜索导入、重复检查等)</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ViewMode" xml:space="preserve">
+    <value>切换视频列表的显示方式(详细列表/缩略图)</value>
   </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>＋频道</value>
@@ -1400,7 +1750,10 @@ videoId 后导入数据库。
     <value>仅 NSFW</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
-    <value>添加时间</value>
+    <value>发布时间</value>
+  </data>
+  <data name="MainForm_colVideoPriority" xml:space="preserve">
+    <value>优先级</value>
   </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>进度</value>
@@ -1426,6 +1779,9 @@ videoId 后导入数据库。
   <data name="MainForm_lblLoginStatus" xml:space="preserve">
     <value>（未登录）</value>
   </data>
+  <data name="MainForm_lblNsfwFilterLabel" xml:space="preserve">
+    <value>NSFW:</value>
+  </data>
   <data name="MainForm_lblStatus" xml:space="preserve">
     <value>就绪</value>
   </data>
@@ -1440,6 +1796,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuChCheckNow" xml:space="preserve">
     <value>立即检查</value>
+  </data>
+  <data name="MainForm_menuChDefaultPriority" xml:space="preserve">
+    <value>默认优先级</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
     <value>删除</value>
@@ -1486,11 +1845,26 @@ videoId 后导入数据库。
   <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
     <value>打开日志文件夹</value>
   </data>
+  <data name="MainForm_menuPriorityHigh" xml:space="preserve">
+    <value>优先</value>
+  </data>
+  <data name="MainForm_menuPriorityHighest" xml:space="preserve">
+    <value>最优先</value>
+  </data>
+  <data name="MainForm_menuPriorityLow" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="MainForm_menuPriorityNormal" xml:space="preserve">
+    <value>普通</value>
+  </data>
   <data name="MainForm_menuShow" xml:space="preserve">
     <value>显示</value>
   </data>
   <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
     <value>批量URL导入...</value>
+  </data>
+  <data name="MainForm_menuToolsDatabaseTool" xml:space="preserve">
+    <value>数据库操作工具(高级)...</value>
   </data>
   <data name="MainForm_menuToolsDuplicateCheck" xml:space="preserve">
     <value>重复检查...</value>
@@ -1500,6 +1874,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
     <value>重新链接已移动文件...</value>
+  </data>
+  <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
+    <value>本地文件完整性检查...</value>
   </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>批量移动未迁移文件...</value>
@@ -1515,6 +1892,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
     <value>检查文件是否存在</value>
+  </data>
+  <data name="MainForm_menuVidCopyAuthor" xml:space="preserve">
+    <value>复制作者名</value>
   </data>
   <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
     <value>复制标题</value>
@@ -1532,7 +1912,7 @@ videoId 后导入数据库。
     <value>下载</value>
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
-    <value>★ 添加到收藏</value>
+    <value>添加到收藏</value>
   </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>映射本地文件...</value>
@@ -1551,6 +1931,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>播放</value>
+  </data>
+  <data name="MainForm_menuVidPriority" xml:space="preserve">
+    <value>优先级</value>
   </data>
   <data name="MainForm_menuVidReDownload" xml:space="preserve">
     <value>重新下载...</value>
@@ -1719,6 +2102,12 @@ videoId 后导入数据库。
   </data>
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>导入完成：新增 {0} 个 / 重新加入队列 {1} 个</value>
+  </data>
+  <data name="SearchImportForm_D012" xml:space="preserve">
+    <value>页 -</value>
+  </data>
+  <data name="SearchImportForm_D013" xml:space="preserve">
+    <value>页 {0} / {1}</value>
   </data>
   <data name="SearchImportForm_Registered" xml:space="preserve">
     <value>[已注册] {0}</value>
@@ -2099,6 +2488,9 @@ videoId 后导入数据库。
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>选择错误提示音文件</value>
   </data>
+  <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
+    <value>下载保存位置</value>
+  </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>设置</value>
   </data>
@@ -2183,6 +2575,9 @@ videoId 后导入数据库。
   <data name="SettingsForm_chkDownloadExternal" xml:space="preserve">
     <value>同时下载 iwara 外部视频（YouTube 嵌入等）（默认值，可按频道覆盖）</value>
   </data>
+  <data name="SettingsForm_chkEnableAdvancedDbTool" xml:space="preserve">
+    <value>在工具菜单中显示数据库操作工具(SQL编辑器/表格浏览器)</value>
+  </data>
   <data name="SettingsForm_chkEnableErrorSound" xml:space="preserve">
     <value>下载失败时播放提示音</value>
   </data>
@@ -2243,6 +2638,9 @@ videoId 后导入数据库。
   <data name="SettingsForm_grpAccount" xml:space="preserve">
     <value>iwara 账号</value>
   </data>
+  <data name="SettingsForm_grpAdvancedDbTool" xml:space="preserve">
+    <value>数据库操作工具 (高级)</value>
+  </data>
   <data name="SettingsForm_grpAutoCheck" xml:space="preserve">
     <value>自动检查</value>
   </data>
@@ -2295,6 +2693,12 @@ videoId 后导入数据库。
     <value>* 下载 R-18 内容或私密视频需要
    使用 iwara 账号登录。
 * 更改邮箱/密码后请点击「重新登录」。</value>
+  </data>
+  <data name="SettingsForm_lblAdvancedDbToolWarning" xml:space="preserve">
+    <value>⚠ 这是直接操作数据库的高级功能。
+错误的操作可能导致数据损坏或丢失。
+该功能以独立进程启动，
+请先关闭downloader后再使用。</value>
   </data>
   <data name="SettingsForm_lblAdvancedNote" xml:space="preserve">
     <value>* 速率限制设置可减轻服务器负担，防止 403/429 错误。
@@ -2429,6 +2833,9 @@ videoId 后导入数据库。
   <data name="SettingsForm_tabBackup" xml:space="preserve">
     <value>备份</value>
   </data>
+  <data name="SettingsForm_tabDatabase" xml:space="preserve">
+    <value>数据库</value>
+  </data>
   <data name="SettingsForm_tabGeneral" xml:space="preserve">
     <value>常规</value>
   </data>
@@ -2515,6 +2922,21 @@ videoId 后导入数据库。
   <data name="SetupWizardForm_D021" xml:space="preserve">
     <value>选择 python.exe</value>
   </data>
+  <data name="SetupWizardForm_D022" xml:space="preserve">
+    <value>=== 开始设置 ===</value>
+  </data>
+  <data name="SetupWizardForm_D023" xml:space="preserve">
+    <value>工作目录: {0}</value>
+  </data>
+  <data name="SetupWizardForm_D024" xml:space="preserve">
+    <value>=== 设置完成 ===</value>
+  </data>
+  <data name="SetupWizardForm_D025" xml:space="preserve">
+    <value>[已取消] 用户操作已中止</value>
+  </data>
+  <data name="SetupWizardForm_D026" xml:space="preserve">
+    <value>[错误] {0}</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader 设置向导</value>
   </data>
@@ -2574,6 +2996,33 @@ videoId 后导入数据库。
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>正在启动...</value>
+  </data>
+  <data name="StatisticsForm_CsvAuthorRankingHeader" xml:space="preserve">
+    <value>排名,作者,视频数,大小(字节)</value>
+  </data>
+  <data name="StatisticsForm_CsvChannelHeader" xml:space="preserve">
+    <value>频道,总视频数,完成,失败,大小,状态</value>
+  </data>
+  <data name="StatisticsForm_CsvErrorHeader" xml:space="preserve">
+    <value>错误类型,数量</value>
+  </data>
+  <data name="StatisticsForm_CsvMonthlyHeader" xml:space="preserve">
+    <value>年月,下载数,大小(字节)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionAuthorRanking" xml:space="preserve">
+    <value># 作者排名(前50)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionByChannel" xml:space="preserve">
+    <value># 频道统计</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionErrors" xml:space="preserve">
+    <value># 按错误类型统计失败</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionMonthly" xml:space="preserve">
+    <value># 月度趋势</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionSummary" xml:space="preserve">
+    <value># 概要统计</value>
   </data>
   <data name="StatisticsForm_D001" xml:space="preserve">
     <value>统计信息加载失败：
@@ -2826,6 +3275,24 @@ videoId 后导入数据库。
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>按月推移</value>
   </data>
+  <data name="StyleGuide_ButtonSample" xml:space="preserve">
+    <value>示例按钮</value>
+  </data>
+  <data name="StyleGuide_Description" xml:space="preserve">
+    <value>用于确认WPF迁移基础(主题、多语言、MVVM)是否正常工作的开发用窗口。</value>
+  </data>
+  <data name="StyleGuide_Heading" xml:space="preserve">
+    <value>控件样式确认</value>
+  </data>
+  <data name="StyleGuide_TextBoxLabel" xml:space="preserve">
+    <value>文本输入示例</value>
+  </data>
+  <data name="StyleGuide_Title" xml:space="preserve">
+    <value>WPF 样式指南 (开发用)</value>
+  </data>
+  <data name="StyleGuide_ToggleTheme" xml:space="preserve">
+    <value>切换深色/浅色</value>
+  </data>
   <data name="SvcDownloadManager_D001" xml:space="preserve">
     <value>跳过：外部视频下载已关闭</value>
   </data>
@@ -3053,6 +3520,18 @@ videoId 后导入数据库。
   <data name="SvcFileMove_D015" xml:space="preserve">
     <value>文件移动确认</value>
   </data>
+  <data name="SvcFileMove_D016" xml:space="preserve">
+    <value>
+同一驱动器，将立即完成。</value>
+  </data>
+  <data name="SvcFileMove_D017" xml:space="preserve">
+    <value>
+目标可用空间: {0} / 所需: {1}</value>
+  </data>
+  <data name="SvcFileMove_D018" xml:space="preserve">
+    <value>
+(获取可用空间失败: {0})</value>
+  </data>
   <data name="SvcIwaraApiService_D001" xml:space="preserve">
     <value>正在获取 {0} 的视频列表...</value>
   </data>
@@ -3134,6 +3613,25 @@ videoId 后导入数据库。
   </data>
   <data name="SvcLocalFileMap_D011" xml:space="preserve">
     <value>确认取消映射</value>
+  </data>
+  <data name="SvcLocalFileMap_D012" xml:space="preserve">
+    <value>此文件已关联到另一个视频“{1}”:
+{0}
+同一个文件不能关联到多个视频。</value>
+  </data>
+  <data name="SvcLocalFileMap_D013" xml:space="preserve">
+    <value>本地文件重复</value>
+  </data>
+  <data name="SvcLocalFileMap_D014" xml:space="preserve">
+    <value>所选文件包含另一个视频“{1}”的标签:
+{0}
+为安全起见，无法关联此文件。</value>
+  </data>
+  <data name="SvcLocalFileMap_D015" xml:space="preserve">
+    <value>文件属于另一个视频</value>
+  </data>
+  <data name="SvcLocalFileMap_D016" xml:space="preserve">
+    <value>数据库项目已改变或文件已不可用。请重新扫描。</value>
   </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>下载完成</value>
@@ -3354,4 +3852,52 @@ videoId 后导入数据库。
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>保存位置</value>
   </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve"><value>本地文件完整性检查</value></data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve"><value>查找数据库中本地文件缺失的视频。选择项目后，可以重新关联本地文件或重新下载。</value></data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve"><value>重新扫描</value></data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve"><value>重新关联本地文件...</value></data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve"><value>重新下载</value></data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve"><value>关闭</value></data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve"><value>等待扫描</value></data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve"><value>标题</value></data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve"><value>Video ID</value></data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve"><value>状态</value></data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve"><value>数据库路径</value></data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve"><value>原因</value></data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve"><value>正在检查本地文件完整性...</value></data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve"><value>存在问题的视频：{0} 个</value></data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve"><value>扫描已取消</value></data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve"><value>错误：{0}</value></data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve"><value>本地文件完整性检查失败：
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve"><value>本地文件完整性检查</value></data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve"><value>请选择一个视频进行重新关联。</value></data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve"><value>项目状态已改变，列表已刷新。</value></data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve"><value>已将“{0}”重新关联到本地文件。</value></data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve"><value>要将选中的 {0} 个项目加入重新下载队列吗？</value></data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve"><value>确认重新下载</value></data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve"><value>已将 {0} 个项目加入重新下载队列。</value></data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve"><value>已加入 {0} 个项目。{1} 个因状态改变或正在处理而跳过。</value></data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve"><value>重新下载失败：
+{0}</value></data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve"><value>该视频当前正在队列中或处理中，列表已刷新。</value></data>
+  <data name="LocalFileIntegrityForm_D016" xml:space="preserve"><value>无法连接以下驱动器或共享: {0}
+
+其中的 {1} 个项目未被判定为“缺失”，而是排除在检查之外。外接驱动器可能未连接，请连接后重新扫描。</value></data>
+  <data name="LocalFileIntegrityForm_D017" xml:space="preserve"><value>正在等待映射操作完成，完成前无法关闭窗口。</value></data>
+  <data name="LocalFileIntegrityForm_D018" xml:space="preserve"><value>检测到 {1} 个缺失项 (仅显示前 {0} 个)。数量过多通常意味着驱动器未连接。</value></data>
+  <data name="LocalFileIntegrityForm_D019" xml:space="preserve"><value>上次扫描达到了缺失项上限。如果驱动器已连接但无响应，实际存在的文件也可能被判定为“缺失”。
+
+此时重新下载 {0} 个项目，可能会重新获取已有的文件。
+
+仍要继续吗？（强烈建议先检查驱动器状态并重新扫描。）</value></data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>等待中</value></data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>下载中</value></data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>写入标签中</value></data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>已完成</value></data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>失败</value></data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>已跳过</value></data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>已暂停</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>已完成但数据库路径为空</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>数据库路径中的文件不存在</value></data>
 </root>

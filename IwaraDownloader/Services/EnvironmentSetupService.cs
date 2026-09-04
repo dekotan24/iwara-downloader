@@ -74,7 +74,11 @@ namespace IwaraDownloader.Services
                 }
             }
 
-            ZipFile.ExtractToDirectory(tempZip, destDir);
+            // 同期I/O。呼び出し元(UIスレッド)がawaitでここまで来ているため、Task.Runで
+            // バックグラウンドスレッドに逃がさないとZIP解凍中(embeddable Pythonで数MB)UIが固まる
+            await Task.Run(() => ZipFile.ExtractToDirectory(tempZip, destDir), ct);
+
+            try { File.Delete(tempZip); } catch { /* 削除できなくてもセットアップ自体は継続 */ }
 
             var pythonExe = Path.Combine(destDir, "python.exe");
             if (!File.Exists(pythonExe))
@@ -267,7 +271,18 @@ namespace IwaraDownloader.Services
             IwaraDownloader.Utils.ChildProcessJob.AssignProcess(proc); // 親死亡で自動 Kill
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
-            await proc.WaitForExitAsync(ct);
+            try
+            {
+                await proc.WaitForExitAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // ウィザードのキャンセルだけではアプリ自体は終了しないため、ChildProcessJobの
+                // 「親死亡で自動Kill」に頼れない。pip/get-pip等がバックグラウンドに残らないよう
+                // ここで明示的に落とす
+                try { if (!proc.HasExited) proc.Kill(entireProcessTree: true); } catch { }
+                throw;
+            }
             return (proc.ExitCode, sb.ToString());
         }
     }

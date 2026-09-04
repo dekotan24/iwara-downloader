@@ -41,6 +41,14 @@
   <data name="AboutForm_D008" xml:space="preserve">
     <value>エラー</value>
   </data>
+  <data name="AboutForm_D009" xml:space="preserve">
+    <value>🎉 パーティーモードを有効にしますか？
+
+ボタンが揺れたり紙吹雪が降ったりする、見た目だけのお遊び機能です。ダウンロード等の動作には影響しません。</value>
+  </data>
+  <data name="AboutForm_D010" xml:space="preserve">
+    <value>ひみつのモード</value>
+  </data>
   <data name="AboutForm_Title" xml:space="preserve">
     <value>バージョン情報</value>
   </data>
@@ -171,6 +179,189 @@ https://www.iwara.ai/profile/username
   </data>
   <data name="Common_Unknown" xml:space="preserve">
     <value>不明</value>
+  </data>
+  <data name="DatabaseToolForm_D001" xml:space="preserve">
+    <value>🔒 読み取り専用モード</value>
+  </data>
+  <data name="DatabaseToolForm_D002" xml:space="preserve">
+    <value>⚠ 書き込みモード有効 (バックアップ: {0})</value>
+  </data>
+  <data name="DatabaseToolForm_D003" xml:space="preserve">
+    <value>書き込みモードにする</value>
+  </data>
+  <data name="DatabaseToolForm_D004" xml:space="preserve">
+    <value>読み取り専用に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_D005" xml:space="preserve">
+    <value>書き込みモードにすると、SQL実行・テーブル編集でデータベースを直接変更できるようになります。
+
+有効化する前に強制バックアップを作成します。
+
+よろしいですか？</value>
+  </data>
+  <data name="DatabaseToolForm_D007" xml:space="preserve">
+    <value>DB操作ツール</value>
+  </data>
+  <data name="DatabaseToolForm_D008" xml:space="preserve">
+    <value>バックアップを作成しました:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D009" xml:space="preserve">
+    <value>バックアップの作成に失敗したため、書き込みモードを開始できません:
+{0}</value>
+  </data>
+  <data name="DatabaseToolForm_D010" xml:space="preserve">
+    <value>これはデータベースを直接操作する上級者向け機能です。
+
+・誤ったSQL/編集でデータが破損・消失する可能性があります
+・動画ファイル自体は連動して変更されないため、DBと実ファイルが食い違う原因になります
+・書き込みモードに入る際は自動でバックアップを作成しますが、完全な保証ではありません
+
+内容を理解した上で続行しますか？</value>
+  </data>
+  <data name="DatabaseToolForm_D011" xml:space="preserve">
+    <value>上級者向け機能の確認</value>
+  </data>
+  <data name="DatabaseToolForm_D012" xml:space="preserve">
+    <value>{0}件取得しました</value>
+  </data>
+  <data name="DatabaseToolForm_D013" xml:space="preserve">
+    <value>{0}件取得しました (上限に達したため打ち切り。右上の「最大取得件数」で調整できます)</value>
+  </data>
+  <data name="DatabaseToolForm_D014" xml:space="preserve">
+    <value>{0}件に影響しました</value>
+  </data>
+  <data name="DatabaseToolForm_D015" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D017" xml:space="preserve">
+    <value>⚠ 整合性エラー: Videos/ExcludedVideosの両方に存在する動画が{0}件あります。想定外の状態です。</value>
+  </data>
+  <data name="DatabaseToolForm_D018" xml:space="preserve">
+    <value>{0}件を表示中 (テーブル: {1})</value>
+  </data>
+  <data name="DatabaseToolForm_D019" xml:space="preserve">
+    <value>更新しました</value>
+  </data>
+  <data name="DatabaseToolForm_D020" xml:space="preserve">
+    <value>更新に失敗しました: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D021" xml:space="preserve">
+    <value>選択した{0}行を削除します。よろしいですか？
+この操作は元に戻せません(バックアップからの復元のみ可能です)。</value>
+  </data>
+  <data name="DatabaseToolForm_D022" xml:space="preserve">
+    <value>行削除の確認</value>
+  </data>
+  <data name="DatabaseToolForm_D023" xml:space="preserve">
+    <value>{0}行を削除しました</value>
+  </data>
+  <data name="DatabaseToolForm_D024" xml:space="preserve">
+    <value>削除に失敗しました: {0}</value>
+  </data>
+  <data name="DatabaseToolForm_D025" xml:space="preserve">
+    <value>このテーブルには主キーが無いため、セル編集・行削除はできません(閲覧のみ)</value>
+  </data>
+  <data name="DatabaseToolForm_D027" xml:space="preserve">
+    <value>削除する行を選択してください</value>
+  </data>
+  <data name="DatabaseToolForm_D028" xml:space="preserve">
+    <value>(上限到達)</value>
+  </data>
+  <data name="DatabaseToolForm_D029" xml:space="preserve">
+    <value>対象: {0}件</value>
+  </data>
+  <data name="DatabaseToolForm_D030" xml:space="preserve">
+    <value>対象の行がありません</value>
+  </data>
+  <data name="DatabaseToolForm_D031" xml:space="preserve">
+    <value>{0}件を待機中に戻します。よろしいですか？</value>
+  </data>
+  <data name="DatabaseToolForm_D032" xml:space="preserve">
+    <value>{0}件を待機中に戻しました</value>
+  </data>
+  <data name="DatabaseToolForm_Title" xml:space="preserve">
+    <value>DB操作ツール (上級者向け)</value>
+  </data>
+  <data name="DatabaseToolForm_btnDeleteSelectedRow" xml:space="preserve">
+    <value>選択行を削除</value>
+  </data>
+  <data name="DatabaseToolForm_btnExecuteSql" xml:space="preserve">
+    <value>実行 (F5)</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshRecoveryCounts" xml:space="preserve">
+    <value>件数を再取得</value>
+  </data>
+  <data name="DatabaseToolForm_btnRefreshTable" xml:space="preserve">
+    <value>再読込</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetDownloadingToPending" xml:space="preserve">
+    <value>待機中に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetFailedToPending" xml:space="preserve">
+    <value>待機中に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetPausedToPending" xml:space="preserve">
+    <value>待機中に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_btnToggleWriteMode" xml:space="preserve">
+    <value>書き込みモードにする</value>
+  </data>
+  <data name="DatabaseToolForm_chkApplyRowLimit" xml:space="preserve">
+    <value>上限を適用</value>
+  </data>
+  <data name="DatabaseToolForm_grpDownloading" xml:space="preserve">
+    <value>ダウンロード中 → 待機中に戻す (異常終了で固まった行の復旧)</value>
+  </data>
+  <data name="DatabaseToolForm_grpFailed" xml:space="preserve">
+    <value>失敗 → 待機中に戻す (リトライ回数・エラーもリセット)</value>
+  </data>
+  <data name="DatabaseToolForm_grpPaused" xml:space="preserve">
+    <value>一時停止 → 待機中に戻す (「後で」保存分の一括再開)</value>
+  </data>
+  <data name="DatabaseToolForm_lblBanner" xml:space="preserve">
+    <value>読み取り専用モード</value>
+  </data>
+  <data name="DatabaseToolForm_lblDownloadingCount" xml:space="preserve">
+    <value>対象: -件</value>
+  </data>
+  <data name="DatabaseToolForm_lblFailedCount" xml:space="preserve">
+    <value>対象: -件</value>
+  </data>
+  <data name="DatabaseToolForm_lblMaxRows" xml:space="preserve">
+    <value>最大取得件数:</value>
+  </data>
+  <data name="DatabaseToolForm_lblPausedCount" xml:space="preserve">
+    <value>対象: -件</value>
+  </data>
+  <data name="DatabaseToolForm_lblRecoveryHint" xml:space="preserve">
+    <value>本体アプリの起動時レジューム相当の復旧操作を、アプリを再起動せずに一括で行います。書き込みモードを有効にしてから使用してください。</value>
+  </data>
+  <data name="DatabaseToolForm_lblSqlHint" xml:space="preserve">
+    <value>SQLを入力して実行してください。読み取り専用モード中は SELECT のみ結果が返り、書き込み系は自動的に拒否されます。</value>
+  </data>
+  <data name="DatabaseToolForm_lblTable" xml:space="preserve">
+    <value>テーブル:</value>
+  </data>
+  <data name="DatabaseToolForm_tabBrowser" xml:space="preserve">
+    <value>テーブルブラウザ</value>
+  </data>
+  <data name="DatabaseToolForm_tabRecovery" xml:space="preserve">
+    <value>復旧</value>
+  </data>
+  <data name="DatabaseToolForm_tabSql" xml:space="preserve">
+    <value>SQL実行</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunning" xml:space="preserve">
+    <value>IwaraDownloaderが起動中です。
+
+起動中のままDB操作ツールを使うと、ダウンロード処理との競合でデータの不整合が起きる可能性があります。
+IwaraDownloaderを終了してから使うことを強く推奨します。
+
+それでも続行しますか？</value>
+  </data>
+  <data name="DbTool_Msg_DownloaderRunningTitle" xml:space="preserve">
+    <value>起動中の確認</value>
   </data>
   <data name="DuplicateCheckForm_D001" xml:space="preserve">
     <value>スキャン中...</value>
@@ -353,6 +544,12 @@ https://www.iwara.ai/profile/username
   <data name="FileMoveProgressForm_lblTitle" xml:space="preserve">
     <value>ファイルを移動しています...</value>
   </data>
+  <data name="ImportFromFolderWizard_ApiFailedLog" xml:space="preserve">
+    <value>[API 失敗] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ApiQuerying" xml:space="preserve">
+    <value>iwara API 問い合わせ {0}/{1}: {2}</value>
+  </data>
   <data name="ImportFromFolderWizard_D001" xml:space="preserve">
     <value>準備中...</value>
   </data>
@@ -458,11 +655,80 @@ https://www.iwara.ai/profile/username
     <value>タイトル照合取込:   {0} 件
 </value>
   </data>
+  <data name="ImportFromFolderWizard_ErrorLog" xml:space="preserve">
+    <value>[エラー] {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionLog" xml:space="preserve">
+    <value>[例外] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ExceptionPrefix" xml:space="preserve">
+    <value>例外: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_FailedLog" xml:space="preserve">
+    <value>[失敗] {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_ImportCancelled" xml:space="preserve">
+    <value>[中止] 取り込みを中止しました</value>
+  </data>
+  <data name="ImportFromFolderWizard_Imported" xml:space="preserve">
+    <value>+ 取り込み: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_Merged" xml:space="preserve">
+    <value>≈ マージ: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewPlaceholderChannel" xml:space="preserve">
+    <value>+ チャンネル追加 (自動チェックOFF): {0} (@{1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_NewSubscription" xml:space="preserve">
+    <value>+ 新規購読: {0} (@{1})</value>
+  </data>
   <data name="ImportFromFolderWizard_NodeNormal" xml:space="preserve">
     <value>{0} — {1} 件</value>
   </data>
   <data name="ImportFromFolderWizard_NodeRegistered" xml:space="preserve">
     <value>{0} — {1} 件  [既に登録済]</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCancelled" xml:space="preserve">
+    <value>[中止] スキャンを中止しました</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanCompleteHeader" xml:space="preserve">
+    <value>=== スキャン完了 ===</value>
+  </data>
+  <data name="ImportFromFolderWizard_ScanTarget" xml:space="preserve">
+    <value>スキャン対象: {0} ファイル</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedAlreadyDownloaded" xml:space="preserve">
+    <value>→ スキップ (既にDL済み): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SkippedExisting" xml:space="preserve">
+    <value>→ スキップ (既存ファイルあり): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiFailed" xml:space="preserve">
+    <value>  API 取得失敗: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryApiSkipped" xml:space="preserve">
+    <value>  API 問い合わせスキップ (DB既存): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryDup" xml:space="preserve">
+    <value>  重複 (既に別の場所にDL済み): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryNewAuthors" xml:space="preserve">
+    <value>  新規作者: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummarySingleVideos" xml:space="preserve">
+    <value>  単発動画: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTagged" xml:space="preserve">
+    <value>  タグ付きファイル: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryTitleMatch" xml:space="preserve">
+    <value>  タイトル照合 (要確認): {0} (高確度 {1})</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUniqueId" xml:space="preserve">
+    <value>  ユニーク videoId: {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_SummaryUntagged" xml:space="preserve">
+    <value>  タグ無し (照合不可・スキップ): {0}</value>
   </data>
   <data name="ImportFromFolderWizard_TMAmbiguousMultiCandidate" xml:space="preserve">
     <value>複数候補と一致</value>
@@ -506,8 +772,38 @@ https://www.iwara.ai/profile/username
   <data name="ImportFromFolderWizard_TMTierSubstring" xml:space="preserve">
     <value>部分一致</value>
   </data>
+  <data name="ImportFromFolderWizard_TagReading" xml:space="preserve">
+    <value>タグ読取り {0}/{1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TaggedUntaggedCount" xml:space="preserve">
+    <value>タグ付きファイル {0} 件 / タグ無し {1} 件</value>
+  </data>
   <data name="ImportFromFolderWizard_Title" xml:space="preserve">
     <value>フォルダから取り込み</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchFailedLog" xml:space="preserve">
+    <value>[失敗] タイトル照合: {0}: {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedTagged" xml:space="preserve">
+    <value>☆ タイトル照合で取込 (タグ書込済): {0}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImportedUntagged" xml:space="preserve">
+    <value>☆ タイトル照合で取込 (タグ未書込 - UUID解決失敗: {0}): {1}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchImporting" xml:space="preserve">
+    <value>タイトル照合取り込み ({0}/{1}) {2}</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchLostFromDb" xml:space="preserve">
+    <value>[失敗] タイトル照合: {0} (DBから消失)</value>
+  </data>
+  <data name="ImportFromFolderWizard_TitleMatchSummary" xml:space="preserve">
+    <value>タイトル照合 {0} 件 (うち高確度 {1} 件) / 重複(既にDL済み) {2} 件 / タグ無し (照合不可) {3} 件</value>
+  </data>
+  <data name="ImportFromFolderWizard_ToastSummary" xml:space="preserve">
+    <value>新規 {0} / マージ {1} / タイトル照合 {2} / スキップ(既存) {3}</value>
+  </data>
+  <data name="ImportFromFolderWizard_UserIdRepaired" xml:space="preserve">
+    <value>~ UserId 修復: @{0}</value>
   </data>
   <data name="ImportFromFolderWizard_btnBack" xml:space="preserve">
     <value>&lt; 戻る</value>
@@ -574,7 +870,8 @@ videoId を取得して DB に取り込みます。
     <value>スキャン中</value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Desc" xml:space="preserve">
-    <value>チェックを入れた作者がチャンネル (購読) として追加されます。
+    <value>チェックを入れた作者は自動チェックONのチャンネル (購読) として追加されます。
+チェックを外した作者も自動チェックOFFのチャンネルとして取り込まれます (あとで有効化できます)。
 </value>
   </data>
   <data name="ImportFromFolderWizard_lblStep3Title" xml:space="preserve">
@@ -960,10 +1257,10 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ダウンロード</value>
   </data>
   <data name="MainForm_D106" xml:space="preserve">
-    <value>★ お気に入りから削除</value>
+    <value>お気に入りから削除</value>
   </data>
   <data name="MainForm_D107" xml:space="preserve">
-    <value>★ お気に入りに追加</value>
+    <value>お気に入りに追加</value>
   </data>
   <data name="MainForm_D108" xml:space="preserve">
     <value>{0}件の動画を再試行キューに追加しました</value>
@@ -1005,7 +1302,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>
 
 除外リスト（ゴミ箱）へ移動します。
-DL済みのファイルは削除されます（後で復元できます）</value>
+DL済みのファイルは削除されます（戻すには再DLが必要です）</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
     <value>{0} 件の動画を除外（ゴミ箱）へ移動しました</value>
@@ -1230,6 +1527,26 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_D190" xml:space="preserve">
     <value>⏸即DL: OFF</value>
   </data>
+  <data name="MainForm_D191" xml:space="preserve">
+    <value>{0}件の優先度を変更しました</value>
+  </data>
+  <data name="MainForm_D192" xml:space="preserve">
+    <value>「{0}」の既定優先度を変更しました</value>
+  </data>
+  <data name="MainForm_D193" xml:space="preserve">
+    <value>{0}件の投稿者名をコピーしました</value>
+  </data>
+  <data name="MainForm_D200" xml:space="preserve">
+    <value>DB操作ツール(DBMaintenanceTool.exe)が見つかりませんでした。
+ビルドが正しく完了しているか確認してください。</value>
+  </data>
+  <data name="MainForm_D201" xml:space="preserve">
+    <value>DB操作ツール</value>
+  </data>
+  <data name="MainForm_D202" xml:space="preserve">
+    <value>DB操作ツールの起動に失敗しました:
+{0}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1269,11 +1586,14 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_QueuePending" xml:space="preserve">
     <value>{0}待機</value>
   </data>
-  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
-    <value> | キュー: DL中 {0}件 平均{1}% / 待機 {2}件</value>
+  <data name="MainForm_QueueResumedDiskSpace" xml:space="preserve">
+    <value>空き容量が回復したため、DLキューを自動再開しました。</value>
   </data>
-  <data name="MainForm_QueueSummaryPending" xml:space="preserve">
-    <value> | キュー: 待機 {0}件</value>
+  <data name="MainForm_QueueSummaryFull" xml:space="preserve">
+    <value> | 平均{0}%</value>
+  </data>
+  <data name="MainForm_QueueSuspendedDiskSpace" xml:space="preserve">
+    <value>空き容量不足のためDLキューを停止しました ({0}件待機中)。空き容量が回復すると自動で再開します。</value>
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0}タグ書込</value>
@@ -1309,6 +1629,36 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_SourceNico" xml:space="preserve">
     <value>ニコニコ</value>
+  </data>
+  <data name="MainForm_ToolbarHint_CheckNow" xml:space="preserve">
+    <value>全チャンネルの新着動画を今すぐ確認します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ClipboardMonitor" xml:space="preserve">
+    <value>クリップボードを監視し、iwaraのURLをコピーすると自動で追加します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Help" xml:space="preserve">
+    <value>バージョン情報・ログフォルダなどのヘルプメニューを開きます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ImmediateDownload" xml:space="preserve">
+    <value>動画追加時に即座にダウンロードを開始するかを切り替えます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Settings" xml:space="preserve">
+    <value>アプリの設定画面を開きます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Setup" xml:space="preserve">
+    <value>Python環境やログイン等の初期セットアップを行います</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
+    <value>ダウンロードキューを開始します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
+    <value>実行中のダウンロードを一時停止します</value>
+  </data>
+  <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
+    <value>一括インポート・検索インポート・重複チェックなどのツールメニューを開きます</value>
+  </data>
+  <data name="MainForm_ToolbarHint_ViewMode" xml:space="preserve">
+    <value>動画一覧の表示形式(詳細リスト/サムネイルタイル)を切り替えます</value>
   </data>
   <data name="MainForm_btnAddUser" xml:space="preserve">
     <value>＋チャンネル</value>
@@ -1404,7 +1754,10 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>NSFWのみ</value>
   </data>
   <data name="MainForm_colVideoDate" xml:space="preserve">
-    <value>追加日時</value>
+    <value>公開日時</value>
+  </data>
+  <data name="MainForm_colVideoPriority" xml:space="preserve">
+    <value>優先度</value>
   </data>
   <data name="MainForm_colVideoProgress" xml:space="preserve">
     <value>進捗</value>
@@ -1430,6 +1783,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_lblLoginStatus" xml:space="preserve">
     <value>(未ログイン)</value>
   </data>
+  <data name="MainForm_lblNsfwFilterLabel" xml:space="preserve">
+    <value>NSFW:</value>
+  </data>
   <data name="MainForm_lblStatus" xml:space="preserve">
     <value>準備完了</value>
   </data>
@@ -1444,6 +1800,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuChCheckNow" xml:space="preserve">
     <value>今すぐ確認</value>
+  </data>
+  <data name="MainForm_menuChDefaultPriority" xml:space="preserve">
+    <value>既定の優先度</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
     <value>削除</value>
@@ -1490,11 +1849,26 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="MainForm_menuHelpOpenLogs" xml:space="preserve">
     <value>ログフォルダを開く</value>
   </data>
+  <data name="MainForm_menuPriorityHigh" xml:space="preserve">
+    <value>優先</value>
+  </data>
+  <data name="MainForm_menuPriorityHighest" xml:space="preserve">
+    <value>最優先</value>
+  </data>
+  <data name="MainForm_menuPriorityLow" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="MainForm_menuPriorityNormal" xml:space="preserve">
+    <value>普通</value>
+  </data>
   <data name="MainForm_menuShow" xml:space="preserve">
     <value>表示</value>
   </data>
   <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
     <value>URL一括インポート...</value>
+  </data>
+  <data name="MainForm_menuToolsDatabaseTool" xml:space="preserve">
+    <value>DB操作ツール(上級者向け)...</value>
   </data>
   <data name="MainForm_menuToolsDuplicateCheck" xml:space="preserve">
     <value>重複チェック...</value>
@@ -1504,6 +1878,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
     <value>移動済みファイルの再リンク...</value>
+  </data>
+  <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
+    <value>ローカルファイル整合性チェック...</value>
   </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>未移動ファイルの一括移動...</value>
@@ -1519,6 +1896,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuVidCheckFileExists" xml:space="preserve">
     <value>ファイル存在チェック</value>
+  </data>
+  <data name="MainForm_menuVidCopyAuthor" xml:space="preserve">
+    <value>投稿者名をコピー</value>
   </data>
   <data name="MainForm_menuVidCopyTitle" xml:space="preserve">
     <value>タイトルをコピー</value>
@@ -1536,7 +1916,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ダウンロード</value>
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
-    <value>★ お気に入りに追加</value>
+    <value>お気に入りに追加</value>
   </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>ローカルファイルをマップ...</value>
@@ -1555,6 +1935,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="MainForm_menuVidPlay" xml:space="preserve">
     <value>再生</value>
+  </data>
+  <data name="MainForm_menuVidPriority" xml:space="preserve">
+    <value>優先度</value>
   </data>
   <data name="MainForm_menuVidReDownload" xml:space="preserve">
     <value>再ダウンロード...</value>
@@ -1723,6 +2106,12 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="SearchImportForm_D011" xml:space="preserve">
     <value>インポート完了: 新規 {0}件 / 再キュー {1}件</value>
+  </data>
+  <data name="SearchImportForm_D012" xml:space="preserve">
+    <value>ページ -</value>
+  </data>
+  <data name="SearchImportForm_D013" xml:space="preserve">
+    <value>ページ {0} / {1}</value>
   </data>
   <data name="SearchImportForm_Registered" xml:space="preserve">
     <value>[登録済] {0}</value>
@@ -2103,6 +2492,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>エラー音声ファイルを選択</value>
   </data>
+  <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
+    <value>ダウンロード保存先</value>
+  </data>
   <data name="SettingsForm_Title" xml:space="preserve">
     <value>設定</value>
   </data>
@@ -2187,6 +2579,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SettingsForm_chkDownloadExternal" xml:space="preserve">
     <value>iwara外動画(YouTube埋め込み等)もDLする (デフォルト・チャンネル別に上書き可)</value>
   </data>
+  <data name="SettingsForm_chkEnableAdvancedDbTool" xml:space="preserve">
+    <value>ツールメニューにDB操作ツール(SQLエディタ/テーブルブラウザ)を表示する</value>
+  </data>
   <data name="SettingsForm_chkEnableErrorSound" xml:space="preserve">
     <value>ダウンロード失敗時に音を鳴らす</value>
   </data>
@@ -2247,6 +2642,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SettingsForm_grpAccount" xml:space="preserve">
     <value>iwaraアカウント</value>
   </data>
+  <data name="SettingsForm_grpAdvancedDbTool" xml:space="preserve">
+    <value>DB操作ツール (上級者向け)</value>
+  </data>
   <data name="SettingsForm_grpAutoCheck" xml:space="preserve">
     <value>自動チェック</value>
   </data>
@@ -2299,6 +2697,12 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>※ R-18コンテンツやプライベート動画をダウンロードするには
 　 iwaraアカウントでのログインが必要です。
 ※ メールアドレス/パスワード変更後は「再ログイン」を押してください。</value>
+  </data>
+  <data name="SettingsForm_lblAdvancedDbToolWarning" xml:space="preserve">
+    <value>⚠ データベースを直接操作する上級者向け機能です。
+誤った操作でデータが破損・消失する可能性があります。
+別プロセスの独立ツールとして起動するため、
+downloaderは終了してから使うことを強く推奨します。</value>
   </data>
   <data name="SettingsForm_lblAdvancedNote" xml:space="preserve">
     <value>※ レート制限設定はサーバー負荷を軽減し、403/429エラーを防ぎます。
@@ -2433,6 +2837,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SettingsForm_tabBackup" xml:space="preserve">
     <value>バックアップ</value>
   </data>
+  <data name="SettingsForm_tabDatabase" xml:space="preserve">
+    <value>データベース</value>
+  </data>
   <data name="SettingsForm_tabGeneral" xml:space="preserve">
     <value>一般</value>
   </data>
@@ -2519,6 +2926,21 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SetupWizardForm_D021" xml:space="preserve">
     <value>python.exe を選択</value>
   </data>
+  <data name="SetupWizardForm_D022" xml:space="preserve">
+    <value>=== セットアップ開始 ===</value>
+  </data>
+  <data name="SetupWizardForm_D023" xml:space="preserve">
+    <value>作業ディレクトリ: {0}</value>
+  </data>
+  <data name="SetupWizardForm_D024" xml:space="preserve">
+    <value>=== セットアップ完了 ===</value>
+  </data>
+  <data name="SetupWizardForm_D025" xml:space="preserve">
+    <value>[キャンセル] ユーザー操作で中止されました</value>
+  </data>
+  <data name="SetupWizardForm_D026" xml:space="preserve">
+    <value>[エラー] {0}</value>
+  </data>
   <data name="SetupWizardForm_Title" xml:space="preserve">
     <value>IwaraDownloader セットアップ</value>
   </data>
@@ -2578,6 +3000,33 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   </data>
   <data name="SplashForm_lblStatus" xml:space="preserve">
     <value>起動中...</value>
+  </data>
+  <data name="StatisticsForm_CsvAuthorRankingHeader" xml:space="preserve">
+    <value>順位,投稿者,動画数,サイズ(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvChannelHeader" xml:space="preserve">
+    <value>チャンネル,総動画数,完了,失敗,サイズ,状態</value>
+  </data>
+  <data name="StatisticsForm_CsvErrorHeader" xml:space="preserve">
+    <value>エラー種別,件数</value>
+  </data>
+  <data name="StatisticsForm_CsvMonthlyHeader" xml:space="preserve">
+    <value>年月,DL数,サイズ(byte)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionAuthorRanking" xml:space="preserve">
+    <value># 投稿者ランキング(上位50)</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionByChannel" xml:space="preserve">
+    <value># チャンネル別統計</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionErrors" xml:space="preserve">
+    <value># エラー別失敗内訳</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionMonthly" xml:space="preserve">
+    <value># 月別推移</value>
+  </data>
+  <data name="StatisticsForm_CsvSectionSummary" xml:space="preserve">
+    <value># 概要統計</value>
   </data>
   <data name="StatisticsForm_D001" xml:space="preserve">
     <value>統計情報の読み込みに失敗しました:
@@ -2830,6 +3279,24 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="StatisticsForm_tabMonthly" xml:space="preserve">
     <value>月別推移</value>
   </data>
+  <data name="StyleGuide_ButtonSample" xml:space="preserve">
+    <value>サンプルボタン</value>
+  </data>
+  <data name="StyleGuide_Description" xml:space="preserve">
+    <value>WPF移行の基盤(テーマ・i18n・MVVM)が正しく動作するかを確認するための開発用ウィンドウです。</value>
+  </data>
+  <data name="StyleGuide_Heading" xml:space="preserve">
+    <value>コントロールスタイル確認</value>
+  </data>
+  <data name="StyleGuide_TextBoxLabel" xml:space="preserve">
+    <value>テキスト入力サンプル</value>
+  </data>
+  <data name="StyleGuide_Title" xml:space="preserve">
+    <value>WPFスタイルガイド (開発用)</value>
+  </data>
+  <data name="StyleGuide_ToggleTheme" xml:space="preserve">
+    <value>ダーク/ライト切替</value>
+  </data>
   <data name="SvcDownloadManager_D001" xml:space="preserve">
     <value>外部動画DL設定がOFFのためスキップ</value>
   </data>
@@ -3057,6 +3524,18 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SvcFileMove_D015" xml:space="preserve">
     <value>ファイル移動の確認</value>
   </data>
+  <data name="SvcFileMove_D016" xml:space="preserve">
+    <value>
+同ドライブのため瞬時に完了します。</value>
+  </data>
+  <data name="SvcFileMove_D017" xml:space="preserve">
+    <value>
+移動先空き容量: {0} / 必要量: {1}</value>
+  </data>
+  <data name="SvcFileMove_D018" xml:space="preserve">
+    <value>
+(空き容量取得失敗: {0})</value>
+  </data>
   <data name="SvcIwaraApiService_D001" xml:space="preserve">
     <value>{0}の動画一覧を取得中...</value>
   </data>
@@ -3139,6 +3618,25 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="SvcLocalFileMap_D011" xml:space="preserve">
     <value>マッピング解除の確認</value>
   </data>
+  <data name="SvcLocalFileMap_D012" xml:space="preserve">
+    <value>このファイルは既に別の動画「{1}」に紐付いています:
+{0}
+同じファイルを複数の動画へ紐付けることはできません。</value>
+  </data>
+  <data name="SvcLocalFileMap_D013" xml:space="preserve">
+    <value>重複するローカルファイル</value>
+  </data>
+  <data name="SvcLocalFileMap_D014" xml:space="preserve">
+    <value>選択したファイルには別の動画「{1}」のタグがあります:
+{0}
+安全のため、このファイルは紐付けできません。</value>
+  </data>
+  <data name="SvcLocalFileMap_D015" xml:space="preserve">
+    <value>別動画のタグがあるファイル</value>
+  </data>
+  <data name="SvcLocalFileMap_D016" xml:space="preserve">
+    <value>対象のDB状態が変わったか、ファイルが利用できなくなりました。再スキャンしてください。</value>
+  </data>
   <data name="SvcNotificationService_D001" xml:space="preserve">
     <value>ダウンロード完了</value>
   </data>
@@ -3155,7 +3653,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ログインが必要です。設定画面からログインしてください。</value>
   </data>
   <data name="UntaggedFileMatchForm_D001" xml:space="preserve">
-    <value>タグの無いファイルが {0} 件見つかりました。検索方法を選んでください。</value>
+    <value>タグの無いファイルが {0} 件見つかりました。ファイル一覧を確認し、ファイル/フォルダ単位で処理方法を割り当ててください。</value>
   </data>
   <data name="UntaggedFileMatchForm_D002" xml:space="preserve">
     <value>例: "{title}.mp4" / "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{artist}\{title}.mp4"  (空欄ならヒント無しの全体ヒューリスティック検索)</value>
@@ -3271,6 +3769,123 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="UntaggedFileMatchForm_rbSkip" xml:space="preserve">
     <value>スキップ (取り込まない)</value>
   </data>
+  <data name="UntaggedFileMatchForm_grpFiles" xml:space="preserve">
+    <value>タグの無いファイル一覧</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblFileList" xml:space="preserve">
+    <value>対象列にチェックを付けて、下の処理方法を適用します。相対パスとフルパスで対象を確認できます。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectAllFiles" xml:space="preserve">
+    <value>全て選択</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnClearFileSelection" xml:space="preserve">
+    <value>選択解除</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblScopeFolder" xml:space="preserve">
+    <value>フォルダ配下を選択:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnBrowseScopeFolder" xml:space="preserve">
+    <value>参照...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectScope" xml:space="preserve">
+    <value>配下を選択</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSelectionStatus" xml:space="preserve">
+    <value>選択状況</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colSelected" xml:space="preserve">
+    <value>対象</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFileName" xml:space="preserve">
+    <value>ファイル名</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colRelativePath" xml:space="preserve">
+    <value>相対パス</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFullPath" xml:space="preserve">
+    <value>フルパス</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedMethod" xml:space="preserve">
+    <value>割り当て方法</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedDetail" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpRule" xml:space="preserve">
+    <value>選択したファイルへ適用する処理</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblMethod" xml:space="preserve">
+    <value>処理方法:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item0" xml:space="preserve">
+    <value>アーティストフォルダ選択検索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item1" xml:space="preserve">
+    <value>ファイル名検索 (DB全体)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item2" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpArtist" xml:space="preserve">
+    <value>アーティスト検索設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpFilename" xml:space="preserve">
+    <value>ファイル名検索設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleHelp" xml:space="preserve">
+    <value>選択したファイルに設定を適用します。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleSummary" xml:space="preserve">
+    <value>割り当て済みの処理は一覧に表示されます。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnApplyRule" xml:space="preserve">
+    <value>選択ファイルに適用</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D021" xml:space="preserve">
+    <value>処理方法が未設定のファイルが {0} 件あります。未設定のファイルをスキップとして続行しますか?</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D022" xml:space="preserve">
+    <value>フォルダはスキャン対象フォルダ自身またはその配下を指定してください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D023" xml:space="preserve">
+    <value>{0} 件のファイルを選択しました。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D024" xml:space="preserve">
+    <value>{0} 件に「{1}」を割り当てました。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D025" xml:space="preserve">
+    <value>処理方法を適用するファイルにチェックを付けてください。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D026" xml:space="preserve">
+    <value>未設定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027" xml:space="preserve">
+    <value>指定した作者の最新動画一覧を取得し、この選択範囲だけを照合します。新規動画にも対応します。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028" xml:space="preserve">
+    <value>DB全体を対象にファイル名で照合します。DB未登録動画は対象外です。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029" xml:space="preserve">
+    <value>この選択範囲は取り込みません。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D030" xml:space="preserve">
+    <value>チェック中: {0} 件 / 割り当て済み: {1} 件 / 未設定: {2} 件</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D031" xml:space="preserve">
+    <value>テンプレートなし</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D032" xml:space="preserve">
+    <value>{0} 件を照合中...</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027_Short" xml:space="preserve">
+    <value>作者検索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028_Short" xml:space="preserve">
+    <value>ファイル名検索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029_Short" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
   <data name="VideoDetailsForm_D001" xml:space="preserve">
     <value>待機中</value>
   </data>
@@ -3358,4 +3973,114 @@ DL済みのファイルは削除されます（後で復元できます）</valu
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>保存先</value>
   </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve">
+    <value>ローカルファイル整合性チェック</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve">
+    <value>DBが保持するローカルファイルの不整合を検出します。対象を選択して、ローカルファイルの再紐付けまたは再ダウンロードを実行できます。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve">
+    <value>再スキャン</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve">
+    <value>ローカルを再紐付け...</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve">
+    <value>再ダウンロード</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve">
+    <value>スキャン待機中</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve">
+    <value>Video ID</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve">
+    <value>状態</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve">
+    <value>DBの保存先</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve">
+    <value>不整合理由</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve">
+    <value>ローカルファイルの整合性を確認中...</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve">
+    <value>不整合がある動画: {0} 件</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve">
+    <value>スキャンを中止しました</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve">
+    <value>エラー: {0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve">
+    <value>ファイル整合性チェックに失敗しました:
+{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve">
+    <value>ファイル整合性チェック</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve">
+    <value>再紐付けする動画を1件選択してください。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve">
+    <value>対象の状態が変わったため、一覧を更新しました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve">
+    <value>「{0}」をローカルファイルに再紐付けしました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve">
+    <value>選択した {0} 件を再ダウンロードキューに追加します。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve">
+    <value>再ダウンロード確認</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve">
+    <value>{0} 件を再ダウンロードキューに追加しました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve">
+    <value>{0} 件をキューに追加しました。{1} 件は状態が変わったか、既に処理中のためスキップしました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve">
+    <value>再ダウンロード処理に失敗しました:
+{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve">
+    <value>この動画は現在キューで処理中のため、一覧を更新しました。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D016" xml:space="preserve">
+    <value>次のドライブ・共有に接続できませんでした: {0}
+
+そこにある {1} 件は「欠損」ではなく判定対象外として扱いました。外付けドライブが未接続の可能性があります。接続してから再スキャンしてください。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D017" xml:space="preserve">
+    <value>マップ処理の完了を待っています。終わるまで閉じられません。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D018" xml:space="preserve">
+    <value>{1} 件の欠損を検出しました (表示は先頭 {0} 件のみ)。件数が多すぎる場合はドライブ未接続を疑ってください。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D019" xml:space="preserve">
+    <value>直前のスキャンで欠損が上限に達しました。ドライブが接続されていても応答していない場合、実際には存在するファイルまで「欠損」と判定されている可能性があります。
+
+このまま {0} 件を再ダウンロードすると、既にあるファイルを取り直すことになります。
+
+本当に続行しますか？（先にドライブの状態を確認して再スキャンすることを強く推奨します）</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>待機中</value></data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>ダウンロード中</value></data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>タグ書き込み中</value></data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>完了</value></data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>失敗</value></data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>スキップ</value></data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>一時停止</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>完了扱いだがDBの保存先が空</value></data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>DBの保存先ファイルが存在しない</value></data>
 </root>

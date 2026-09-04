@@ -1,0 +1,873 @@
+<Window x:Class="IwaraDownloader.Wpf.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:IwaraDownloader.Wpf.Markup"
+        xmlns:vwp="clr-namespace:WpfToolkit.Controls;assembly=VirtualizingWrapPanel"
+        Title="IwaraDownloader"
+        Icon="pack://siteoforigin:,,,/icon.ico"
+        Width="1200" Height="750"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!--
+            OS標準のButton/ComboBox/GridViewColumnHeaderテンプレートはMouseOver/フォーカス時に
+            文字色と連動しない明るい(ほぼ白の)オーバーレイを独自に乗せてくるため、ウィンドウ全体で
+            共有するフラットなテンプレートに差し替える。ホバー/フォーカスは枠線の強調だけで表現する。
+        -->
+        <Style x:Key="FlatButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Border}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
+            ComboBoxの本体・展開Popupとも明示的にダークテーマの色を敷く。
+            Popup配下のBorderにBackgroundを指定しないとAllowsTransparency=Trueの効果で
+            背景が完全に透明になり、後ろの一覧が透けて見えてしまう(実機確認済みの不具合)。
+        -->
+        <Style x:Key="FlatComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundElevated}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="Toggle"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press" Focusable="False">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ToggleBd"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="20" />
+                                                </Grid.ColumnDefinitions>
+                                                <Path Grid.Column="1" Data="M0,0 L4,4 L8,0 Z"
+                                                      Fill="{DynamicResource Brush.TextSecondary}"
+                                                      Width="8" Height="4" Stretch="Uniform"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ToggleBd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <!--
+                                SelectionBoxItem/ContentPresenterは、項目がComboBoxItemの場合
+                                ComboBoxItemオブジェクトそのものを指すため、ItemContainerStyleの
+                                Foreground(Popup用の黒固定)がここにも効いてしまい閉状態が読めなくなる
+                                (実機確認済みの不具合)。SelectedItem.Contentを直接テキスト表示することで
+                                ComboBoxItemの見た目を一切継承しない。
+                            -->
+                            <TextBlock x:Name="ContentSite" IsHitTestVisible="False"
+                                       Text="{Binding SelectedItem.Content, RelativeSource={RelativeSource TemplatedParent}}"
+                                       Margin="{TemplateBinding Padding}"
+                                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Brush.Text}" />
+                            <Popup x:Name="Popup" Placement="Bottom" AllowsTransparency="True"
+                                   Focusable="False" PopupAnimation="None"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Background="{DynamicResource Brush.BackgroundElevated}"
+                                        BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                        CornerRadius="4"
+                                        SnapsToDevicePixels="True">
+                                    <ScrollViewer SnapsToDevicePixels="True" Margin="2">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Padding" Value="6,4" />
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FlatGridViewColumnHeaderStyle" TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundElevated}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridViewColumnHeader">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="0,0,1,1">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="Left" VerticalAlignment="Center"
+                                               TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
+            メニュー項目のアイコン。Windows標準搭載のSegoe MDL2 Assetsのグリフを使うことで
+            画像リソースを持たずに済み、高DPIでも滲まない。コンテキストメニュー自体は
+            OS既定のテンプレート(ライト固定)なので、色もテーマ非追従の固定値でよい。
+            グリフは文字コード事故を避けるため数値文字参照(&#x....;)で書くこと。
+        -->
+        <Style x:Key="MenuGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="#3C3C3C" />
+        </Style>
+        <Style x:Key="MenuGlyphDestructive" TargetType="TextBlock" BasedOn="{StaticResource MenuGlyph}">
+            <Setter Property="Foreground" Value="#B3261E" />
+        </Style>
+
+        <!--
+            動画の右クリックメニュー。詳細リスト(ListView)とタイル表示(ListBox)の両方から
+            {StaticResource VideoContextMenu} で共有する(同一インスタンスをContextMenuプロパティに
+            割り当てるとPlacementTargetが開いた側に自動追従するため、複数コントロールでの共有は問題ない)。
+            各MenuItemのVisibilityはMainViewModel.RefreshVideoContextMenuState()が
+            メニューを開く直前(ContextMenuOpening)に計算するCanXxxSelectedVideo系の
+            プロパティにバインドする(旧WinForms版menuVideoContext_Openingに相当)。
+        -->
+        <ContextMenu x:Key="VideoContextMenu"
+                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                     Opened="VideoContextMenu_Opened" Closed="VideoContextMenu_Closed">
+            <!-- G1: いま一番やりたいこと(状態依存の一次アクション)。4項目のVisibilityはほぼ排他なので、
+                 完了済みなら「再生」が、未DLなら「ダウンロード」が自動的に先頭に来る。 -->
+            <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}"
+                      Visibility="{Binding CanPlaySelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE768;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}"
+                      Visibility="{Binding CanOpenFolderSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE838;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{Binding DownloadMenuText}" Command="{Binding DownloadVideoCommand}"
+                      Visibility="{Binding CanDownloadSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE896;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCancel}" Command="{Binding CancelVideoCommand}"
+                      Visibility="{Binding CanCancelSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE711;" /></MenuItem.Icon>
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator1, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G2: メンテ操作。頻度が低いので一次アクションより下に置く。 -->
+            <MenuItem Header="{loc:T MainForm_menuVidRetryFailed}" Command="{Binding RetryFailedVideoCommand}"
+                      Visibility="{Binding CanRetryFailedSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE72C;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidReDownload}" Command="{Binding ReDownloadVideoCommand}"
+                      Visibility="{Binding CanReDownloadSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE895;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidRefreshInfo}" Command="{Binding RefreshVideoInfoCommand}"
+                      Visibility="{Binding CanRefreshInfoSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE777;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCheckFileExists}" Command="{Binding CheckFileExistsForSelectedVideoCommand}"
+                      Visibility="{Binding CanCheckFileExistsSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE930;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidMapLocalFile}" Command="{Binding MapLocalFileCommand}"
+                      Visibility="{Binding CanMapLocalFileSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE71B;" /></MenuItem.Icon>
+            </MenuItem>
+            <!-- 子項目はIsCheckable。既定のMenuItemテンプレートではチェックマークとIconが
+                 左の同じスロットを共有するため、子にはアイコンを付けない。 -->
+            <MenuItem Header="{loc:T MainForm_menuVidPriority}"
+                      Visibility="{Binding CanChangeVideoPriority, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7C1;" /></MenuItem.Icon>
+                <MenuItem Header="{loc:T MainForm_menuPriorityHighest}" Command="{Binding SetVideoPriorityHighestCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityHighestChecked, Mode=OneWay}" />
+                <MenuItem Header="{loc:T MainForm_menuPriorityHigh}" Command="{Binding SetVideoPriorityHighCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityHighChecked, Mode=OneWay}" />
+                <MenuItem Header="{loc:T MainForm_menuPriorityNormal}" Command="{Binding SetVideoPriorityNormalCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityNormalChecked, Mode=OneWay}" />
+                <MenuItem Header="{loc:T MainForm_menuPriorityLow}" Command="{Binding SetVideoPriorityLowCommand}"
+                          IsCheckable="True" IsChecked="{Binding PriorityLowChecked, Mode=OneWay}" />
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator2, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G3: Webページ/コピー -->
+            <MenuItem Header="{loc:T MainForm_menuVidOpenPage}" Command="{Binding OpenVideoPageCommand}"
+                      Visibility="{Binding CanOpenPageSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE128;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidOpenAuthor}" Command="{Binding OpenVideoAuthorPageCommand}"
+                      Visibility="{Binding CanOpenAuthorSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE77B;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8C8;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCopyTitle}" Command="{Binding CopyVideoTitleCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8C8;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCopyAuthor}" Command="{Binding CopyVideoAuthorCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8C8;" /></MenuItem.Icon>
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator3, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G4: お気に入り/詳細情報。アイコンは追加=枠だけの星/解除=塗りの星でVMから切り替える。 -->
+            <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}"
+                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="{Binding FavoriteMenuGlyph}" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidDetails}" Command="{Binding OpenVideoDetailsCommand}"
+                      Visibility="{Binding CanShowVideoDetails, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE946;" /></MenuItem.Icon>
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator4, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G5: 破壊的操作。誤クリック防止のためアイコンを赤にする。 -->
+            <MenuItem Header="{loc:T MainForm_menuVidDelete}" Command="{Binding DeleteVideoCommand}"
+                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyphDestructive}" Text="&#xE74D;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidRestore}" Command="{Binding RestoreVideoCommand}"
+                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE10E;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidPermanentDelete}" Command="{Binding PermanentDeleteVideoCommand}"
+                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyphDestructive}" Text="&#xE74D;" /></MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+
+        <!-- タイル表示用ListBoxItem: 動画一覧ListViewItemと同じ理由でダーク背景を保つカスタムテンプレート -->
+        <Style x:Key="VideoTileItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="Background" Value="{DynamicResource Brush.BackgroundElevated}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <!--
+        Phase4a: レイアウトシェルのみ。中身(チャンネルツリー/動画一覧/ツールバー等)は
+        Phase4b〜4fで順次埋める。旧WinForms版の構造(MainForm.Designer.cs)に対応:
+          toolStrip(上) / mainSplitContainer.Panel1(URL入力行) /
+          contentSplitContainer(左=チャンネルツリー, 右=動画一覧) / statusStrip(下)
+    -->
+    <Grid>
+        <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" x:Name="ToolbarRow" />
+            <RowDefinition Height="Auto" x:Name="UrlInputRow" />
+            <RowDefinition Height="*" x:Name="ContentRow" />
+            <RowDefinition Height="Auto" x:Name="StatusBarRow" />
+        </Grid.RowDefinitions>
+
+        <!-- ツールバー -->
+        <Border Grid.Row="0" x:Name="ToolbarHost"
+                Background="{DynamicResource Brush.BackgroundElevated}"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1"
+                Padding="6">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.Resources>
+                    <!-- ToolTipに設定した説明文を、ホバー/キーボードフォーカス時にステータスバーへも表示する
+                         (MainWindow.xaml.cs ToolbarItem_ShowHint/HideHint。フッタ側はMainViewModel.FooterStatusText参照)。 -->
+                    <Style TargetType="Button" BasedOn="{StaticResource FlatButtonStyle}">
+                        <Setter Property="Margin" Value="0,0,4,0" />
+                        <EventSetter Event="MouseEnter" Handler="ToolbarItem_ShowHint" />
+                        <EventSetter Event="MouseLeave" Handler="ToolbarItem_HideHint" />
+                        <EventSetter Event="GotFocus" Handler="ToolbarItem_ShowHint" />
+                        <EventSetter Event="LostFocus" Handler="ToolbarItem_HideHint" />
+                    </Style>
+                    <Style TargetType="ToggleButton">
+                        <Setter Property="Padding" Value="10,6" />
+                        <Setter Property="Margin" Value="0,0,4,0" />
+                        <Setter Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+                        <Setter Property="BorderThickness" Value="1" />
+                        <EventSetter Event="MouseEnter" Handler="ToolbarItem_ShowHint" />
+                        <EventSetter Event="MouseLeave" Handler="ToolbarItem_HideHint" />
+                        <EventSetter Event="GotFocus" Handler="ToolbarItem_ShowHint" />
+                        <EventSetter Event="LostFocus" Handler="ToolbarItem_HideHint" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Bd"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4">
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           TextElement.Foreground="{TemplateBinding Foreground}" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.5" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                    <!-- ドロップダウンボタン: Buttonのクリックで自身に付けたContextMenuを開く(MainWindow.xaml.cs ToolbarDropdown_Click)。
+                         ContextMenuはPopupの別ツリーに属しDataContextを継承しないため、ChannelTreeのContextMenuと同じ手法で
+                         PlacementTarget(=このButton)のDataContextを明示的に引き継がせる。 -->
+                    <Style x:Key="DropdownButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <EventSetter Event="Click" Handler="ToolbarDropdown_Click" />
+                    </Style>
+                </StackPanel.Resources>
+                <Button Content="{loc:T MainForm_D082}" Command="{Binding CheckNowCommand}" ToolTip="{loc:T MainForm_ToolbarHint_CheckNow}" />
+                <Button Content="{loc:T MainForm_btnStartAll}" Command="{Binding StartAllCommand}" ToolTip="{loc:T MainForm_ToolbarHint_StartAll}" />
+                <Button Content="{loc:T MainForm_btnStopAll}" Command="{Binding StopAllCommand}" ToolTip="{loc:T MainForm_ToolbarHint_StopAll}" />
+                <ToggleButton Content="{Binding ImmediateDownloadToggleText}" IsChecked="{Binding ImmediateDownloadOnAdd}"
+                              ToolTip="{loc:T MainForm_ToolbarHint_ImmediateDownload}" />
+                <ToggleButton Content="{Binding ClipboardMonitorToggleText}" IsChecked="{Binding ClipboardMonitorEnabled}"
+                              ToolTip="{loc:T MainForm_ToolbarHint_ClipboardMonitor}" />
+                <ToggleButton Content="{Binding ViewModeToggleText}" IsChecked="{Binding IsTileMode}"
+                              ToolTip="{loc:T MainForm_ToolbarHint_ViewMode}" />
+                <Separator Margin="4,0" />
+                <Button Content="{loc:T MainForm_btnSettings}" Command="{Binding OpenSettingsCommand}" ToolTip="{loc:T MainForm_ToolbarHint_Settings}" />
+                <Button Content="{loc:T MainForm_btnSetup}" Command="{Binding OpenSetupWizardCommand}"
+                        Background="{DynamicResource Brush.Warning}"
+                        Visibility="{Binding IsSetupNeeded, Converter={StaticResource BoolToVis}}"
+                        ToolTip="{loc:T MainForm_ToolbarHint_Setup}" />
+                <Separator Margin="4,0" />
+                <Button Style="{StaticResource DropdownButtonStyle}" ToolTip="{loc:T MainForm_ToolbarHint_Tools}">
+                    <TextBlock><Run Text="{loc:T MainForm_btnTools}" /><Run Text=" ▾" /></TextBlock>
+                    <Button.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="{loc:T MainForm_menuToolsBulkImport}" Command="{Binding OpenBulkImportCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsSearchImport}" Command="{Binding OpenSearchImportCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsImportFolder}" Command="{Binding OpenImportFromFolderCommand}" />
+                            <Separator />
+                            <MenuItem Header="{loc:T MainForm_menuToolsDuplicateCheck}" Command="{Binding OpenDuplicateCheckCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsStatistics}" Command="{Binding OpenStatisticsCommand}" />
+                            <Separator />
+                            <MenuItem Header="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsLocalFileIntegrity}" Command="{Binding OpenLocalFileIntegrityCommand}" />
+                            <Separator Visibility="{Binding IsAdvancedDbToolEnabled, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuToolsDatabaseTool}" Command="{Binding OpenDatabaseToolCommand}"
+                                      Visibility="{Binding IsAdvancedDbToolEnabled, Converter={StaticResource BoolToVis}}" />
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+                <Button Style="{StaticResource DropdownButtonStyle}" ToolTip="{loc:T MainForm_ToolbarHint_Help}">
+                    <TextBlock><Run Text="{loc:T MainForm_btnHelp}" /><Run Text=" ▾" /></TextBlock>
+                    <Button.ContextMenu>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="{loc:T MainForm_menuHelpAbout}" Command="{Binding OpenAboutCommand}" />
+                            <MenuItem Header="{loc:T MainForm_menuHelpOpenLogs}" Command="{Binding OpenLogFolderCommand}" />
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+                <TextBlock Text="{Binding LoginStatusText}" Foreground="{Binding LoginStatusBrush}"
+                           VerticalAlignment="Center" Margin="8,0,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- URL入力行 -->
+        <Border Grid.Row="1" x:Name="UrlInputHost"
+                Background="{DynamicResource Brush.Background}"
+                Padding="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="UrlTextBox"
+                         Text="{Binding UrlInput, UpdateSourceTrigger=PropertyChanged}"
+                         Padding="6"
+                         Background="{DynamicResource Brush.BackgroundElevated}"
+                         Foreground="{DynamicResource Brush.Text}"
+                         BorderBrush="{DynamicResource Brush.Border}" Margin="0,0,8,0">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding AddFromUrlCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+                <Button Grid.Column="1" Content="{loc:T MainForm_btnPasteAndAdd}"
+                        Command="{Binding AddFromUrlCommand}"
+                        Style="{StaticResource FlatButtonStyle}"
+                        Padding="10,6"
+                        Background="{DynamicResource Brush.Accent}"
+                        Foreground="{DynamicResource Brush.OnAccent}"
+                        BorderThickness="0" />
+            </Grid>
+        </Border>
+
+        <!-- コンテンツ: 左=チャンネルツリー(Phase4b) / 右=動画一覧(Phase4c) -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" x:Name="ChannelTreeColumn" MinWidth="150" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" x:Name="VideoListColumn" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" x:Name="ChannelTreeHost"
+                    Background="{DynamicResource Brush.Background}"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
+                <ListBox ItemsSource="{Binding TreeNodes}"
+                         SelectedItem="{Binding SelectedTreeNode}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ContextMenuOpening="ChannelTree_ContextMenuOpening">
+                    <ListBox.ContextMenu>
+                        <!--
+                            ContextMenuはPopupの別ツリーに属しDataContextを継承しないため、
+                            PlacementTarget(=このListBox)のDataContext(=MainViewModel)を
+                            明示的に引き継がせる。これで配下のMenuItemは通常通り{Binding XCommand}で書ける。
+                            各項目のVisibilityはMainViewModel.RefreshChannelContextMenuState()が
+                            開く直前(ContextMenuOpening)に計算する(旧WinForms版contextMenuChannel_Openingに相当)。
+                        -->
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Header="{loc:T MainForm_menuChOpen}" Command="{Binding OpenChannelPageCommand}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{Binding CheckChannelNowText}" Command="{Binding CheckChannelNowCommand}"
+                                      IsEnabled="{Binding CheckChannelNowEnabled}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDownloadAll}" Command="{Binding DownloadAllChannelCommand}"
+                                      Visibility="{Binding CanDownloadAllChannel, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChCheckFiles}" Command="{Binding CheckChannelFilesCommand}"
+                                      Visibility="{Binding CanCheckChannelFiles, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDeleteNotFound}" Command="{Binding DeleteNotFoundChannelCommand}"
+                                      Visibility="{Binding CanDeleteNotFoundChannel, Converter={StaticResource BoolToVis}}" />
+                            <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{Binding ChannelSavePathText}" Command="{Binding SetChannelSavePathCommand}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChExternalDL}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem Header="{Binding ChannelExternalDLInheritText}" Command="{Binding SetChannelExternalDLInheritCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelExternalDLInheritChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuChExternalDLOn}" Command="{Binding SetChannelExternalDLOnCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelExternalDLOnChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuChExternalDLOff}" Command="{Binding SetChannelExternalDLOffCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelExternalDLOffChecked, Mode=OneWay}" />
+                            </MenuItem>
+                            <MenuItem Header="{loc:T MainForm_menuChDefaultPriority}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem Header="{loc:T MainForm_menuPriorityHighest}" Command="{Binding SetChannelPriorityHighestCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityHighestChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuPriorityHigh}" Command="{Binding SetChannelPriorityHighCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityHighChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuPriorityNormal}" Command="{Binding SetChannelPriorityNormalCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityNormalChecked, Mode=OneWay}" />
+                                <MenuItem Header="{loc:T MainForm_menuPriorityLow}" Command="{Binding SetChannelPriorityLowCommand}"
+                                          IsCheckable="True" IsChecked="{Binding ChannelPriorityLowChecked, Mode=OneWay}" />
+                            </MenuItem>
+                            <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChEnable}" Command="{Binding EnableChannelCommand}"
+                                      Visibility="{Binding CanEnableChannel, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDisable}" Command="{Binding DisableChannelCommand}"
+                                      Visibility="{Binding CanDisableChannel, Converter={StaticResource BoolToVis}}" />
+                            <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                            <MenuItem Header="{loc:T MainForm_menuChDelete}" Command="{Binding DeleteChannelCommand}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="8,4" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundElevated}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Text}"
+                                       Foreground="{Binding Foreground}"
+                                       TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="Normal" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBold}" Value="True">
+                                                <Setter Property="FontWeight" Value="Bold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                           Background="{DynamicResource Brush.Border}" />
+
+            <Border Grid.Column="2" x:Name="VideoListHost"
+                    Background="{DynamicResource Brush.Background}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- 動画一覧フィルタ行(旧WinForms版txtVideoFilter/btnClearFilter/btnAdvancedSearch) -->
+                    <Grid Grid.Row="0" Margin="8,8,8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding VideoFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="6"
+                                 Background="{DynamicResource Brush.BackgroundElevated}"
+                                 Foreground="{DynamicResource Brush.Text}"
+                                 BorderBrush="{DynamicResource Brush.Border}" Margin="0,0,4,0" />
+                        <Button Grid.Column="1" Content="✕" Command="{Binding ClearVideoFilterCommand}"
+                                Style="{StaticResource FlatButtonStyle}" Padding="8,4" Margin="0,0,4,0" />
+                        <Button Grid.Column="2" Content="{Binding AdvancedSearchToggleText}" Command="{Binding ToggleAdvancedSearchCommand}"
+                                Style="{StaticResource FlatButtonStyle}" Padding="8,4" />
+                    </Grid>
+
+                    <!-- 詳細検索パネル(旧WinForms版panelAdvancedFilter: NSFWフィルタ/お気に入りのみ/タグ絞り込み) -->
+                    <Border Grid.Row="1" Margin="8,4,8,0" Padding="8"
+                            Background="{DynamicResource Brush.BackgroundElevated}"
+                            BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                            Visibility="{Binding IsAdvancedFilterVisible, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{loc:T MainForm_lblNsfwFilterLabel}" VerticalAlignment="Center" Margin="0,0,4,0"
+                                       Foreground="{DynamicResource Brush.Text}" />
+                            <ComboBox Width="110" Margin="0,0,12,0"
+                                      Style="{StaticResource FlatComboBoxStyle}"
+                                      SelectedIndex="{Binding NsfwFilterMode}">
+                                <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item0}" />
+                                <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item1}" />
+                                <ComboBoxItem Content="{loc:T MainForm_cmbNsfwFilter_Item2}" />
+                            </ComboBox>
+                            <CheckBox Content="{loc:T MainForm_chkFavOnly}" IsChecked="{Binding FavoriteOnlyFilter}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"
+                                      Foreground="{DynamicResource Brush.Text}" />
+                            <TextBox Width="220" Text="{Binding TagFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="4"
+                                     Background="{DynamicResource Brush.BackgroundElevated}"
+                                     Foreground="{DynamicResource Brush.Text}"
+                                     BorderBrush="{DynamicResource Brush.Border}"
+                                     VerticalAlignment="Center"
+                                     ToolTip="{loc:T MainForm_txtTagFilter_Placeholder}" />
+                        </StackPanel>
+                    </Border>
+
+                <!--
+                    動画一覧: ListViewの既定パネルはVirtualizingStackPanelのため、
+                    IsVirtualizing/VirtualizationMode を明示しなくても4万件規模で
+                    可視行のみUI要素化される(旧WinForms版のVirtualModeに相当)。
+                -->
+                <ListView Grid.Row="2" ItemsSource="{Binding Videos}"
+                          SelectedItem="{Binding SelectedVideo}"
+                          SelectionMode="Extended"
+                          SelectionChanged="VideoList_SelectionChanged"
+                          Background="Transparent" BorderThickness="0"
+                          Visibility="{Binding IsListMode, Converter={StaticResource BoolToVis}}"
+                          ContextMenu="{StaticResource VideoContextMenu}"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.ScrollUnit="Pixel"
+                          ContextMenuOpening="VideoList_ContextMenuOpening"
+                          GridViewColumnHeader.Click="VideoColumnHeader_Click"
+                          PreviewMouseLeftButtonDown="VideoList_PreviewMouseLeftButtonDown">
+                    <!--
+                        ItemContainerStyle未指定だとOS標準のListViewItemテンプレートが使われ、
+                        選択/フォーカス時に文字色と連動しない明るい(ほぼ白の)ハイライトを乗せてくる
+                        (ツールバーのButtonと同じ問題)。行の文字色は各列がBrush.Text/StatusForeground
+                        (どちらも明るい色)前提のため、背景は常にダークテーマの色に留め、選択/フォーカスは
+                        背景の明暗差とアクセント枠線だけで表現する。
+                    -->
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListViewItem">
+                                        <Border x:Name="Bd"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                Padding="{TemplateBinding Padding}"
+                                                SnapsToDevicePixels="True">
+                                            <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                                   Columns="{TemplateBinding GridView.ColumnCollection}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.BackgroundHover}" />
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                                <Setter TargetName="Bd" Property="BorderThickness" Value="1" />
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                                <Setter TargetName="Bd" Property="BorderThickness" Value="1" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.View>
+                        <GridView ColumnHeaderContainerStyle="{StaticResource FlatGridViewColumnHeaderStyle}">
+                            <GridViewColumn Header="{Binding TitleColumnHeader}" Width="400" DisplayMemberBinding="{Binding Title}" />
+                            <GridViewColumn Header="{Binding SourceColumnHeader}" Width="80" DisplayMemberBinding="{Binding Source}" />
+                            <GridViewColumn Header="{Binding StatusColumnHeader}" Width="90">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusForeground}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="{Binding PriorityColumnHeader}" Width="60" DisplayMemberBinding="{Binding PriorityText}" />
+                            <GridViewColumn Header="{Binding ProgressColumnHeader}" Width="120" DisplayMemberBinding="{Binding ProgressText}" />
+                            <GridViewColumn Header="{Binding SizeColumnHeader}" Width="90" DisplayMemberBinding="{Binding FileSize}" />
+                            <GridViewColumn Header="{Binding DateColumnHeader}" Width="140" DisplayMemberBinding="{Binding DisplayDate}" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <!--
+                    タイル表示(旧WinForms版View.LargeIcon相当)。詳細リストと同じVideosを直接束縛する。
+                    WPF標準WrapPanelはコンテナ仮想化非対応(4万件規模だと全件のUI要素を生成して重くなる)
+                    なため、NuGet: VirtualizingWrapPanel (WpfToolkit.Controls) を使う。可視範囲のみ
+                    コンテナが生成/リサイクルされるので旧WinForms版のTileModeMaxItemsキャップは不要。
+                    サムネ読み込みはコンテナがリサイクルされてDataContextが切り替わるたびに
+                    TileItem_DataContextChanged(MainWindow.xaml.cs)でトリガーする。
+                -->
+                <ListBox Grid.Row="2" ItemsSource="{Binding Videos}"
+                         SelectedItem="{Binding SelectedVideo}"
+                         SelectionMode="Extended"
+                         SelectionChanged="VideoList_SelectionChanged"
+                         Background="Transparent" BorderThickness="0"
+                         Visibility="{Binding IsTileMode, Converter={StaticResource BoolToVis}}"
+                         ContextMenu="{StaticResource VideoContextMenu}"
+                         ContextMenuOpening="VideoList_ContextMenuOpening"
+                         ScrollViewer.CanContentScroll="True"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         VirtualizingPanel.ScrollUnit="Pixel"
+                         ItemContainerStyle="{StaticResource VideoTileItemStyle}"
+                         PreviewMouseLeftButtonDown="TileList_PreviewMouseLeftButtonDown">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <vwp:VirtualizingWrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Background未指定だとヒットテスト対象外になり、サムネ未読込(Image.Sourceがnull)の
+                                 領域でクリック/ダブルクリックが素通りしてしまうため、Transparentを明示する -->
+                            <Grid Width="150" Background="Transparent"
+                                  Loaded="TileItem_Loaded" DataContextChanged="TileItem_DataContextChanged">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="84" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid Grid.Row="0">
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                    <TextBlock Text="★" FontSize="14" Foreground="{DynamicResource Brush.Favorite}"
+                                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4"
+                                               Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVis}}" />
+                                </Grid>
+                                <StackPanel Grid.Row="1" Margin="4,3">
+                                    <TextBlock Text="{Binding Title}" FontSize="11"
+                                               Foreground="{DynamicResource Brush.Text}"
+                                               TextWrapping="Wrap" MaxHeight="30" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding StatusText}" FontSize="10"
+                                               Foreground="{Binding StatusForeground}" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ステータスバー -->
+        <Border Grid.Row="3" x:Name="StatusBarHost"
+                Background="{DynamicResource Brush.BackgroundElevated}"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0"
+                Padding="8,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding FooterStatusText}"
+                           Foreground="{DynamicResource Brush.Text}" FontSize="11"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding DownloadCountText}"
+                           Foreground="{DynamicResource Brush.TextSecondary}" FontSize="11"
+                           VerticalAlignment="Center" Margin="12,0" />
+                <ProgressBar Grid.Column="2" Value="{Binding ProgressBarValue, Mode=OneWay}"
+                             Minimum="0" Maximum="100" Height="14" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Text="{Binding FreeSpaceText}"
+                           Foreground="{Binding FreeSpaceForeground}" FontSize="11"
+                           VerticalAlignment="Center" Margin="12,0,0,0" />
+            </Grid>
+        </Border>
+        </Grid>
+
+        <!--
+            パーティーモード(隠しイースターエッグ、AboutWindowのアイコン連打で発火)の演出。
+            ダウンロード機能とは無関係な見た目だけの要素。既定は非表示、MainWindow.xaml.csが
+            PartyModeService.Changed購読でVisibility/アニメーションを切り替える。
+            マウス操作を奪わないよう両方IsHitTestVisible=Falseにする。
+        -->
+        <Border x:Name="PartyRainbowBorder" IsHitTestVisible="False" Visibility="Collapsed"
+                BorderThickness="2">
+            <Border.BorderBrush>
+                <LinearGradientBrush x:Name="PartyRainbowBrush" StartPoint="0,0" EndPoint="1,1">
+                    <LinearGradientBrush.RelativeTransform>
+                        <RotateTransform x:Name="PartyRainbowRotate" CenterX="0.5" CenterY="0.5" Angle="0" />
+                    </LinearGradientBrush.RelativeTransform>
+                    <GradientStop Color="#FF0000" Offset="0.0" />
+                    <GradientStop Color="#FF8000" Offset="0.14" />
+                    <GradientStop Color="#FFFF00" Offset="0.28" />
+                    <GradientStop Color="#00FF40" Offset="0.42" />
+                    <GradientStop Color="#00C0FF" Offset="0.57" />
+                    <GradientStop Color="#4040FF" Offset="0.71" />
+                    <GradientStop Color="#C000FF" Offset="0.86" />
+                    <GradientStop Color="#FF0000" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.BorderBrush>
+        </Border>
+        <Canvas x:Name="ConfettiCanvas" IsHitTestVisible="False" Visibility="Collapsed" ClipToBounds="True" />
+    </Grid>
+</Window>

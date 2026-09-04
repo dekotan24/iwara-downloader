@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DBMaintenanceTool</AssemblyName>
+    <!-- RootNamespaceをIwaraDownloader本体と合わせる: L.cs/Localizer.csがリンク元と同じ埋め込み
+         リソース名("IwaraDownloader.Resources.Strings")を前提にしているため、ここを変えると
+         文言が一切解決できなくなる (AssemblyNameとは独立の設定なので、AssemblyName変更の影響は受けない) -->
+    <RootNamespace>IwaraDownloader</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>deko</Authors>
+    <Description>IwaraDownloader DB操作ツール(上級者向け、downloader終了中に使う独立メンテナンスツール)</Description>
+    <ApplicationIcon>..\IwaraDownloader\icon.ico</ApplicationIcon>
+    <Title>DB Maintenance Tool</Title>
+    <NeutralResourcesLanguage>ja</NeutralResourcesLanguage>
+    <!-- 本体と同じ出力フォルダに配置する (本体からProcess.Startで見つけられるように) -->
+    <OutputPath>..\IwaraDownloader\bin\$(Configuration)\net10.0-windows\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+  </ItemGroup>
+
+  <!-- 本体(IwaraDownloader)とロジックを共有するファイルをリンク参照する。
+       DatabaseServiceを二重管理せず、DBスキーマ/マイグレーション/管理者APIを一箇所に保つ -->
+  <ItemGroup>
+    <Compile Include="..\IwaraDownloader\Services\DatabaseService.cs" Link="Services\DatabaseService.cs" />
+    <Compile Include="..\IwaraDownloader\Services\LoggingService.cs" Link="Services\LoggingService.cs" />
+    <Compile Include="..\IwaraDownloader\Models\VideoInfo.cs" Link="Models\VideoInfo.cs" />
+    <Compile Include="..\IwaraDownloader\Models\SubscribedUser.cs" Link="Models\SubscribedUser.cs" />
+    <Compile Include="..\IwaraDownloader\Models\Enums.cs" Link="Models\Enums.cs" />
+    <Compile Include="..\IwaraDownloader\Models\DownloadPriority.cs" Link="Models\DownloadPriority.cs" />
+    <Compile Include="..\IwaraDownloader\Models\VideoTreeCounts.cs" Link="Models\VideoTreeCounts.cs" />
+    <Compile Include="..\IwaraDownloader\Utils\L.cs" Link="Utils\L.cs" />
+    <Compile Include="..\IwaraDownloader\Utils\Localizer.cs" Link="Utils\Localizer.cs" />
+    <Compile Include="..\IwaraDownloader\Utils\Helpers.cs" Link="Utils\Helpers.cs" />
+    <!-- 本体と同じUI言語設定(settings.jsonのLanguage)を再現するために必要 -->
+    <Compile Include="..\IwaraDownloader\Utils\SettingsManager.cs" Link="Utils\SettingsManager.cs" />
+    <Compile Include="..\IwaraDownloader\Utils\CryptoHelper.cs" Link="Utils\CryptoHelper.cs" />
+    <Compile Include="..\IwaraDownloader\Models\AppSettings.cs" Link="Models\AppSettings.cs" />
+    <!-- SDK標準のカルチャ自動判定(ファイル名の .en. / .zh-Hans. 部分)に任せる。
+         LogicalNameを明示するとサテライトアセンブリ生成のカルチャ判定を素通りしてしまうため使わない -->
+    <EmbeddedResource Include="..\IwaraDownloader\Resources\Strings.resx" Link="Resources\Strings.resx" />
+    <EmbeddedResource Include="..\IwaraDownloader\Resources\Strings.en.resx" Link="Resources\Strings.en.resx" />
+    <EmbeddedResource Include="..\IwaraDownloader\Resources\Strings.zh-Hans.resx" Link="Resources\Strings.zh-Hans.resx" />
+  </ItemGroup>
+
+</Project>

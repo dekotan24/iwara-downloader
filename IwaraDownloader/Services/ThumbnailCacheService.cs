@@ -13,7 +13,14 @@ namespace IwaraDownloader.Services
     ///
     /// 設計:
     ///   - キーは VideoId (.jpg として保存)
-    ///   - メモリ LRU で直近 200 枚保持
+    ///   - メモリ LRU で直近 200 枚保持。中身は生バイト列(byte[])であって
+    ///     System.Drawing.Bitmap ではない。WinForms→WPF移行に伴い、GDI+ 依存の
+    ///     Image を直接キャッシュすると WPF 側(BitmapImage/ImageSource)から
+    ///     再利用できないため。byte[] はイミュータブルに扱う分、Bitmap のように
+    ///     「clone してから渡す/evict時にDisposeする」というライフサイクル管理も
+    ///     不要になる副次的なメリットがある。
+    ///     - WinForms向け: TryGetMemoryCached/TryGetCached (Image を返す。内部でbyte[]から都度デコード)
+    ///     - WPF向け:      TryGetMemoryCachedBytes (byte[] をそのまま返す。BitmapImageの構築に使う)
     ///   - ネット DL は並列度 2 まで + 直前リクエストから ApiRequestDelayMs ms 空ける
     ///   - DL 完了時 ThumbnailReady イベントで UI に通知 → 仮想 ListView の RedrawItems
     /// </summary>
@@ -38,11 +45,11 @@ namespace IwaraDownloader.Services
         // 保存先は設定で切替可能なため固定フィールドにせず GetCachePath で都度解決する
         private string? _lastCacheDir;
         private readonly HttpClient _http;
-        // メモリ LRU: 同一 lock 配下で操作。Image 所有権はキャッシュ側。
-        // 外部に渡すのは必ず Bitmap clone (呼び出し側で Dispose 可能)。
+        // メモリ LRU: 同一 lock 配下で操作。byte[] は不変として扱うため、
+        // 呼び出し側に配列参照をそのまま渡してよい(Bitmapのような Dispose/clone 管理は不要)。
         private readonly object _memLock = new();
-        private readonly Dictionary<string, LinkedListNode<(string Key, Image Img)>> _memCache = new();
-        private readonly LinkedList<(string Key, Image Img)> _lruList = new();
+        private readonly Dictionary<string, LinkedListNode<(string Key, byte[] Bytes)>> _memCache = new();
+        private readonly LinkedList<(string Key, byte[] Bytes)> _lruList = new();
         private readonly ConcurrentDictionary<string, byte> _inflight = new();
         private readonly SemaphoreSlim _netGate = new(2, 2);   // ネット DL 並列度
         private long _lastNetRequestTick = 0;
@@ -175,37 +182,28 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// メモリキャッシュのみから取得 (I/O ゼロ、UI スレッド安全)。返り値はクローン。
-        /// ディスクキャッシュは EnsureLoadedAsync で非同期に読み込む。
+        /// メモリキャッシュのみから取得 (I/O ゼロ、UI スレッド安全)。byte[] からその場でデコードする。
+        /// ディスクキャッシュは EnsureLoadedAsync で非同期に読み込む。WinForms(GDI+)向け。
         /// </summary>
         public Image? TryGetMemoryCached(string videoId)
         {
-            if (string.IsNullOrEmpty(videoId) || _disposed) return null;
-            // lock 内では「LRU 先頭へ移動」+ Image 参照取得のみ。
-            // Bitmap clone (ピクセルコピーで重い) は lock 外で実施して UI フリーズを防ぐ。
-            // LRU 先頭にしてあるので eviction 対象外 = clone 中に Dispose されるレースは起きない。
-            Image? source = null;
-            lock (_memLock)
+            var bytes = TryGetMemoryCachedBytes(videoId);
+            if (bytes == null) return null;
+            try
             {
-                if (_memCache.TryGetValue(videoId, out var node))
-                {
-                    _lruList.Remove(node);
-                    _lruList.AddFirst(node);
-                    source = node.Value.Img;
-                }
+                using var ms = new MemoryStream(bytes);
+                using var loaded = Image.FromStream(ms);
+                return new Bitmap(loaded);
             }
-            if (source == null) return null;
-            try { return new Bitmap(source); }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Mem clone failed for {videoId}: {ex.Message}");
+                Debug.WriteLine($"Mem decode failed for {videoId}: {ex.Message}");
                 lock (_memLock)
                 {
                     if (_memCache.TryGetValue(videoId, out var node))
                     {
                         _memCache.Remove(videoId);
                         _lruList.Remove(node);
-                        try { node.Value.Img.Dispose(); } catch { }
                     }
                 }
                 return null;
@@ -213,8 +211,27 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 同期取得: メモリ → ディスク の順で探す (毎回クローン)。
-        /// ディスクから読み込んだ場合はメモリにも昇格させる。
+        /// メモリキャッシュのみから生バイト列を取得 (I/O ゼロ、UI スレッド安全)。WPF(BitmapImage)向け。
+        /// byte[] は不変として扱っているため、返す配列はキャッシュ内部と同一参照(コピーしない)。
+        /// 呼び出し側で内容を書き換えないこと。
+        /// </summary>
+        public byte[]? TryGetMemoryCachedBytes(string videoId)
+        {
+            if (string.IsNullOrEmpty(videoId) || _disposed) return null;
+            lock (_memLock)
+            {
+                if (_memCache.TryGetValue(videoId, out var node))
+                {
+                    _lruList.Remove(node);
+                    _lruList.AddFirst(node);
+                    return node.Value.Bytes;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 同期取得: メモリ → ディスク の順で探す。ディスクから読み込んだ場合はメモリにも昇格させる。
         /// バックフィル等の重い処理向け。UI スレッドでは TryGetMemoryCached を使う。
         /// </summary>
         public Image? TryGetCached(string videoId)
@@ -228,14 +245,10 @@ namespace IwaraDownloader.Services
             {
                 var bytes = File.ReadAllBytes(path);
                 if (bytes.Length == 0) return null;
-                Bitmap stored;
-                using (var ms = new MemoryStream(bytes))
-                using (var loaded = Image.FromStream(ms))
-                {
-                    stored = new Bitmap(loaded);
-                }
-                PutMem(videoId, stored);
-                return new Bitmap(stored);
+                PutMem(videoId, bytes);
+                using var ms = new MemoryStream(bytes);
+                using var loaded = Image.FromStream(ms);
+                return new Bitmap(loaded);
             }
             catch (Exception ex)
             {
@@ -271,13 +284,7 @@ namespace IwaraDownloader.Services
                             var bytes = await File.ReadAllBytesAsync(path);
                             if (bytes.Length > 0)
                             {
-                                Bitmap stored;
-                                using (var ms = new MemoryStream(bytes))
-                                using (var img = Image.FromStream(ms))
-                                {
-                                    stored = new Bitmap(img);
-                                }
-                                PutMem(videoId, stored);
+                                PutMem(videoId, bytes);
                                 if (!_disposed) ThumbnailReady?.Invoke(this, videoId);
                                 return;
                             }
@@ -416,13 +423,7 @@ namespace IwaraDownloader.Services
                 var path = GetCachePath(videoId);
                 await File.WriteAllBytesAsync(path, bytes);
 
-                Bitmap stored;
-                using (var ms = new MemoryStream(bytes))
-                using (var img = Image.FromStream(ms))
-                {
-                    stored = new Bitmap(img);
-                }
-                PutMem(videoId, stored);
+                PutMem(videoId, bytes);
 
                 try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 1); } catch { }
 
@@ -435,20 +436,19 @@ namespace IwaraDownloader.Services
             }
         }
 
-        private void PutMem(string videoId, Image img)
+        private void PutMem(string videoId, byte[] bytes)
         {
-            // LRU: 既存キーなら置換、新規なら先頭追加、上限超なら末尾 evict
+            // LRU: 既存キーなら置換、新規なら先頭追加、上限超なら末尾 evict。
+            // byte[] は不変として扱うため Dispose 管理は不要 (GC 任せでよい)。
             lock (_memLock)
             {
-                if (_disposed) { try { img.Dispose(); } catch { } return; }
+                if (_disposed) return;
                 if (_memCache.TryGetValue(videoId, out var existing))
                 {
-                    // 旧 Bitmap を Dispose してから置換 (TryGetMemoryCached の Bitmap clone は完了済みのはず)
-                    try { existing.Value.Img.Dispose(); } catch { }
                     _lruList.Remove(existing);
                     _memCache.Remove(videoId);
                 }
-                var node = new LinkedListNode<(string, Image)>((videoId, img));
+                var node = new LinkedListNode<(string, byte[])>((videoId, bytes));
                 _lruList.AddFirst(node);
                 _memCache[videoId] = node;
 
@@ -457,7 +457,6 @@ namespace IwaraDownloader.Services
                     var last = _lruList.Last;
                     _lruList.RemoveLast();
                     _memCache.Remove(last.Value.Key);
-                    try { last.Value.Img.Dispose(); } catch { }
                 }
             }
         }
@@ -467,10 +466,6 @@ namespace IwaraDownloader.Services
             lock (_memLock)
             {
                 _disposed = true;
-                foreach (var node in _memCache.Values)
-                {
-                    try { node.Value.Img.Dispose(); } catch { }
-                }
                 _memCache.Clear();
                 _lruList.Clear();
             }

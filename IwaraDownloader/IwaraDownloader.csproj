@@ -5,11 +5,13 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- WPF段階移行 (strangler-fig方式): WinFormsと恒久的に共存させる。理由はメモ参照 -->
+    <UseWPF>true</UseWPF>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>IwaraDownloader</AssemblyName>
     <RootNamespace>IwaraDownloader</RootNamespace>
-    <Version>2.5.1</Version>
+    <Version>3.0.0</Version>
     <Authors>deko</Authors>
     <Description>Iwara video downloader</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -23,7 +25,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DebugType>none</DebugType>
+    <!-- WPF移行中はXAMLバインディング/null参照系のスタックトレースに行番号が要るため portable に変更 -->
+    <DebugType>portable</DebugType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -35,12 +38,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- UseWPF+UseWindowsForms併用でSDKの既定ImplicitUsings一覧からSystem.IO/System.Net.Httpが
+         抜け落ちる既知の挙動があるため、プロジェクト全体へ明示的に復元する -->
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Services\BrowserService.cs.old" />
     <None Remove="Services\YtDlpService.cs.old" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="icon.ico" />
+    <!-- WPF側でpack://siteoforigin:,,,/icon.ico として実行フォルダから読むため出力へコピーする
+         (元々はApplicationIconとしてexeへの埋め込み専用で、出力フォルダへのコピー指定が無かった) -->
+    <Content Include="icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="WebUI\**" CopyToOutputDirectory="PreserveNewest" LinkBase="WebUI" />
   </ItemGroup>
 
@@ -77,6 +91,10 @@
 
     <!-- TagLib# for mp4 metadata (UUID tagging) -->
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+
+    <!-- WPF移行用 MVVM ツールキット (ソースジェネレータ、公式) -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="VirtualizingWrapPanel" Version="2.5.1" />
   </ItemGroup>
 
   <ItemGroup>

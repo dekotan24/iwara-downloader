@@ -15,8 +15,25 @@ namespace IwaraDownloader.Services
         private readonly LoggingService _logger = LoggingService.Instance;
         private readonly ConcurrentDictionary<string, DownloadTask> _activeTasks;
         private readonly ConcurrentDictionary<string, DownloadTask> _pendingTasks;
-        private readonly ConcurrentQueue<DownloadTask> _pendingQueue;
+
+        /// <summary>
+        /// 優先度別の待機キュー(添字=(int)DownloadPriority、Highest=3〜Low=0)。
+        /// 優先度変更は既存タスクをキュー間で物理的に移動せず、task.Priority を書き換えるだけの
+        /// lazy migration方式。デキュー時(TryDequeueNext)に「取り出したキューの優先度」と
+        /// 「タスクの現在のPriority」が食い違っていたら正しいバケットへ回して探し直す。
+        /// これにより「1件のタスクに対してキュー参照は常に1本」という不変条件が保たれる。
+        /// </summary>
+        private readonly ConcurrentQueue<DownloadTask>[] _pendingQueueByPriority =
+        {
+            new ConcurrentQueue<DownloadTask>(), // Low
+            new ConcurrentQueue<DownloadTask>(), // Normal
+            new ConcurrentQueue<DownloadTask>(), // High
+            new ConcurrentQueue<DownloadTask>(), // Highest
+        };
         private int _activeDownloadCount;
+        /// <summary>EnqueueDownloadの重複チェック〜登録をアトミックにするための軽量ロック。
+        /// 保持中にDB I/O・イベント発火はしない(EnqueueDownload参照)。</summary>
+        private readonly object _enqueueLock = new object();
         private readonly SemaphoreSlim _slotAvailableSignal = new SemaphoreSlim(0, int.MaxValue);
         private readonly System.Timers.Timer _autoCheckTimer;
         private CancellationTokenSource? _globalCts;
@@ -38,6 +55,12 @@ namespace IwaraDownloader.Services
         /// <summary>ログイン必要エラーでキューが停止した時のイベント (int = 停止したタスク数)</summary>
         public event EventHandler<int>? DownloadQueueSuspended;
 
+        /// <summary>空き容量不足でキューが停止した時のイベント (int = 停止したタスク数)</summary>
+        public event EventHandler<int>? DownloadQueueSuspendedForDiskSpace;
+
+        /// <summary>空き容量が回復してキューを自動再開した時のイベント</summary>
+        public event EventHandler? DownloadQueueResumedForDiskSpace;
+
         /// <summary>アクティブなタスク数</summary>
         public int ActiveTaskCount => _activeTasks.Count;
 
@@ -49,10 +72,10 @@ namespace IwaraDownloader.Services
 
         /// <summary>
         /// 待機中のタスク数。
-        /// タスクはエンキュー時に _pendingQueue と _pendingTasks の両方へ登録されるため、
+        /// タスクはエンキュー時に _pendingQueueByPriority と _pendingTasks の両方へ登録されるため、
         /// 足し算すると二重計上になる。_pendingTasks 単独が正しい待機数:
         /// デキュー済みでスロット待ちのタスクを含み (実行開始まで残る)、
-        /// キャンセル済みタスク (_pendingQueue に残骸が残る) を含まない。
+        /// キャンセル済みタスク (_pendingQueueByPriority に残骸が残る) を含まない。
         /// </summary>
         public int PendingTaskCount => _pendingTasks.Count;
 
@@ -68,7 +91,6 @@ namespace IwaraDownloader.Services
             _database = DatabaseService.Instance;
             _activeTasks = new ConcurrentDictionary<string, DownloadTask>();
             _pendingTasks = new ConcurrentDictionary<string, DownloadTask>();
-            _pendingQueue = new ConcurrentQueue<DownloadTask>();
 
             // 自動チェックタイマー (重複起動防止 + 例外捕捉)
             _autoCheckTimer = new System.Timers.Timer();
@@ -169,7 +191,7 @@ namespace IwaraDownloader.Services
         /// <summary>
         /// 起動時に未完了のダウンロードを再開。
         /// 大量 (数千件) のときに UI スレッドを止めないよう、すべて Task.Run で背後実行する。
-        /// 個別 EnqueueDownload は呼ばず、_pendingTasks/_pendingQueue へ直接バルク投入する。
+        /// 個別 EnqueueDownload は呼ばず、_pendingTasks/_pendingQueueByPriority へ直接バルク投入する。
         /// </summary>
         public void ResumeIncompleteDownloads()
         {
@@ -237,11 +259,15 @@ namespace IwaraDownloader.Services
                     Status = DownloadStatus.Pending,
                     IsSubscriptionDownload = video.SubscribedUserId.HasValue,
                     Quality = quality,
-                    SubscribedUser = user
+                    SubscribedUser = user,
+                    Priority = ResolvePriority(video, user),
+                    // 待機中(デキュー前)の段階からキャンセル可能にするため、ここで生成しておく
+                    // (ExecuteDownloadAsync側は既存のものがあれば使い回す。CancelTask/ProcessQueueAsync参照)。
+                    CancellationTokenSource = new CancellationTokenSource()
                 };
 
                 _pendingTasks[video.VideoId] = task;
-                _pendingQueue.Enqueue(task);
+                _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
                 enqueued++;
             }
 
@@ -374,6 +400,41 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 未DL(Pending)の動画の優先度を一括変更する。Downloading/Completed等は対象外
+        /// (優先度はキュー待ちの並び順にしか意味を持たないため)。
+        /// DBの永続値(video.Priority)と、生きているpendingタスク(あれば)のPriorityの両方を更新する。
+        /// タスク側は再エンキューせず値を書き換えるだけ(lazy migration、TryDequeueNext参照)。
+        /// </summary>
+        /// <returns>変更した件数</returns>
+        public int ChangeVideoPriority(IEnumerable<VideoInfo> videos, DownloadPriority priority)
+        {
+            var list = videos?.Where(v => v != null && v.Status == DownloadStatus.Pending).ToList()
+                ?? new List<VideoInfo>();
+            if (list.Count == 0) return 0;
+
+            _database.SetVideoPriority(list.Select(v => v.VideoId), priority);
+
+            foreach (var v in list)
+            {
+                v.Priority = priority;
+                if (_pendingTasks.TryGetValue(v.VideoId, out var task))
+                {
+                    task.Priority = priority;
+                    // task.Video は enqueue時のDB読み出し由来の別インスタンス(呼び出し元の v とは
+                    // 別オブジェクト)。ここを更新しないと、後で SuspendQueueForLogin 等が
+                    // _database.UpdateVideo(task.Video) を呼んだ時に古いPriorityで上書きされ、
+                    // 今回の変更が黙って消える。
+                    task.Video.Priority = priority;
+                }
+            }
+
+            // バケット間移動が発生した分を拾いに行く (でないと次のスロット解放/enqueueまで止まったまま)
+            if (_isRunning) _ = ProcessQueueAsync();
+
+            return list.Count;
+        }
+
+        /// <summary>
         /// 動画を「除外(ゴミ箱)」へ送る。削除操作の実体。
         /// 全ての削除経路 (単体/一括/Not Found一括/Web) はこのメソッドを通す。
         ///   1) 進行中/待機中のタスクをキャンセル
@@ -432,7 +493,7 @@ namespace IwaraDownloader.Services
         /// ローカルファイルは除外時に削除済みのため:
         ///   - 完了扱いだったのにファイルが無いもの → Pending にリセットして再DLキューへ
         ///   - 元々待機中(Pending)だったもの → 再DLキューへ (取得を再開)
-        ///   - 失敗(Failed)/スキップ/一時停止 → 状態はそのまま (自動DLしない。デコが選ぶ)
+        ///   - 失敗(Failed)/スキップ/一時停止 → 状態はそのまま (自動DLしない。手動で選ぶ)
         /// </summary>
         /// <returns>復元した件数</returns>
         public int RestoreExcludedVideos(IEnumerable<string> videoIds)
@@ -519,33 +580,47 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// キューに入る優先度を解決する。動画に手動設定(Priority)があればそれを最優先、
+        /// 無ければ所属チャンネルのDefaultPriority、それも無ければNormal。
+        /// チャンネルの既定優先度を後から変えても、既にキューに入っている動画には遡及しない
+        /// (この解決はEnqueueDownload/起動時再開の投入タイミングでのみ行われるため)。
+        /// </summary>
+        private static DownloadPriority ResolvePriority(VideoInfo video, SubscribedUser? subscribedUser)
+            => video.Priority ?? subscribedUser?.DefaultPriority ?? DownloadPriority.Normal;
+
+        /// <summary>
         /// 動画をダウンロードキューに追加
         /// </summary>
         public DownloadTask EnqueueDownload(VideoInfo video, bool isSubscriptionDownload = false, SubscribedUser? subscribedUser = null)
         {
-            // 既にキューに入っているか確認
-            if (_pendingTasks.ContainsKey(video.VideoId) || _activeTasks.ContainsKey(video.VideoId))
-            {
-                var existingTask = GetTask(video.VideoId);
-                if (existingTask != null) return existingTask;
-            }
+            DownloadTask task;
+            bool skipped;
 
-            // 外部動画 (YouTube埋め込み等) のDL設定判定
-            if (video.IsExternal)
+            // 重複チェック(ContainsKey)〜_pendingTasks登録〜バケットEnqueueまでをアトミックにする。
+            // ここを地続きのlockで守らないと、異なるスレッド(WebServerServiceのHTTPハンドラと
+            // UI操作等)から同じVideoIdへほぼ同時にEnqueueDownloadが呼ばれた際、両方が重複チェックを
+            // 通過して二重にタスクが生成され、同一動画が並行して二重ダウンロードされ得る。
+            // ロック内ではDB I/O・イベント発火をしない: TaskStatusChangedはWPFのDispatcherへ
+            // マーシャルされ、UI側のコマンド(DownloadVideo等)は同期的にEnqueueDownloadを呼ぶため、
+            // ロック保持中にDispatcherを待つ形になるとUI側とのデッドロック経路になる。
+            lock (_enqueueLock)
             {
-                var settings = SettingsManager.Instance.Settings;
-                bool shouldDownload = subscribedUser != null
-                    ? subscribedUser.ResolveDownloadExternal(settings.DownloadExternalVideosDefault)
-                    : settings.DownloadExternalVideosDefault;
-
-                if (!shouldDownload)
+                if (_pendingTasks.ContainsKey(video.VideoId) || _activeTasks.ContainsKey(video.VideoId))
                 {
-                    _logger.Info($"外部動画スキップ (設定によりDLしない): {video.Title} [{video.EmbedUrl}]");
+                    var existingTask = GetTask(video.VideoId);
+                    if (existingTask != null) return existingTask;
+                }
+
+                // 外部動画 (YouTube埋め込み等) のDL設定判定
+                skipped = video.IsExternal && !(subscribedUser != null
+                    ? subscribedUser.ResolveDownloadExternal(SettingsManager.Instance.Settings.DownloadExternalVideosDefault)
+                    : SettingsManager.Instance.Settings.DownloadExternalVideosDefault);
+
+                if (skipped)
+                {
                     video.Status = DownloadStatus.Skipped;
                     video.LastErrorMessage = L.T("SvcDownloadManager_D001");
-                    _database.UpdateVideo(video);
-
-                    var skippedTask = new DownloadTask
+                    task = new DownloadTask
                     {
                         Video = video,
                         Status = DownloadStatus.Skipped,
@@ -553,27 +628,38 @@ namespace IwaraDownloader.Services
                         Quality = SettingsManager.Instance.Settings.DefaultQuality,
                         SubscribedUser = subscribedUser
                     };
-                    TaskStatusChanged?.Invoke(this, skippedTask);
-                    return skippedTask;
+                }
+                else
+                {
+                    task = new DownloadTask
+                    {
+                        Video = video,
+                        Status = DownloadStatus.Pending,
+                        IsSubscriptionDownload = isSubscriptionDownload,
+                        Quality = SettingsManager.Instance.Settings.DefaultQuality,
+                        SubscribedUser = subscribedUser,
+                        Priority = ResolvePriority(video, subscribedUser),
+                        // 待機中(デキュー前)の段階からキャンセル可能にするため、ここで生成しておく
+                        // (ExecuteDownloadAsync側は既存のものがあれば使い回す。CancelTask/ProcessQueueAsync参照)。
+                        CancellationTokenSource = new CancellationTokenSource()
+                    };
+                    video.Status = DownloadStatus.Pending;
+
+                    // 待機中タスクとして登録
+                    _pendingTasks[video.VideoId] = task;
+                    _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
                 }
             }
 
-            var task = new DownloadTask
-            {
-                Video = video,
-                Status = DownloadStatus.Pending,
-                IsSubscriptionDownload = isSubscriptionDownload,
-                Quality = SettingsManager.Instance.Settings.DefaultQuality,
-                SubscribedUser = subscribedUser
-            };
-
-            // DBのステータスも更新
-            video.Status = DownloadStatus.Pending;
+            // DBのステータスも更新 (ロックの外: SQLite I/Oをロック保持中に行わない)
             _database.UpdateVideo(video);
 
-            // 待機中タスクとして登録
-            _pendingTasks[video.VideoId] = task;
-            _pendingQueue.Enqueue(task);
+            if (skipped)
+            {
+                _logger.Info($"外部動画スキップ (設定によりDLしない): {video.Title} [{video.EmbedUrl}]");
+                TaskStatusChanged?.Invoke(this, task);
+                return task;
+            }
 
             // イベント発火(UIに反映)
             TaskStatusChanged?.Invoke(this, task);
@@ -605,16 +691,26 @@ namespace IwaraDownloader.Services
                 var token = cts.Token;
                 while (_isRunning && !token.IsCancellationRequested)
                 {
-                    if (!_pendingQueue.TryDequeue(out var task))
+                    // Pendingが無ければ何もせず終了(スロット待ちに入る前に軽くチェックし、
+                    // 無駄な待機を避ける)。
+                    if (_pendingTasks.IsEmpty)
                     {
                         break;
                     }
 
-                    // キャンセルされたタスク(_pendingTasksから削除済み)はスキップ
-                    if (!_pendingTasks.ContainsKey(task.Video.VideoId))
+                    // 同時DL数制限を先に待つ。デキュー(TryDequeueNext)より先にスロット空きを
+                    // 待つことで、「スロット満杯で1件を確保したまま待機」する死角を作らない —
+                    // これにより、待機中に他タスクの優先度を上げても、スロットが実際に空いた
+                    // 瞬間の優先度状態で次のタスクが選ばれる(逆順だと、確保済みの1件が
+                    // 優先度変更を無視してそのまま先に実行されてしまう)。
+                    while (_activeDownloadCount >= SettingsManager.Instance.Settings.MaxConcurrentDownloads)
                     {
-                        _logger.Debug($"Skipping cancelled task: {task.Video.VideoId}");
-                        continue;
+                        await _slotAvailableSignal.WaitAsync(token);
+                    }
+
+                    if (!TryDequeueNext(out var task) || task == null)
+                    {
+                        break;
                     }
 
                     // 注: _pendingTasks の削除は ExecuteDownloadAsync 冒頭で行う。
@@ -622,11 +718,6 @@ namespace IwaraDownloader.Services
                     // _pendingTasks にも _activeTasks にも居ない死角ができ、UI 上で
                     // 「0DL中」と表示されてしまうため。
 
-                    // 同時DL数制限: 現在の設定値を都度参照し、動的変更に対応
-                    while (_activeDownloadCount >= SettingsManager.Instance.Settings.MaxConcurrentDownloads)
-                    {
-                        await _slotAvailableSignal.WaitAsync(token);
-                    }
                     Interlocked.Increment(ref _activeDownloadCount);
 
                     try
@@ -637,12 +728,30 @@ namespace IwaraDownloader.Services
                         System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
                         await Task.Delay(delayMs, token);
 
+                        // デキュー後、ここに来るまでの間にCancelTaskが呼ばれ、このタスクの
+                        // CancellationTokenSourceが既にキャンセルされている場合、ダウンロードを
+                        // 開始しない。CancelTaskは_pendingTasksから削除するだけでバケットには
+                        // 何もしないため、TryDequeueNextの時点ではこのキャンセル要求を検知できず、
+                        // ここで拾わないとユーザーの明示的なキャンセル操作が無視され、
+                        // ダウンロードがそのまま強行されてしまう。
+                        if (task.CancellationTokenSource?.IsCancellationRequested == true)
+                        {
+                            Interlocked.Decrement(ref _activeDownloadCount);
+                            _slotAvailableSignal.Release();
+                            continue;
+                        }
+
                         // スレッドプール上で起動 (呼び出し元が UI スレッドのため、await の continuation が
                         // UI に戻って WriteIwaraTags 等の同期I/Oで詰まるのを防ぐ)
                         _ = Task.Run(() => ExecuteDownloadAsync(task));
                     }
                     catch
                     {
+                        // ここでの例外(主にToken.Delayのキャンセル)はtaskを取り出した後に発生するため、
+                        // バケットに戻さないと_pendingTasksにだけ残るゴーストタスクになり、
+                        // DrainAllPendingQueues経由の回収(ログイン/ディスク容量回復、全キャンセル)からも
+                        // 漏れて二度と処理されなくなる。
+                        _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
                         Interlocked.Decrement(ref _activeDownloadCount);
                         _slotAvailableSignal.Release();
                         throw;
@@ -652,7 +761,90 @@ namespace IwaraDownloader.Services
             finally
             {
                 Interlocked.Exchange(ref _isProcessingQueue, 0);
+
+                // フラグを0に戻す直前〜直後の間に、他スレッドがEnqueueDownloadで新規タスクを
+                // バケットへ投入しつつ_ = ProcessQueueAsync()を呼んでも、まだフラグが1のため
+                // 即returnされ(missed wakeup)、そのタスクは別の偶発的イベントがProcessQueueAsyncを
+                // 再起動するまで放置される。フラグを0に戻した後にバケットの中身を再確認し、
+                // 残っていれば自分で拾いに行く。
+                //
+                // 条件は「_pendingTasksが空でない」かつ「バケットにも実体がある」の両方を満たす
+                // ときだけ再キックする(片方だけだと2種類のビジーループになり得る):
+                //   - バケットにだけ残っている(ゴースト。CancelTaskは_pendingTasksから削除する
+                //     だけでバケットのタスク実体は掃除しない) → _pendingTasksが空ならこの条件で
+                //     弾かれ、再キックしない。ここでbreakした直後はwhileループ先頭の
+                //     _pendingTasks.IsEmptyチェックにも引っかかるため、再キックしてもTryDequeueNext
+                //     まで到達できず、バケット非空→再キック→即breakを永久に繰り返してCPUを使い切る。
+                //   - _pendingTasksにだけ残っている(デキュー済み・未アクティブの窓) → バケットには
+                //     居ないためこの条件で弾かれ、再キックしない(再キックしても即breakするだけの
+                //     無駄なビジーループになるため)。
+                //   - 本物の新規投入 → EnqueueDownloadは_pendingTasksとバケットの両方に登録するため
+                //     必ずtrueになり、正しく拾える。
+                var hasPendingInBucket = false;
+                foreach (var q in _pendingQueueByPriority)
+                {
+                    if (!q.IsEmpty) { hasPendingInBucket = true; break; }
+                }
+                if (_isRunning && !_pendingTasks.IsEmpty && hasPendingInBucket)
+                {
+                    _ = ProcessQueueAsync();
+                }
             }
+        }
+
+        /// <summary>
+        /// 優先度順(Highest→Low)に次に処理すべきタスクを取り出す。
+        /// キャンセル済み(_pendingTasksから削除済み)のゴーストは捨てる。
+        /// 優先度変更でバケットが変わったタスクは正しいバケットへ回し、その回はHighestから探し直す
+        /// (でないと「移動したタスクを誰も処理しに来ない」ままfalseを返してProcessQueueAsyncが
+        /// 止まってしまう — 移動は必ず同一呼び出し内で解決する)。
+        /// </summary>
+        private bool TryDequeueNext(out DownloadTask? result)
+        {
+            while (true)
+            {
+                bool moved = false;
+                for (int p = _pendingQueueByPriority.Length - 1; p >= 0 && !moved; p--)
+                {
+                    while (_pendingQueueByPriority[p].TryDequeue(out var candidate))
+                    {
+                        // キャンセルされたタスク(_pendingTasksから削除済み)はスキップ
+                        if (!_pendingTasks.ContainsKey(candidate.Video.VideoId))
+                        {
+                            _logger.Debug($"Skipping cancelled task: {candidate.Video.VideoId}");
+                            continue;
+                        }
+
+                        if ((int)candidate.Priority != p)
+                        {
+                            // 優先度変更で行き先が変わっている。正しいバケットへ回して
+                            // 今回のパスはHighestから探し直す
+                            _pendingQueueByPriority[(int)candidate.Priority].Enqueue(candidate);
+                            moved = true;
+                            break;
+                        }
+
+                        result = candidate;
+                        return true;
+                    }
+                }
+                if (!moved)
+                {
+                    result = null;
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 優先度別キュー全4本を空にして中身を列挙する。
+        /// SuspendQueueForLogin/SuspendQueueForDiskSpace/CancelAllTasks の「待機中を全部Pendingへ戻す」で使う。
+        /// </summary>
+        private IEnumerable<DownloadTask> DrainAllPendingQueues()
+        {
+            foreach (var queue in _pendingQueueByPriority)
+                while (queue.TryDequeue(out var task))
+                    yield return task;
         }
 
         /// <summary>
@@ -662,11 +854,27 @@ namespace IwaraDownloader.Services
         {
             try
             {
-                // pending → active へ同タイミングで切り替え (UI 表示に死角を作らない)
-                _pendingTasks.TryRemove(task.Video.VideoId, out _);
-                _activeTasks[task.Video.VideoId] = task;
+                // pending → active の切り替えを EnqueueDownload と同じロックで行う。
+                // この間に再DL操作が GetTask() を通過して新しいタスクを投入すると、
+                // 旧タスクと新タスクが同じ VideoId で並行する競合窓が生じるため。
+                // キャンセル後に同じVideoIdが再投入された場合は、旧タスクが新タスクの
+                // _pendingTasksエントリを奪わないよう参照一致も確認する。
+                lock (_enqueueLock)
+                {
+                    if (!_pendingTasks.TryGetValue(task.Video.VideoId, out var pendingTask)
+                        || !ReferenceEquals(pendingTask, task))
+                    {
+                        return;
+                    }
 
-                task.CancellationTokenSource = new CancellationTokenSource();
+                    _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                    _activeTasks[task.Video.VideoId] = task;
+                }
+
+                // EnqueueDownload/バルク投入時点で既に生成済みのはずだが、古いデータ等での
+                // 念のためのフォールバックとして無ければここで生成する(既存があれば使い回すことで、
+                // デキュー前にCancelTaskが要求したキャンセルを取りこぼさないようにする)。
+                task.CancellationTokenSource ??= new CancellationTokenSource();
                 task.Status = DownloadStatus.Downloading;
                 task.StartedAt = DateTime.Now;
 
@@ -701,6 +909,15 @@ namespace IwaraDownloader.Services
                     video.FileUuid = urlInfo.FileUuid;
                 if (!string.IsNullOrEmpty(urlInfo.AuthorUsername) && string.IsNullOrEmpty(video.AuthorUsername))
                     video.AuthorUsername = urlInfo.AuthorUsername;
+                // 作者不明のまま仮登録されていた動画(URL取得失敗の再試行等)が、ここで初めて作者判明
+                // した場合もチャンネルへ紐付ける。ただしtask.IsSubscriptionDownload/SubscribedUserは
+                // enqueue時点で確定済みのため今回の保存先には反映されない(次回以降のDLから反映)。
+                if (!video.SubscribedUserId.HasValue && !string.IsNullOrEmpty(video.AuthorUsername))
+                {
+                    var channel = _database.EnsureChannelForAuthor(video.AuthorUsername, video.Site);
+                    video.AuthorUserId = channel.UserId;
+                    video.SubscribedUserId = channel.Id;
+                }
                 if (!string.IsNullOrEmpty(urlInfo.Title) && string.IsNullOrEmpty(video.Title))
                     video.Title = urlInfo.Title;
                 if (!string.IsNullOrEmpty(urlInfo.Rating))
@@ -836,6 +1053,37 @@ namespace IwaraDownloader.Services
 
                 if (success && File.Exists(outputPath))
                 {
+                    // 完了処理(タグ書き込み・DB更新・通知等)の前に、除外(ゴミ箱)で先を
+                    // 越されていないか確認する。CancelTaskはCancellationTokenSourceをセットする
+                    // だけで実I/Oの中断を待たないため、ここに到達した時点で既に除外(Videosテーブル
+                    // から削除済み)が完了している競合が起こり得る。この場合、ExcludeVideos側の
+                    // ファイル削除(step 3)は「除外を実行した時点でのVideoInfoスナップショット」の
+                    // LocalFilePathを見るため、まだダウンロード中だったこの動画のパスは空で
+                    // 素通りしてしまい、たった今書き終えたファイルを一切消せない。そのため
+                    // ExcludeVideos step 3と同じ後始末(mp4・サイドカーjson削除、キャッシュ無効化)
+                    // をここで行う(削除失敗はベストエフォート、除外自体は成立しているので警告のみ)。
+                    if (_database.GetVideoByVideoId(video.VideoId) == null)
+                    {
+                        _logger.Info($"Download finished after exclude, discarding orphaned file: {video.Title} ({outputPath})");
+
+                        try { File.Delete(outputPath); }
+                        catch (Exception ex) { _logger.Warn($"Exclude race: file delete failed {outputPath}: {ex.Message}"); }
+
+                        var metaPath = Path.ChangeExtension(outputPath, ".json");
+                        if (File.Exists(metaPath))
+                        {
+                            try { File.Delete(metaPath); } catch { }
+                        }
+
+                        var outDir = Path.GetDirectoryName(outputPath);
+                        if (!string.IsNullOrEmpty(outDir))
+                            IndexCacheService.Invalidate(outDir);
+
+                        task.Status = DownloadStatus.Paused;
+                        TaskStatusChanged?.Invoke(this, task);
+                        return;
+                    }
+
                     task.Progress = 100;
                     video.LocalFilePath = outputPath;
                     video.DownloadedAt = DateTime.Now;
@@ -956,7 +1204,12 @@ namespace IwaraDownloader.Services
                                     || ex.Message.Contains("errors.notFound")
                                     || ex.Message.Contains("Video not found");
 
-                bool isUnrecoverable = isLoginRequired || isCdnUnavailable || isPrivateVideo || isVideoNotFound;
+                // 空き容量不足: DownloadManager.ProcessTaskAsync のDL開始前チェックが投げる
+                // "DISK_SPACE: " マーカー付き例外。閾値が回復するまでは何度リトライしても
+                // 同じ理由で失敗するので、ログイン必要と同じ扱いでキューを止める。
+                bool isDiskSpace = ex.Message.Contains("DISK_SPACE:");
+
+                bool isUnrecoverable = isLoginRequired || isCdnUnavailable || isPrivateVideo || isVideoNotFound || isDiskSpace;
 
                 if (isLoginRequired)
                 {
@@ -969,6 +1222,16 @@ namespace IwaraDownloader.Services
                     task.Video.Status = DownloadStatus.Pending;
                     _database.UpdateVideo(task.Video);
                     SuspendQueueForLogin();
+                }
+                else if (isDiskSpace)
+                {
+                    _logger.Warn($"Disk space low — suspending download queue until space is freed.");
+                    // ログイン切れと同じ理由でRetryCountは動画側の問題ではないため取り消し、
+                    // ResumeAfterDiskSpaceRecovered (Pendingのみ再開) の対象にする。
+                    task.Video.RetryCount = Math.Max(0, task.Video.RetryCount - 1);
+                    task.Video.Status = DownloadStatus.Pending;
+                    _database.UpdateVideo(task.Video);
+                    SuspendQueueForDiskSpace();
                 }
                 else if (task.Video.RetryCount < maxRetry && !isUnrecoverable)
                 {
@@ -1026,7 +1289,16 @@ namespace IwaraDownloader.Services
             }
             finally
             {
-                _activeTasks.TryRemove(task.Video.VideoId, out _);
+                // 同じVideoIdの新しいタスクが既に登録されている場合、旧タスクの終了処理で
+                // 新タスクを削除しないよう、参照一致を確認してから除去する。
+                lock (_enqueueLock)
+                {
+                    if (_activeTasks.TryGetValue(task.Video.VideoId, out var activeTask)
+                        && ReferenceEquals(activeTask, task))
+                    {
+                        _activeTasks.TryRemove(task.Video.VideoId, out _);
+                    }
+                }
                 Interlocked.Decrement(ref _activeDownloadCount);
                 _slotAvailableSignal.Release();
                 TaskStatusChanged?.Invoke(this, task);
@@ -1209,17 +1481,38 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void CancelTask(string videoId)
         {
-            // アクティブなタスクをキャンセル
-            if (_activeTasks.TryGetValue(videoId, out var task))
+            DownloadTask? activeTask = null;
+            DownloadTask? pendingTask = null;
+
+            // アクティブ/待機中の状態取得と待機中タスクの削除をEnqueue/実行開始と
+            // 同じロックで直列化し、旧タスクと再投入タスクの入れ替わりを防ぐ。
+            // TryDequeueNextでバケットから取り出された後、ExecuteDownloadAsyncが_activeTasksへ
+            // 登録するまでの間(レート制限待機中)は_pendingTasksにだけ存在し、バケットには残らない。
+            // この窓でキャンセルされた場合に備え、まずCancellationTokenSourceをキャンセルしておく
+            // ことで、ProcessQueueAsync側がTask.Run直前にIsCancellationRequestedを見て
+            // ダウンロード開始そのものを取りやめられるようにする(そうしないと、この窓でのキャンセルは
+            // 単に無視されてダウンロードが強行されてしまう)。
+            lock (_enqueueLock)
             {
-                task.Cancel();
+                _activeTasks.TryGetValue(videoId, out activeTask);
+                _pendingTasks.TryRemove(videoId, out pendingTask);
+
+                // 新しいEnqueueDownloadがDBをPendingへ書き換える前に、キャンセルした
+                // 待機タスクのPaused状態を確定させる。DB更新はイベント発火を伴わないため、
+                // この短い区間だけロック内で行い、旧タスクの状態が新タスクへ巻き戻る競合を防ぐ。
+                if (pendingTask != null)
+                {
+                    pendingTask.Cancel();
+                    pendingTask.Video.Status = DownloadStatus.Paused;
+                    _database.UpdateVideo(pendingTask.Video);
+                }
             }
 
-            // 待機中のタスクも削除
-            if (_pendingTasks.TryRemove(videoId, out var pendingTask))
+            // イベント発火はロック外で行う。activeTaskのキャンセル通知は実行側が行い、
+            // pendingTaskだけここで状態確定済みなので、待機タスクのイベントを1回発火する。
+            activeTask?.Cancel();
+            if (pendingTask != null)
             {
-                pendingTask.Video.Status = DownloadStatus.Paused;
-                _database.UpdateVideo(pendingTask.Video);
                 TaskStatusChanged?.Invoke(this, pendingTask);
             }
         }
@@ -1245,7 +1538,7 @@ namespace IwaraDownloader.Services
 
             // 待機キューを Pending に戻す (Failed にしない — ログイン後に自動で再DLできるように)
             var suspendedCount = 0;
-            while (_pendingQueue.TryDequeue(out var task))
+            foreach (var task in DrainAllPendingQueues())
             {
                 _pendingTasks.TryRemove(task.Video.VideoId, out _);
                 task.Video.Status = DownloadStatus.Pending;
@@ -1272,15 +1565,115 @@ namespace IwaraDownloader.Services
             Interlocked.Exchange(ref _suspendNotifiedForLogin, 0);
 
             var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
+            // ResumeIncompleteDownloadsCoreと同様、購読ユーザーを解決してからEnqueueDownloadに渡す。
+            // 素のEnqueueDownload(video)だけだとisSubscriptionDownload=false/subscribedUser=nullになり、
+            // 購読チャンネル別の保存先解決とUUID重複検出がスキップされてしまうため。
+            var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
             var count = 0;
             foreach (var video in pendingVideos)
             {
-                EnqueueDownload(video);
+                SubscribedUser? user = null;
+                if (video.SubscribedUserId.HasValue)
+                    userMap.TryGetValue(video.SubscribedUserId.Value, out user);
+                EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
                 count++;
             }
 
             if (count > 0)
                 _logger.Info($"Resumed {count} downloads after login");
+        }
+
+        /// <summary>空き容量不足によるキュー停止が既に通知済みかどうか (多重イベント発火の防止用)。</summary>
+        private int _suspendNotifiedForDiskSpace;
+
+        /// <summary>空き容量回復チェックの間隔。DriveInfoの取得自体は軽いが、キュー停止中に
+        /// 頻繁すぎるポーリングをする意味は薄いため1分間隔にしている(旧: 30秒から緩和)。</summary>
+        private const int DiskSpaceRecoveryCheckIntervalMs = 60_000;
+
+        /// <summary>
+        /// 空き容量が回復したか一定間隔で確認するタイマー。SuspendQueueForDiskSpaceで起動し、
+        /// ResumeAfterDiskSpaceRecoveredまたはDisposeで停止する。
+        /// </summary>
+        private System.Timers.Timer? _diskSpaceRecoveryTimer;
+
+        /// <summary>
+        /// 空き容量不足によるキュー一時停止(報告のあったissue対応)。ログイン切れと違い、
+        /// 全ドライブ・全保存先を厳密に区別すると設計が複雑になるため、既定の保存先
+        /// (settings.DownloadFolder)のドライブ1つだけを監視対象として単純化している。
+        /// 実行中タスクは能動的にキャンセルしない(ディスクフルなら書き込みで自然に失敗するため、
+        /// ログイン切れほど緊急に止める必要がない)。待機中タスクだけPendingに戻して次の投入を防ぐ。
+        /// </summary>
+        private void SuspendQueueForDiskSpace()
+        {
+            var suspendedCount = 0;
+            foreach (var task in DrainAllPendingQueues())
+            {
+                _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                task.Video.Status = DownloadStatus.Pending;
+                _database.UpdateVideo(task.Video);
+                suspendedCount++;
+            }
+
+            if (Interlocked.Exchange(ref _suspendNotifiedForDiskSpace, 1) == 0)
+            {
+                _logger.Warn($"Download queue suspended: disk space low ({suspendedCount} tasks returned to Pending)");
+                DownloadQueueSuspendedForDiskSpace?.Invoke(this, suspendedCount);
+
+                _diskSpaceRecoveryTimer?.Stop();
+                _diskSpaceRecoveryTimer?.Dispose();
+                _diskSpaceRecoveryTimer = new System.Timers.Timer(DiskSpaceRecoveryCheckIntervalMs) { AutoReset = true };
+                _diskSpaceRecoveryTimer.Elapsed += (_, _) => CheckDiskSpaceRecovery();
+                _diskSpaceRecoveryTimer.Start();
+            }
+        }
+
+        /// <summary>_diskSpaceRecoveryTimerから30秒おきに呼ばれ、既定保存先の空き容量が
+        /// MinFreeSpaceGb以上に回復していればキューを自動再開する。</summary>
+        private void CheckDiskSpaceRecovery()
+        {
+            try
+            {
+                var settings = SettingsManager.Instance.Settings;
+                var minFreeGb = settings.MinFreeSpaceGb;
+                if (minFreeGb <= 0) { ResumeAfterDiskSpaceRecovered(); return; }
+
+                var root = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
+                if (string.IsNullOrEmpty(root)) return;
+
+                var freeBytes = new DriveInfo(root).AvailableFreeSpace;
+                if (freeBytes >= minFreeGb * 1024L * 1024 * 1024)
+                    ResumeAfterDiskSpaceRecovered();
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug($"CheckDiskSpaceRecovery failed (will retry): {ex.Message}");
+            }
+        }
+
+        /// <summary>空き容量回復によるキュー再開。Pending状態の動画をすべて再エンキューする。</summary>
+        private void ResumeAfterDiskSpaceRecovered()
+        {
+            _diskSpaceRecoveryTimer?.Stop();
+            _diskSpaceRecoveryTimer?.Dispose();
+            _diskSpaceRecoveryTimer = null;
+            Interlocked.Exchange(ref _suspendNotifiedForDiskSpace, 0);
+
+            var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
+            // ResumeAfterLoginと同じ理由(購読チャンネル別保存先・UUID重複検出の維持)で
+            // 購読ユーザーを解決してからEnqueueDownloadに渡す。
+            var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
+            var count = 0;
+            foreach (var video in pendingVideos)
+            {
+                SubscribedUser? user = null;
+                if (video.SubscribedUserId.HasValue)
+                    userMap.TryGetValue(video.SubscribedUserId.Value, out user);
+                EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                count++;
+            }
+
+            _logger.Info($"Disk space recovered — resumed {count} downloads");
+            DownloadQueueResumedForDiskSpace?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -1294,7 +1687,7 @@ namespace IwaraDownloader.Services
             }
 
             // 待機中タスクもすべてクリア
-            while (_pendingQueue.TryDequeue(out var task))
+            foreach (var task in DrainAllPendingQueues())
             {
                 _pendingTasks.TryRemove(task.Video.VideoId, out _);
                 task.Video.Status = DownloadStatus.Paused;
@@ -1334,6 +1727,10 @@ namespace IwaraDownloader.Services
                         video.AuthorUsername = urlInfo.AuthorUsername;
                     if (!string.IsNullOrEmpty(urlInfo.FileUuid))
                         video.FileUuid = urlInfo.FileUuid;
+                    if (urlInfo.PostedAt.HasValue)
+                        video.PostedAt = urlInfo.PostedAt;
+                    if (!string.IsNullOrEmpty(urlInfo.ApiRawJson))
+                        video.ApiRawJson = urlInfo.ApiRawJson;
                     _database.UpdateVideo(video);
                     progress?.Report(L.T("SvcDownloadManager_D006", urlInfo.Title));
                     return true;
@@ -1568,7 +1965,7 @@ namespace IwaraDownloader.Services
                 UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D017", user.Username, reasonLabel));
                 var progress = new Progress<string>(msg => UserAddStatusChanged?.Invoke(this, msg));
                 var siteHost = string.IsNullOrEmpty(user.Site) ? Helpers.SiteTv : user.Site;
-                var videos = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
+                var (videos, fetchStatus) = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
 
                 // Add (追加時) は req.ImmediateDownload (呼び出し側の選択、既定は設定値)、
                 // Check (定期新着チェック) は AutoDownloadOnCheck 設定 — 常に今まで通り。
@@ -1585,6 +1982,7 @@ namespace IwaraDownloader.Services
                 // しまう (issue #21)。Paused なら起動時レジュームや EnqueuePendingVideosForUser の
                 // 対象から自然に外れ、右クリック「ダウンロード」等の手動操作でのみ開始される。
                 var newVideos = new List<VideoInfo>();
+                var existingBackfill = new List<(string VideoId, DateTime? PostedAt, string? ApiRawJson)>();
                 foreach (var video in videos)
                 {
                     // 除外(ゴミ箱)に入っている動画は自動取得で復活させない。
@@ -1600,13 +1998,31 @@ namespace IwaraDownloader.Services
                         video.Id = _database.AddVideo(video);
                         newVideos.Add(video);
                     }
+                    else if (video.PostedAt.HasValue || !string.IsNullOrEmpty(video.ApiRawJson))
+                    {
+                        // 既存動画は get_videos の応答が来ても再登録しないためここではスキップされるが、
+                        // PostedAt/ApiRawJson とも未取得(NULL/空)ならバックフィル対象として積む。
+                        // 既に埋まっている行はDB側のWHERE句でUPDATE自体がスキップされるので、
+                        // ここで毎回リストに積んでも定常状態では無駄な書き込みにはならない。
+                        existingBackfill.Add((video.VideoId, video.PostedAt, video.ApiRawJson));
+                    }
                 }
+                if (existingBackfill.Count > 0)
+                    _database.BackfillExistingVideoMetadata(existingBackfill);
 
-                user.TotalVideoCount = videos.Count;
                 user.LastCheckedAt = DateTime.Now;
-                // 取得成功 = 本登録扱い。Add はもちろん、5 回失敗で諦めた仮登録 (VideosLoaded=false) が
-                // 後の新着チェックで取れた場合もここで解除し、起動時の無駄な Add 再取得ループを防ぐ。
-                user.VideosLoaded = true;
+                // Failed (ログイン未済・レート制限・一時的な通信エラー等、今回は判定できなかった) は
+                // TotalVideoCount/VideosLoaded/IsAccountDeleted を一切書き換えない。ここを無条件で
+                // 更新すると、一時的な403等で取得0件になっただけの生存チャンネルが毎回0件表示になったり、
+                // 消滅判定が意図せず巻き戻ったりする。
+                if (fetchStatus != ChannelFetchStatus.Failed)
+                {
+                    user.TotalVideoCount = videos.Count;
+                    // 取得成功 = 本登録扱い。Add はもちろん、5 回失敗で諦めた仮登録 (VideosLoaded=false) が
+                    // 後の新着チェックで取れた場合もここで解除し、起動時の無駄な Add 再取得ループを防ぐ。
+                    user.VideosLoaded = true;
+                    user.IsAccountDeleted = fetchStatus == ChannelFetchStatus.UserNotFound;
+                }
                 _database.UpdateSubscribedUser(user);
 
                 if (req.Reason == FetchReason.Add)
@@ -1733,7 +2149,13 @@ namespace IwaraDownloader.Services
                     existing.Site = siteHost;
                     _database.UpdateVideo(existing);
                 }
-                if (effectiveImmediateDownload) EnqueueDownload(existing, false);
+                if (effectiveImmediateDownload)
+                {
+                    var existingUser = existing.SubscribedUserId.HasValue
+                        ? _database.GetSubscribedUserById(existing.SubscribedUserId.Value)
+                        : null;
+                    EnqueueDownload(existing, existing.SubscribedUserId.HasValue, existingUser);
+                }
                 return existing;
             }
 
@@ -1777,14 +2199,27 @@ namespace IwaraDownloader.Services
                 Url = url,
                 AuthorUsername = urlInfo.AuthorUsername ?? "",
                 FileUuid = urlInfo.FileUuid ?? "",
+                PostedAt = urlInfo.PostedAt,
+                ApiRawJson = urlInfo.ApiRawJson ?? "",
                 Site = siteHost,
                 // 「後で」選択時は Paused で保存 (Pending は起動時レジューム対象のため。issue #21)
                 Status = effectiveImmediateDownload ? DownloadStatus.Pending : DownloadStatus.Paused
             };
 
+            // 「単発動画」という別分類は廃止。作者が判明していれば必ずチャンネル(アーティスト)に
+            // 紐付ける。既に購読済みならそこへ合流、未購読なら自動チェックOFFの新規チャンネルとして
+            // 作成する。
+            SubscribedUser? channel = null;
+            if (!string.IsNullOrEmpty(video.AuthorUsername))
+            {
+                channel = _database.EnsureChannelForAuthor(video.AuthorUsername, siteHost);
+                video.AuthorUserId = channel.UserId;
+                video.SubscribedUserId = channel.Id;
+            }
+
             video.Id = _database.AddVideo(video);
 
-            if (effectiveImmediateDownload) EnqueueDownload(video, false);
+            if (effectiveImmediateDownload) EnqueueDownload(video, channel != null, channel);
             return video;
         }
 
@@ -1849,6 +2284,8 @@ namespace IwaraDownloader.Services
                       && Interlocked.CompareExchange(ref _isProcessingQueue, 0, 0) == 0,
                 5000);
             _autoCheckTimer.Dispose();
+            _diskSpaceRecoveryTimer?.Stop();
+            _diskSpaceRecoveryTimer?.Dispose();
             _slotAvailableSignal.Dispose();
             _globalCts?.Dispose();
         }
