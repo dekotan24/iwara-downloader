@@ -125,10 +125,9 @@
 git clone https://github.com/dekotan24/iwara-downloader.git
 cd iwara-downloader
 dotnet build IwaraDownloader.sln -c Release
-dotnet test IwaraDownloader.sln -c Debug
 ```
 
-Visual Studio 2022 / .NET 10.0 SDK が必要です。
+Visual Studio 2022 / .NET 10.0 SDK が必要です。ソリューションには本体と DB 操作ツールが含まれ、両方が同じ出力フォルダにビルドされます。
 
 ## 技術スタック
 

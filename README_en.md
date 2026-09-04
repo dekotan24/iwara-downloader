@@ -125,10 +125,9 @@ If you close it during a download or while UUID tags are being written to an mp4
 git clone https://github.com/dekotan24/iwara-downloader.git
 cd iwara-downloader
 dotnet build IwaraDownloader.sln -c Release
-dotnet test IwaraDownloader.sln -c Debug
 ```
 
-Visual Studio 2022 and the .NET 10.0 SDK are required.
+Visual Studio 2022 and the .NET 10.0 SDK are required. The solution contains the app and the DB maintenance tool, and both build into the same output folder.
 
 ## Built with
 
