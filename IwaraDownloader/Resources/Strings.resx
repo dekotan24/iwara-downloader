@@ -268,6 +268,18 @@ https://www.iwara.ai/profile/username
   <data name="DatabaseToolForm_D028" xml:space="preserve">
     <value>(上限到達)</value>
   </data>
+  <data name="DatabaseToolForm_D029" xml:space="preserve">
+    <value>対象: {0}件</value>
+  </data>
+  <data name="DatabaseToolForm_D030" xml:space="preserve">
+    <value>対象の行がありません</value>
+  </data>
+  <data name="DatabaseToolForm_D031" xml:space="preserve">
+    <value>{0}件を待機中に戻します。よろしいですか？</value>
+  </data>
+  <data name="DatabaseToolForm_D032" xml:space="preserve">
+    <value>{0}件を待機中に戻しました</value>
+  </data>
   <data name="DatabaseToolForm_Title" xml:space="preserve">
     <value>DB操作ツール (上級者向け)</value>
   </data>
@@ -277,14 +289,53 @@ https://www.iwara.ai/profile/username
   <data name="DatabaseToolForm_btnExecuteSql" xml:space="preserve">
     <value>実行 (F5)</value>
   </data>
+  <data name="DatabaseToolForm_btnRefreshRecoveryCounts" xml:space="preserve">
+    <value>件数を再取得</value>
+  </data>
   <data name="DatabaseToolForm_btnRefreshTable" xml:space="preserve">
     <value>再読込</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetDownloadingToPending" xml:space="preserve">
+    <value>待機中に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetFailedToPending" xml:space="preserve">
+    <value>待機中に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetPausedToPending" xml:space="preserve">
+    <value>待機中に戻す</value>
+  </data>
+  <data name="DatabaseToolForm_btnToggleWriteMode" xml:space="preserve">
+    <value>書き込みモードにする</value>
   </data>
   <data name="DatabaseToolForm_chkApplyRowLimit" xml:space="preserve">
     <value>上限を適用</value>
   </data>
+  <data name="DatabaseToolForm_grpDownloading" xml:space="preserve">
+    <value>ダウンロード中 → 待機中に戻す (異常終了で固まった行の復旧)</value>
+  </data>
+  <data name="DatabaseToolForm_grpFailed" xml:space="preserve">
+    <value>失敗 → 待機中に戻す (リトライ回数・エラーもリセット)</value>
+  </data>
+  <data name="DatabaseToolForm_grpPaused" xml:space="preserve">
+    <value>一時停止 → 待機中に戻す (「後で」保存分の一括再開)</value>
+  </data>
+  <data name="DatabaseToolForm_lblBanner" xml:space="preserve">
+    <value>読み取り専用モード</value>
+  </data>
+  <data name="DatabaseToolForm_lblDownloadingCount" xml:space="preserve">
+    <value>対象: -件</value>
+  </data>
+  <data name="DatabaseToolForm_lblFailedCount" xml:space="preserve">
+    <value>対象: -件</value>
+  </data>
   <data name="DatabaseToolForm_lblMaxRows" xml:space="preserve">
     <value>最大取得件数:</value>
+  </data>
+  <data name="DatabaseToolForm_lblPausedCount" xml:space="preserve">
+    <value>対象: -件</value>
+  </data>
+  <data name="DatabaseToolForm_lblRecoveryHint" xml:space="preserve">
+    <value>本体アプリの起動時レジューム相当の復旧操作を、アプリを再起動せずに一括で行います。書き込みモードを有効にしてから使用してください。</value>
   </data>
   <data name="DatabaseToolForm_lblSqlHint" xml:space="preserve">
     <value>SQLを入力して実行してください。読み取り専用モード中は SELECT のみ結果が返り、書き込み系は自動的に拒否されます。</value>
@@ -294,6 +345,9 @@ https://www.iwara.ai/profile/username
   </data>
   <data name="DatabaseToolForm_tabBrowser" xml:space="preserve">
     <value>テーブルブラウザ</value>
+  </data>
+  <data name="DatabaseToolForm_tabRecovery" xml:space="preserve">
+    <value>復旧</value>
   </data>
   <data name="DatabaseToolForm_tabSql" xml:space="preserve">
     <value>SQL実行</value>

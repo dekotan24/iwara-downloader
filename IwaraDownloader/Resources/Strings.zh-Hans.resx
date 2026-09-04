@@ -222,7 +222,7 @@ https://www.iwara.tv/profile/username/videos</value>
     <value>已获取 {0} 行</value>
   </data>
   <data name="DatabaseToolForm_D013" xml:space="preserve">
-    <value>已获取 {0} 行 (已达上限，可在右上角的「最大取得件数」调整)</value>
+    <value>已获取 {0} 行 (已达上限，可在右上角的「最大取得行数」调整)</value>
   </data>
   <data name="DatabaseToolForm_D014" xml:space="preserve">
     <value>已影响 {0} 行</value>
@@ -264,6 +264,18 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="DatabaseToolForm_D028" xml:space="preserve">
     <value>(已达上限)</value>
   </data>
+  <data name="DatabaseToolForm_D029" xml:space="preserve">
+    <value>对象: {0} 行</value>
+  </data>
+  <data name="DatabaseToolForm_D030" xml:space="preserve">
+    <value>没有符合条件的行</value>
+  </data>
+  <data name="DatabaseToolForm_D031" xml:space="preserve">
+    <value>将 {0} 行恢复为等待中。是否继续？</value>
+  </data>
+  <data name="DatabaseToolForm_D032" xml:space="preserve">
+    <value>已将 {0} 行恢复为等待中</value>
+  </data>
   <data name="DatabaseToolForm_Title" xml:space="preserve">
     <value>数据库操作工具 (高级)</value>
   </data>
@@ -273,14 +285,53 @@ https://www.iwara.tv/profile/username/videos</value>
   <data name="DatabaseToolForm_btnExecuteSql" xml:space="preserve">
     <value>执行 (F5)</value>
   </data>
+  <data name="DatabaseToolForm_btnRefreshRecoveryCounts" xml:space="preserve">
+    <value>重新获取数量</value>
+  </data>
   <data name="DatabaseToolForm_btnRefreshTable" xml:space="preserve">
     <value>重新加载</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetDownloadingToPending" xml:space="preserve">
+    <value>恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetFailedToPending" xml:space="preserve">
+    <value>恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_btnResetPausedToPending" xml:space="preserve">
+    <value>恢复为等待中</value>
+  </data>
+  <data name="DatabaseToolForm_btnToggleWriteMode" xml:space="preserve">
+    <value>启用写入模式</value>
   </data>
   <data name="DatabaseToolForm_chkApplyRowLimit" xml:space="preserve">
     <value>应用行数上限</value>
   </data>
+  <data name="DatabaseToolForm_grpDownloading" xml:space="preserve">
+    <value>下载中 → 恢复为等待中 (恢复因异常结束而卡住的行)</value>
+  </data>
+  <data name="DatabaseToolForm_grpFailed" xml:space="preserve">
+    <value>失败 → 恢复为等待中 (同时重置重试次数和错误)</value>
+  </data>
+  <data name="DatabaseToolForm_grpPaused" xml:space="preserve">
+    <value>暂停 → 恢复为等待中 (批量恢复以「稍后」保存的项目)</value>
+  </data>
+  <data name="DatabaseToolForm_lblBanner" xml:space="preserve">
+    <value>只读模式</value>
+  </data>
+  <data name="DatabaseToolForm_lblDownloadingCount" xml:space="preserve">
+    <value>对象: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblFailedCount" xml:space="preserve">
+    <value>对象: -</value>
+  </data>
   <data name="DatabaseToolForm_lblMaxRows" xml:space="preserve">
     <value>最大取得行数:</value>
+  </data>
+  <data name="DatabaseToolForm_lblPausedCount" xml:space="preserve">
+    <value>对象: -</value>
+  </data>
+  <data name="DatabaseToolForm_lblRecoveryHint" xml:space="preserve">
+    <value>无需重启主程序，即可批量执行与主程序启动时恢复相同的操作。请先启用写入模式后再使用。</value>
   </data>
   <data name="DatabaseToolForm_lblSqlHint" xml:space="preserve">
     <value>请输入SQL并执行。只读模式下仅SELECT语句会返回结果，写入类语句会被自动拒绝。</value>
@@ -290,6 +341,9 @@ https://www.iwara.tv/profile/username/videos</value>
   </data>
   <data name="DatabaseToolForm_tabBrowser" xml:space="preserve">
     <value>表格浏览器</value>
+  </data>
+  <data name="DatabaseToolForm_tabRecovery" xml:space="preserve">
+    <value>恢复</value>
   </data>
   <data name="DatabaseToolForm_tabSql" xml:space="preserve">
     <value>SQL 编辑器</value>
