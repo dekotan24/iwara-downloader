@@ -2,6 +2,7 @@
 
 <img width="72" height="72" alt="icon" src="https://github.com/user-attachments/assets/dfae4206-78de-45de-a975-d9b69b96c68b" />
 
+
 # IwaraDownloader
 
 **iwara.tv / iwara.ai の動画ダウンローダー & メディアサーバー**
@@ -15,7 +16,7 @@
 
 [English](README_en.md) · [ダウンロード](https://github.com/dekotan24/iwara-downloader/releases)
 
-<img width="1000" alt="screenshot" src="https://github.com/user-attachments/assets/de36894c-65e9-41af-b150-e65c7ff4a8bf" />
+<img width="1186" height="743" alt="screenshot" src="https://github.com/user-attachments/assets/8686f4d7-6107-4843-9597-24da7beefc1c" />
 
 </div>
 
