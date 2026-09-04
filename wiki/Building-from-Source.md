@@ -53,7 +53,6 @@ iwara-downloader/
 │   ├── iwara_helper.py   # Python API ヘルパー
 │   └── iwara_setup.bat   # セットアップバッチ
 ├── IwaraDownloader.DbTool/   # DB 操作ツール（本体とソースをリンク共有）
-├── docs/                     # 設計メモ
 ├── tools/                    # 開発用スクリプト
 ├── wiki/                     # このドキュメント
 ├── README.md
