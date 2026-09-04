@@ -28,7 +28,7 @@ Subscribe to a channel and new uploads are saved automatically. Watch them from 
 - **Collection management** — UUIDs embedded in the mp4 prevent re-downloads, plus library relocation, duplicate checks, and a statistics dashboard
 - **Exclusion list** — deleted videos stay deleted instead of reappearing on the next check, and can be restored at any time
 - **Multilingual UI** — English / 日本語 / 简体中文
-- **Entirely local** — files and credentials never leave your machine
+- **Stored locally** — your library and credentials stay on your PC and are never held on the author's or a third party's server (the app does talk to iwara, and checks GitHub for updates)
 
 ## Requirements
 
