@@ -1547,6 +1547,9 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
     <value>DB操作ツールの起動に失敗しました:
 {0}</value>
   </data>
+  <data name="MainForm_D203" xml:space="preserve">
+    <value>{0} の全動画の再取得をキューに登録しました</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1815,6 +1818,15 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
   </data>
   <data name="MainForm_menuChDownloadAll" xml:space="preserve">
     <value>全てダウンロード</value>
+  </data>
+  <data name="MainForm_menuChRefetchAll" xml:space="preserve">
+    <value>動画全体を再取得</value>
+  </data>
+  <data name="MainForm_ChannelHint_CheckNow" xml:space="preserve">
+    <value>前回取得した最新投稿より新しい分だけを取得します（速い）</value>
+  </data>
+  <data name="MainForm_ChannelHint_RefetchAll" xml:space="preserve">
+    <value>全ページを取得し直します。旧バージョンの取得上限で欠けた古い動画を拾うとき用（時間がかかります）</value>
   </data>
   <data name="MainForm_menuChEnable" xml:space="preserve">
     <value>有効にする</value>

@@ -1543,6 +1543,9 @@ Please check that the build completed correctly.</value>
     <value>Failed to start the database tool:
 {0}</value>
   </data>
+  <data name="MainForm_D203" xml:space="preserve">
+    <value>Queued a full refetch of all videos on {0}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1811,6 +1814,15 @@ If the save folder setting has not been changed yet, change it first (settings o
   </data>
   <data name="MainForm_menuChDownloadAll" xml:space="preserve">
     <value>Download All</value>
+  </data>
+  <data name="MainForm_menuChRefetchAll" xml:space="preserve">
+    <value>Refetch All Videos</value>
+  </data>
+  <data name="MainForm_ChannelHint_CheckNow" xml:space="preserve">
+    <value>Fetches only videos newer than the latest one already saved (fast).</value>
+  </data>
+  <data name="MainForm_ChannelHint_RefetchAll" xml:space="preserve">
+    <value>Refetches every page. Use this to recover old videos missed by the previous fetch limit (slow).</value>
   </data>
   <data name="MainForm_menuChEnable" xml:space="preserve">
     <value>Enable</value>

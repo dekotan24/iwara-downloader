@@ -1623,6 +1623,21 @@ namespace IwaraDownloader.Wpf.ViewModels
             StatusMessage = L.T("MainForm_D087", user.Username);
         }
 
+        /// <summary>
+        /// このチャンネルの動画一覧を全ページ取り直す。
+        /// 通常の新着チェックは既知の最新投稿日より古いページに入った時点で打ち切るため、
+        /// 旧バージョンの取得上限 (100 ページ = 3200 件) で切り捨てられた古い動画には
+        /// 二度と到達しない。それを拾い直すための手動操作。
+        /// </summary>
+        [RelayCommand]
+        private void RefetchAllChannel()
+        {
+            var user = SelectedTreeNode?.Channel;
+            if (user == null) return;
+            _downloadManager.EnqueueUserForCheck(user, priority: true, fullRefetch: true);
+            StatusMessage = L.T("MainForm_D203", user.Username);
+        }
+
         [RelayCommand]
         private void OpenChannelPage()
         {

@@ -1280,6 +1280,40 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// そのチャンネルで既に DB が持っている最新の投稿日時を返す (1 件も無ければ null)。
+        /// 新着チェックのページング早期打ち切り (iwara_helper.py --since) に渡す基準値。
+        /// PostedAt は同一マシンが "o" 書式で書いた固定オフセットの文字列なので、
+        /// 文字列としての MAX がそのまま時刻の MAX になる。
+        /// 判定を誤って新しすぎる値を返すと新着を取りこぼすため、パースできない値は無視する。
+        /// </summary>
+        public DateTime? GetLatestPostedAtForUser(int subscribedUserId)
+        {
+            using var connection = OpenConnection();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT MAX(PostedAt) FROM Videos
+                WHERE SubscribedUserId = @SubscribedUserId AND PostedAt IS NOT NULL AND PostedAt != ''";
+            command.Parameters.AddWithValue("@SubscribedUserId", subscribedUserId);
+
+            var result = command.ExecuteScalar();
+            if (result == null || result == DBNull.Value) return null;
+
+            if (!DateTime.TryParse(result.ToString(), null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
+                return null;
+
+            // オフセットを持たない値 (旧バージョンが書いた行) は Unspecified になる。
+            // これをローカル時刻とみなすと JST では 9 時間先の since になり、
+            // その間の新着を黙って取りこぼす。UTC 扱いに倒せば since が古い側にずれるだけで、
+            // 余分にページを読むが取りこぼしは起きない。
+            if (dt.Kind == DateTimeKind.Unspecified)
+                dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+
+            return dt;
+        }
+
+        /// <summary>
         /// 未DL (Completed / Skipped / Failed を除く) の動画を取得
         /// </summary>
         public List<VideoInfo> GetNotDownloadedVideos()

@@ -16,6 +16,7 @@ import hashlib
 import re
 import subprocess
 import time
+from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 
 # Windows コンソールで日本語タイトルを print(file=sys.stderr) するときの
@@ -126,6 +127,34 @@ def _prune_video_raw(video: dict) -> dict:
             "username": user.get("username"),
         }
     return pruned
+
+
+# 新着チェックで「丸ごと既知」のページが何ページ続いたら打ち切るか。
+# 1 ページ 32 件なので 2 ページ = 64 件ぶんの安全マージン。
+_SINCE_GRACE_PAGES = 2
+
+
+def _parse_iso_datetime(value):
+    """ISO8601 文字列を timezone-aware な datetime にする。
+    iwara API は "2020-12-30T13:52:40.000Z"、C# 側の --since は "o" 書式
+    (小数部 7 桁) を送ってくるので、どちらも受けられるように正規化する。
+    パースできなければ None (呼び出し側で「判定不能」として扱う)。"""
+    if not value:
+        return None
+    v = str(value).strip()
+    if v.endswith("Z"):
+        v = v[:-1] + "+00:00"
+    # 小数秒が 7 桁以上 (C# "o") だと fromisoformat が落ちるので 6 桁に丸める
+    m = re.match(r"^(.*\.\d{6})\d+(.*)$", v)
+    if m:
+        v = m.group(1) + m.group(2)
+    try:
+        dt = datetime.fromisoformat(v)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class IwaraAPI:
@@ -439,8 +468,15 @@ class IwaraAPI:
         except Exception as e:
             return {"success": False, "error": f"Exception: {e}"}
 
-    def get_user_videos(self, username: str) -> dict:
-        """ユーザーの全動画リストを取得"""
+    def get_user_videos(self, username: str, since: str = None) -> dict:
+        """ユーザーの動画リストを取得。
+
+        since (ISO8601) を渡すと「新着チェック」モードになり、投稿日が since 以下の
+        ページだけが続いた時点でページングを打ち切る。API は sort=date (新しい順) 固定
+        なので、既知の最新投稿より古いページに入った以降はすべて既知動画であり、
+        全ページを舐める必要がない (3400 本のチャンネルで 151 秒 -> 数秒)。
+        非公開->公開のような「後から古い日付で現れる」ケースを拾うため、
+        丸ごと既知だったページが _SINCE_GRACE_PAGES 連続するまでは止めない。"""
         if not self.token:
             return {"success": False, "error": "Login required", "code": "LOGIN_REQUIRED"}
         try:
@@ -482,8 +518,12 @@ class IwaraAPI:
             # 2. 動画リストを全ページ取得
             videos = []
             page = 0
-            max_pages = 100  # 安全のため上限
-            
+            # 暴走保険としての上限。1 ページ 32 件なので 1000 ページ = 32000 件まで対応。
+            # 空ページで自然に break するので、通常はここには到達しない。
+            max_pages = 1000
+            since_dt = _parse_iso_datetime(since)
+            old_page_streak = 0
+
             while page < max_pages:
                 # ページ取得間のディレイ
                 if page > 0:
@@ -528,12 +568,36 @@ class IwaraAPI:
                 
                 print(f"Fetched page {page + 1}, {len(results)} videos (total: {len(videos)})", file=sys.stderr)
                 page += 1
-            
+
+                # 新着チェックの早期打ち切り。
+                # 投稿日をパースできなかった動画は「新しいかもしれない」側に倒す
+                # (判定不能を打ち切り理由にしない)。
+                if since_dt is not None:
+                    page_is_all_old = True
+                    for v in results:
+                        created = _parse_iso_datetime(v.get("createdAt"))
+                        if created is None or created > since_dt:
+                            page_is_all_old = False
+                            break
+                    if page_is_all_old:
+                        old_page_streak += 1
+                        if old_page_streak >= _SINCE_GRACE_PAGES:
+                            print(f"Early stop: {old_page_streak} consecutive pages older than {since}",
+                                  file=sys.stderr)
+                            break
+                    else:
+                        old_page_streak = 0
+
+            if page >= max_pages:
+                print(f"WARNING: hit max_pages={max_pages}, video list may be truncated",
+                      file=sys.stderr)
+
             return {
                 "success": True,
                 "username": username,
                 "user_id": user_id,
                 "count": len(videos),
+                "truncated": page >= max_pages,
                 "videos": videos
             }
             
@@ -1281,7 +1345,11 @@ def main():
         if len(sys.argv) < 3:
             print(json.dumps({"success": False, "error": "Usage: get_videos <username>"}))
             sys.exit(1)
-        result = api.get_user_videos(sys.argv[2])
+        since = None
+        for i, arg in enumerate(sys.argv):
+            if arg == "--since" and i + 1 < len(sys.argv):
+                since = sys.argv[i + 1]
+        result = api.get_user_videos(sys.argv[2], since=since)
         
     elif action == "download":
         if len(sys.argv) < 4:

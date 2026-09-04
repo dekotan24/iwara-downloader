@@ -1543,6 +1543,9 @@ videoId 后导入数据库。
     <value>启动数据库操作工具失败:
 {0}</value>
   </data>
+  <data name="MainForm_D203" xml:space="preserve">
+    <value>已将 {0} 的全部视频重新获取加入队列</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1811,6 +1814,15 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuChDownloadAll" xml:space="preserve">
     <value>全部下载</value>
+  </data>
+  <data name="MainForm_menuChRefetchAll" xml:space="preserve">
+    <value>重新获取全部视频</value>
+  </data>
+  <data name="MainForm_ChannelHint_CheckNow" xml:space="preserve">
+    <value>仅获取比已保存的最新视频更新的部分（较快）。</value>
+  </data>
+  <data name="MainForm_ChannelHint_RefetchAll" xml:space="preserve">
+    <value>重新获取全部页面。用于找回因旧版本获取上限而缺失的旧视频（较慢）。</value>
   </data>
   <data name="MainForm_menuChEnable" xml:space="preserve">
     <value>启用</value>

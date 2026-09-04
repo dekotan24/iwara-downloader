@@ -131,9 +131,11 @@ namespace IwaraDownloader.Services
         /// <summary>
         /// 取得キューの 1 項目。Attempt はタイムアウト時のリトライ回数 (エクスポネンシャル)。
         /// ImmediateDownload は Reason=Add のときだけ意味を持つ (Check は常に AutoDownloadOnCheck 設定に従う)。
+        /// FullRefetch=true の Check は --since による早期打ち切りを行わず全ページを舐める
+        /// (max_pages の旧上限 100 で切られていた古い動画を拾い直す手動操作用)。
         /// リトライ再投入 (req with { Attempt = ... }) では自動的に引き継がれる。
         /// </summary>
-        private sealed record FetchRequest(string UserId, FetchReason Reason, int Attempt = 0, bool ImmediateDownload = true);
+        private sealed record FetchRequest(string UserId, FetchReason Reason, int Attempt = 0, bool ImmediateDownload = true, bool FullRefetch = false);
 
         private readonly Channel<FetchRequest> _fetchQueue =
             Channel.CreateUnbounded<FetchRequest>(new UnboundedChannelOptions { SingleReader = true });
@@ -141,7 +143,11 @@ namespace IwaraDownloader.Services
             Channel.CreateUnbounded<FetchRequest>(new UnboundedChannelOptions { SingleReader = true });
         private readonly HashSet<string> _pendingUserIds = new(StringComparer.OrdinalIgnoreCase);
 
-        // タイムアウト: min(90s * 2^Attempt, 10min)、最大 5 回で諦め (回線が遅い人を切り捨てない)
+        // タイムアウト: min(90s * 2^Attempt, 10min)、最大 5 回で諦め (回線が遅い人を切り捨てない)。
+        // これは「無音が続いた時間」の上限であって取得全体の上限ではない。Python が
+        // 1 ページ取るたびに進捗を吐くので、その都度カウントし直す (ProcessFetchRequestAsync)。
+        // こうしないと、ページ数の多いチャンネルや ApiRequestDelayMs を伸ばした設定で、
+        // 正常に進んでいる取得まで打ち切られてしまう。
         private static readonly TimeSpan FetchTimeoutBase = TimeSpan.FromSeconds(90);
         private static readonly TimeSpan FetchTimeoutCap = TimeSpan.FromMinutes(10);
         private const int FetchMaxAttempts = 5;
@@ -1887,16 +1893,28 @@ namespace IwaraDownloader.Services
         /// <summary>
         /// 単一チャンネルを新着チェックとして取得キューに積む。
         /// priority=true なら手動「今すぐ確認」用の優先キューへ (通常キューより先に処理)。
+        /// fullRefetch=true なら早期打ち切りを無効化して全ページを取り直す。
+        ///
+        /// 通常は _pendingUserIds で二重投入を弾くが、fullRefetch だけは弾かない。
+        /// 定期スイープ (384 チャンネル × ChannelCheckDelayMs) でキューに積まれている間に
+        /// 手動の「全体を再取得」を押すと、そのチャンネルは既に pending 扱いなので黙って
+        /// 捨てられ、代わりに早期打ち切りありの通常 Check が走ってしまう。
+        /// これは利用者が明示的にバイパスしたかった動作そのものなので、重複取得のコストを
+        /// 払ってでも必ずキューに載せる (取得結果は VideoExists で重複排除されるため実害はない)。
         /// </summary>
-        public void EnqueueUserForCheck(SubscribedUser user, bool priority)
+        public void EnqueueUserForCheck(SubscribedUser user, bool priority, bool fullRefetch = false)
         {
             if (user == null || string.IsNullOrEmpty(user.UserId)) return;
+
+            bool added;
             lock (_pendingUserIds)
             {
-                if (!_pendingUserIds.Add(user.UserId)) return; // 既にキュー/処理中
+                added = _pendingUserIds.Add(user.UserId);
             }
+            if (!added && !fullRefetch) return; // 既にキュー/処理中
+
             var queue = priority ? _priorityFetchQueue : _fetchQueue;
-            if (!queue.Writer.TryWrite(new FetchRequest(user.UserId, FetchReason.Check)))
+            if (!queue.Writer.TryWrite(new FetchRequest(user.UserId, FetchReason.Check, FullRefetch: fullRefetch)) && added)
                 lock (_pendingUserIds) _pendingUserIds.Remove(user.UserId);
         }
 
@@ -1965,7 +1983,29 @@ namespace IwaraDownloader.Services
                 UserAddStatusChanged?.Invoke(this, L.T("SvcDownloadManager_D017", user.Username, reasonLabel));
                 var progress = new Progress<string>(msg => UserAddStatusChanged?.Invoke(this, msg));
                 var siteHost = string.IsNullOrEmpty(user.Site) ? Helpers.SiteTv : user.Site;
-                var (videos, fetchStatus) = await _iwaraApi.GetUserVideosAsync(user.UserId, progress, siteHost, linked.Token);
+
+                // 新着チェックは既知の最新投稿日を基準に途中で打ち切らせる。
+                // Add (新規追加) と手動の全件再取得は過去分も全部欲しいので null のまま全ページ取得する。
+                DateTime? since = req.Reason == FetchReason.Check && !req.FullRefetch
+                    ? _database.GetLatestPostedAtForUser(user.Id)
+                    : null;
+
+                // 進捗ウォッチドッグ: Python が何か書くたびにタイムアウトを引き直す。
+                // 特定の行 ("Fetched page" 等) だけを見ると、429 バックオフ中の
+                // "RateLimit: waiting 300.0s..." のように「1 行吐いてから長時間黙る」ケースで
+                // 正常に待っているだけの取得を打ち切ってしまう (RateLimitMaxDelayMs は既定 300s)。
+                // 出力があること自体が生存の証拠なので、行の中身は問わない。
+                // ハングしたプロセスは何も書かないので、これで検出力は落ちない。
+                // CTS 破棄後に stderr の残りが流れてくることがあるので ObjectDisposedException は握る
+                // (呼び出し側でも例外は握られるが、ここで意図を明示しておく)。
+                void OnFetchProgress(string line)
+                {
+                    try { timeoutCts.CancelAfter(timeout); }
+                    catch (ObjectDisposedException) { }
+                }
+
+                var (videos, fetchStatus) = await _iwaraApi.GetUserVideosAsync(
+                    user.UserId, progress, siteHost, linked.Token, since, OnFetchProgress);
 
                 // Add (追加時) は req.ImmediateDownload (呼び出し側の選択、既定は設定値)、
                 // Check (定期新着チェック) は AutoDownloadOnCheck 設定 — 常に今まで通り。
