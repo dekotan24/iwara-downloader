@@ -1199,10 +1199,10 @@ videoId 后导入数据库。
     <value>下载</value>
   </data>
   <data name="MainForm_D106" xml:space="preserve">
-    <value>★ 从收藏中删除</value>
+    <value>从收藏中删除</value>
   </data>
   <data name="MainForm_D107" xml:space="preserve">
-    <value>★ 添加到收藏</value>
+    <value>添加到收藏</value>
   </data>
   <data name="MainForm_D108" xml:space="preserve">
     <value>已将 {0} 个视频加入重试队列</value>
@@ -1244,7 +1244,7 @@ videoId 后导入数据库。
     <value>
 
 将移动到排除列表（回收站）。
-已下载的文件将被删除（之后可恢复）</value>
+已下载的文件将被删除（恢复需重新下载）</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
     <value>已将 {0} 个视频移动到回收站</value>
@@ -1858,7 +1858,7 @@ videoId 后导入数据库。
     <value>下载</value>
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
-    <value>★ 添加到收藏</value>
+    <value>添加到收藏</value>
   </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>映射本地文件...</value>

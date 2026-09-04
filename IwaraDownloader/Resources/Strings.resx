@@ -1203,10 +1203,10 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ダウンロード</value>
   </data>
   <data name="MainForm_D106" xml:space="preserve">
-    <value>★ お気に入りから削除</value>
+    <value>お気に入りから削除</value>
   </data>
   <data name="MainForm_D107" xml:space="preserve">
-    <value>★ お気に入りに追加</value>
+    <value>お気に入りに追加</value>
   </data>
   <data name="MainForm_D108" xml:space="preserve">
     <value>{0}件の動画を再試行キューに追加しました</value>
@@ -1248,7 +1248,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>
 
 除外リスト（ゴミ箱）へ移動します。
-DL済みのファイルは削除されます（後で復元できます）</value>
+DL済みのファイルは削除されます（戻すには再DLが必要です）</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
     <value>{0} 件の動画を除外（ゴミ箱）へ移動しました</value>
@@ -1862,7 +1862,7 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>ダウンロード</value>
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
-    <value>★ お気に入りに追加</value>
+    <value>お気に入りに追加</value>
   </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>ローカルファイルをマップ...</value>

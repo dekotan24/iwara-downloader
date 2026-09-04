@@ -183,6 +183,21 @@
         </Style>
 
         <!--
+            メニュー項目のアイコン。Windows標準搭載のSegoe MDL2 Assetsのグリフを使うことで
+            画像リソースを持たずに済み、高DPIでも滲まない。コンテキストメニュー自体は
+            OS既定のテンプレート(ライト固定)なので、色もテーマ非追従の固定値でよい。
+            グリフは文字コード事故を避けるため数値文字参照(&#x....;)で書くこと。
+        -->
+        <Style x:Key="MenuGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="#3C3C3C" />
+        </Style>
+        <Style x:Key="MenuGlyphDestructive" TargetType="TextBlock" BasedOn="{StaticResource MenuGlyph}">
+            <Setter Property="Foreground" Value="#B3261E" />
+        </Style>
+
+        <!--
             動画の右クリックメニュー。詳細リスト(ListView)とタイル表示(ListBox)の両方から
             {StaticResource VideoContextMenu} で共有する(同一インスタンスをContextMenuプロパティに
             割り当てるとPlacementTargetが開いた側に自動追従するため、複数コントロールでの共有は問題ない)。
@@ -193,22 +208,53 @@
         <ContextMenu x:Key="VideoContextMenu"
                      DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
                      Opened="VideoContextMenu_Opened" Closed="VideoContextMenu_Closed">
+            <!-- G1: いま一番やりたいこと(状態依存の一次アクション)。4項目のVisibilityはほぼ排他なので、
+                 完了済みなら「再生」が、未DLなら「ダウンロード」が自動的に先頭に来る。 -->
+            <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}"
+                      Visibility="{Binding CanPlaySelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE768;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}"
+                      Visibility="{Binding CanOpenFolderSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE838;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{Binding DownloadMenuText}" Command="{Binding DownloadVideoCommand}"
-                      Visibility="{Binding CanDownloadSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanDownloadSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE896;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidCancel}" Command="{Binding CancelVideoCommand}"
-                      Visibility="{Binding CanCancelSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanCancelSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE711;" /></MenuItem.Icon>
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator1, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G2: メンテ操作。頻度が低いので一次アクションより下に置く。 -->
             <MenuItem Header="{loc:T MainForm_menuVidRetryFailed}" Command="{Binding RetryFailedVideoCommand}"
-                      Visibility="{Binding CanRetryFailedSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanRetryFailedSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE72C;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidReDownload}" Command="{Binding ReDownloadVideoCommand}"
-                      Visibility="{Binding CanReDownloadSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanReDownloadSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE895;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidRefreshInfo}" Command="{Binding RefreshVideoInfoCommand}"
-                      Visibility="{Binding CanRefreshInfoSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanRefreshInfoSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE777;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidCheckFileExists}" Command="{Binding CheckFileExistsForSelectedVideoCommand}"
-                      Visibility="{Binding CanCheckFileExistsSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanCheckFileExistsSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE930;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidMapLocalFile}" Command="{Binding MapLocalFileCommand}"
-                      Visibility="{Binding CanMapLocalFileSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanMapLocalFileSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE71B;" /></MenuItem.Icon>
+            </MenuItem>
+            <!-- 子項目はIsCheckable。既定のMenuItemテンプレートではチェックマークとIconが
+                 左の同じスロットを共有するため、子にはアイコンを付けない。 -->
             <MenuItem Header="{loc:T MainForm_menuVidPriority}"
                       Visibility="{Binding CanChangeVideoPriority, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7C1;" /></MenuItem.Icon>
                 <MenuItem Header="{loc:T MainForm_menuPriorityHighest}" Command="{Binding SetVideoPriorityHighestCommand}"
                           IsCheckable="True" IsChecked="{Binding PriorityHighestChecked, Mode=OneWay}" />
                 <MenuItem Header="{loc:T MainForm_menuPriorityHigh}" Command="{Binding SetVideoPriorityHighCommand}"
@@ -218,32 +264,55 @@
                 <MenuItem Header="{loc:T MainForm_menuPriorityLow}" Command="{Binding SetVideoPriorityLowCommand}"
                           IsCheckable="True" IsChecked="{Binding PriorityLowChecked, Mode=OneWay}" />
             </MenuItem>
-            <Separator />
-            <MenuItem Header="{loc:T MainForm_menuVidPlay}" Command="{Binding PlayVideoCommand}"
-                      Visibility="{Binding CanPlaySelectedVideo, Converter={StaticResource BoolToVis}}" />
-            <MenuItem Header="{loc:T MainForm_menuVidOpenFolder}" Command="{Binding OpenVideoFolderCommand}"
-                      Visibility="{Binding CanOpenFolderSelectedVideo, Converter={StaticResource BoolToVis}}" />
-            <Separator />
+
+            <Separator Visibility="{Binding ShowVideoSeparator2, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G3: Webページ/コピー -->
             <MenuItem Header="{loc:T MainForm_menuVidOpenPage}" Command="{Binding OpenVideoPageCommand}"
-                      Visibility="{Binding CanOpenPageSelectedVideo, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding CanOpenPageSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE128;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidOpenAuthor}" Command="{Binding OpenVideoAuthorPageCommand}"
-                      Visibility="{Binding CanOpenAuthorSelectedVideo, Converter={StaticResource BoolToVis}}" />
-            <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}" />
-            <MenuItem Header="{loc:T MainForm_menuVidCopyTitle}" Command="{Binding CopyVideoTitleCommand}" />
-            <MenuItem Header="{loc:T MainForm_menuVidCopyAuthor}" Command="{Binding CopyVideoAuthorCommand}" />
-            <Separator />
+                      Visibility="{Binding CanOpenAuthorSelectedVideo, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE77B;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCopyUrl}" Command="{Binding CopyVideoUrlCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8C8;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCopyTitle}" Command="{Binding CopyVideoTitleCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8C8;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="{loc:T MainForm_menuVidCopyAuthor}" Command="{Binding CopyVideoAuthorCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8C8;" /></MenuItem.Icon>
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator3, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G4: お気に入り/詳細情報。アイコンは追加=枠だけの星/解除=塗りの星でVMから切り替える。 -->
             <MenuItem Header="{Binding FavoriteMenuText}" Command="{Binding ToggleFavoriteCommand}"
-                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="{Binding FavoriteMenuGlyph}" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidDetails}" Command="{Binding OpenVideoDetailsCommand}"
-                      Visibility="{Binding CanShowVideoDetails, Converter={StaticResource BoolToVis}}" />
-            <Separator />
+                      Visibility="{Binding CanShowVideoDetails, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE946;" /></MenuItem.Icon>
+            </MenuItem>
+
+            <Separator Visibility="{Binding ShowVideoSeparator4, Converter={StaticResource BoolToVis}}" />
+
+            <!-- G5: 破壊的操作。誤クリック防止のためアイコンを赤にする。 -->
             <MenuItem Header="{loc:T MainForm_menuVidDelete}" Command="{Binding DeleteVideoCommand}"
-                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}" />
-            <Separator Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding IsNormalNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyphDestructive}" Text="&#xE74D;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidRestore}" Command="{Binding RestoreVideoCommand}"
-                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE10E;" /></MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="{loc:T MainForm_menuVidPermanentDelete}" Command="{Binding PermanentDeleteVideoCommand}"
-                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}" />
+                      Visibility="{Binding IsExcludedNodeSelected, Converter={StaticResource BoolToVis}}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyphDestructive}" Text="&#xE74D;" /></MenuItem.Icon>
+            </MenuItem>
         </ContextMenu>
 
         <!-- タイル表示用ListBoxItem: 動画一覧ListViewItemと同じ理由でダーク背景を保つカスタムテンプレート -->

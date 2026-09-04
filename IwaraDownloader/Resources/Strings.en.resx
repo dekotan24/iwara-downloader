@@ -1199,10 +1199,10 @@ Downloaded files will be deleted (restorable later)</value>
     <value>Download</value>
   </data>
   <data name="MainForm_D106" xml:space="preserve">
-    <value>★ Remove from Favorites</value>
+    <value>Remove from Favorites</value>
   </data>
   <data name="MainForm_D107" xml:space="preserve">
-    <value>★ Add to Favorites</value>
+    <value>Add to Favorites</value>
   </data>
   <data name="MainForm_D108" xml:space="preserve">
     <value>Added {0} videos to the retry queue</value>
@@ -1244,7 +1244,7 @@ Downloaded files will be deleted (restorable later)</value>
     <value>
 
 Moves to the exclusion list (bin).
-Downloaded files will be deleted (restorable later)</value>
+Downloaded files will be deleted (re-download required to restore)</value>
   </data>
   <data name="MainForm_D121" xml:space="preserve">
     <value>Moved {0} videos to the bin</value>
@@ -1858,7 +1858,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>Download</value>
   </data>
   <data name="MainForm_menuVidFavorite" xml:space="preserve">
-    <value>★ Add to Favorites</value>
+    <value>Add to Favorites</value>
   </data>
   <data name="MainForm_menuVidMapLocalFile" xml:space="preserve">
     <value>Map local file...</value>

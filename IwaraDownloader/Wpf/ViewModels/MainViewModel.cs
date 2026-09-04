@@ -1052,11 +1052,22 @@ namespace IwaraDownloader.Wpf.ViewModels
         [ObservableProperty] private bool _canOpenPageSelectedVideo;
         [ObservableProperty] private bool _canShowVideoDetails;
         [ObservableProperty] private string _favoriteMenuText = "";
+        // お気に入りメニューのアイコン。追加=枠だけの星(E734) / 解除=塗りつぶした星(E735)。
+        // エスケープシーケンスを書かずに済むよう、コードポイントから直接組み立てる。
+        [ObservableProperty] private string _favoriteMenuGlyph = ((char)0xE734).ToString();
         [ObservableProperty] private bool _canChangeVideoPriority;
         [ObservableProperty] private bool _priorityHighestChecked;
         [ObservableProperty] private bool _priorityHighChecked;
         [ObservableProperty] private bool _priorityNormalChecked;
         [ObservableProperty] private bool _priorityLowChecked;
+
+        // 動画コンテキストメニューの区切り線。WPFは前後の項目が全てCollapsedになったSeparatorを
+        // 自動では畳まないため、グループ単位の表示有無から明示的に計算する
+        // (これが無いと、例えばDL中の項目を右クリックしたときに区切り線が2本続けて出る)。
+        [ObservableProperty] private bool _showVideoSeparator1;
+        [ObservableProperty] private bool _showVideoSeparator2;
+        [ObservableProperty] private bool _showVideoSeparator3;
+        [ObservableProperty] private bool _showVideoSeparator4;
 
         /// <summary>
         /// 動画コンテキストメニューを開く直前に呼ぶ。旧WinForms版menuVideoContext_Openingに相当
@@ -1079,11 +1090,20 @@ namespace IwaraDownloader.Wpf.ViewModels
                 CanRefreshInfoSelectedVideo = false;
                 CanCheckFileExistsSelectedVideo = false;
                 CanMapLocalFileSelectedVideo = false;
-                CanOpenAuthorSelectedVideo = false;
                 CanPlaySelectedVideo = false;
                 CanOpenFolderSelectedVideo = false;
                 CanChangeVideoPriority = false;
                 PriorityHighestChecked = PriorityHighChecked = PriorityNormalChecked = PriorityLowChecked = false;
+                // 除外ノードでも「ページを開く」「投稿者のページを開く」は出す(本当に消えたか、
+                // 投稿者が何者かを確認する導線として残す)。旧WinForms版は投稿者ページのみ隠して
+                // いたが、「投稿者名をコピー」は出るという非対称になっていたため揃えた。
+                // なお、この2つと「詳細情報」はこの分岐で未設定のままだと前回の選択の値が残るため、
+                // ここで必ず確定させる(区切り線の計算が前回値に引きずられるのを防ぐ)。
+                var excludedSingle = selected.Count == 1 ? selected[0] : null;
+                CanOpenPageSelectedVideo = excludedSingle != null && !string.IsNullOrEmpty(excludedSingle.Url);
+                CanOpenAuthorSelectedVideo = excludedSingle != null && !string.IsNullOrEmpty(excludedSingle.AuthorUsername);
+                CanShowVideoDetails = false;
+                UpdateVideoSeparators();
                 return;
             }
 
@@ -1115,6 +1135,7 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             bool allFav = selected.All(v => v.IsFavorite);
             FavoriteMenuText = allFav ? L.T("MainForm_D106") : L.T("MainForm_D107");
+            FavoriteMenuGlyph = ((char)(allFav ? 0xE735 : 0xE734)).ToString();
 
             // 優先度は未DL(Pending)にのみ意味を持つ。チェックマークは選択中Pending全件の実効優先度
             // (手動設定 ?? 所属チャンネルの既定 ?? Normal) が一致する場合のみ点灯、バラバラなら消灯。
@@ -1139,6 +1160,35 @@ namespace IwaraDownloader.Wpf.ViewModels
             {
                 PriorityHighestChecked = PriorityHighChecked = PriorityNormalChecked = PriorityLowChecked = false;
             }
+
+            UpdateVideoSeparators();
+        }
+
+        /// <summary>
+        /// 動画コンテキストメニューの区切り線の表示可否を、各Can*系プロパティ確定後に計算する。
+        /// メニューは5つのグループで構成され、区切り線Nは「Nより上に表示中のグループが1つ以上あり」
+        /// かつ「直後のグループも表示される」場合にのみ出す(先頭の線・連続した線を出さないため)。
+        ///   G1 再生/フォルダを開く/ダウンロード/キャンセル (状況に応じた一次アクション)
+        ///   G2 失敗を再試行/再ダウンロード/情報再取得/ファイル存在チェック/マップ/優先度 (メンテ操作)
+        ///   G3 ページを開く/投稿者のページを開く/各種コピー (コピー3項目は無条件表示なので常にtrue)
+        ///   G4 お気に入り/詳細情報
+        ///   G5 削除、または除外ノードの復元/完全に削除
+        /// </summary>
+        private void UpdateVideoSeparators()
+        {
+            bool g1 = CanPlaySelectedVideo || CanOpenFolderSelectedVideo
+                      || CanDownloadSelectedVideo || CanCancelSelectedVideo;
+            bool g2 = CanRetryFailedSelectedVideo || CanReDownloadSelectedVideo
+                      || CanRefreshInfoSelectedVideo || CanCheckFileExistsSelectedVideo
+                      || CanMapLocalFileSelectedVideo || CanChangeVideoPriority;
+            bool g3 = true;
+            bool g4 = IsNormalNodeSelected || CanShowVideoDetails;
+            bool g5 = IsNormalNodeSelected || IsExcludedNodeSelected;
+
+            ShowVideoSeparator1 = g1 && g2;
+            ShowVideoSeparator2 = (g1 || g2) && g3;
+            ShowVideoSeparator3 = (g1 || g2 || g3) && g4;
+            ShowVideoSeparator4 = (g1 || g2 || g3 || g4) && g5;
         }
 
         [RelayCommand]
