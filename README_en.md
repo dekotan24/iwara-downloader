@@ -15,7 +15,7 @@ Subscribe to a channel and new uploads are saved automatically. Watch them from 
 
 [日本語](README.md) · [Download](https://github.com/dekotan24/iwara-downloader/releases)
 
-<img width="1000" alt="screenshot" src="https://github.com/user-attachments/assets/de36894c-65e9-41af-b150-e65c7ff4a8bf" />
+<img width="1186" height="743" alt="screenshot" src="https://github.com/user-attachments/assets/8686f4d7-6107-4843-9597-24da7beefc1c" />
 
 </div>
 
