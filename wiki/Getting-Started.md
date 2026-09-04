@@ -6,7 +6,7 @@
 2. 任意のフォルダに展開
 3. `IwaraDownloader.exe` を実行
 
-[.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) が必要です。未インストールの場合はインストールしてください。
+[.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要です。未インストールの場合はインストールしてください。
 
 ## 初回セットアップウィザード
 

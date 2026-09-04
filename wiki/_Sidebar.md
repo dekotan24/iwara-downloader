@@ -6,6 +6,7 @@
 - [検索・フィルタ](Search-and-Filter)
 - [コレクション管理](Collection-Management)
 - [Web メディアサーバー](Web-Media-Server)
+- [DB 操作ツール](Database-Tool)
 - [設定一覧](Settings)
 - [トラブルシューティング](Troubleshooting)
 - [ソースからビルド](Building-from-Source)
