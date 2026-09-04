@@ -37,6 +37,13 @@ namespace IwaraDownloader.Services
         private readonly SemaphoreSlim _slotAvailableSignal = new SemaphoreSlim(0, int.MaxValue);
         private readonly System.Timers.Timer _autoCheckTimer;
         private CancellationTokenSource? _globalCts;
+
+        /// <summary>
+        /// アプリ終了処理中か。Stop() が _globalCts を Cancel した後だけ true になる。
+        /// Stop() の呼び出し元は終了時の後始末のみで、「全て停止」ボタンは
+        /// CancelAllTasks を通るため、利用者の停止操作とは区別できる。
+        /// </summary>
+        private bool IsShuttingDown => _globalCts?.IsCancellationRequested == true;
         private bool _isRunning;
         private int _isProcessingQueue; // 0=idle, 1=running (Interlocked で更新)
 
@@ -1159,6 +1166,10 @@ namespace IwaraDownloader.Services
             }
             catch (OperationCanceledException)
             {
+                // 「利用者がこのタスクを止めた」のか「巻き添えで止まった」のかでステータスを変える。
+                // Paused は起動時レジュームの対象外 (ResumeIncompleteDownloadsCore は
+                // Downloading→Pending の降格と Pending の再開しか行わない) なので、
+                // 巻き添えキャンセルを Paused で保存すると手動で再開するまで取り残される。
                 if (task.SuspendedForLogin)
                 {
                     // ログイン必要による巻き添えキャンセル: Paused にすると ResumeAfterLogin
@@ -1167,8 +1178,21 @@ namespace IwaraDownloader.Services
                     task.Status = DownloadStatus.Pending;
                     task.Video.Status = DownloadStatus.Pending;
                 }
+                else if (IsShuttingDown)
+                {
+                    // アプリ終了に巻き込まれたキャンセル。利用者が止めたわけではないので
+                    // Pending で保存し、次回起動時のレジュームに乗せる。
+                    // ここを Paused にすると「タスクマネージャで強制終了すると
+                    // Downloading のまま残って Downloading→Pending で回収されるのに、
+                    // 行儀よく終了したときだけ再開されない」という逆転が起きる。
+                    _logger.Info($"Download interrupted by shutdown: {task.Video.Title}");
+                    task.Status = DownloadStatus.Pending;
+                    task.Video.Status = DownloadStatus.Pending;
+                }
                 else
                 {
+                    // 利用者による明示的な停止 (タスクのキャンセル / 全て停止)。
+                    // 意図した一時停止なので Paused のまま残す。
                     _logger.Info($"Download cancelled: {task.Video.Title}");
                     task.Status = DownloadStatus.Paused;
                     task.Video.Status = DownloadStatus.Paused;
