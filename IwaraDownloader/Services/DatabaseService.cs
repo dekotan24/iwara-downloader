@@ -1619,11 +1619,17 @@ namespace IwaraDownloader.Services
 
             try
             {
+                // インポートされた動画は除外(ゴミ箱)から出す = 不変条件を維持。
+                // DELETE と INSERT を同一コマンドにまとめると ExecuteNonQuery() が両方の
+                // 変更行数を合算して返し、挿入件数と一致しなくなるためコマンドを分ける。
+                var unexcludeCommand = connection.CreateCommand();
+                unexcludeCommand.Transaction = transaction;
+                unexcludeCommand.CommandText = "DELETE FROM ExcludedVideos WHERE VideoId = @VideoId";
+                var pUnexcludeVideoId = unexcludeCommand.Parameters.Add("@VideoId", SqliteType.Text);
+
                 var command = connection.CreateCommand();
                 command.Transaction = transaction;
-                // インポートされた動画は除外(ゴミ箱)から出す = 不変条件を維持。
                 command.CommandText = @"
-                    DELETE FROM ExcludedVideos WHERE VideoId = @VideoId;
                     INSERT OR IGNORE INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
                         DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
                         RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson, Priority)
@@ -1663,6 +1669,9 @@ namespace IwaraDownloader.Services
 
                 foreach (var video in videos)
                 {
+                    pUnexcludeVideoId.Value = video.VideoId;
+                    unexcludeCommand.ExecuteNonQuery();
+
                     pVideoId.Value = video.VideoId;
                     pTitle.Value = video.Title;
                     pUrl.Value = video.Url;
