@@ -59,3 +59,6 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Rust移行PoC(中止)の残骸
+/tools/iwara-rust-poc/
