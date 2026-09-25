@@ -1598,24 +1598,12 @@ namespace IwaraDownloader.Wpf.ViewModels
                 System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
             if (result != System.Windows.MessageBoxResult.Yes) return;
 
+            // 同じローカルパスを複数の動画行が参照している場合、別の行のファイルを壊さない。
+            _downloadManager.DeleteLocalVideoFiles(videos);
+
             int requeuedCount = 0;
             foreach (var video in videos)
             {
-                if (!string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
-                {
-                    try { File.Delete(video.LocalFilePath); } catch { /* 削除失敗してもDBリセットは続行 */ }
-                }
-                if (!string.IsNullOrEmpty(video.LocalFilePath))
-                {
-                    var metaPath = Path.ChangeExtension(video.LocalFilePath, ".json");
-                    if (File.Exists(metaPath))
-                    {
-                        try { File.Delete(metaPath); } catch { }
-                    }
-                    var dir = Path.GetDirectoryName(video.LocalFilePath);
-                    if (!string.IsNullOrEmpty(dir)) IndexCacheService.Invalidate(dir);
-                }
-
                 video.LocalFilePath = string.Empty;
                 video.FileSize = 0;
                 video.Status = DownloadStatus.Pending;
@@ -1647,10 +1635,10 @@ namespace IwaraDownloader.Wpf.ViewModels
                 System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
             if (result != System.Windows.MessageBoxResult.Yes) return;
 
-            int deleted = _database.DeleteExcludedPermanent(videos.Select(v => v.VideoId));
+            var deletion = _downloadManager.PermanentlyDeleteExcludedVideos(videos);
             RefreshTree();
             LoadVideos();
-            StatusMessage = L.T("MainForm_PurgedStatus", deleted);
+            StatusMessage = L.T("MainForm_PurgedStatus", deletion.VideoCount);
         }
 
         #endregion

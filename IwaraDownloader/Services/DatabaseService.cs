@@ -1565,26 +1565,38 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 指定したローカルパスをVideosまたはExcludedVideosの別動画が参照しているか確認する。
-        /// チャンネル削除時に共有ファイルを誤って消さないために使う。
+        /// 指定したローカルパスをVideosまたはExcludedVideosの動画が参照しているか確認する。
+        /// excludedVideoIds に指定した動画は、削除・再DL対象として無視する。
+        /// 共有ファイルを誤って消さないために使う。
         /// </summary>
-        public bool IsLocalFileReferenced(string localFilePath)
+        public bool IsLocalFileReferenced(string localFilePath, IEnumerable<string>? excludedVideoIds = null)
         {
             if (string.IsNullOrWhiteSpace(localFilePath)) return false;
+
+            var excluded = excludedVideoIds?
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.Ordinal)
+                ?? new HashSet<string>(StringComparer.Ordinal);
 
             using var connection = OpenConnection();
             using var command = connection.CreateCommand();
             command.CommandText = @"
-                SELECT EXISTS(
-                    SELECT 1 FROM Videos
-                    WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
-                    UNION ALL
-                    SELECT 1 FROM ExcludedVideos
-                    WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
-                )
+                SELECT VideoId FROM Videos
+                WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
+                UNION ALL
+                SELECT VideoId FROM ExcludedVideos
+                WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
             ";
             command.Parameters.AddWithValue("@LocalFilePath", localFilePath);
-            return Convert.ToInt32(command.ExecuteScalar()) != 0;
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (!excluded.Contains(reader.GetString(0)))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -428,6 +428,69 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 動画に紐付くローカル動画とサイドカーJSONを安全に削除する。
+        /// 対象動画以外の行が同じパスを参照している場合は、共有ファイルを残す。
+        /// </summary>
+        public (int DeletedFileCount, int FailedFileCount) DeleteLocalVideoFiles(IEnumerable<VideoInfo> videos)
+        {
+            var list = videos?.Where(v => v != null).ToList() ?? new List<VideoInfo>();
+            if (list.Count == 0) return (0, 0);
+
+            // DB上の対象行自身は、除外・完全削除・再ダウンロードのいずれでも
+            // 「この処理で片付ける行」なので参照元として数えない。
+            var targetVideoIds = list
+                .Select(v => v.VideoId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.Ordinal);
+            var paths = list
+                .Select(v => v.LocalFilePath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            int deletedFileCount = 0;
+            int failedFileCount = 0;
+            foreach (var path in paths)
+            {
+                if (_database.IsLocalFileReferenced(path, targetVideoIds))
+                {
+                    _logger.Warn($"Keeping shared local file: {path}");
+                    continue;
+                }
+
+                var metadataPath = Path.ChangeExtension(path, ".json");
+                var fileExisted = File.Exists(path);
+                var metadataExisted = File.Exists(metadataPath);
+
+                if (fileExisted)
+                {
+                    if (TryDelete(path))
+                        deletedFileCount++;
+                    else
+                    {
+                        failedFileCount++;
+                        _logger.Warn($"Local file delete failed: {path}");
+                    }
+                }
+
+                if (metadataExisted && !TryDelete(metadataPath))
+                {
+                    failedFileCount++;
+                    _logger.Warn($"Metadata file delete failed: {metadataPath}");
+                }
+
+                if (fileExisted || metadataExisted)
+                {
+                    var directory = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(directory))
+                        IndexCacheService.Invalidate(directory);
+                }
+            }
+
+            return (deletedFileCount, failedFileCount);
+        }
+
+        /// <summary>
         /// 未DL(Pending)の動画の優先度を一括変更する。Downloading/Completed等は対象外
         /// (優先度はキュー待ちの並び順にしか意味を持たないため)。
         /// DBの永続値(video.Priority)と、生きているpendingタスク(あれば)のPriorityの両方を更新する。
@@ -513,27 +576,10 @@ namespace IwaraDownloader.Services
             int moved = _database.MoveVideosToExcluded(list.Select(v => v.Id));
 
             // 3) DL 完了済みのローカルファイルを削除 (ベストエフォート、失敗はログのみ)。
-            //    DB 移動成功後に行う。ファイル削除が失敗しても除外自体は成立している。
-            foreach (var v in list)
-            {
-                if (string.IsNullOrEmpty(v.LocalFilePath) || !File.Exists(v.LocalFilePath)) continue;
-
-                try { File.Delete(v.LocalFilePath); }
-                catch (Exception ex) { _logger.Warn($"Exclude: file delete failed {v.LocalFilePath}: {ex.Message}"); }
-
-                // サイドカー .json も削除
-                var metaPath = Path.ChangeExtension(v.LocalFilePath, ".json");
-                if (File.Exists(metaPath))
-                {
-                    try { File.Delete(metaPath); } catch { }
-                }
-                // インデックスキャッシュを無効化 (UUID マップから外す)
-                var dir = Path.GetDirectoryName(v.LocalFilePath);
-                if (!string.IsNullOrEmpty(dir))
-                    IndexCacheService.Invalidate(dir);
-            }
-
-            _logger.Info($"Excluded {moved} video(s) to bin");
+            //    DB 移動成功後に行う。共有パスは別の動画を壊さないよう残す。
+            var fileDeletion = DeleteLocalVideoFiles(list);
+            _logger.Info($"Excluded {moved} video(s) to bin " +
+                         $"(files={fileDeletion.DeletedFileCount}, failedFiles={fileDeletion.FailedFileCount})");
             return moved;
         }
 
@@ -556,50 +602,11 @@ namespace IwaraDownloader.Services
             // スナップショット取得とDB削除の間に投入されたタスクも止める。
             CancelTasksForVideos(deletedVideos);
 
-            var paths = deletedVideos
-                .Select(v => v.LocalFilePath)
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            int deletedFileCount = 0;
-            int failedFileCount = 0;
-            foreach (var path in paths)
-            {
-                // 単発登録・別チャンネル・ゴミ箱側の行が同じ実体を参照している場合、
-                // その動画のファイルまで消すと別の登録を壊すため残す。
-                if (_database.IsLocalFileReferenced(path))
-                {
-                    _logger.Warn($"Channel delete: keeping shared local file {path}");
-                    continue;
-                }
-
-                var metadataPath = Path.ChangeExtension(path, ".json");
-                var fileExisted = File.Exists(path);
-                var metadataExisted = File.Exists(metadataPath);
-
-                if (fileExisted)
-                {
-                    if (TryDelete(path))
-                        deletedFileCount++;
-                    else
-                        failedFileCount++;
-                }
-
-                if (metadataExisted && !TryDelete(metadataPath))
-                    failedFileCount++;
-
-                if (fileExisted || metadataExisted)
-                {
-                    var directory = Path.GetDirectoryName(path);
-                    if (!string.IsNullOrEmpty(directory))
-                        IndexCacheService.Invalidate(directory);
-                }
-            }
+            var fileDeletion = DeleteLocalVideoFiles(deletedVideos);
 
             _logger.Info($"Deleted channel {user.Username}: videos={deletedVideos.Count}, " +
-                         $"files={deletedFileCount}, failedFiles={failedFileCount}");
-            return (deletedVideos.Count, deletedFileCount, failedFileCount);
+                         $"files={fileDeletion.DeletedFileCount}, failedFiles={fileDeletion.FailedFileCount}");
+            return (deletedVideos.Count, fileDeletion.DeletedFileCount, fileDeletion.FailedFileCount);
 
             void CancelTasksForVideos(IEnumerable<VideoInfo> videos)
             {
@@ -613,6 +620,24 @@ namespace IwaraDownloader.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 除外(ゴミ箱)から動画を完全に削除し、残っているローカルファイルも片付ける。
+        /// </summary>
+        public (int VideoCount, int DeletedFileCount, int FailedFileCount)
+            PermanentlyDeleteExcludedVideos(IEnumerable<VideoInfo> videos)
+        {
+            var list = videos?.Where(v => v != null).ToList() ?? new List<VideoInfo>();
+            if (list.Count == 0) return (0, 0, 0);
+
+            var deleted = _database.DeleteExcludedPermanent(list.Select(v => v.VideoId));
+            if (deleted == 0) return (0, 0, 0);
+
+            var fileDeletion = DeleteLocalVideoFiles(list);
+            _logger.Info($"Permanently deleted {deleted} excluded video(s) " +
+                         $"(files={fileDeletion.DeletedFileCount}, failedFiles={fileDeletion.FailedFileCount})");
+            return (deleted, fileDeletion.DeletedFileCount, fileDeletion.FailedFileCount);
         }
 
         /// <summary>
@@ -1298,18 +1323,10 @@ namespace IwaraDownloader.Services
                     {
                         _logger.Info($"Download finished after exclude, discarding orphaned file: {video.Title} ({outputPath})");
 
-                        try { File.Delete(outputPath); }
-                        catch (Exception ex) { _logger.Warn($"Exclude race: file delete failed {outputPath}: {ex.Message}"); }
-
-                        var metaPath = Path.ChangeExtension(outputPath, ".json");
-                        if (File.Exists(metaPath))
-                        {
-                            try { File.Delete(metaPath); } catch { }
-                        }
-
-                        var outDir = Path.GetDirectoryName(outputPath);
-                        if (!string.IsNullOrEmpty(outDir))
-                            IndexCacheService.Invalidate(outDir);
+                        // 別の動画行が同じパスを参照している可能性があるため、
+                        // 除外処理・再DL処理と同じ共有ファイル保護を通す。
+                        video.LocalFilePath = outputPath;
+                        DeleteLocalVideoFiles(new[] { video });
 
                         task.Status = DownloadStatus.Paused;
                         TaskStatusChanged?.Invoke(this, task);
