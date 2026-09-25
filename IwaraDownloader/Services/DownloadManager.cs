@@ -538,6 +538,84 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 購読チャンネルと、そのチャンネルに紐付く動画を完全に削除する。
+        /// 購読の無効化(DisableChannel)とは異なり、動画レコードとローカル動画ファイルも削除する。
+        /// </summary>
+        /// <returns>(削除動画数、削除したローカル動画ファイル数、削除に失敗したファイル数)</returns>
+        public (int VideoCount, int LocalFileCount, int FailedFileCount) DeleteSubscribedUserAndVideos(SubscribedUser user)
+        {
+            if (user == null) return (0, 0, 0);
+
+            // DB削除より先に、既にキューへ入っている動画を止める。
+            // 取得ワーカーとの競合はDB側の同一トランザクションで封じる。
+            var currentVideos = _database.GetVideosBySubscribedUser(user.Id);
+            CancelTasksForVideos(currentVideos);
+
+            var deletedVideos = _database.DeleteSubscribedUserAndVideos(user.Id);
+
+            // スナップショット取得とDB削除の間に投入されたタスクも止める。
+            CancelTasksForVideos(deletedVideos);
+
+            var paths = deletedVideos
+                .Select(v => v.LocalFilePath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            int deletedFileCount = 0;
+            int failedFileCount = 0;
+            foreach (var path in paths)
+            {
+                // 単発登録・別チャンネル・ゴミ箱側の行が同じ実体を参照している場合、
+                // その動画のファイルまで消すと別の登録を壊すため残す。
+                if (_database.IsLocalFileReferenced(path))
+                {
+                    _logger.Warn($"Channel delete: keeping shared local file {path}");
+                    continue;
+                }
+
+                var metadataPath = Path.ChangeExtension(path, ".json");
+                var fileExisted = File.Exists(path);
+                var metadataExisted = File.Exists(metadataPath);
+
+                if (fileExisted)
+                {
+                    if (TryDelete(path))
+                        deletedFileCount++;
+                    else
+                        failedFileCount++;
+                }
+
+                if (metadataExisted && !TryDelete(metadataPath))
+                    failedFileCount++;
+
+                if (fileExisted || metadataExisted)
+                {
+                    var directory = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(directory))
+                        IndexCacheService.Invalidate(directory);
+                }
+            }
+
+            _logger.Info($"Deleted channel {user.Username}: videos={deletedVideos.Count}, " +
+                         $"files={deletedFileCount}, failedFiles={failedFileCount}");
+            return (deletedVideos.Count, deletedFileCount, failedFileCount);
+
+            void CancelTasksForVideos(IEnumerable<VideoInfo> videos)
+            {
+                foreach (var video in videos)
+                {
+                    if (GetTask(video.VideoId) == null) continue;
+                    try { CancelTask(video.VideoId); }
+                    catch (Exception ex)
+                    {
+                        _logger.Debug($"Channel delete: cancel failed {video.VideoId}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// 除外(ゴミ箱)から動画を復元する。DB を ExcludedVideos → Videos へ戻す。
         /// ローカルファイルは除外時に削除済みのため:
         ///   - 完了扱いだったのにファイルが無いもの → Pending にリセットして再DLキューへ
@@ -1018,6 +1096,17 @@ namespace IwaraDownloader.Services
                 // 念のためのフォールバックとして無ければここで生成する(既存があれば使い回すことで、
                 // デキュー前にCancelTaskが要求したキャンセルを取りこぼさないようにする)。
                 task.CancellationTokenSource ??= new CancellationTokenSource();
+
+                // チャンネル削除と取得完了後のEnqueueDownloadが競合すると、削除済みの
+                // VideoInfoを使った古いタスクがここまで到達することがある。DBに行が無い
+                // タスクは開始せず、削除操作後に動画を再DLしないようにする。
+                if (_database.GetVideoByVideoId(task.Video.VideoId) == null)
+                {
+                    _logger.Info($"Skipping download for deleted video: {task.Video.Title}");
+                    task.Status = DownloadStatus.Paused;
+                    return;
+                }
+
                 task.Status = DownloadStatus.Downloading;
                 task.StartedAt = DateTime.Now;
 

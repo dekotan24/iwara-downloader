@@ -1238,7 +1238,9 @@ videoId 后导入数据库。
     <value>已将 {0} 的外部视频下载设置更改为「{1}」</value>
   </data>
   <data name="MainForm_D102" xml:space="preserve">
-    <value>将「{0}」从订阅列表中删除吗？</value>
+    <value>要从订阅列表中删除「{0}」吗？
+同时会永久删除 {1} 个已注册视频和 {2} 个本地视频文件。
+此操作无法撤销。</value>
   </data>
   <data name="MainForm_D103" xml:space="preserve">
     <value>确认</value>
@@ -1543,6 +1545,12 @@ videoId 后导入数据库。
   <data name="MainForm_D203" xml:space="preserve">
     <value>已将 {0} 的全部视频重新获取加入队列</value>
   </data>
+  <data name="MainForm_D204" xml:space="preserve">
+    <value>已删除「{0}」（视频：{1}，本地文件：{2}）</value>
+  </data>
+  <data name="MainForm_D205" xml:space="preserve">
+    <value>已删除「{0}」（视频：{1}，本地文件：{2}）。无法删除的文件：{3}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1801,7 +1809,7 @@ videoId 后导入数据库。
     <value>默认优先级</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
-    <value>删除</value>
+    <value>删除订阅和视频</value>
   </data>
   <data name="MainForm_menuChDeleteNotFound" xml:space="preserve">
     <value>排除 Not Found</value>

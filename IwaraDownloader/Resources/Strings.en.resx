@@ -1238,7 +1238,9 @@ Downloaded files will be deleted (restorable later)</value>
     <value>External video DL setting for {0} changed to "{1}"</value>
   </data>
   <data name="MainForm_D102" xml:space="preserve">
-    <value>Remove "{0}" from your subscriptions?</value>
+    <value>Remove "{0}" from your subscriptions?
+This will also permanently delete {1} registered videos and {2} local video files.
+This action cannot be undone.</value>
   </data>
   <data name="MainForm_D103" xml:space="preserve">
     <value>Confirm</value>
@@ -1543,6 +1545,12 @@ Please check that the build completed correctly.</value>
   <data name="MainForm_D203" xml:space="preserve">
     <value>Queued a full refetch of all videos on {0}</value>
   </data>
+  <data name="MainForm_D204" xml:space="preserve">
+    <value>Removed "{0}" (videos: {1}, local files: {2})</value>
+  </data>
+  <data name="MainForm_D205" xml:space="preserve">
+    <value>Removed "{0}" (videos: {1}, local files: {2}). Files that could not be deleted: {3}</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>Excluded (Bin)</value>
   </data>
@@ -1801,7 +1809,7 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>Default priority</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
-    <value>Delete</value>
+    <value>Delete subscription and videos</value>
   </data>
   <data name="MainForm_menuChDeleteNotFound" xml:space="preserve">
     <value>Remove Not Found</value>

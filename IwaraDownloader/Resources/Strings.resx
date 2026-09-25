@@ -1242,7 +1242,9 @@ DL済みのファイルは削除されます（後で復元できます）</valu
     <value>{0} のiwara外動画DL設定を「{1}」に変更しました</value>
   </data>
   <data name="MainForm_D102" xml:space="preserve">
-    <value>「{0}」を購読リストから削除しますか？</value>
+    <value>「{0}」を購読リストから削除しますか？
+登録動画 {1} 件と、存在するローカル動画ファイル {2} 件も削除されます。
+この操作は元に戻せません。</value>
   </data>
   <data name="MainForm_D103" xml:space="preserve">
     <value>確認</value>
@@ -1547,6 +1549,12 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
   <data name="MainForm_D203" xml:space="preserve">
     <value>{0} の全動画の再取得をキューに登録しました</value>
   </data>
+  <data name="MainForm_D204" xml:space="preserve">
+    <value>「{0}」を削除しました（動画 {1} 件、ローカルファイル {2} 件）</value>
+  </data>
+  <data name="MainForm_D205" xml:space="preserve">
+    <value>「{0}」を削除しました（動画 {1} 件、ローカルファイル {2} 件）。削除できなかったファイル: {3} 件</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>除外済み（ゴミ箱）</value>
   </data>
@@ -1805,7 +1813,7 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
     <value>既定の優先度</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
-    <value>削除</value>
+    <value>購読と動画を削除</value>
   </data>
   <data name="MainForm_menuChDeleteNotFound" xml:space="preserve">
     <value>Not Found を除外</value>

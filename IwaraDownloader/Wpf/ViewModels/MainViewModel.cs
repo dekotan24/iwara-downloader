@@ -2031,13 +2031,26 @@ namespace IwaraDownloader.Wpf.ViewModels
             var user = SelectedTreeNode?.Channel;
             if (user == null) return;
 
+            var videos = _database.GetVideosBySubscribedUser(user.Id);
+            var localFileCount = videos
+                .Select(v => v.LocalFilePath)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(File.Exists);
+
             var result = System.Windows.MessageBox.Show(
-                L.T("MainForm_D102", user.Username), L.T("MainForm_D103"),
-                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                L.T("MainForm_D102", user.Username, videos.Count, localFileCount), L.T("MainForm_D103"),
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
             if (result != System.Windows.MessageBoxResult.Yes) return;
 
-            _database.DeleteSubscribedUser(user.Id);
+            var deletion = _downloadManager.DeleteSubscribedUserAndVideos(user);
             RefreshTree();
+            LoadVideos();
+            RefreshDownloadCount();
+            StatusMessage = deletion.FailedFileCount == 0
+                ? L.T("MainForm_D204", user.Username, deletion.VideoCount, deletion.LocalFileCount)
+                : L.T("MainForm_D205", user.Username, deletion.VideoCount, deletion.LocalFileCount,
+                    deletion.FailedFileCount);
         }
 
         private System.Windows.Forms.IWin32Window GetOwnerWin32Window() => OwnerWindow != null

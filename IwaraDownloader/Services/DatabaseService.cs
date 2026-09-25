@@ -622,6 +622,68 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 購読ユーザーと、そのユーザーに紐付く動画を完全に削除する。
+        /// Videos と SubscribedUsers の削除を同一トランザクションで行うため、
+        /// チャンネル取得処理と競合しても「購読だけ消えて動画が残る」状態を作らない。
+        /// 除外(ゴミ箱)に入っている同ユーザーの動画も、購読削除に合わせて削除する。
+        /// </summary>
+        public List<VideoInfo> DeleteSubscribedUserAndVideos(int id)
+        {
+            var videos = new List<VideoInfo>();
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                foreach (var table in new[] { "Videos", "ExcludedVideos" })
+                {
+                    using var selectCommand = connection.CreateCommand();
+                    selectCommand.Transaction = transaction;
+                    selectCommand.CommandText = $"SELECT * FROM {table} WHERE SubscribedUserId = @SubscribedUserId";
+                    selectCommand.Parameters.AddWithValue("@SubscribedUserId", id);
+                    using var reader = selectCommand.ExecuteReader();
+                    while (reader.Read())
+                        videos.Add(ReadVideo(reader));
+                }
+
+                // Videosを先に消す。SubscribedUsersを先に消すとON DELETE SET NULLが働き、
+                // どの動画をこのチャンネルと一緒に削除すべきか判別できなくなる。
+                using (var deleteVideos = connection.CreateCommand())
+                {
+                    deleteVideos.Transaction = transaction;
+                    deleteVideos.CommandText = "DELETE FROM Videos WHERE SubscribedUserId = @SubscribedUserId";
+                    deleteVideos.Parameters.AddWithValue("@SubscribedUserId", id);
+                    deleteVideos.ExecuteNonQuery();
+                }
+
+                using (var deleteExcluded = connection.CreateCommand())
+                {
+                    deleteExcluded.Transaction = transaction;
+                    deleteExcluded.CommandText = "DELETE FROM ExcludedVideos WHERE SubscribedUserId = @SubscribedUserId";
+                    deleteExcluded.Parameters.AddWithValue("@SubscribedUserId", id);
+                    deleteExcluded.ExecuteNonQuery();
+                }
+
+                using (var deleteUser = connection.CreateCommand())
+                {
+                    deleteUser.Transaction = transaction;
+                    deleteUser.CommandText = "DELETE FROM SubscribedUsers WHERE Id = @Id";
+                    deleteUser.Parameters.AddWithValue("@Id", id);
+                    deleteUser.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+
+            return videos;
+        }
+
+        /// <summary>
         /// 全ての購読ユーザーを取得
         /// </summary>
         public List<SubscribedUser> GetAllSubscribedUsers()
@@ -1500,6 +1562,29 @@ namespace IwaraDownloader.Services
 
             using var reader = command.ExecuteReader();
             return reader.Read() ? ReadVideo(reader) : null;
+        }
+
+        /// <summary>
+        /// 指定したローカルパスをVideosまたはExcludedVideosの別動画が参照しているか確認する。
+        /// チャンネル削除時に共有ファイルを誤って消さないために使う。
+        /// </summary>
+        public bool IsLocalFileReferenced(string localFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(localFilePath)) return false;
+
+            using var connection = OpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT EXISTS(
+                    SELECT 1 FROM Videos
+                    WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
+                    UNION ALL
+                    SELECT 1 FROM ExcludedVideos
+                    WHERE LocalFilePath = @LocalFilePath COLLATE NOCASE
+                )
+            ";
+            command.Parameters.AddWithValue("@LocalFilePath", localFilePath);
+            return Convert.ToInt32(command.ExecuteScalar()) != 0;
         }
 
         /// <summary>
