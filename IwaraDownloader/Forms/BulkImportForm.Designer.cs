@@ -27,7 +27,6 @@ namespace IwaraDownloader.Forms
             this.btnImport = new Button();
             this.btnCancel = new Button();
             this.lblHelp = new Label();
-            this.chkImmediateDownload = new CheckBox();
             this.SuspendLayout();
 
             // 
@@ -113,18 +112,6 @@ namespace IwaraDownloader.Forms
             this.lblHelp.Text = "※ 対応形式: 動画URL / チャンネル(プロフィール)URL / VideoIdのみ (iwara.tv・iwara.ai 両対応)\n※ 重複URLは自動でスキップされます";
 
             //
-            // chkImmediateDownload
-            //
-            this.chkImmediateDownload.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            this.chkImmediateDownload.AutoSize = true;
-            this.chkImmediateDownload.Location = new Point(12, 394);
-            this.chkImmediateDownload.Name = "chkImmediateDownload";
-            this.chkImmediateDownload.Size = new Size(300, 19);
-            this.chkImmediateDownload.TabIndex = 8;
-            this.chkImmediateDownload.Text = "チャンネルの動画を今すぐダウンロード開始する";
-            this.chkImmediateDownload.UseVisualStyleBackColor = true;
-
-            //
             // progressBar
             //
             this.progressBar.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
@@ -173,7 +160,6 @@ namespace IwaraDownloader.Forms
             this.Controls.Add(this.btnClear);
             this.Controls.Add(this.lblStats);
             this.Controls.Add(this.lblHelp);
-            this.Controls.Add(this.chkImmediateDownload);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.btnImport);
             this.Controls.Add(this.btnCancel);
@@ -201,6 +187,5 @@ namespace IwaraDownloader.Forms
         private ProgressBar progressBar;
         private Button btnImport;
         private Button btnCancel;
-        private CheckBox chkImmediateDownload;
     }
 }

@@ -38,7 +38,6 @@
   "BulkImportForm_btnImport": "导入",
   "BulkImportForm_btnLoadFile": "从文件",
   "BulkImportForm_btnPaste": "从剪贴板",
-  "BulkImportForm_chkImmediateDownload": "立即开始下载频道的视频",
   "BulkImportForm_lblDescription": "请输入 iwara.tv / iwara.ai 的视频或频道URL（每行一个URL）",
   "BulkImportForm_lblHelp": "* 支持格式：视频URL / 频道（个人资料）URL / 纯VideoId（iwara.tv 和 iwara.ai 均支持）\n* 重复的URL会自动跳过",
   "BulkImportForm_lblStats": "检测到的URL：0个",

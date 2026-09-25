@@ -149,9 +149,6 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>从剪贴板</value>
   </data>
-  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
-    <value>立即开始下载频道的视频</value>
-  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>请输入 iwara.tv / iwara.ai 的视频或频道URL（每行一个URL）</value>
   </data>

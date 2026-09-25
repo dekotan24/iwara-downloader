@@ -901,6 +901,29 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// 既存動画の作者チャンネル所属だけを更新する。
+        /// DownloadManager が保持する最新のステータスやローカルファイル情報を、
+        /// 古い VideoInfo スナップショットで上書きしないための限定更新。
+        /// </summary>
+        public bool UpdateVideoChannelAssignment(int videoId, string authorUserId, int subscribedUserId)
+        {
+            if (videoId <= 0 || subscribedUserId <= 0) return false;
+
+            using var connection = OpenConnection();
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                UPDATE Videos SET
+                    AuthorUserId = @AuthorUserId,
+                    SubscribedUserId = @SubscribedUserId
+                WHERE Id = @Id
+            ";
+            command.Parameters.AddWithValue("@AuthorUserId", authorUserId ?? "");
+            command.Parameters.AddWithValue("@SubscribedUserId", subscribedUserId);
+            command.Parameters.AddWithValue("@Id", videoId);
+            return command.ExecuteNonQuery() == 1;
+        }
+
+        /// <summary>
         /// タグ・メモ・お気に入りだけを更新する(VideoDetailsFormの保存用)。
         /// UpdateVideo(全カラムUPDATE)を使うと、フォームを開いた時点のVideoInfoスナップショットの
         /// Status/LocalFilePath等(古い値)で、その間にバックグラウンドDLスレッドが書き込んだ

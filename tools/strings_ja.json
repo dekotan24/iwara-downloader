@@ -38,7 +38,6 @@
   "BulkImportForm_btnImport": "インポート",
   "BulkImportForm_btnLoadFile": "ファイルから",
   "BulkImportForm_btnPaste": "クリップボードから",
-  "BulkImportForm_chkImmediateDownload": "チャンネルの動画を今すぐダウンロード開始する",
   "BulkImportForm_lblDescription": "iwara.tv / iwara.ai の動画・チャンネルURLを入力してください(1行に1URL)",
   "BulkImportForm_lblHelp": "※ 対応形式: 動画URL / チャンネル(プロフィール)URL / VideoIdのみ (iwara.tv・iwara.ai 両対応)\n※ 重複URLは自動でスキップされます",
   "BulkImportForm_lblStats": "検出されたURL: 0件",

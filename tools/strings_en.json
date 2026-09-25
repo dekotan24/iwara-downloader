@@ -38,7 +38,6 @@
   "BulkImportForm_btnImport": "Import",
   "BulkImportForm_btnLoadFile": "From File",
   "BulkImportForm_btnPaste": "From Clipboard",
-  "BulkImportForm_chkImmediateDownload": "Start downloading channel videos immediately",
   "BulkImportForm_lblDescription": "Enter iwara.tv / iwara.ai video or channel URLs (one URL per line)",
   "BulkImportForm_lblHelp": "* Supported: video URLs / channel (profile) URLs / bare VideoIds (both iwara.tv and iwara.ai)\n* Duplicate URLs are skipped automatically",
   "BulkImportForm_lblStats": "URLs detected: 0",

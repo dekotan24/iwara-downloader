@@ -35,8 +35,6 @@ namespace IwaraDownloader.Forms
         private void BulkImportForm_Load(object sender, EventArgs e)
         {
             UpdateStats();
-            // 既定値はツールバーの「即DL」トグルに合わせる (この画面限定で上書き可能)
-            chkImmediateDownload.Checked = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
         }
 
         /// <summary>
@@ -246,20 +244,64 @@ namespace IwaraDownloader.Forms
         /// <summary>
         /// 一括追加した動画をダウンロードキューへ投入する。
         /// AddVideosBatch はDBへの保存だけを行い、DownloadManagerのメモリキューは
-        /// 更新しないため、即DLを選んだ場合は保存後に明示的に投入する必要がある。
+        /// 更新しないため、ヘッダの即DL設定が有効な場合は保存後に明示的に投入する必要がある。
         /// </summary>
         private void EnqueueImportedVideos(IEnumerable<VideoInfo> videos)
         {
             if (_downloadManager == null) return;
 
-            foreach (var video in videos)
+            foreach (var importedVideo in videos)
             {
+                // AddVideosBatch は高速化のため VideoInfo.Id を採番して返さない。
+                // DownloadManager.UpdateVideo は Id で更新するため、Bulk Import の新規行は
+                // DBから再読込して通常の単体登録と同じ実体をキューへ渡す。
+                var video = importedVideo.Id > 0
+                    ? importedVideo
+                    : _database.GetVideoByVideoId(importedVideo.VideoId);
+                if (video == null)
+                {
+                    LoggingService.Instance.Warn(
+                        $"一括インポート後の動画再読込に失敗 ({importedVideo.VideoId})");
+                    continue;
+                }
+
                 SubscribedUser? subscribedUser = null;
                 if (video.SubscribedUserId.HasValue)
                     subscribedUser = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
 
                 _downloadManager.EnqueueDownload(
                     video, video.SubscribedUserId.HasValue, subscribedUser);
+            }
+        }
+
+        /// <summary>
+        /// 単発登録と同じく、作者が判明した動画を作者チャンネルへ紐付ける。
+        /// 新規動画は一括INSERT前にフィールドへ反映し、既存動画はチャンネル列だけを
+        /// 限定更新して、ダウンロード中のステータス等を古いスナップショットで上書きしない。
+        /// </summary>
+        private void AssociateVideosWithAuthorChannels(
+            IEnumerable<VideoInfo> videos,
+            IDictionary<string, SubscribedUser> channelCache,
+            bool persistExisting)
+        {
+            foreach (var video in videos)
+            {
+                var author = video.AuthorUsername?.Trim();
+                if (string.IsNullOrEmpty(author)) continue;
+
+                if (!channelCache.TryGetValue(author, out var channel))
+                {
+                    channel = _database.EnsureChannelForAuthor(author, video.Site);
+                    channelCache[author] = channel;
+                }
+
+                var channelChanged = video.SubscribedUserId != channel.Id
+                    || !string.Equals(video.AuthorUserId, channel.UserId, StringComparison.Ordinal);
+                video.AuthorUserId = channel.UserId;
+                video.SubscribedUserId = channel.Id;
+
+                if (persistExisting && video.Id > 0 && channelChanged)
+                    _database.UpdateVideoChannelAssignment(video.Id, channel.UserId, channel.Id);
             }
         }
 
@@ -301,8 +343,11 @@ namespace IwaraDownloader.Forms
             DuplicateCount = 0;
             int addedChannels = 0, channelFailed = 0;
             bool videosPersisted = false;
-            var immediateDownload = chkImmediateDownload.Checked;
+            // Bulk Importも通常の単体登録と同じく、ヘッダの即DL設定だけに従う。
+            var immediateDownload = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
             var videosToEnqueue = new List<VideoInfo>();
+            var existingVideos = new List<VideoInfo>();
+            var channelCache = new Dictionary<string, SubscribedUser>(StringComparer.OrdinalIgnoreCase);
             using var cancellation = new CancellationTokenSource();
             _importCancellation = cancellation;
             _isImporting = true;
@@ -326,13 +371,17 @@ namespace IwaraDownloader.Forms
                         {
                             DuplicateCount++;
 
-                            // 以前の一括登録でDBだけに保存され、キューへ投入されていない
-                            // 動画も、即DLを選んだ再インポートで救済する。
-                            if (immediateDownload && _downloadManager != null)
+                            // 以前の一括登録で作者チャンネルへの紐付けが漏れた動画も、
+                            // 再インポート時に通常登録と同じ所属へ修復する。
+                            var existing = _database.GetVideoByVideoId(v.Id);
+                            if (existing != null)
                             {
-                                var existing = _database.GetVideoByVideoId(v.Id);
-                                if (existing != null && existing.Status != DownloadStatus.Completed)
-                                    videosToEnqueue.Add(existing);
+                                existingVideos.Add(existing);
+                                if (existing.Status != DownloadStatus.Completed)
+                                {
+                                    if (immediateDownload && _downloadManager != null)
+                                        videosToEnqueue.Add(existing);
+                                }
                             }
                         }
                         else
@@ -349,6 +398,10 @@ namespace IwaraDownloader.Forms
                         if (!IsDisposed && !Disposing)
                             progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
                     }
+
+                    // 新規動画・既存動画とも、単体登録と同じく作者チャンネルへ所属させる。
+                    AssociateVideosWithAuthorChannels(ImportedVideos, channelCache, persistExisting: false);
+                    AssociateVideosWithAuthorChannels(existingVideos, channelCache, persistExisting: true);
 
                     if (ImportedVideos.Count > 0)
                     {
@@ -371,7 +424,7 @@ namespace IwaraDownloader.Forms
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        if (_downloadManager.EnqueueSubscribedUser(profileUrl, immediateDownload))
+                        if (_downloadManager.EnqueueSubscribedUser(profileUrl))
                             addedChannels++;
                         else
                             channelFailed++;
@@ -402,6 +455,8 @@ namespace IwaraDownloader.Forms
                 // キャンセル時も、API取得が完了してリストへ追加済みの分は失わない。
                 if (!videosPersisted && ImportedVideos.Count > 0)
                 {
+                    AssociateVideosWithAuthorChannels(ImportedVideos, channelCache, persistExisting: false);
+
                     // キャンセルでキュー投入を省略した分は、Pendingのまま残すと
                     // 次回起動時に意図せず自動DLされるため、明示的に保留へ戻す。
                     if (immediateDownload)

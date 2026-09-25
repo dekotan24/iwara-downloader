@@ -149,9 +149,6 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>クリップボードから</value>
   </data>
-  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
-    <value>チャンネルの動画を今すぐダウンロード開始する</value>
-  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>iwara.tv / iwara.ai の動画・チャンネルURLを入力してください(1行に1URL)</value>
   </data>

@@ -149,9 +149,6 @@ Log in from the settings screen.</value>
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>From Clipboard</value>
   </data>
-  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
-    <value>Start downloading channel videos immediately</value>
-  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>Enter iwara.tv / iwara.ai video or channel URLs (one URL per line)</value>
   </data>
