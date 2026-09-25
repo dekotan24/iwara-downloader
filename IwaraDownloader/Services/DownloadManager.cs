@@ -1881,7 +1881,37 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
-        /// 動画情報を再取得(タイトル等が取れていない場合用)
+        /// APIから取得した動画情報をDBモデルへ反映する。空の項目は既存値を保持する。
+        /// </summary>
+        private static void ApplyVideoInfo(VideoInfo video, IwaraApiService.VideoUrlInfo info)
+        {
+            if (!string.IsNullOrWhiteSpace(info.Title))
+                video.Title = info.Title;
+            if (!string.IsNullOrEmpty(info.Url))
+                video.Url = info.Url;
+            if (!string.IsNullOrEmpty(info.FileUuid))
+                video.FileUuid = info.FileUuid;
+            if (!string.IsNullOrEmpty(info.AuthorUsername))
+                video.AuthorUsername = info.AuthorUsername;
+            if (!string.IsNullOrEmpty(info.Rating))
+                video.Rating = info.Rating;
+            if (!string.IsNullOrEmpty(info.ThumbnailUrl))
+                video.ThumbnailUrl = info.ThumbnailUrl;
+            if (info.DurationSeconds > 0)
+                video.DurationSeconds = info.DurationSeconds;
+            if (!string.IsNullOrEmpty(info.EmbedUrl))
+                video.EmbedUrl = info.EmbedUrl;
+            if (info.PostedAt.HasValue)
+                video.PostedAt = info.PostedAt;
+            if (!string.IsNullOrEmpty(info.ApiRawJson))
+                video.ApiRawJson = info.ApiRawJson;
+            if (!string.IsNullOrEmpty(info.ResolvedSite))
+                video.Site = info.ResolvedSite;
+        }
+
+        /// <summary>
+        /// 動画情報を再取得(タイトル等が取れていない場合用)。
+        /// get_infoだけを使い、ダウンロード用CDN情報は取得しない。
         /// </summary>
         public async Task<bool> RefreshVideoInfoAsync(VideoInfo video, IProgress<string>? progress = null)
         {
@@ -1890,19 +1920,11 @@ namespace IwaraDownloader.Services
                 progress?.Report(L.T("SvcDownloadManager_D005", video.VideoId));
 
                 var siteForApi = string.IsNullOrEmpty(video.Site) ? null : video.Site;
-                var urlInfo = await _iwaraApi.GetDownloadUrlAsync(video.VideoId, siteForApi);
+                var urlInfo = await _iwaraApi.GetVideoInfoAsync(video.VideoId, siteForApi);
 
-                if (urlInfo.Success && !string.IsNullOrEmpty(urlInfo.Title))
+                if (urlInfo.Success && !string.IsNullOrWhiteSpace(urlInfo.Title))
                 {
-                    video.Title = urlInfo.Title;
-                    if (!string.IsNullOrEmpty(urlInfo.AuthorUsername))
-                        video.AuthorUsername = urlInfo.AuthorUsername;
-                    if (!string.IsNullOrEmpty(urlInfo.FileUuid))
-                        video.FileUuid = urlInfo.FileUuid;
-                    if (urlInfo.PostedAt.HasValue)
-                        video.PostedAt = urlInfo.PostedAt;
-                    if (!string.IsNullOrEmpty(urlInfo.ApiRawJson))
-                        video.ApiRawJson = urlInfo.ApiRawJson;
+                    ApplyVideoInfo(video, urlInfo);
                     _database.UpdateVideo(video);
                     progress?.Report(L.T("SvcDownloadManager_D006", urlInfo.Title));
                     return true;

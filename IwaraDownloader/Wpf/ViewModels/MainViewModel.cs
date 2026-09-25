@@ -841,6 +841,127 @@ namespace IwaraDownloader.Wpf.ViewModels
             form.ShowDialog();
         }
 
+        private bool _isRepairingImportedVideoInfo;
+
+        /// <summary>
+        /// URL一括インポートの旧実装が保存した仮タイトルかどうかを判定する。
+        /// 保存時の表示言語が現在の言語と異なる場合もあるため、対応する全言語の
+        /// 固定プレフィックスを確認する。動画IDで末尾も確認し、通常の動画タイトルを
+        /// 「Video」で始まるという理由だけで上書きしない。
+        /// </summary>
+        private static bool IsPlaceholderVideoTitle(VideoInfo video)
+        {
+            var title = video.Title?.Trim() ?? string.Empty;
+            if (title.Length == 0) return true;
+
+            var videoId = video.VideoId?.Trim() ?? string.Empty;
+            if (videoId.Length == 0) return false;
+
+            return title.Equals($"Video {videoId}", StringComparison.OrdinalIgnoreCase)
+                || title.Equals($"[未取得] {videoId}", StringComparison.Ordinal)
+                || title.Equals($"[Not fetched] {videoId}", StringComparison.OrdinalIgnoreCase)
+                || title.Equals($"[未获取] {videoId}", StringComparison.Ordinal);
+        }
+
+        [RelayCommand]
+        private async Task RepairImportedVideoInfo()
+        {
+            if (_isRepairingImportedVideoInfo) return;
+
+            if (!_downloadManager.IsLoggedIn)
+            {
+                System.Windows.MessageBox.Show(
+                    L.T("MainForm_BugFixRepairLoginRequired"),
+                    L.T("MainForm_menuToolsBugFix"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var candidates = _database.GetAllVideos()
+                .Where(IsPlaceholderVideoTitle)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                System.Windows.MessageBox.Show(
+                    L.T("MainForm_BugFixRepairNoTargets"),
+                    L.T("MainForm_menuToolsBugFix"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            var repairable = candidates
+                .Where(v => v.Status != DownloadStatus.Downloading
+                         && v.Status != DownloadStatus.WritingTags
+                         && _downloadManager.GetTask(v.VideoId) == null)
+                .ToList();
+            var skipped = candidates.Count - repairable.Count;
+            if (repairable.Count == 0)
+            {
+                System.Windows.MessageBox.Show(
+                    L.T("MainForm_BugFixRepairNoRunnable", skipped),
+                    L.T("MainForm_menuToolsBugFix"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            var confirm = System.Windows.MessageBox.Show(
+                L.T("MainForm_BugFixRepairConfirm", repairable.Count, skipped),
+                L.T("MainForm_menuToolsBugFix"),
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+            if (confirm != System.Windows.MessageBoxResult.Yes) return;
+
+            _isRepairingImportedVideoInfo = true;
+            try
+            {
+                var progress = new Progress<string>(message => StatusMessage = message);
+                var repaired = 0;
+                var failed = 0;
+
+                foreach (var video in repairable)
+                {
+                    // 確認ダイアログ中に開始されたタスクは直前で再確認し、
+                    // DownloadManagerが保持するVideoInfoを古い値で上書きしない。
+                    if (video.Status == DownloadStatus.Downloading
+                        || video.Status == DownloadStatus.WritingTags
+                        || _downloadManager.GetTask(video.VideoId) != null)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (await _downloadManager.RefreshVideoInfoAsync(video, progress))
+                        repaired++;
+                    else
+                        failed++;
+                }
+
+                RefreshTree();
+                LoadVideos();
+                StatusMessage = L.T("MainForm_BugFixRepairResult", repaired, failed, skipped);
+                System.Windows.MessageBox.Show(
+                    StatusMessage,
+                    L.T("MainForm_menuToolsBugFix"),
+                    System.Windows.MessageBoxButton.OK,
+                    failed == 0 ? System.Windows.MessageBoxImage.Information : System.Windows.MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    L.T("MainForm_BugFixRepairError", ex.Message),
+                    L.T("MainForm_menuToolsBugFix"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isRepairingImportedVideoInfo = false;
+            }
+        }
+
         #region ツールバートグル+ツール/ヘルプメニュー (Phase8a-3でパリティ閉じ)
         // クリップボード監視トグル(WM_CLIPBOARDUPDATEフック必須)とタイル表示モード切替
         // (サムネグリッドUI自体が未実装)はPhase8b/将来フェーズへ持ち越し。
@@ -1120,7 +1241,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             CanCancelSelectedVideo = hasPending || hasDownloading || hasPaused;
             CanRetryFailedSelectedVideo = hasFailed;
             CanReDownloadSelectedVideo = hasCompleted;
-            CanRefreshInfoSelectedVideo = selected.Any(v => string.IsNullOrEmpty(v.Title) || v.Title.StartsWith("Video "));
+            CanRefreshInfoSelectedVideo = selected.Any(IsPlaceholderVideoTitle);
             CanCheckFileExistsSelectedVideo = hasCompleted;
 
             var single = IsSingleVideoSelected ? selected[0] : null;
@@ -1426,7 +1547,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             int refreshCount = 0;
             foreach (var video in videos)
             {
-                if (!(string.IsNullOrEmpty(video.Title) || video.Title.StartsWith("Video "))) continue;
+                if (!IsPlaceholderVideoTitle(video)) continue;
                 if (await _downloadManager.RefreshVideoInfoAsync(video, progress)) refreshCount++;
             }
             LoadVideos();

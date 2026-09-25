@@ -1899,6 +1899,35 @@ videoId 后导入数据库。
   <data name="MainForm_menuToolsStatistics" xml:space="preserve">
     <value>统计仪表板...</value>
   </data>
+  <data name="MainForm_menuToolsBugFix" xml:space="preserve">
+    <value>错误修复</value>
+  </data>
+  <data name="MainForm_menuToolsRepairImportedVideoInfo" xml:space="preserve">
+    <value>修复批量URL导入的视频信息...</value>
+  </data>
+  <data name="MainForm_BugFixRepairLoginRequired" xml:space="preserve">
+    <value>请先登录 iwara，然后再修复视频信息。</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoTargets" xml:space="preserve">
+    <value>没有需要修复的视频。</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoRunnable" xml:space="preserve">
+    <value>存在修复目标，但它们正在下载或处于其他忙碌状态，当前无法处理。（{0} 个）</value>
+  </data>
+  <data name="MainForm_BugFixRepairConfirm" xml:space="preserve">
+    <value>要重新获取 {0} 个占位标题视频的信息吗？
+正在下载或处于其他忙碌状态的 {1} 个视频将被跳过。</value>
+  </data>
+  <data name="MainForm_BugFixRepairResult" xml:space="preserve">
+    <value>视频信息修复完成。
+成功：{0} 个
+失败：{1} 个
+跳过：{2} 个</value>
+  </data>
+  <data name="MainForm_BugFixRepairError" xml:space="preserve">
+    <value>修复视频信息时发生错误。
+{0}</value>
+  </data>
   <data name="MainForm_menuVidCancel" xml:space="preserve">
     <value>取消</value>
   </data>

@@ -1899,6 +1899,35 @@ If the save folder setting has not been changed yet, change it first (settings o
   <data name="MainForm_menuToolsStatistics" xml:space="preserve">
     <value>Statistics Dashboard...</value>
   </data>
+  <data name="MainForm_menuToolsBugFix" xml:space="preserve">
+    <value>Bug Fixes</value>
+  </data>
+  <data name="MainForm_menuToolsRepairImportedVideoInfo" xml:space="preserve">
+    <value>Repair Imported Video Information...</value>
+  </data>
+  <data name="MainForm_BugFixRepairLoginRequired" xml:space="preserve">
+    <value>Log in to iwara before repairing video information.</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoTargets" xml:space="preserve">
+    <value>There are no videos to repair.</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoRunnable" xml:space="preserve">
+    <value>Repair targets exist, but none can be processed because they are downloading or otherwise busy. ({0})</value>
+  </data>
+  <data name="MainForm_BugFixRepairConfirm" xml:space="preserve">
+    <value>Refresh information for {0} videos with placeholder titles?
+{1} videos that are downloading or otherwise busy will be skipped.</value>
+  </data>
+  <data name="MainForm_BugFixRepairResult" xml:space="preserve">
+    <value>Video information repair completed.
+Succeeded: {0}
+Failed: {1}
+Skipped: {2}</value>
+  </data>
+  <data name="MainForm_BugFixRepairError" xml:space="preserve">
+    <value>An error occurred while repairing video information.
+{0}</value>
+  </data>
   <data name="MainForm_menuVidCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>

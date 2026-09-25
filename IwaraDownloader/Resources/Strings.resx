@@ -1903,6 +1903,35 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
   <data name="MainForm_menuToolsStatistics" xml:space="preserve">
     <value>統計ダッシュボード...</value>
   </data>
+  <data name="MainForm_menuToolsBugFix" xml:space="preserve">
+    <value>バグ修正</value>
+  </data>
+  <data name="MainForm_menuToolsRepairImportedVideoInfo" xml:space="preserve">
+    <value>URL一括インポート済み動画の情報を修復...</value>
+  </data>
+  <data name="MainForm_BugFixRepairLoginRequired" xml:space="preserve">
+    <value>情報を修復するには iwara にログインしてください。</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoTargets" xml:space="preserve">
+    <value>修復対象の動画はありません。</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoRunnable" xml:space="preserve">
+    <value>修復対象はありますが、実行中のダウンロードなどのため処理できる動画がありません。({0}件)</value>
+  </data>
+  <data name="MainForm_BugFixRepairConfirm" xml:space="preserve">
+    <value>仮タイトルの動画 {0}件から情報を再取得しますか？
+実行中のダウンロードなど {1}件はスキップされます。</value>
+  </data>
+  <data name="MainForm_BugFixRepairResult" xml:space="preserve">
+    <value>動画情報の修復が完了しました。
+成功: {0}件
+失敗: {1}件
+スキップ: {2}件</value>
+  </data>
+  <data name="MainForm_BugFixRepairError" xml:space="preserve">
+    <value>動画情報の修復中にエラーが発生しました。
+{0}</value>
+  </data>
   <data name="MainForm_menuVidCancel" xml:space="preserve">
     <value>キャンセル</value>
   </data>
