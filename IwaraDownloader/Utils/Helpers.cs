@@ -15,16 +15,19 @@ namespace IwaraDownloader.Utils
 
         // 動画/プロフィール URL を判定する正規表現 (両ドメイン対応)
         private static readonly Regex RxVideoUrl =
-            new(@"iwara\.(?:tv|ai)/video/([^/\?]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            new(@"iwara\.(?:tv|ai)/video/([^/\?\s]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex RxProfileUrl =
-            new(@"iwara\.(?:tv|ai)/profile/([^/\?]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            new(@"iwara\.(?:tv|ai)/profile/([^/\?\s]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static bool IsSingleLineInput(string value) =>
+            value.IndexOfAny(['\r', '\n']) < 0;
 
         /// <summary>
         /// iwara URLからユーザー名を抽出 (iwara.tv / iwara.ai 両対応)
         /// </summary>
         public static string? ExtractUsernameFromUrl(string url)
         {
-            if (string.IsNullOrWhiteSpace(url)) return null;
+            if (string.IsNullOrWhiteSpace(url) || !IsSingleLineInput(url)) return null;
             var m = RxProfileUrl.Match(url);
             return m.Success ? m.Groups[1].Value : null;
         }
@@ -34,7 +37,7 @@ namespace IwaraDownloader.Utils
         /// </summary>
         public static string? ExtractVideoIdFromUrl(string url)
         {
-            if (string.IsNullOrWhiteSpace(url)) return null;
+            if (string.IsNullOrWhiteSpace(url) || !IsSingleLineInput(url)) return null;
             var m = RxVideoUrl.Match(url);
             return m.Success ? m.Groups[1].Value : null;
         }
@@ -54,7 +57,7 @@ namespace IwaraDownloader.Utils
         /// URLがiwaraのユーザーページかどうか (iwara.tv / iwara.ai)
         /// </summary>
         public static bool IsUserProfileUrl(string url)
-            => !string.IsNullOrWhiteSpace(url) && RxProfileUrl.IsMatch(url);
+            => !string.IsNullOrWhiteSpace(url) && IsSingleLineInput(url) && RxProfileUrl.IsMatch(url);
 
         /// <summary>
         /// ユーザー名が有効かどうか(英数字、@、_、-のみ許可)
@@ -72,7 +75,7 @@ namespace IwaraDownloader.Utils
         /// URLがiwaraの動画ページかどうか (iwara.tv / iwara.ai)
         /// </summary>
         public static bool IsVideoUrl(string url)
-            => !string.IsNullOrWhiteSpace(url) && RxVideoUrl.IsMatch(url);
+            => !string.IsNullOrWhiteSpace(url) && IsSingleLineInput(url) && RxVideoUrl.IsMatch(url);
 
         /// <summary>
         /// ファイル名として使用できない文字を置換
