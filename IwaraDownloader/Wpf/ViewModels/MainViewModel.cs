@@ -1138,7 +1138,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             FavoriteMenuGlyph = ((char)(allFav ? 0xE735 : 0xE734)).ToString();
 
             // 優先度は未DL(Pending)にのみ意味を持つ。チェックマークは選択中Pending全件の実効優先度
-            // (手動設定 ?? 所属チャンネルの既定 ?? Normal) が一致する場合のみ点灯、バラバラなら消灯。
+            // (実キューのtask.Priority ?? 手動設定 ?? 所属チャンネルの既定 ?? Normal) が一致する場合のみ点灯。
             // 選択件数分の個別DB問い合わせを避けるため、チャンネルは1回だけ一括取得する
             // (大量選択(数千件)で右クリックメニューを開くたびにUIスレッドが固まるのを防ぐため)。
             CanChangeVideoPriority = hasPending;
@@ -1146,9 +1146,10 @@ namespace IwaraDownloader.Wpf.ViewModels
             {
                 var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
                 var resolved = selected.Where(v => v.Status == DownloadStatus.Pending)
-                    .Select(v => v.Priority ?? (v.SubscribedUserId.HasValue && userMap.TryGetValue(v.SubscribedUserId.Value, out var u)
-                        ? u.DefaultPriority
-                        : null) ?? DownloadPriority.Normal)
+                    .Select(v => GetEffectivePriority(v,
+                        v.SubscribedUserId.HasValue && userMap.TryGetValue(v.SubscribedUserId.Value, out var u)
+                            ? u
+                            : null))
                     .Distinct().ToList();
                 var uniform = resolved.Count == 1 ? resolved[0] : (DownloadPriority?)null;
                 PriorityHighestChecked = uniform == DownloadPriority.Highest;
@@ -1897,6 +1898,9 @@ namespace IwaraDownloader.Wpf.ViewModels
             if (user == null) return;
             user.DefaultPriority = priority;
             _database.UpdateSubscribedUser(user);
+            // 既存キューはtask.Priority、新規投入前のPendingは購読既定値を表示する。
+            // DBだけ更新して一覧を再計算しないと、変更前の既定値が画面に残る。
+            ScheduleVideoListRefresh();
             StatusMessage = L.T("MainForm_D192", user.Username);
         }
 
@@ -2019,11 +2023,13 @@ namespace IwaraDownloader.Wpf.ViewModels
             query.IncludeAuthorInFreeText = SelectedTreeNode?.Kind != TreeNodeKind.Channel;
             var filtered = query.IsEmpty ? source.ToList() : source.Where(query.Match).ToList();
 
-            SortVideoList(filtered);
-
-            // 優先度表示の解決(Video.Priority ?? 所属チャンネルのDefaultPriority ?? Normal)用に
+            // 優先度表示の解決(実キューのtask.Priority ?? Video.Priority ??
+            // 所属チャンネルのDefaultPriority ?? Normal)用に
             // チャンネルを1回だけ一括取得してDictionary化(動画1件ごとのDB問い合わせを避ける)。
             var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
+
+            // ソートも表示と同じ実効優先度を使うため、チャンネル既定値を解決できる状態で行う。
+            SortVideoList(filtered, userMap);
 
             var items = new List<VideoListItemViewModel>(filtered.Count);
             foreach (var video in filtered)
@@ -2104,14 +2110,14 @@ namespace IwaraDownloader.Wpf.ViewModels
             ApplyVideoFilter();
         }
 
-        private void SortVideoList(List<VideoInfo> list)
+        private void SortVideoList(List<VideoInfo> list, IReadOnlyDictionary<int, SubscribedUser> userMap)
         {
             Comparison<VideoInfo> comparison = _sortColumn switch
             {
                 0 => (a, b) => string.Compare(a.Title, b.Title, StringComparison.CurrentCulture),
                 1 => (a, b) => string.Compare(VideoListItemViewModel.GetSourceLabel(a), VideoListItemViewModel.GetSourceLabel(b), StringComparison.Ordinal),
                 2 => (a, b) => a.Status.CompareTo(b.Status),
-                3 => (a, b) => GetPrioritySortValue(a).CompareTo(GetPrioritySortValue(b)),
+                3 => (a, b) => GetPrioritySortValue(a, userMap).CompareTo(GetPrioritySortValue(b, userMap)),
                 4 => (a, b) => GetProgressSortValue(a).CompareTo(GetProgressSortValue(b)),
                 5 => (a, b) => a.FileSize.CompareTo(b.FileSize),
                 6 => (a, b) => (a.PostedAt ?? a.CreatedAt).CompareTo(b.PostedAt ?? b.CreatedAt),
@@ -2136,12 +2142,30 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// 優先度はキュー待ち(Pending)にしか意味を持たない(VideoListItemViewModel.Refreshの表示ルールと同じ)。
         /// それ以外の状態は全て最下位扱いにして一覧の末尾/先頭にまとめる。
         /// </summary>
-        private double GetPrioritySortValue(VideoInfo video)
+        private double GetPrioritySortValue(VideoInfo video, IReadOnlyDictionary<int, SubscribedUser> userMap)
         {
             if (video.Status != DownloadStatus.Pending) return -1;
+            var owner = video.SubscribedUserId.HasValue
+                && userMap.TryGetValue(video.SubscribedUserId.Value, out var user)
+                ? user
+                : null;
+            return (double)GetEffectivePriority(video, owner);
+        }
+
+        /// <summary>
+        /// Pending動画の実効優先度。DownloadManagerに存在する待機タスクを最優先し、
+        /// まだメモリキューに無い動画だけDBの手動設定/購読既定値へフォールバックする。
+        /// </summary>
+        private DownloadPriority GetEffectivePriority(VideoInfo video, SubscribedUser? owner = null)
+        {
             var task = _downloadManager.GetTask(video.VideoId);
-            var resolved = video.Priority ?? task?.SubscribedUser?.DefaultPriority ?? DownloadPriority.Normal;
-            return (double)resolved;
+            if (task?.Status == DownloadStatus.Pending)
+                return task.Priority;
+
+            return video.Priority
+                ?? owner?.DefaultPriority
+                ?? task?.SubscribedUser?.DefaultPriority
+                ?? DownloadPriority.Normal;
         }
 
         private void UpdateColumnHeaderTexts()

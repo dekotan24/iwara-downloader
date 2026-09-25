@@ -39,8 +39,9 @@ namespace IwaraDownloader.Wpf.ViewModels
         /// <summary>
         /// Video(DBから読んだ値)を元に表示用プロパティを再計算する。
         /// DownloadTaskの進捗/状態が別途あればそちらを優先する場合はoverrideを渡す。
-        /// owner(所属チャンネル)は優先度表示の解決(Video.Priority ?? owner.DefaultPriority ?? Normal)に
-        /// 使う。省略時はtask.SubscribedUser(あれば)にフォールバックする。
+        /// Pending中の実タスクが存在する場合はtask.Priorityを実キューの値として表示する。
+        /// 実タスクがまだ無い動画だけ、Video.Priority ?? owner.DefaultPriority ?? Normalで解決する。
+        /// ownerを省略した場合はtask.SubscribedUser(あれば)にフォールバックする。
         /// </summary>
         public void Refresh(DownloadTask? task = null, SubscribedUser? owner = null)
         {
@@ -57,7 +58,10 @@ namespace IwaraDownloader.Wpf.ViewModels
             // 優先度はキュー待ち(Pending)にしか意味を持たないため、それ以外は空欄表示にする
             if (effectiveStatus == DownloadStatus.Pending)
             {
-                var resolved = Video.Priority ?? (owner ?? task?.SubscribedUser)?.DefaultPriority ?? DownloadPriority.Normal;
+                var resolved = task?.Priority
+                    ?? Video.Priority
+                    ?? (owner ?? task?.SubscribedUser)?.DefaultPriority
+                    ?? DownloadPriority.Normal;
                 PriorityText = GetPriorityText(resolved);
             }
             else

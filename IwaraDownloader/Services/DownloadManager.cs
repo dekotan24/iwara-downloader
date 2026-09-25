@@ -15,13 +15,17 @@ namespace IwaraDownloader.Services
         private readonly LoggingService _logger = LoggingService.Instance;
         private readonly ConcurrentDictionary<string, DownloadTask> _activeTasks;
         private readonly ConcurrentDictionary<string, DownloadTask> _pendingTasks;
+        // ChangeVideoPriority と、まだメモリキューへ投入されていない Pending 動画の
+        // EnqueueDownload が競合しても、今回の手動設定を古い VideoInfo で上書きしないための
+        // プロセス内オーバーライド。永続値はDBに保存されるため、再起動後は不要になる。
+        private readonly ConcurrentDictionary<string, DownloadPriority> _priorityOverrides =
+            new(StringComparer.Ordinal);
 
         /// <summary>
         /// 優先度別の待機キュー(添字=(int)DownloadPriority、Highest=3〜Low=0)。
-        /// 優先度変更は既存タスクをキュー間で物理的に移動せず、task.Priority を書き換えるだけの
-        /// lazy migration方式。デキュー時(TryDequeueNext)に「取り出したキューの優先度」と
-        /// 「タスクの現在のPriority」が食い違っていたら正しいバケットへ回して探し直す。
-        /// これにより「1件のタスクに対してキュー参照は常に1本」という不変条件が保たれる。
+        /// 優先度変更時は全待機タスクを現在のPriorityに従って再配置する。
+        /// キュー内の任意位置にあるタスクを直接移動できないConcurrentQueueの制約があるため、
+        /// 変更時に4本を一度排出して再構築する。
         /// </summary>
         private readonly ConcurrentQueue<DownloadTask>[] _pendingQueueByPriority =
         {
@@ -30,9 +34,13 @@ namespace IwaraDownloader.Services
             new ConcurrentQueue<DownloadTask>(), // High
             new ConcurrentQueue<DownloadTask>(), // Highest
         };
+        // 優先度変更時のキュー再配置と、デキュー/一時停止による全キュー排出を直列化する。
+        // ConcurrentQueue単体はスレッドセーフだが、複数キューを一度空にして再配置する操作は
+        // 1つの原子的なスナップショットとして扱う必要がある。
+        private readonly object _priorityQueueLock = new object();
         private int _activeDownloadCount;
         /// <summary>EnqueueDownloadの重複チェック〜登録をアトミックにするための軽量ロック。
-        /// 保持中にDB I/O・イベント発火はしない(EnqueueDownload参照)。</summary>
+        /// EnqueueDownloadの通常経路では保持中にDB I/O・イベント発火をしない。</summary>
         private readonly object _enqueueLock = new object();
         private readonly SemaphoreSlim _slotAvailableSignal = new SemaphoreSlim(0, int.MaxValue);
         private readonly System.Timers.Timer _autoCheckTimer;
@@ -256,32 +264,39 @@ namespace IwaraDownloader.Services
             var quality = SettingsManager.Instance.Settings.DefaultQuality;
 
             int enqueued = 0;
-            foreach (var video in pendingVideos)
+            // 起動時の一括投入も通常のEnqueueDownloadと同じロックで保護する。
+            // ここを無保護にすると、優先度変更/キャンセル/再投入と
+            // _pendingTasks登録〜優先度キュー登録の途中で競合し、キューにいないPendingが残る。
+            lock (_enqueueLock)
             {
-                // 既にメモリキューに居るものはスキップ
-                if (_pendingTasks.ContainsKey(video.VideoId) || _activeTasks.ContainsKey(video.VideoId))
-                    continue;
-
-                SubscribedUser? user = null;
-                if (video.SubscribedUserId.HasValue)
-                    userMap.TryGetValue(video.SubscribedUserId.Value, out user);
-
-                var task = new DownloadTask
+                foreach (var video in pendingVideos)
                 {
-                    Video = video,
-                    Status = DownloadStatus.Pending,
-                    IsSubscriptionDownload = video.SubscribedUserId.HasValue,
-                    Quality = quality,
-                    SubscribedUser = user,
-                    Priority = ResolvePriority(video, user),
-                    // 待機中(デキュー前)の段階からキャンセル可能にするため、ここで生成しておく
-                    // (ExecuteDownloadAsync側は既存のものがあれば使い回す。CancelTask/ProcessQueueAsync参照)。
-                    CancellationTokenSource = new CancellationTokenSource()
-                };
+                    // 既にメモリキューに居るものはスキップ
+                    if (_pendingTasks.ContainsKey(video.VideoId) || _activeTasks.ContainsKey(video.VideoId))
+                        continue;
 
-                _pendingTasks[video.VideoId] = task;
-                _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
-                enqueued++;
+                    SubscribedUser? user = null;
+                    if (video.SubscribedUserId.HasValue)
+                        userMap.TryGetValue(video.SubscribedUserId.Value, out user);
+
+                    var task = new DownloadTask
+                    {
+                        Video = video,
+                        Status = DownloadStatus.Pending,
+                        IsSubscriptionDownload = video.SubscribedUserId.HasValue,
+                        Quality = quality,
+                        SubscribedUser = user,
+                        Priority = ResolvePriority(video, user),
+                        // 待機中(デキュー前)の段階からキャンセル可能にするため、ここで生成しておく
+                        // (ExecuteDownloadAsync側は既存のものがあれば使い回す。CancelTask/ProcessQueueAsync参照)。
+                        CancellationTokenSource = new CancellationTokenSource()
+                    };
+
+                    _pendingTasks[video.VideoId] = task;
+                    lock (_priorityQueueLock)
+                        _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
+                    enqueued++;
+                }
             }
 
             _logger.Info($"Enqueued {enqueued} tasks (bulk, no per-task event fire)");
@@ -416,7 +431,7 @@ namespace IwaraDownloader.Services
         /// 未DL(Pending)の動画の優先度を一括変更する。Downloading/Completed等は対象外
         /// (優先度はキュー待ちの並び順にしか意味を持たないため)。
         /// DBの永続値(video.Priority)と、生きているpendingタスク(あれば)のPriorityの両方を更新する。
-        /// タスク側は再エンキューせず値を書き換えるだけ(lazy migration、TryDequeueNext参照)。
+        /// タスク側は優先度キューへ再配置し、変更後の値が古いキューの後ろに埋もれないようにする。
         /// </summary>
         /// <returns>変更した件数</returns>
         public int ChangeVideoPriority(IEnumerable<VideoInfo> videos, DownloadPriority priority)
@@ -425,23 +440,44 @@ namespace IwaraDownloader.Services
                 ?? new List<VideoInfo>();
             if (list.Count == 0) return 0;
 
-            _database.SetVideoPriority(list.Select(v => v.VideoId), priority);
+            var videoIds = list.Select(v => v.VideoId).Distinct(StringComparer.Ordinal).ToList();
 
-            foreach (var v in list)
+            lock (_enqueueLock)
             {
-                v.Priority = priority;
-                if (_pendingTasks.TryGetValue(v.VideoId, out var task))
+                // Pending→Activeの切り替えも同じロックを使うため、DB更新をこのロック内で行う。
+                // DBを先に更新してからロックを取ると、切り替え側が古いtask.Videoを保存して
+                // 手動設定を巻き戻す競合が発生する。
+                _database.SetVideoPriority(videoIds, priority);
+
+                foreach (var v in list)
                 {
-                    task.Priority = priority;
-                    // task.Video は enqueue時のDB読み出し由来の別インスタンス(呼び出し元の v とは
-                    // 別オブジェクト)。ここを更新しないと、後で SuspendQueueForLogin 等が
-                    // _database.UpdateVideo(task.Video) を呼んだ時に古いPriorityで上書きされ、
-                    // 今回の変更が黙って消える。
-                    task.Video.Priority = priority;
+                    _priorityOverrides[v.VideoId] = priority;
+                    v.Priority = priority;
+                    if (_pendingTasks.TryGetValue(v.VideoId, out var task))
+                    {
+                        task.Priority = priority;
+                        // task.Video は enqueue時のDB読み出し由来の別インスタンス(呼び出し元の v とは
+                        // 別オブジェクト)。ここを更新しないと、後で SuspendQueueForLogin 等が
+                        // _database.UpdateVideo(task.Video) を呼んだ時に古いPriorityで上書きされ、
+                        // 今回の変更が黙って消える。
+                        task.Video.Priority = priority;
+                    }
+                    else if (_activeTasks.TryGetValue(v.VideoId, out var activeTask))
+                    {
+                        // UI側のStatusがPendingのままActiveへ遷移した短い窓でも、後続の
+                        // ExecuteDownloadAsyncが古いPriorityを保存しないよう同期する。
+                        activeTask.Priority = priority;
+                        activeTask.Video.Priority = priority;
+                    }
                 }
+
+                // 既存のキュー参照を全て現在のPriorityで再配置する。
+                // これをせずPriorityフィールドだけ書き換えると、例えばNormalキューの後方に
+                // あるタスクをHighへ上げても、前方のNormalが先に取り出され続ける。
+                RebuildPendingPriorityQueues();
             }
 
-            // バケット間移動が発生した分を拾いに行く (でないと次のスロット解放/enqueueまで止まったまま)
+            // 優先度変更後のキューを拾いに行く (でないと次のスロット解放/enqueueまで止まったまま)
             if (_isRunning) _ = ProcessQueueAsync();
 
             return list.Count;
@@ -598,8 +634,18 @@ namespace IwaraDownloader.Services
         /// チャンネルの既定優先度を後から変えても、既にキューに入っている動画には遡及しない
         /// (この解決はEnqueueDownload/起動時再開の投入タイミングでのみ行われるため)。
         /// </summary>
-        private static DownloadPriority ResolvePriority(VideoInfo video, SubscribedUser? subscribedUser)
-            => video.Priority ?? subscribedUser?.DefaultPriority ?? DownloadPriority.Normal;
+        private DownloadPriority ResolvePriority(VideoInfo video, SubscribedUser? subscribedUser)
+        {
+            if (_priorityOverrides.TryGetValue(video.VideoId, out var overridePriority))
+            {
+                // DB変更後に別インスタンスの古いVideoInfoが投入されても、後続の
+                // UpdateVideo(video)で今回の手動設定を巻き戻さないよう反映する。
+                video.Priority = overridePriority;
+                return overridePriority;
+            }
+
+            return video.Priority ?? subscribedUser?.DefaultPriority ?? DownloadPriority.Normal;
+        }
 
         /// <summary>
         /// 動画をダウンロードキューに追加
@@ -660,7 +706,8 @@ namespace IwaraDownloader.Services
 
                     // 待機中タスクとして登録
                     _pendingTasks[video.VideoId] = task;
-                    _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
+                    lock (_priorityQueueLock)
+                        _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
                 }
             }
 
@@ -712,14 +759,21 @@ namespace IwaraDownloader.Services
                     }
 
                     // 同時DL数制限を先に待つ。デキュー(TryDequeueNext)より先にスロット空きを
-                    // 待つことで、「スロット満杯で1件を確保したまま待機」する死角を作らない —
-                    // これにより、待機中に他タスクの優先度を上げても、スロットが実際に空いた
-                    // 瞬間の優先度状態で次のタスクが選ばれる(逆順だと、確保済みの1件が
-                    // 優先度変更を無視してそのまま先に実行されてしまう)。
+                    // 待つことで、「スロット満杯で1件を確保したまま待機」する死角を作らない。
                     while (_activeDownloadCount >= SettingsManager.Instance.Settings.MaxConcurrentDownloads)
                     {
                         await _slotAvailableSignal.WaitAsync(token);
                     }
+
+                    // レート制限の待機もデキュー直前に行う。先にタスクを取り出してから待つと、
+                    // この待機中に別タスクの優先度を上げても、取り出し済みの古いタスクが先に
+                    // 実行されてしまう。待機後に現在のキューを再評価することで、優先度変更を
+                    // 次の選択へ確実に反映する。また、待機中はタスクがキューと_pendingTasksの
+                    // 両方に残るため、一時停止/全キャンセルの回収対象からも漏れない。
+                    var settings = SettingsManager.Instance.Settings;
+                    var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
+                    System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
+                    await Task.Delay(delayMs, token);
 
                     if (!TryDequeueNext(out var task) || task == null)
                     {
@@ -727,19 +781,17 @@ namespace IwaraDownloader.Services
                     }
 
                     // 注: _pendingTasks の削除は ExecuteDownloadAsync 冒頭で行う。
-                    // ここで先に削除すると、セマフォ待機/レート制限遅延の間タスクが
-                    // _pendingTasks にも _activeTasks にも居ない死角ができ、UI 上で
-                    // 「0DL中」と表示されてしまうため。
+                    // ここで先に削除すると、デキュー直後からExecuteDownloadAsync開始までの
+                    // 短い窓にタスクが _pendingTasks にも _activeTasks にも居ない死角ができ、
+                    // UI 上で「0DL中」と表示されてしまうため。
 
                     Interlocked.Increment(ref _activeDownloadCount);
 
                     try
                     {
-                        // レート制限：DL開始前に設定値分待機
-                        var settings = SettingsManager.Instance.Settings;
-                        var delayMs = Math.Max(settings.DownloadDelayMs, 1000); // 最低1秒
-                        System.Diagnostics.Debug.WriteLine($"RateLimit: waiting {delayMs}ms before download...");
-                        await Task.Delay(delayMs, token);
+                        // レート制限待機の完了直後にStop()される競合をここで拾う。既にデキュー
+                        // 済みなので、catch側でキューへ戻して次回起動時に再開できる状態を保つ。
+                        token.ThrowIfCancellationRequested();
 
                         // デキュー後、ここに来るまでの間にCancelTaskが呼ばれ、このタスクの
                         // CancellationTokenSourceが既にキャンセルされている場合、ダウンロードを
@@ -760,11 +812,12 @@ namespace IwaraDownloader.Services
                     }
                     catch
                     {
-                        // ここでの例外(主にToken.Delayのキャンセル)はtaskを取り出した後に発生するため、
-                        // バケットに戻さないと_pendingTasksにだけ残るゴーストタスクになり、
+                        // ここでの例外はtaskを取り出した後に発生するため、バケットに戻さないと
+                        // _pendingTasksにだけ残るゴーストタスクになり、
                         // DrainAllPendingQueues経由の回収(ログイン/ディスク容量回復、全キャンセル)からも
                         // 漏れて二度と処理されなくなる。
-                        _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
+                        lock (_priorityQueueLock)
+                            _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
                         Interlocked.Decrement(ref _activeDownloadCount);
                         _slotAvailableSignal.Release();
                         throw;
@@ -794,9 +847,12 @@ namespace IwaraDownloader.Services
                 //   - 本物の新規投入 → EnqueueDownloadは_pendingTasksとバケットの両方に登録するため
                 //     必ずtrueになり、正しく拾える。
                 var hasPendingInBucket = false;
-                foreach (var q in _pendingQueueByPriority)
+                lock (_priorityQueueLock)
                 {
-                    if (!q.IsEmpty) { hasPendingInBucket = true; break; }
+                    foreach (var q in _pendingQueueByPriority)
+                    {
+                        if (!q.IsEmpty) { hasPendingInBucket = true; break; }
+                    }
                 }
                 if (_isRunning && !_pendingTasks.IsEmpty && hasPendingInBucket)
                 {
@@ -814,37 +870,73 @@ namespace IwaraDownloader.Services
         /// </summary>
         private bool TryDequeueNext(out DownloadTask? result)
         {
-            while (true)
+            lock (_priorityQueueLock)
             {
-                bool moved = false;
-                for (int p = _pendingQueueByPriority.Length - 1; p >= 0 && !moved; p--)
+                while (true)
                 {
-                    while (_pendingQueueByPriority[p].TryDequeue(out var candidate))
+                    bool moved = false;
+                    for (int p = _pendingQueueByPriority.Length - 1; p >= 0 && !moved; p--)
                     {
-                        // キャンセルされたタスク(_pendingTasksから削除済み)はスキップ
-                        if (!_pendingTasks.ContainsKey(candidate.Video.VideoId))
+                        while (_pendingQueueByPriority[p].TryDequeue(out var candidate))
                         {
-                            _logger.Debug($"Skipping cancelled task: {candidate.Video.VideoId}");
-                            continue;
-                        }
+                            // キャンセル済み、または同じ動画IDへ再投入された旧タスクはスキップ
+                            if (!_pendingTasks.TryGetValue(candidate.Video.VideoId, out var pendingTask)
+                                || !ReferenceEquals(pendingTask, candidate))
+                            {
+                                _logger.Debug($"Skipping stale/cancelled task: {candidate.Video.VideoId}");
+                                continue;
+                            }
 
-                        if ((int)candidate.Priority != p)
-                        {
-                            // 優先度変更で行き先が変わっている。正しいバケットへ回して
-                            // 今回のパスはHighestから探し直す
-                            _pendingQueueByPriority[(int)candidate.Priority].Enqueue(candidate);
-                            moved = true;
-                            break;
-                        }
+                            if ((int)candidate.Priority != p)
+                            {
+                                // 念のため残っている古いバケット参照も正しい場所へ戻す。
+                                _pendingQueueByPriority[(int)candidate.Priority].Enqueue(candidate);
+                                moved = true;
+                                break;
+                            }
 
-                        result = candidate;
-                        return true;
+                            result = candidate;
+                            return true;
+                        }
+                    }
+                    if (!moved)
+                    {
+                        result = null;
+                        return false;
                     }
                 }
-                if (!moved)
+            }
+        }
+
+        /// <summary>
+        /// 待機キュー内のタスクを現在のPriorityに従って再配置する。
+        /// 呼び出し元が_enqueueLockを保持している場合があるため、このメソッド自身は
+        /// _priorityQueueLockだけを取得する。
+        /// </summary>
+        private void RebuildPendingPriorityQueues()
+        {
+            lock (_priorityQueueLock)
+            {
+                var queued = new List<DownloadTask>();
+                foreach (var queue in _pendingQueueByPriority)
                 {
-                    result = null;
-                    return false;
+                    while (queue.TryDequeue(out var task))
+                        queued.Add(task);
+                }
+
+                // _pendingTasksのキーと同じOrdinal比較にする。IDの大文字小文字だけが異なる
+                // 別エントリを誤って1件にまとめると、再構築時にタスクが消えるため。
+                var seenVideoIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var task in queued)
+                {
+                    if (!_pendingTasks.TryGetValue(task.Video.VideoId, out var pendingTask)
+                        || !ReferenceEquals(pendingTask, task)
+                        || !seenVideoIds.Add(task.Video.VideoId))
+                    {
+                        continue;
+                    }
+
+                    _pendingQueueByPriority[(int)task.Priority].Enqueue(task);
                 }
             }
         }
@@ -853,11 +945,49 @@ namespace IwaraDownloader.Services
         /// 優先度別キュー全4本を空にして中身を列挙する。
         /// SuspendQueueForLogin/SuspendQueueForDiskSpace/CancelAllTasks の「待機中を全部Pendingへ戻す」で使う。
         /// </summary>
-        private IEnumerable<DownloadTask> DrainAllPendingQueues()
+        private List<DownloadTask> DrainAllPendingQueues()
         {
-            foreach (var queue in _pendingQueueByPriority)
-                while (queue.TryDequeue(out var task))
-                    yield return task;
+            lock (_priorityQueueLock)
+            {
+                var tasks = new List<DownloadTask>();
+                foreach (var queue in _pendingQueueByPriority)
+                    while (queue.TryDequeue(out var task))
+                        tasks.Add(task);
+                return tasks;
+            }
+        }
+
+        /// <summary>
+        /// _pendingTasksに残っている全タスクを待機状態から取り除く。
+        /// TryDequeueNext後、実行開始前のタスクはキューからは消えているが
+        /// _pendingTasksには残っているため、キューのDrainだけでは取りこぼす。
+        /// 呼び出し元は_enqueueLockを保持すること。
+        /// </summary>
+        private List<DownloadTask> TakeAllPendingTasks(DownloadStatus videoStatus, bool suspendedForLogin = false)
+        {
+            var tasks = new List<DownloadTask>();
+            foreach (var task in _pendingTasks.Values.ToList())
+            {
+                if (!_pendingTasks.TryGetValue(task.Video.VideoId, out var current)
+                    || !ReferenceEquals(current, task))
+                {
+                    continue;
+                }
+
+                _pendingTasks.TryRemove(task.Video.VideoId, out _);
+                if (suspendedForLogin)
+                    task.SuspendedForLogin = true;
+
+                task.Cancel();
+                task.Status = videoStatus;
+                task.Video.Status = videoStatus;
+                tasks.Add(task);
+            }
+
+            // 取り除いたタスクの古いキュー参照と、既にキャンセル済みの残骸をまとめて掃除する。
+            // _enqueueLock → _priorityQueueLockの順はEnqueueDownloadと同じで、ロック順を崩さない。
+            DrainAllPendingQueues();
+            return tasks;
         }
 
         /// <summary>
@@ -1517,7 +1647,7 @@ namespace IwaraDownloader.Services
             // アクティブ/待機中の状態取得と待機中タスクの削除をEnqueue/実行開始と
             // 同じロックで直列化し、旧タスクと再投入タスクの入れ替わりを防ぐ。
             // TryDequeueNextでバケットから取り出された後、ExecuteDownloadAsyncが_activeTasksへ
-            // 登録するまでの間(レート制限待機中)は_pendingTasksにだけ存在し、バケットには残らない。
+            // 登録するまでの間は_pendingTasksにだけ存在し、バケットには残らない。
             // この窓でキャンセルされた場合に備え、まずCancellationTokenSourceをキャンセルしておく
             // ことで、ProcessQueueAsync側がTask.Run直前にIsCancellationRequestedを見て
             // ダウンロード開始そのものを取りやめられるようにする(そうしないと、この窓でのキャンセルは
@@ -1557,21 +1687,25 @@ namespace IwaraDownloader.Services
 
         private void SuspendQueueForLogin()
         {
-            // 実行中タスクをキャンセル (全部同じ理由で失敗するため)。
-            // SuspendedForLogin を立てておくと、OperationCanceledException ハンドラで
-            // Paused ではなく Pending として保存され、ログイン後に自動再開される
-            foreach (var task in _activeTasks.Values)
+            List<DownloadTask> suspendedTasks;
+            lock (_enqueueLock)
             {
-                task.SuspendedForLogin = true;
-                task.Cancel();
+                // 実行中タスクをキャンセル (全部同じ理由で失敗するため)。
+                // SuspendedForLogin を立てておくと、OperationCanceledException ハンドラで
+                // Paused ではなく Pending として保存され、ログイン後に自動再開される
+                foreach (var task in _activeTasks.Values)
+                {
+                    task.SuspendedForLogin = true;
+                    task.Cancel();
+                }
+
+                // キューから既にデキューされ、実行開始前のタスクも含めてPendingへ戻す。
+                suspendedTasks = TakeAllPendingTasks(DownloadStatus.Pending, suspendedForLogin: true);
             }
 
-            // 待機キューを Pending に戻す (Failed にしない — ログイン後に自動で再DLできるように)
             var suspendedCount = 0;
-            foreach (var task in DrainAllPendingQueues())
+            foreach (var task in suspendedTasks)
             {
-                _pendingTasks.TryRemove(task.Video.VideoId, out _);
-                task.Video.Status = DownloadStatus.Pending;
                 _database.UpdateVideo(task.Video);
                 suspendedCount++;
             }
@@ -1635,11 +1769,17 @@ namespace IwaraDownloader.Services
         /// </summary>
         private void SuspendQueueForDiskSpace()
         {
-            var suspendedCount = 0;
-            foreach (var task in DrainAllPendingQueues())
+            List<DownloadTask> suspendedTasks;
+            lock (_enqueueLock)
             {
-                _pendingTasks.TryRemove(task.Video.VideoId, out _);
-                task.Video.Status = DownloadStatus.Pending;
+                // 実行中タスクは止めず、Pendingのまま残す。ただし既にデキュー済みで
+                // 実行開始前のタスクはキャンセルして、空き容量不足中の開始を防ぐ。
+                suspendedTasks = TakeAllPendingTasks(DownloadStatus.Pending);
+            }
+
+            var suspendedCount = 0;
+            foreach (var task in suspendedTasks)
+            {
                 _database.UpdateVideo(task.Video);
                 suspendedCount++;
             }
@@ -1711,16 +1851,18 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void CancelAllTasks()
         {
-            foreach (var task in _activeTasks.Values)
+            List<DownloadTask> pausedTasks;
+            lock (_enqueueLock)
             {
-                task.Cancel();
+                foreach (var task in _activeTasks.Values)
+                    task.Cancel();
+
+                // キューから既にデキューされ、実行開始前のタスクも含めて停止する。
+                pausedTasks = TakeAllPendingTasks(DownloadStatus.Paused);
             }
 
-            // 待機中タスクもすべてクリア
-            foreach (var task in DrainAllPendingQueues())
+            foreach (var task in pausedTasks)
             {
-                _pendingTasks.TryRemove(task.Video.VideoId, out _);
-                task.Video.Status = DownloadStatus.Paused;
                 _database.UpdateVideo(task.Video);
             }
         }
