@@ -160,6 +160,78 @@ namespace IwaraDownloader.Forms
         private readonly record struct VideoEntry(string Id, string Url, string Site);
 
         /// <summary>
+        /// 一括インポートする動画の表示用情報を取得する。
+        ///
+        /// 一括URLインポートは、従来はAPIを呼ばずに仮タイトルだけでDBへ登録していたため、
+        /// その後ダウンロードしない動画は「[未取得] VideoId」のまま残っていた。
+        /// ログイン済みなら get_info を使って表示用メタデータを補完し、取得できない場合は
+        /// インポート自体を失敗させずに従来の仮タイトルへフォールバックする。
+        /// </summary>
+        private async Task<VideoInfo> CreateImportedVideoAsync(VideoEntry entry, bool immediateDownload)
+        {
+            var video = new VideoInfo
+            {
+                VideoId = entry.Id,
+                Title = L.T("BulkImportForm_D015", entry.Id),
+                Url = entry.Url,
+                Site = entry.Site,
+                // 即DLチェックOFFなら Paused で保存 (Pending だと次回起動時の
+                // レジュームで意図せず自動DLされてしまうため。issue #21)
+                Status = immediateDownload ? DownloadStatus.Pending : DownloadStatus.Paused,
+                CreatedAt = DateTime.Now
+            };
+
+            // メタデータ取得にはログイン済みの IwaraApiService が必要。
+            // 未ログイン時は従来どおり仮登録し、後のログイン/情報更新で補完できるようにする。
+            if (_downloadManager?.IsLoggedIn != true)
+                return video;
+
+            try
+            {
+                // ダウンロードURLやCDN情報は不要なので、get_info の軽い経路を使う。
+                var info = await _downloadManager.IwaraApi.GetVideoInfoAsync(entry.Id, entry.Site);
+                if (!info.Success)
+                {
+                    LoggingService.Instance.Warn(
+                        $"一括インポートの動画情報取得に失敗 ({entry.Id}): {info.Error ?? "unknown error"}");
+                    return video;
+                }
+
+                if (!string.IsNullOrWhiteSpace(info.Title))
+                    video.Title = info.Title;
+                if (!string.IsNullOrEmpty(info.FileUuid))
+                    video.FileUuid = info.FileUuid;
+                if (!string.IsNullOrEmpty(info.AuthorUsername))
+                    video.AuthorUsername = info.AuthorUsername;
+                if (!string.IsNullOrEmpty(info.Rating))
+                    video.Rating = info.Rating;
+                if (!string.IsNullOrEmpty(info.ThumbnailUrl))
+                    video.ThumbnailUrl = info.ThumbnailUrl;
+                if (info.DurationSeconds > 0)
+                    video.DurationSeconds = info.DurationSeconds;
+                if (!string.IsNullOrEmpty(info.EmbedUrl))
+                    video.EmbedUrl = info.EmbedUrl;
+                if (info.PostedAt.HasValue)
+                    video.PostedAt = info.PostedAt;
+                if (!string.IsNullOrEmpty(info.ApiRawJson))
+                    video.ApiRawJson = info.ApiRawJson;
+
+                // site未指定時の自動フォールバックが将来有効になった場合にも、
+                // 保存後のダウンロード先が実際に解決したサイトと一致するようにする。
+                if (!string.IsNullOrEmpty(info.ResolvedSite))
+                    video.Site = info.ResolvedSite;
+            }
+            catch (Exception ex)
+            {
+                // 1件のメタデータ取得失敗で、残りのURLまで取り込めなくならないようにする。
+                LoggingService.Instance.Warn(
+                    $"一括インポートの動画情報取得中に例外 ({entry.Id}): {ex.Message}");
+            }
+
+            return video;
+        }
+
+        /// <summary>
         /// インポート実行
         /// </summary>
         private async void btnImport_Click(object sender, EventArgs e)
@@ -204,43 +276,22 @@ namespace IwaraDownloader.Forms
                     var videoIds = videos.Select(v => v.Id).ToList();
                     var existingIds = _database.GetExistingVideoIds(videoIds);
 
-                    await Task.Run(() =>
+                    foreach (var v in videos)
                     {
-                        foreach (var v in videos)
+                        if (existingIds.Contains(v.Id))
                         {
-                            if (existingIds.Contains(v.Id))
-                            {
-                                DuplicateCount++;
-                            }
-                            else
-                            {
-                                ImportedVideos.Add(new VideoInfo
-                                {
-                                    VideoId = v.Id,
-                                    Title = L.T("BulkImportForm_D015", v.Id),
-                                    Url = v.Url,
-                                    Site = v.Site,
-                                    // 即DLチェックOFFなら Paused で保存 (Pending だと次回起動時の
-                                    // レジュームで意図せず自動DLされてしまうため。issue #21)
-                                    Status = chkImmediateDownload.Checked ? DownloadStatus.Pending : DownloadStatus.Paused,
-                                    CreatedAt = DateTime.Now
-                                });
-                            }
-                            // インポート中にユーザーがウィンドウを閉じると、破棄済み/ハンドル破棄済みの
-                            // コントロールへのInvokeが例外を投げてバックグラウンドスレッドをクラッシュ
-                            // させるため、IsDisposedチェックとtry-catchの両方でガードする
-                            // (チェック直後にDisposeされるTOCTOUの余地があるためtry-catchも必須)。
-                            if (!this.IsDisposed)
-                            {
-                                try
-                                {
-                                    this.Invoke(() => progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum));
-                                }
-                                catch (ObjectDisposedException) { }
-                                catch (InvalidOperationException) { }
-                            }
+                            DuplicateCount++;
                         }
-                    });
+                        else
+                        {
+                            // API呼び出しは非同期なのでUIスレッドをブロックせず、
+                            // 取得に失敗した場合も仮タイトルで取り込みを継続する。
+                            ImportedVideos.Add(await CreateImportedVideoAsync(v, chkImmediateDownload.Checked));
+                        }
+
+                        if (!IsDisposed && !Disposing)
+                            progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
+                    }
 
                     if (ImportedVideos.Count > 0)
                         _database.AddVideosBatch(ImportedVideos);
