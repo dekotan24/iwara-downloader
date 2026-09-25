@@ -244,6 +244,26 @@ namespace IwaraDownloader.Forms
         }
 
         /// <summary>
+        /// 一括追加した動画をダウンロードキューへ投入する。
+        /// AddVideosBatch はDBへの保存だけを行い、DownloadManagerのメモリキューは
+        /// 更新しないため、即DLを選んだ場合は保存後に明示的に投入する必要がある。
+        /// </summary>
+        private void EnqueueImportedVideos(IEnumerable<VideoInfo> videos)
+        {
+            if (_downloadManager == null) return;
+
+            foreach (var video in videos)
+            {
+                SubscribedUser? subscribedUser = null;
+                if (video.SubscribedUserId.HasValue)
+                    subscribedUser = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+
+                _downloadManager.EnqueueDownload(
+                    video, video.SubscribedUserId.HasValue, subscribedUser);
+            }
+        }
+
+        /// <summary>
         /// インポート実行
         /// </summary>
         private async void btnImport_Click(object sender, EventArgs e)
@@ -281,6 +301,8 @@ namespace IwaraDownloader.Forms
             DuplicateCount = 0;
             int addedChannels = 0, channelFailed = 0;
             bool videosPersisted = false;
+            var immediateDownload = chkImmediateDownload.Checked;
+            var videosToEnqueue = new List<VideoInfo>();
             using var cancellation = new CancellationTokenSource();
             _importCancellation = cancellation;
             _isImporting = true;
@@ -303,13 +325,25 @@ namespace IwaraDownloader.Forms
                         if (existingIds.Contains(v.Id))
                         {
                             DuplicateCount++;
+
+                            // 以前の一括登録でDBだけに保存され、キューへ投入されていない
+                            // 動画も、即DLを選んだ再インポートで救済する。
+                            if (immediateDownload && _downloadManager != null)
+                            {
+                                var existing = _database.GetVideoByVideoId(v.Id);
+                                if (existing != null && existing.Status != DownloadStatus.Completed)
+                                    videosToEnqueue.Add(existing);
+                            }
                         }
                         else
                         {
                             // API呼び出しは非同期なのでUIスレッドをブロックせず、
                             // 取得に失敗した場合も仮タイトルで取り込みを継続する。
-                            ImportedVideos.Add(await CreateImportedVideoAsync(
-                                v, chkImmediateDownload.Checked, cancellationToken));
+                            var imported = await CreateImportedVideoAsync(
+                                v, immediateDownload, cancellationToken);
+                            ImportedVideos.Add(imported);
+                            if (immediateDownload)
+                                videosToEnqueue.Add(imported);
                         }
 
                         if (!IsDisposed && !Disposing)
@@ -321,6 +355,12 @@ namespace IwaraDownloader.Forms
                         _database.AddVideosBatch(ImportedVideos);
                         videosPersisted = true;
                     }
+
+                    // AddVideosBatch はDB保存のみで、DownloadManagerのメモリキューには
+                    // 入らない。ここで初めて投入することで、画面上もPending/待機中のまま
+                    // 取り残されず、通常の単体追加と同じく即時に処理が始まる。
+                    if (immediateDownload && videosToEnqueue.Count > 0)
+                        EnqueueImportedVideos(videosToEnqueue);
                 }
 
                 // --- チャンネル (profile) の処理 ---
@@ -331,7 +371,7 @@ namespace IwaraDownloader.Forms
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        if (_downloadManager.EnqueueSubscribedUser(profileUrl, chkImmediateDownload.Checked))
+                        if (_downloadManager.EnqueueSubscribedUser(profileUrl, immediateDownload))
                             addedChannels++;
                         else
                             channelFailed++;
@@ -362,6 +402,13 @@ namespace IwaraDownloader.Forms
                 // キャンセル時も、API取得が完了してリストへ追加済みの分は失わない。
                 if (!videosPersisted && ImportedVideos.Count > 0)
                 {
+                    // キャンセルでキュー投入を省略した分は、Pendingのまま残すと
+                    // 次回起動時に意図せず自動DLされるため、明示的に保留へ戻す。
+                    if (immediateDownload)
+                    {
+                        foreach (var video in ImportedVideos)
+                            video.Status = DownloadStatus.Paused;
+                    }
                     _database.AddVideosBatch(ImportedVideos);
                     videosPersisted = true;
                 }
