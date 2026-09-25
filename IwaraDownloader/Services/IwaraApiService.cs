@@ -614,19 +614,21 @@ namespace IwaraDownloader.Services
         /// ダウンロードURLは必要ないため、get_url の filesq/CDN問い合わせを省略する。
         /// フォルダ取り込みなど、タイトル・作者・file_idだけが必要な処理で使用する。
         /// </summary>
-        public async Task<VideoUrlInfo> GetVideoInfoAsync(string videoId, string? site = null)
+        public async Task<VideoUrlInfo> GetVideoInfoAsync(
+            string videoId, string? site = null, CancellationToken cancellationToken = default)
         {
             if (!IsLoggedIn)
                 return VideoUrlInfo.FromError("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
 
-            var info = await GetVideoInfoInternalAsync(videoId, site);
+            var info = await GetVideoInfoInternalAsync(videoId, site, cancellationToken);
             // GetDownloadUrlAsync と同じ site 自動フォールバックを維持する。
             if (!info.Success
                 && string.IsNullOrEmpty(site)
                 && (info.Error?.Contains("differentSite", StringComparison.OrdinalIgnoreCase) ?? false))
             {
                 Debug.WriteLine($"GetVideoInfo: differentSite detected for {videoId}, retrying with www.iwara.ai");
-                var retry = await GetVideoInfoInternalAsync(videoId, Utils.Helpers.SiteAi);
+                var retry = await GetVideoInfoInternalAsync(
+                    videoId, Utils.Helpers.SiteAi, cancellationToken);
                 if (retry.Success)
                 {
                     retry.ResolvedSite = Utils.Helpers.SiteAi;
@@ -636,9 +638,10 @@ namespace IwaraDownloader.Services
             return info;
         }
 
-        private async Task<VideoUrlInfo> GetVideoInfoInternalAsync(string videoId, string? site)
+        private async Task<VideoUrlInfo> GetVideoInfoInternalAsync(
+            string videoId, string? site, CancellationToken cancellationToken)
         {
-            var result = await RunPythonAsync("get_info", site, videoId);
+            var result = await RunPythonAsync("get_info", site, cancellationToken, null, videoId);
             if (result == null)
                 return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
 

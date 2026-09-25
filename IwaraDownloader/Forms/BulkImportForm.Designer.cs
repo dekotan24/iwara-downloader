@@ -150,7 +150,6 @@ namespace IwaraDownloader.Forms
             // btnCancel
             //
             this.btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            this.btnCancel.DialogResult = DialogResult.Cancel;
             this.btnCancel.Location = new Point(397, 444);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new Size(75, 27);

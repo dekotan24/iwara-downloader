@@ -13,6 +13,10 @@ namespace IwaraDownloader.Forms
     {
         private readonly DatabaseService _database;
         private readonly DownloadManager? _downloadManager;
+        private CancellationTokenSource? _importCancellation;
+        private bool _isImporting;
+        private bool _cancelRequested;
+        private bool _allowClose;
 
         /// <summary>インポートされた動画リスト</summary>
         public List<VideoInfo> ImportedVideos { get; } = new();
@@ -167,8 +171,11 @@ namespace IwaraDownloader.Forms
         /// ログイン済みなら get_info を使って表示用メタデータを補完し、取得できない場合は
         /// インポート自体を失敗させずに従来の仮タイトルへフォールバックする。
         /// </summary>
-        private async Task<VideoInfo> CreateImportedVideoAsync(VideoEntry entry, bool immediateDownload)
+        private async Task<VideoInfo> CreateImportedVideoAsync(
+            VideoEntry entry, bool immediateDownload, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var video = new VideoInfo
             {
                 VideoId = entry.Id,
@@ -189,7 +196,8 @@ namespace IwaraDownloader.Forms
             try
             {
                 // ダウンロードURLやCDN情報は不要なので、get_info の軽い経路を使う。
-                var info = await _downloadManager.IwaraApi.GetVideoInfoAsync(entry.Id, entry.Site);
+                var info = await _downloadManager.IwaraApi.GetVideoInfoAsync(
+                    entry.Id, entry.Site, cancellationToken);
                 if (!info.Success)
                 {
                     LoggingService.Instance.Warn(
@@ -220,6 +228,10 @@ namespace IwaraDownloader.Forms
                 // 保存後のダウンロード先が実際に解決したサイトと一致するようにする。
                 if (!string.IsNullOrEmpty(info.ResolvedSite))
                     video.Site = info.ResolvedSite;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -259,6 +271,7 @@ namespace IwaraDownloader.Forms
             }
 
             btnImport.Enabled = false;
+            btnCancel.Enabled = true;
             btnImport.Text = L.T("BulkImportForm_D010");
             progressBar.Visible = true;
             progressBar.Value = 0;
@@ -267,9 +280,16 @@ namespace IwaraDownloader.Forms
             ImportedVideos.Clear();
             DuplicateCount = 0;
             int addedChannels = 0, channelFailed = 0;
+            bool videosPersisted = false;
+            using var cancellation = new CancellationTokenSource();
+            _importCancellation = cancellation;
+            _isImporting = true;
+            _cancelRequested = false;
 
             try
             {
+                var cancellationToken = cancellation.Token;
+
                 // --- 動画 (id) の処理 ---
                 if (videos.Count > 0)
                 {
@@ -278,6 +298,8 @@ namespace IwaraDownloader.Forms
 
                     foreach (var v in videos)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         if (existingIds.Contains(v.Id))
                         {
                             DuplicateCount++;
@@ -286,7 +308,8 @@ namespace IwaraDownloader.Forms
                         {
                             // API呼び出しは非同期なのでUIスレッドをブロックせず、
                             // 取得に失敗した場合も仮タイトルで取り込みを継続する。
-                            ImportedVideos.Add(await CreateImportedVideoAsync(v, chkImmediateDownload.Checked));
+                            ImportedVideos.Add(await CreateImportedVideoAsync(
+                                v, chkImmediateDownload.Checked, cancellationToken));
                         }
 
                         if (!IsDisposed && !Disposing)
@@ -294,7 +317,10 @@ namespace IwaraDownloader.Forms
                     }
 
                     if (ImportedVideos.Count > 0)
+                    {
                         _database.AddVideosBatch(ImportedVideos);
+                        videosPersisted = true;
+                    }
                 }
 
                 // --- チャンネル (profile) の処理 ---
@@ -303,6 +329,8 @@ namespace IwaraDownloader.Forms
                 {
                     foreach (var profileUrl in profiles)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         if (_downloadManager.EnqueueSubscribedUser(profileUrl, chkImmediateDownload.Checked))
                             addedChannels++;
                         else
@@ -310,6 +338,8 @@ namespace IwaraDownloader.Forms
                         progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
                     }
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 // 結果表示
                 var channelMsg = addedChannels > 0
@@ -324,9 +354,22 @@ namespace IwaraDownloader.Forms
 
                 if (ImportedVideos.Count > 0 || addedChannels > 0)
                 {
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
+                    CompleteDialog(DialogResult.OK);
                 }
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // キャンセル時も、API取得が完了してリストへ追加済みの分は失わない。
+                if (!videosPersisted && ImportedVideos.Count > 0)
+                {
+                    _database.AddVideosBatch(ImportedVideos);
+                    videosPersisted = true;
+                }
+
+                if (ImportedVideos.Count > 0 || addedChannels > 0)
+                    CompleteDialog(DialogResult.OK);
+                else
+                    CompleteDialog(DialogResult.Cancel);
             }
             catch (Exception ex)
             {
@@ -335,7 +378,10 @@ namespace IwaraDownloader.Forms
             }
             finally
             {
+                _importCancellation = null;
+                _isImporting = false;
                 btnImport.Enabled = true;
+                btnCancel.Enabled = true;
                 btnImport.Text = L.T("BulkImportForm_D013");
                 progressBar.Visible = false;
             }
@@ -343,8 +389,42 @@ namespace IwaraDownloader.Forms
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
-            this.Close();
+            if (_isImporting)
+            {
+                RequestCancellation();
+                return;
+            }
+
+            CompleteDialog(DialogResult.Cancel);
+        }
+
+        private void RequestCancellation()
+        {
+            if (_cancelRequested) return;
+
+            _cancelRequested = true;
+            btnCancel.Enabled = false;
+            _importCancellation?.Cancel();
+        }
+
+        private void CompleteDialog(DialogResult result)
+        {
+            _allowClose = true;
+            _isImporting = false;
+            DialogResult = result;
+            Close();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_isImporting && !_allowClose)
+            {
+                e.Cancel = true;
+                RequestCancellation();
+                return;
+            }
+
+            base.OnFormClosing(e);
         }
     }
 }
