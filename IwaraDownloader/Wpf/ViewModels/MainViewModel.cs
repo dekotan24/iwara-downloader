@@ -627,7 +627,11 @@ namespace IwaraDownloader.Wpf.ViewModels
         private void StartAll()
         {
             _downloadManager.Start();
+            _downloadManager.ResumeAllDownloads();
             StatusMessage = L.T("MainForm_D044");
+            RefreshTree();
+            LoadVideos();
+            RefreshDownloadCount();
         }
 
         [RelayCommand]

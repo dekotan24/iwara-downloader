@@ -1657,10 +1657,10 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
     <value>Python環境やログイン等の初期セットアップを行います</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
-    <value>ダウンロードキューを開始します</value>
+    <value>待機中・一時停止中のダウンロードを再開します</value>
   </data>
   <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
-    <value>実行中のダウンロードを一時停止します</value>
+    <value>実行中・待機中のダウンロードをすべて一時停止します</value>
   </data>
   <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
     <value>一括インポート・検索インポート・重複チェックなどのツールメニューを開きます</value>
@@ -1732,13 +1732,13 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
     <value>▶ DL開始</value>
   </data>
   <data name="MainForm_btnStartAll_Tip" xml:space="preserve">
-    <value>待機中の動画のダウンロードを開始</value>
+    <value>待機中・一時停止中の動画のダウンロードを開始</value>
   </data>
   <data name="MainForm_btnStopAll" xml:space="preserve">
     <value>■ 停止</value>
   </data>
   <data name="MainForm_btnStopAll_Tip" xml:space="preserve">
-    <value>進行中のダウンロードをすべて停止</value>
+    <value>ダウンロード中・待機中の動画をすべて一時停止</value>
   </data>
   <data name="MainForm_btnTools" xml:space="preserve">
     <value>ツール</value>

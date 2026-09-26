@@ -1414,6 +1414,16 @@ namespace IwaraDownloader.Services
                     task.Status = DownloadStatus.Pending;
                     task.Video.Status = DownloadStatus.Pending;
                 }
+                else if (task.ResumeAfterGlobalStop)
+                {
+                    // ヘッダの全体停止後に「DL開始」が押された場合は、キャンセル完了後に
+                    // この動画も全体再開の対象にする。キャンセル処理が非同期なので、
+                    // ResumeAllDownloads の時点でまだ _activeTasks に残っている動画は
+                    // finally から再投入する。
+                    _logger.Info($"Download resumed after global stop: {task.Video.Title}");
+                    task.Status = DownloadStatus.Pending;
+                    task.Video.Status = DownloadStatus.Pending;
+                }
                 else if (IsShuttingDown)
                 {
                     // アプリ終了に巻き込まれたキャンセル。利用者が止めたわけではないので
@@ -1555,6 +1565,8 @@ namespace IwaraDownloader.Services
             }
             finally
             {
+                var resumeAfterGlobalStop = task.ResumeAfterGlobalStop;
+
                 // 同じVideoIdの新しいタスクが既に登録されている場合、旧タスクの終了処理で
                 // 新タスクを削除しないよう、参照一致を確認してから除去する。
                 lock (_enqueueLock)
@@ -1568,6 +1580,44 @@ namespace IwaraDownloader.Services
                 Interlocked.Decrement(ref _activeDownloadCount);
                 _slotAvailableSignal.Release();
                 TaskStatusChanged?.Invoke(this, task);
+
+                // 「DL開始」がキャンセル完了より先に押された場合、ここで旧タスクが
+                // _activeTasks から外れた後に通常の EnqueueDownload 経路へ戻す。
+                if (resumeAfterGlobalStop && !task.SuspendedForLogin
+                    && _isRunning && !IsShuttingDown)
+                {
+                    RequeueAfterGlobalStop(task.Video.VideoId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 全体停止でキャンセル中だった動画を、旧タスクの終了後に再投入する。
+        /// </summary>
+        private void RequeueAfterGlobalStop(string videoId)
+        {
+            try
+            {
+                var video = _database.GetVideoByVideoId(videoId);
+                if (video == null
+                    || video.Status == DownloadStatus.Completed
+                    || video.Status == DownloadStatus.Failed
+                    || video.Status == DownloadStatus.Skipped
+                    || GetTask(videoId) != null)
+                {
+                    return;
+                }
+
+                SubscribedUser? user = null;
+                if (video.SubscribedUserId.HasValue)
+                    user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+
+                EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                _logger.Info($"Re-enqueued after global stop: {video.Title}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn($"Requeue after global stop failed ({videoId}): {ex.Message}");
             }
         }
 
@@ -1950,6 +2000,58 @@ namespace IwaraDownloader.Services
 
             _logger.Info($"Disk space recovered — resumed {count} downloads");
             DownloadQueueResumedForDiskSpace?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// ヘッダの「DL開始」で、未完了の動画をすべて通常のダウンロードキューへ戻す。
+        /// Paused は手動の「後で」指定を含むが、このコマンドは明示的な全体開始なので
+        /// Pending と同様に再開する。Failed/Skipped は一括再試行の対象にしない。
+        /// </summary>
+        public int ResumeAllDownloads()
+        {
+            // StopAll直後は実行中タスクのキャンセル完了がまだ非同期の場合がある。
+            // その動画は ExecuteDownloadAsync の finally から旧タスク終了後に再投入する。
+            lock (_enqueueLock)
+            {
+                foreach (var task in _activeTasks.Values)
+                {
+                    if (!task.SuspendedForLogin
+                        && task.CancellationTokenSource?.IsCancellationRequested == true)
+                    {
+                        task.ResumeAfterGlobalStop = true;
+                    }
+                }
+            }
+
+            var videos = _database.GetNotDownloadedVideos();
+            var userMap = _database.GetAllSubscribedUsers().ToDictionary(u => u.Id);
+            var resumedCount = 0;
+
+            foreach (var video in videos)
+            {
+                var existingTask = GetTask(video.VideoId);
+                if (existingTask != null)
+                {
+                    if (!existingTask.SuspendedForLogin
+                        && existingTask.CancellationTokenSource?.IsCancellationRequested == true)
+                    {
+                        existingTask.ResumeAfterGlobalStop = true;
+                    }
+                    continue;
+                }
+
+                SubscribedUser? user = null;
+                if (video.SubscribedUserId.HasValue)
+                    userMap.TryGetValue(video.SubscribedUserId.Value, out user);
+
+                EnqueueDownload(video, video.SubscribedUserId.HasValue, user);
+                resumedCount++;
+            }
+
+            if (resumedCount > 0)
+                _logger.Info($"Resumed {resumedCount} incomplete downloads from global start");
+
+            return resumedCount;
         }
 
         /// <summary>

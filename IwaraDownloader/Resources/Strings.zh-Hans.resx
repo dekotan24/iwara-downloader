@@ -1653,10 +1653,10 @@ videoId 后导入数据库。
     <value>进行Python环境、登录等初始设置</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
-    <value>开始下载队列</value>
+    <value>恢复等待中和已暂停的下载</value>
   </data>
   <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
-    <value>暂停正在进行的下载</value>
+    <value>暂停所有进行中和等待中的下载</value>
   </data>
   <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
     <value>打开工具菜单(批量导入、搜索导入、重复检查等)</value>
@@ -1728,13 +1728,13 @@ videoId 后导入数据库。
     <value>▶ 开始下载</value>
   </data>
   <data name="MainForm_btnStartAll_Tip" xml:space="preserve">
-    <value>开始下载等待中的视频</value>
+    <value>开始下载等待中和已暂停的视频</value>
   </data>
   <data name="MainForm_btnStopAll" xml:space="preserve">
     <value>■ 停止</value>
   </data>
   <data name="MainForm_btnStopAll_Tip" xml:space="preserve">
-    <value>停止所有进行中的下载</value>
+    <value>暂停所有进行中和等待中的视频</value>
   </data>
   <data name="MainForm_btnTools" xml:space="preserve">
     <value>工具</value>

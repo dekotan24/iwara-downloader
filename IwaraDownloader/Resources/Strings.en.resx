@@ -1653,10 +1653,10 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>Run the initial setup (Python environment, login, etc.)</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
-    <value>Start the download queue</value>
+    <value>Resume pending and paused downloads</value>
   </data>
   <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
-    <value>Pause running downloads</value>
+    <value>Pause all active and pending downloads</value>
   </data>
   <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
     <value>Open the tools menu (bulk import, search import, duplicate check, etc.)</value>
@@ -1728,13 +1728,13 @@ If the save folder setting has not been changed yet, change it first (settings o
     <value>▶ Start DL</value>
   </data>
   <data name="MainForm_btnStartAll_Tip" xml:space="preserve">
-    <value>Start downloading pending videos</value>
+    <value>Start downloading pending and paused videos</value>
   </data>
   <data name="MainForm_btnStopAll" xml:space="preserve">
     <value>■ Stop</value>
   </data>
   <data name="MainForm_btnStopAll_Tip" xml:space="preserve">
-    <value>Stop all downloads in progress</value>
+    <value>Pause all active and pending videos</value>
   </data>
   <data name="MainForm_btnTools" xml:space="preserve">
     <value>Tools</value>
