@@ -8,7 +8,7 @@
 
 Subscribe to a channel and new uploads are saved automatically. Watch them from any device on your network through the built-in web server.
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/dekotan24/iwara-downloader/releases)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -143,4 +143,4 @@ This software is intended for personal use. Copyright in downloaded videos remai
 
 ## Acknowledgements
 
-[iwara-python-api](https://github.com/xiatg/iwara-python-api) · [cloudscraper](https://github.com/VeNoMouS/cloudscraper) · Parts of this project were developed with [Claude](https://claude.ai) by Anthropic
+[iwara-python-api](https://github.com/xiatg/iwara-python-api) · [cloudscraper](https://github.com/VeNoMouS/cloudscraper) · [Claude Code](https://claude.ai) ・ [Codex](https://chatgpt.com)

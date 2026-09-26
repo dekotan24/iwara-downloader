@@ -449,7 +449,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.Stop();
             try { _webServer.StopAsync().Wait(5000); } catch { }
             _webServer.Dispose();
-            MetadataService.WaitForWritesToComplete(10000);
+            MetadataService.WaitForWritesToComplete();
             _downloadManager.Dispose();
         }
 

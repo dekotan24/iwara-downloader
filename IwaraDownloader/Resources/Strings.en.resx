@@ -958,7 +958,7 @@ The existing file will be deleted. Continue?</value>
     <value>Setup incomplete. You can rerun it from the "Environment Setup" button.</value>
   </data>
   <data name="MainForm_D016" xml:space="preserve">
-    <value>Shutting down. Waiting for downloads to abort and tag writing to finish...</value>
+    <value>Shutting down. Waiting for downloads to abort and tag writing to finish (up to 120 seconds)...</value>
   </data>
   <data name="MainForm_D017" xml:space="preserve">
     <value>Environment not set up. Click the "Environment Setup" button.</value>

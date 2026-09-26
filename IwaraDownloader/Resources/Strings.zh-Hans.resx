@@ -958,7 +958,7 @@ videoId 后导入数据库。
     <value>设置未完成。可通过「环境设置」按钮重新运行。</value>
   </data>
   <data name="MainForm_D016" xml:space="preserve">
-    <value>正在退出。等待下载中断和标签写入完成...</value>
+    <value>正在退出。等待下载中断和标签写入完成（最长120秒）...</value>
   </data>
   <data name="MainForm_D017" xml:space="preserve">
     <value>环境尚未设置。请点击「环境设置」按钮。</value>

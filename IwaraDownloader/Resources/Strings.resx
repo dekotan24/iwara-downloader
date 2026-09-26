@@ -962,7 +962,7 @@ videoId を取得して DB に取り込みます。
     <value>セットアップ未完了。「環境セットアップ」ボタンから再実行できます。</value>
   </data>
   <data name="MainForm_D016" xml:space="preserve">
-    <value>終了処理中です。実行中のダウンロードの中断とタグ書き込みの完了を待っています...</value>
+    <value>終了処理中です。実行中のダウンロードの中断とタグ書き込みの完了を待っています（最大120秒）...</value>
   </data>
   <data name="MainForm_D017" xml:space="preserve">
     <value>環境が未セットアップです。「環境セットアップ」ボタンをクリックしてください。</value>

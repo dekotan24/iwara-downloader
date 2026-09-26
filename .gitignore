@@ -7,6 +7,7 @@
 /IwaraDownloader.DbTool/obj
 /IwaraDownloader.DbTool/bin
 /IwaraDownloader.Tests/
+/wiki/
 *.user
 
 # Python embeddable runtime artifacts
@@ -59,6 +60,3 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
-
-# Rust移行PoC(中止)の残骸
-/tools/iwara-rust-poc/
