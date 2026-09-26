@@ -1550,6 +1550,8 @@ namespace IwaraDownloader.Wpf.ViewModels
                 if (!IsPlaceholderVideoTitle(video)) continue;
                 if (await _downloadManager.RefreshVideoInfoAsync(video, progress)) refreshCount++;
             }
+            // 作者チャンネルへの紐付けが修復処理で行われるため、サイドバーの件数も再集計する。
+            RefreshTree();
             LoadVideos();
             StatusMessage = L.T("MainForm_D110", refreshCount);
         }

@@ -2016,6 +2016,143 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// URL一括登録の旧実装が保存した仮タイトルかどうかを判定する。
+        /// 修復対象の判定と、仮ファイル名を正式名へ戻す対象の判定で共通に使う。
+        /// </summary>
+        private static bool IsPlaceholderVideoTitle(VideoInfo video)
+        {
+            var title = video.Title?.Trim() ?? string.Empty;
+            var videoId = video.VideoId?.Trim() ?? string.Empty;
+            if (title.Length == 0 || videoId.Length == 0) return title.Length == 0;
+
+            return title.Equals($"Video {videoId}", StringComparison.OrdinalIgnoreCase)
+                || title.Equals($"[未取得] {videoId}", StringComparison.Ordinal)
+                || title.Equals($"[Not fetched] {videoId}", StringComparison.OrdinalIgnoreCase)
+                || title.Equals($"[未获取] {videoId}", StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 仮タイトルで生成された可能性が高いファイル名か確認する。
+        /// ユーザーが任意に名前を付けたファイルを、情報修復だけで勝手に変更しないため、
+        /// 動画IDと仮タイトルの印をファイル名に要求する。
+        /// </summary>
+        private static bool IsPlaceholderVideoFileName(string path, string videoId)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(videoId)) return false;
+            if (!fileName.Contains(videoId, StringComparison.OrdinalIgnoreCase)) return false;
+
+            return fileName.Contains("not fetched", StringComparison.OrdinalIgnoreCase)
+                || fileName.Contains("未取得", StringComparison.Ordinal)
+                || fileName.Contains("未获取", StringComparison.Ordinal)
+                || fileName.StartsWith("Video ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 仮タイトルで保存された動画ファイルを、修復後のタイトルに合わせてリネームする。
+        /// 移動先が既存ファイル・既存サイドカー・DB上の別動画と衝突する場合は連番を付ける。
+        /// </summary>
+        private bool TryRenamePlaceholderVideoFile(
+            VideoInfo video, string oldTitle, string oldAuthor, DateTime? oldPostedAt)
+        {
+            var oldPath = video.LocalFilePath;
+            if (string.IsNullOrWhiteSpace(oldPath)
+                || !File.Exists(oldPath))
+                return false;
+
+            var settings = SettingsManager.Instance.Settings;
+            var oldGeneratedName = Helpers.ApplyFilenameTemplate(
+                settings.FilenameTemplate, oldTitle, oldAuthor, video.VideoId, oldPostedAt);
+            var oldFileName = Path.GetFileNameWithoutExtension(oldPath);
+            if (!IsPlaceholderVideoFileName(oldPath, video.VideoId)
+                && !string.Equals(oldFileName, oldGeneratedName, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // 同じ実体を別動画も参照している場合、片方の情報修復で共有ファイルを
+            // 移動すると別動画のLocalFilePathが壊れるため、ファイル名変更を行わない。
+            var targetIds = new[] { video.VideoId };
+            if (_database.IsLocalFileReferenced(oldPath, targetIds))
+            {
+                _logger.Warn($"Skipping placeholder file rename because the file is shared: {oldPath}");
+                return false;
+            }
+
+            var directory = Path.GetDirectoryName(oldPath);
+            if (string.IsNullOrEmpty(directory)) return false;
+
+            var extension = Path.GetExtension(oldPath);
+            if (string.IsNullOrEmpty(extension)) extension = ".mp4";
+
+            var newGeneratedName = Helpers.ApplyFilenameTemplate(
+                settings.FilenameTemplate, video.Title, video.AuthorUsername, video.VideoId, video.PostedAt);
+            var desiredPath = Path.Combine(directory, newGeneratedName + extension);
+
+            if (string.Equals(oldPath, desiredPath, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var newPath = GetAvailableVideoFilePath(desiredPath, video.VideoId);
+            var oldMetadataPath = Path.ChangeExtension(oldPath, ".json");
+            var newMetadataPath = Path.ChangeExtension(newPath, ".json");
+
+            try
+            {
+                using var journal = FileMoveJournal.Begin();
+                journal.RecordStart(video.Id, oldPath, newPath);
+
+                FileMoveHelper.MoveFileSafe(oldPath, newPath);
+                if (File.Exists(oldMetadataPath))
+                {
+                    try
+                    {
+                        FileMoveHelper.MoveFileSafe(oldMetadataPath, newMetadataPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 本体の移動とDB更新は成立させ、サイドカーだけは次回の手動修復に委ねる。
+                        _logger.Warn($"Placeholder metadata rename failed {oldMetadataPath}: {ex.Message}");
+                    }
+                }
+
+                video.LocalFilePath = newPath;
+                _database.UpdateVideo(video);
+                journal.RecordDone(video.Id);
+
+                IndexCacheService.Invalidate(directory);
+                _logger.Info($"Renamed repaired placeholder file: {oldPath} -> {newPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // リネームできなくても、呼び出し側がタイトル等の情報更新を続行できるようにする。
+                _logger.Warn($"Placeholder file rename failed {oldPath} -> {newPath}: {ex.Message}");
+                return false;
+            }
+        }
+
+        private string GetAvailableVideoFilePath(string desiredPath, string videoId)
+        {
+            var directory = Path.GetDirectoryName(desiredPath) ?? string.Empty;
+            var fileName = Path.GetFileNameWithoutExtension(desiredPath);
+            var extension = Path.GetExtension(desiredPath);
+            var counter = 0;
+
+            while (true)
+            {
+                var candidate = counter == 0
+                    ? desiredPath
+                    : Path.Combine(directory, $"{fileName} ({counter}){extension}");
+                var metadataPath = Path.ChangeExtension(candidate, ".json");
+
+                if (!File.Exists(candidate)
+                    && !File.Exists(metadataPath)
+                    && !_database.IsLocalFileReferenced(candidate, new[] { videoId }))
+                    return candidate;
+
+                counter++;
+            }
+        }
+
+        /// <summary>
         /// 動画情報を再取得(タイトル等が取れていない場合用)。
         /// get_infoだけを使い、ダウンロード用CDN情報は取得しない。
         /// </summary>
@@ -2030,8 +2167,35 @@ namespace IwaraDownloader.Services
 
                 if (urlInfo.Success && !string.IsNullOrWhiteSpace(urlInfo.Title))
                 {
+                    var oldTitle = video.Title;
+                    var oldAuthor = video.AuthorUsername;
+                    var oldPostedAt = video.PostedAt;
+                    var wasPlaceholderTitle = IsPlaceholderVideoTitle(video);
+
                     ApplyVideoInfo(video, urlInfo);
-                    _database.UpdateVideo(video);
+
+                    // 情報未取得の動画は作者が空のまま登録されていることがある。
+                    // 通常の単体登録と同じ所属確定をここでも通し、チャンネル集計に含める。
+                    if (!video.SubscribedUserId.HasValue
+                        && !string.IsNullOrWhiteSpace(video.AuthorUsername))
+                    {
+                        var channel = _database.EnsureChannelForAuthor(video.AuthorUsername, video.Site);
+                        video.AuthorUserId = channel.UserId;
+                        video.SubscribedUserId = channel.Id;
+                    }
+
+                    if (wasPlaceholderTitle)
+                    {
+                        // リネームに成功した場合は、このメソッド内でDB更新とジャーナル完了まで行う。
+                        // 失敗/対象外なら、タイトル等だけを通常どおり保存する。
+                        if (!TryRenamePlaceholderVideoFile(video, oldTitle, oldAuthor, oldPostedAt))
+                            _database.UpdateVideo(video);
+                    }
+                    else
+                    {
+                        _database.UpdateVideo(video);
+                    }
+
                     progress?.Report(L.T("SvcDownloadManager_D006", urlInfo.Title));
                     return true;
                 }
