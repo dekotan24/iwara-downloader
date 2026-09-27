@@ -368,7 +368,7 @@ namespace IwaraDownloader.Wpf.ViewModels
         {
             try
             {
-                if (!ClipboardMonitorEnabled) return;
+                if (!ClipboardMonitorEnabled || _isShuttingDown) return;
 
                 string text;
                 try
@@ -424,13 +424,50 @@ namespace IwaraDownloader.Wpf.ViewModels
             _downloadManager.DownloadingCount > 0 || _downloadManager.WritingTagsCount > 0
             || _downloadManager.PendingTaskCount > 0 || MetadataService.WritesInProgress > 0;
 
+        private bool _isShuttingDown;
+        private bool _disposed;
+
         /// <summary>
-        /// アプリ終了処理。旧WinForms版MainForm_FormClosing(トレイ最小化ではなく実際に閉じる経路)に対応。
+        /// アプリ終了処理(非同期版)。旧WinForms版MainForm_FormClosing(トレイ最小化ではなく実際に閉じる経路)に対応。
         /// DL停止→Webサーバー停止→mp4タグ書き込み完了待ち→DownloadManager破棄の順で行う
-        /// (moov atom破損防止のため書き込み完了待ちを挟む)。
+        /// (moov atom破損防止のため書き込み完了待ちを挟む)。書き込み待ちは最大120秒かかるため
+        /// UIスレッド外で待ち、その間もウィンドウが「応答なし」にならないようにする
+        /// (応答なしで強制終了されると、守りたかったmp4がかえって壊れる)。
         /// </summary>
+        public async Task ShutdownAsync()
+        {
+            if (_disposed) return;
+            BeginShutdown();
+            _disposed = true;
+            StatusMessage = L.T("MainForm_D016");
+            // 待ちの間もUIスレッドが動くため、走行中のバックグラウンド処理が残り得る。
+            // DownloadManager破棄と重なると、DBだけ消えてファイルが残る等の中途半端な状態になるので先に待つ。
+            await AwaitIgnoringErrors(StartAllCommand.ExecutionTask);
+            await AwaitIgnoringErrors(_channelDeletionTask);
+            await Task.Run(CompleteShutdown);
+        }
+
+        private static async Task AwaitIgnoringErrors(Task? task)
+        {
+            if (task == null) return;
+            try { await task; } catch { }
+        }
+
+        /// <summary>同期版の終了処理。ShutdownAsyncと共通のフラグで二重実行しない。</summary>
         public void Dispose()
         {
+            if (_disposed) return;
+            BeginShutdown();
+            _disposed = true;
+            CompleteShutdown();
+        }
+
+        /// <summary>UIスレッドで行う停止処理(タイマー停止・イベント解除・DL停止)。</summary>
+        private void BeginShutdown()
+        {
+            if (_isShuttingDown) return;
+            _isShuttingDown = true;
+
             if (Current == this) Current = null;
 
             _freeSpaceTimer.Stop();
@@ -447,6 +484,11 @@ namespace IwaraDownloader.Wpf.ViewModels
             ThumbnailCacheService.Instance.ThumbnailReady -= OnThumbnailReady;
 
             _downloadManager.Stop();
+        }
+
+        /// <summary>待ち時間を伴う後始末。UIスレッド以外からも呼べる処理だけを置く。</summary>
+        private void CompleteShutdown()
+        {
             try { _webServer.StopAsync().Wait(5000); } catch { }
             _webServer.Dispose();
             MetadataService.WaitForWritesToComplete();
@@ -624,19 +666,36 @@ namespace IwaraDownloader.Wpf.ViewModels
         private void CheckNow() => _downloadManager.EnqueueAllUsersForCheck();
 
         [RelayCommand]
-        private void StartAll()
+        private async Task StartAll()
         {
+            if (_isShuttingDown) return;
+
             _downloadManager.Start();
-            _downloadManager.ResumeAllDownloads();
-            StatusMessage = L.T("MainForm_D044");
+            StatusMessage = L.T("MainForm_D011");
+            try
+            {
+                // 未DLが数千件あると全件のDB読み出しと投入に時間がかかるため、UIスレッドを塞がない。
+                await Task.Run(() => _downloadManager.ResumeAllDownloads());
+                StatusMessage = L.T("MainForm_D044");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("StartAll: ResumeAllDownloads failed", ex);
+                StatusMessage = ex.Message;
+            }
+            if (_isShuttingDown) return;
             RefreshTree();
             LoadVideos();
             RefreshDownloadCount();
         }
 
         [RelayCommand]
-        private void StopAll()
+        private async Task StopAll()
         {
+            // 全開始の投入中に止めると、止めた後に残りが投入されてDLが再開してしまうため、投入完了を待ってから止める。
+            await AwaitIgnoringErrors(StartAllCommand.ExecutionTask);
+            if (_isShuttingDown) return;
+
             _downloadManager.CancelAllTasks();
             StatusMessage = L.T("MainForm_D045");
             RefreshTree();
@@ -867,6 +926,23 @@ namespace IwaraDownloader.Wpf.ViewModels
                 || title.Equals($"[未获取] {videoId}", StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// 情報修復の直前に、DBの最新行がまだ修復してよい状態かを確認する。
+        /// キュー中/DL中、または読み出し時点からStatus/LocalFilePathが変わっている動画はnullを返す。
+        /// </summary>
+        private VideoInfo? TryGetRepairableLatestVideo(VideoInfo snapshot)
+        {
+            if (_downloadManager.GetTask(snapshot.VideoId) != null) return null;
+
+            var latest = _database.GetVideoByVideoId(snapshot.VideoId);
+            if (latest == null) return null;
+            if (latest.Status == DownloadStatus.Downloading || latest.Status == DownloadStatus.WritingTags) return null;
+            if (latest.Status != snapshot.Status) return null;
+            if (!string.Equals(latest.LocalFilePath ?? "", snapshot.LocalFilePath ?? "", StringComparison.OrdinalIgnoreCase)) return null;
+            if (!IsPlaceholderVideoTitle(latest)) return null;
+            return latest;
+        }
+
         [RelayCommand]
         private async Task RepairImportedVideoInfo()
         {
@@ -925,13 +1001,16 @@ namespace IwaraDownloader.Wpf.ViewModels
                 var repaired = 0;
                 var failed = 0;
 
-                foreach (var video in repairable)
+                foreach (var snapshot in repairable)
                 {
-                    // 確認ダイアログ中に開始されたタスクは直前で再確認し、
-                    // DownloadManagerが保持するVideoInfoを古い値で上書きしない。
-                    if (video.Status == DownloadStatus.Downloading
-                        || video.Status == DownloadStatus.WritingTags
-                        || _downloadManager.GetTask(video.VideoId) != null)
+                    // 終了処理中は修復(ファイル名変更を含む)を続けず、結果ダイアログも出さない。
+                    if (_isShuttingDown) return;
+
+                    // 確認ダイアログ中や前の動画の修復待ちの間に、キュー投入・DL開始・再DL等で
+                    // 状態が変わっていることがある。候補一覧のVideoInfoは古いままなので、DBの最新行を
+                    // 読み直して比較し、変わっていればDL側の値を古い値で上書きしないようスキップする。
+                    var video = TryGetRepairableLatestVideo(snapshot);
+                    if (video == null)
                     {
                         skipped++;
                         continue;
@@ -1549,9 +1628,13 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             var progress = new Progress<string>(msg => StatusMessage = msg);
             int refreshCount = 0;
-            foreach (var video in videos)
+            foreach (var selected in videos)
             {
-                if (!IsPlaceholderVideoTitle(video)) continue;
+                if (_isShuttingDown) return;
+                if (!IsPlaceholderVideoTitle(selected)) continue;
+                // 一覧の値は古いことがあるため、DBの最新行でキュー中/DL中でないことを確かめてから修復する。
+                var video = TryGetRepairableLatestVideo(selected);
+                if (video == null) continue;
                 if (await _downloadManager.RefreshVideoInfoAsync(video, progress)) refreshCount++;
             }
             // 作者チャンネルへの紐付けが修復処理で行われるため、サイドバーの件数も再集計する。
@@ -1593,8 +1676,23 @@ namespace IwaraDownloader.Wpf.ViewModels
         [RelayCommand]
         private void ReDownloadVideo()
         {
-            var videos = GetSelectedVideoInfos().Where(v => v.Status == DownloadStatus.Completed).ToList();
-            if (videos.Count == 0) return;
+            var selectedVideos = GetSelectedVideoInfos().Where(v => v.Status == DownloadStatus.Completed).ToList();
+            if (selectedVideos.Count == 0) return;
+
+            // ファイルを他の動画行(選択中の別の行も含む)と共有している動画は再DLしない。
+            // 共有ファイルは消せないので、残したまま同じ保存先へ再DLすると上書きや連番の重複ファイルができる。
+            var sharedVideos = selectedVideos
+                .Where(v => !string.IsNullOrWhiteSpace(v.LocalFilePath)
+                         && _database.IsLocalFileReferenced(v.LocalFilePath, new[] { v.VideoId }))
+                .ToList();
+            var videos = selectedVideos.Except(sharedVideos).ToList();
+            if (videos.Count == 0)
+            {
+                StatusMessage = L.T("MainForm_RedlAllShared", sharedVideos.Count);
+                System.Windows.MessageBox.Show(StatusMessage, L.T("MainForm_D122"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
 
             var totalSize = videos.Sum(v => v.FileSize);
             var message = videos.Count == 1
@@ -1625,7 +1723,9 @@ namespace IwaraDownloader.Wpf.ViewModels
 
             RefreshTree();
             LoadVideos();
-            StatusMessage = L.T("MainForm_D123", requeuedCount);
+            StatusMessage = sharedVideos.Count == 0
+                ? L.T("MainForm_D123", requeuedCount)
+                : L.T("MainForm_RedlSkippedShared", requeuedCount, sharedVideos.Count);
         }
 
         [RelayCommand]
@@ -2019,32 +2119,92 @@ namespace IwaraDownloader.Wpf.ViewModels
             StatusMessage = L.T("MainForm_D192", user.Username);
         }
 
+        private bool _isDeletingChannel;
+        private Task? _channelDeletionTask;
+
         [RelayCommand]
-        private void DeleteChannel()
+        private async Task DeleteChannel()
         {
+            if (_isDeletingChannel || _isShuttingDown) return;
             var user = SelectedTreeNode?.Channel;
             if (user == null) return;
 
-            var videos = _database.GetVideosBySubscribedUser(user.Id);
-            var localFileCount = videos
+            _isDeletingChannel = true;
+            try
+            {
+                StatusMessage = L.T("MainForm_DeleteChannelCounting");
+                // パスごとのDB問い合わせとファイル確認は件数が多いと重いため、UIスレッド外で数える。
+                var (videoCount, localFileCount) = await Task.Run(() => CountChannelDeletionTargets(user.Id));
+
+                var result = System.Windows.MessageBox.Show(
+                    L.T("MainForm_D102", user.Username, videoCount, localFileCount), L.T("MainForm_D103"),
+                    System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+                if (result != System.Windows.MessageBoxResult.Yes)
+                {
+                    StatusMessage = "";
+                    return;
+                }
+                // 確認ダイアログを出している間にトレイから終了された場合は削除しない。
+                if (_isShuttingDown) return;
+
+                StatusMessage = L.T("MainForm_DeleteChannelInProgress", user.Username);
+                var deletionTask = Task.Run(() => _downloadManager.DeleteSubscribedUserAndVideos(user));
+                _channelDeletionTask = deletionTask;
+                var deletion = await deletionTask;
+                if (_isShuttingDown) return;
+
+                RefreshTree();
+                LoadVideos();
+                RefreshDownloadCount();
+                StatusMessage = deletion.FailedFileCount == 0
+                    ? L.T("MainForm_D204", user.Username, deletion.VideoCount, deletion.LocalFileCount)
+                    : L.T("MainForm_D205", user.Username, deletion.VideoCount, deletion.LocalFileCount,
+                        deletion.FailedFileCount);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error($"DeleteChannel failed: {user.Username}", ex);
+                StatusMessage = L.T("MainForm_DeleteChannelError", user.Username, ex.Message);
+                System.Windows.MessageBox.Show(
+                    StatusMessage, L.T("MainForm_D103"),
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                if (!_isShuttingDown)
+                {
+                    // 途中まで削除が進んでいる可能性があるため、表示をDBの現状に合わせる。
+                    RefreshTree();
+                    LoadVideos();
+                    RefreshDownloadCount();
+                }
+            }
+            finally
+            {
+                _isDeletingChannel = false;
+            }
+        }
+
+        /// <summary>
+        /// チャンネル削除の確認ダイアログ用の件数。ローカルファイルは実際に消えるもの
+        /// (存在し、かつこのチャンネル以外の動画行から参照されていないもの)だけを数える。
+        /// 除外判定はDownloadManager.DeleteLocalVideoFilesと同じ規則にそろえる。
+        /// </summary>
+        private (int VideoCount, int LocalFileCount) CountChannelDeletionTargets(int subscribedUserId)
+        {
+            var videos = _database.GetVideosBySubscribedUser(subscribedUserId);
+            // 除外(ゴミ箱)に入っている同チャンネルの動画もチャンネル削除で一緒に消える。
+            var excludedVideos = _database.GetExcludedVideos()
+                .Where(v => v.SubscribedUserId == subscribedUserId)
+                .ToList();
+            var allTargets = videos.Concat(excludedVideos).ToList();
+            var channelVideoIds = allTargets
+                .Select(v => v.VideoId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.Ordinal);
+            var localFileCount = allTargets
                 .Select(v => v.LocalFilePath)
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Count(File.Exists);
-
-            var result = System.Windows.MessageBox.Show(
-                L.T("MainForm_D102", user.Username, videos.Count, localFileCount), L.T("MainForm_D103"),
-                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
-            if (result != System.Windows.MessageBoxResult.Yes) return;
-
-            var deletion = _downloadManager.DeleteSubscribedUserAndVideos(user);
-            RefreshTree();
-            LoadVideos();
-            RefreshDownloadCount();
-            StatusMessage = deletion.FailedFileCount == 0
-                ? L.T("MainForm_D204", user.Username, deletion.VideoCount, deletion.LocalFileCount)
-                : L.T("MainForm_D205", user.Username, deletion.VideoCount, deletion.LocalFileCount,
-                    deletion.FailedFileCount);
+                .Count(path => File.Exists(path) && !_database.IsLocalFileReferenced(path, channelVideoIds));
+            return (videos.Count, localFileCount);
         }
 
         private System.Windows.Forms.IWin32Window GetOwnerWin32Window() => OwnerWindow != null
