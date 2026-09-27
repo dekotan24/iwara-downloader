@@ -920,6 +920,99 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// チャンネル取得結果の動画を追加する。video.SubscribedUserId のチャンネルがまだ存在し、
+        /// かつ除外(ゴミ箱)に入っていない場合だけ挿入する。
+        /// 存在確認と挿入を1文にしているのは、取得中にチャンネル削除がコミットされても
+        /// 削除済みチャンネルに紐付く孤児動画を作らないため (外部キーは強制していない)。
+        /// 除外済み動画は自動取得で復活させないので、AddVideo と違い ExcludedVideos から出さない。
+        /// </summary>
+        /// <returns>追加した行の Id。挿入しなかった場合は 0</returns>
+        public int AddVideoIfSubscribedUserExists(VideoInfo video)
+        {
+            using var connection = OpenConnection();
+
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                INSERT INTO Videos (VideoId, Title, Url, ThumbnailUrl, LocalThumbnailPath, AuthorUserId, AuthorUsername,
+                    DurationSeconds, PostedAt, LocalFilePath, FileSize, Status, DownloadedAt, SubscribedUserId,
+                    RetryCount, LastErrorMessage, CreatedAt, Tags, Memo, FileUuid, EmbedUrl, Rating, Site, IsFavorite, ThumbnailStatus, ApiRawJson, Priority)
+                SELECT @VideoId, @Title, @Url, @ThumbnailUrl, @LocalThumbnailPath, @AuthorUserId, @AuthorUsername,
+                    @DurationSeconds, @PostedAt, @LocalFilePath, @FileSize, @Status, @DownloadedAt, @SubscribedUserId,
+                    @RetryCount, @LastErrorMessage, @CreatedAt, @Tags, @Memo, @FileUuid, @EmbedUrl, @Rating, @Site, @IsFavorite, @ThumbnailStatus, @ApiRawJson, @Priority
+                WHERE EXISTS (SELECT 1 FROM SubscribedUsers WHERE Id = @SubscribedUserId)
+                  AND NOT EXISTS (SELECT 1 FROM ExcludedVideos WHERE VideoId = @VideoId);
+                SELECT CASE WHEN changes() > 0 THEN last_insert_rowid() ELSE 0 END;
+            ";
+            AddVideoParameters(command, video);
+            command.Parameters.AddWithValue("@CreatedAt", video.CreatedAt.ToString("o"));
+
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+
+        /// <summary>
+        /// 指定動画のうち、未DL (Completed / Skipped / Failed 以外) のものを Pending にして、その VideoId を返す。
+        /// 読み取りと更新を同じトランザクションで行い、呼び出し元の古いスナップショットで
+        /// 完了済みなどの動画を Pending に巻き戻さないようにする。
+        /// </summary>
+        public List<string> SetPendingForNotDownloaded(IEnumerable<string> videoIds)
+        {
+            var updated = new List<string>();
+            var idList = videoIds.Distinct(StringComparer.Ordinal).ToList();
+            if (idList.Count == 0) return updated;
+
+            using var connection = OpenConnection();
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                const int batchSize = 500;
+                const string notDownloaded = "Status != @Completed AND Status != @Skipped AND Status != @Failed";
+                for (int i = 0; i < idList.Count; i += batchSize)
+                {
+                    var batch = idList.Skip(i).Take(batchSize).ToList();
+                    var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
+
+                    using (var selectCommand = connection.CreateCommand())
+                    {
+                        selectCommand.Transaction = transaction;
+                        selectCommand.CommandText = $"SELECT VideoId FROM Videos WHERE VideoId IN ({placeholders}) AND {notDownloaded}";
+                        AddStatusFilterParameters(selectCommand);
+                        for (int j = 0; j < batch.Count; j++)
+                            selectCommand.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                        using var reader = selectCommand.ExecuteReader();
+                        while (reader.Read())
+                            updated.Add(reader.GetString(0));
+                    }
+
+                    using (var updateCommand = connection.CreateCommand())
+                    {
+                        updateCommand.Transaction = transaction;
+                        updateCommand.CommandText =
+                            $"UPDATE Videos SET Status = @Pending WHERE VideoId IN ({placeholders}) AND {notDownloaded} AND Status != @Pending";
+                        AddStatusFilterParameters(updateCommand);
+                        updateCommand.Parameters.AddWithValue("@Pending", (int)DownloadStatus.Pending);
+                        for (int j = 0; j < batch.Count; j++)
+                            updateCommand.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                        updateCommand.ExecuteNonQuery();
+                    }
+                }
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+            return updated;
+
+            static void AddStatusFilterParameters(SqliteCommand command)
+            {
+                command.Parameters.AddWithValue("@Completed", (int)DownloadStatus.Completed);
+                command.Parameters.AddWithValue("@Skipped", (int)DownloadStatus.Skipped);
+                command.Parameters.AddWithValue("@Failed", (int)DownloadStatus.Failed);
+            }
+        }
+
+        /// <summary>
         /// 動画を更新
         /// </summary>
         public void UpdateVideo(VideoInfo video)
@@ -2153,16 +2246,23 @@ namespace IwaraDownloader.Services
         /// </summary>
         /// <returns>除外した件数</returns>
         public int MoveVideosToExcluded(IEnumerable<int> ids)
+            => MoveVideosToExcludedAndGetMoved(ids).Count;
+
+        /// <summary>
+        /// MoveVideosToExcluded と同じ移動を行い、実際に移動した行を移動時点の値で返す。
+        /// 呼び出し側が持つ一覧は古い可能性があるため、ファイル削除などはこの戻り値を使う。
+        /// </summary>
+        public List<VideoInfo> MoveVideosToExcludedAndGetMoved(IEnumerable<int> ids)
         {
+            var movedVideos = new List<VideoInfo>();
             var idList = ids.Distinct().ToList();
-            if (idList.Count == 0) return 0;
+            if (idList.Count == 0) return movedVideos;
 
             using var connection = OpenConnection();
             var cols = GetSharedVideoColumnList(connection);
             var now = DateTime.Now.ToString("o");
 
             using var transaction = connection.BeginTransaction();
-            int moved = 0;
             try
             {
                 const int batchSize = 500;
@@ -2170,6 +2270,17 @@ namespace IwaraDownloader.Services
                 {
                     var batch = idList.Skip(i).Take(batchSize).ToList();
                     var placeholders = string.Join(",", batch.Select((_, idx) => $"@id{idx}"));
+
+                    using (var selectCmd = connection.CreateCommand())
+                    {
+                        selectCmd.Transaction = transaction;
+                        selectCmd.CommandText = $"SELECT * FROM Videos WHERE Id IN ({placeholders})";
+                        for (int j = 0; j < batch.Count; j++)
+                            selectCmd.Parameters.AddWithValue($"@id{j}", batch[j]);
+                        using var reader = selectCmd.ExecuteReader();
+                        while (reader.Read())
+                            movedVideos.Add(ReadVideo(reader));
+                    }
 
                     // 1) スナップショットを ExcludedVideos へ。
                     //    INSERT OR REPLACE で「削除→復元→再削除」サイクルの VideoId UNIQUE 衝突を回避。
@@ -2189,7 +2300,7 @@ namespace IwaraDownloader.Services
                     deleteCmd.CommandText = $"DELETE FROM Videos WHERE Id IN ({placeholders})";
                     for (int j = 0; j < batch.Count; j++)
                         deleteCmd.Parameters.AddWithValue($"@id{j}", batch[j]);
-                    moved += deleteCmd.ExecuteNonQuery();
+                    deleteCmd.ExecuteNonQuery();
                 }
                 transaction.Commit();
             }
@@ -2198,7 +2309,7 @@ namespace IwaraDownloader.Services
                 transaction.Rollback();
                 throw;
             }
-            return moved;
+            return movedVideos;
         }
 
         /// <summary>
@@ -2294,13 +2405,22 @@ namespace IwaraDownloader.Services
         /// </summary>
         /// <returns>削除した件数</returns>
         public int DeleteExcludedPermanent(IEnumerable<string> videoIds)
+            => DeleteExcludedPermanentAndGetDeleted(videoIds).Count;
+
+        /// <summary>
+        /// 除外(ゴミ箱)から完全に削除し、実際に削除した行を返す (復元不可)。
+        /// 呼び出し元の選択リストは古い可能性があり、復元済みなどで削除されなかった動画の
+        /// ファイルまで片付けないよう、削除と同じトランザクションで読んだ行を返す。
+        /// </summary>
+        /// <returns>削除した動画 (削除時点の LocalFilePath を含む)</returns>
+        public List<VideoInfo> DeleteExcludedPermanentAndGetDeleted(IEnumerable<string> videoIds)
         {
+            var deletedVideos = new List<VideoInfo>();
             var idList = videoIds.Distinct().ToList();
-            if (idList.Count == 0) return 0;
+            if (idList.Count == 0) return deletedVideos;
 
             using var connection = OpenConnection();
             using var transaction = connection.BeginTransaction();
-            int deleted = 0;
             try
             {
                 const int batchSize = 500;
@@ -2308,12 +2428,26 @@ namespace IwaraDownloader.Services
                 {
                     var batch = idList.Skip(i).Take(batchSize).ToList();
                     var placeholders = string.Join(",", batch.Select((_, idx) => $"@vid{idx}"));
-                    var command = connection.CreateCommand();
-                    command.Transaction = transaction;
-                    command.CommandText = $"DELETE FROM ExcludedVideos WHERE VideoId IN ({placeholders})";
-                    for (int j = 0; j < batch.Count; j++)
-                        command.Parameters.AddWithValue($"@vid{j}", batch[j]);
-                    deleted += command.ExecuteNonQuery();
+
+                    using (var selectCommand = connection.CreateCommand())
+                    {
+                        selectCommand.Transaction = transaction;
+                        selectCommand.CommandText = $"SELECT * FROM ExcludedVideos WHERE VideoId IN ({placeholders})";
+                        for (int j = 0; j < batch.Count; j++)
+                            selectCommand.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                        using var reader = selectCommand.ExecuteReader();
+                        while (reader.Read())
+                            deletedVideos.Add(ReadVideo(reader));
+                    }
+
+                    using (var deleteCommand = connection.CreateCommand())
+                    {
+                        deleteCommand.Transaction = transaction;
+                        deleteCommand.CommandText = $"DELETE FROM ExcludedVideos WHERE VideoId IN ({placeholders})";
+                        for (int j = 0; j < batch.Count; j++)
+                            deleteCommand.Parameters.AddWithValue($"@vid{j}", batch[j]);
+                        deleteCommand.ExecuteNonQuery();
+                    }
                 }
                 transaction.Commit();
             }
@@ -2322,7 +2456,7 @@ namespace IwaraDownloader.Services
                 transaction.Rollback();
                 throw;
             }
-            return deleted;
+            return deletedVideos;
         }
 
         #endregion
