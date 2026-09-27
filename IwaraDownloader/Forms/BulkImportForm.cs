@@ -255,15 +255,24 @@ namespace IwaraDownloader.Forms
                 // AddVideosBatch は高速化のため VideoInfo.Id を採番して返さない。
                 // DownloadManager.UpdateVideo は Id で更新するため、Bulk Import の新規行は
                 // DBから再読込して通常の単体登録と同じ実体をキューへ渡す。
-                var video = importedVideo.Id > 0
-                    ? importedVideo
-                    : _database.GetVideoByVideoId(importedVideo.VideoId);
+                // 既存行も、存在確認からここまでの間に別経路でDL完了等へ進んでいることがあるため
+                // 手元のスナップショットではなく最新の行で判定する。
+                // (新規のつもりの行も INSERT OR IGNORE で別経路の行に負けていれば、読み直すのはその行)
+                var video = _database.GetVideoByVideoId(importedVideo.VideoId);
                 if (video == null)
                 {
                     LoggingService.Instance.Warn(
                         $"一括インポート後の動画再読込に失敗 ({importedVideo.VideoId})");
                     continue;
                 }
+
+                // 完了済み・スキップ済みを再DLさせない。
+                if (video.Status == DownloadStatus.Completed || video.Status == DownloadStatus.Skipped)
+                    continue;
+
+                // 待機中/DL中のタスクがあれば、DB上の Status に関わらず二重投入しない。
+                if (_downloadManager.GetTask(video.VideoId) != null)
+                    continue;
 
                 SubscribedUser? subscribedUser = null;
                 if (video.SubscribedUserId.HasValue)
@@ -288,6 +297,11 @@ namespace IwaraDownloader.Forms
             {
                 var author = video.AuthorUsername?.Trim();
                 if (string.IsNullOrEmpty(author)) continue;
+
+                // 修復対象はチャンネル未所属の動画だけ。既に別チャンネルへ所属している動画を
+                // 作者チャンネルへ移すと、購読チャンネル側の一覧から動画が消えてしまう。
+                // 判定は起動時の作者チャンネル集約 (SubscribedUserId IS NULL) と揃える。
+                if (persistExisting && video.SubscribedUserId.HasValue) continue;
 
                 if (!channelCache.TryGetValue(author, out var channel))
                 {
@@ -453,22 +467,35 @@ namespace IwaraDownloader.Forms
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
                 // キャンセル時も、API取得が完了してリストへ追加済みの分は失わない。
+                // ここで出た例外は下の catch (Exception) には渡らず、async void から
+                // UIスレッドの未処理例外になるため、この場で受け止める。
+                bool saveFailed = false;
                 if (!videosPersisted && ImportedVideos.Count > 0)
                 {
-                    AssociateVideosWithAuthorChannels(ImportedVideos, channelCache, persistExisting: false);
-
-                    // キャンセルでキュー投入を省略した分は、Pendingのまま残すと
-                    // 次回起動時に意図せず自動DLされるため、明示的に保留へ戻す。
-                    if (immediateDownload)
+                    try
                     {
-                        foreach (var video in ImportedVideos)
-                            video.Status = DownloadStatus.Paused;
+                        AssociateVideosWithAuthorChannels(ImportedVideos, channelCache, persistExisting: false);
+
+                        // キャンセルでキュー投入を省略した分は、Pendingのまま残すと
+                        // 次回起動時に意図せず自動DLされるため、明示的に保留へ戻す。
+                        if (immediateDownload)
+                        {
+                            foreach (var video in ImportedVideos)
+                                video.Status = DownloadStatus.Paused;
+                        }
+                        _database.AddVideosBatch(ImportedVideos);
+                        videosPersisted = true;
                     }
-                    _database.AddVideosBatch(ImportedVideos);
-                    videosPersisted = true;
+                    catch (Exception ex)
+                    {
+                        saveFailed = true;
+                        LoggingService.Instance.Error($"一括インポートのキャンセル時の保存に失敗: {ex.Message}", ex);
+                        MessageBox.Show(L.T("BulkImportForm_D012", ex.Message),
+                            L.T("BulkImportForm_D003"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
 
-                if (ImportedVideos.Count > 0 || addedChannels > 0)
+                if ((!saveFailed && ImportedVideos.Count > 0) || addedChannels > 0)
                     CompleteDialog(DialogResult.OK);
                 else
                     CompleteDialog(DialogResult.Cancel);

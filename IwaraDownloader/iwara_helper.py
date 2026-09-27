@@ -157,6 +157,25 @@ def _parse_iso_datetime(value):
     return dt
 
 
+# 待機中に stderr へ生存表示を出す間隔 (秒)。
+# C# 側は stderr 出力が途絶えると取得プロセスを打ち切るので、その猶予 (最短 90 秒) より十分短くする。
+_HEARTBEAT_INTERVAL = 10.0
+
+
+def _sleep_with_heartbeat(seconds, label="RateLimit"):
+    """seconds 秒待つ。長い待機は細切れにし、合間に残り秒数を stderr に出す。
+    stdout は JSON 応答専用なので書かない。"""
+    deadline = time.monotonic() + max(0.0, seconds)
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(_HEARTBEAT_INTERVAL, remaining))
+        remaining = deadline - time.monotonic()
+        if remaining >= 1:
+            print(f"{label}: still waiting, {remaining:.0f}s left", file=sys.stderr, flush=True)
+
+
 class IwaraAPI:
     def __init__(self, token=None, rate_limit_config=None, site=None):
         self.scraper = cloudscraper.create_scraper(
@@ -196,8 +215,8 @@ class IwaraAPI:
         elapsed = time.time() - self._last_request_time
         if elapsed < delay_seconds:
             wait_time = delay_seconds - elapsed
-            print(f"RateLimit: waiting {wait_time:.1f}s...", file=sys.stderr)
-            time.sleep(wait_time)
+            print(f"RateLimit: waiting {wait_time:.1f}s...", file=sys.stderr, flush=True)
+            _sleep_with_heartbeat(wait_time)
         
         self._last_request_time = time.time()
     
@@ -221,8 +240,8 @@ class IwaraAPI:
             else:
                 delay = self.rate_limit_base_delay
             
-            print(f"RateLimit: HTTP 429 Too Many Requests, backing off for {delay:.0f}s (attempt {self._consecutive_errors})", file=sys.stderr)
-            time.sleep(delay)
+            print(f"RateLimit: HTTP 429 Too Many Requests, backing off for {delay:.0f}s (attempt {self._consecutive_errors})", file=sys.stderr, flush=True)
+            _sleep_with_heartbeat(delay)
             return True, "Rate limited (429)"
         
         if status_code == 403:
@@ -258,8 +277,8 @@ class IwaraAPI:
                 else:
                     delay = self.rate_limit_base_delay
                 
-                print(f"RateLimit: HTTP 403 (rate limit), backing off for {delay:.0f}s (attempt {self._consecutive_errors})", file=sys.stderr)
-                time.sleep(delay)
+                print(f"RateLimit: HTTP 403 (rate limit), backing off for {delay:.0f}s (attempt {self._consecutive_errors})", file=sys.stderr, flush=True)
+                _sleep_with_heartbeat(delay)
                 return True, f"Rate limited (403): {error_detail}"
             else:
                 # 権限不足の403 - リトライしない
@@ -306,7 +325,7 @@ class IwaraAPI:
                 last_error = str(e)
                 print(f"Request error (attempt {attempt + 1}/{max_retries}): {e}", file=sys.stderr)
                 if attempt < max_retries - 1:
-                    time.sleep(self.api_request_delay * (attempt + 1))
+                    _sleep_with_heartbeat(self.api_request_delay * (attempt + 1))
                 else:
                     raise
         
