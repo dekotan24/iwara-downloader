@@ -149,9 +149,6 @@
   <data name="BulkImportForm_btnPaste" xml:space="preserve">
     <value>从剪贴板</value>
   </data>
-  <data name="BulkImportForm_chkImmediateDownload" xml:space="preserve">
-    <value>立即开始下载频道的视频</value>
-  </data>
   <data name="BulkImportForm_lblDescription" xml:space="preserve">
     <value>请输入 iwara.tv / iwara.ai 的视频或频道URL（每行一个URL）</value>
   </data>
@@ -889,6 +886,163 @@ videoId 后导入数据库。
   <data name="ImportFromFolderWizard_lblTitleMatchTitle" xml:space="preserve">
     <value>标题匹配文件（待确认）</value>
   </data>
+  <data name="LocalFileIntegrityForm_D001" xml:space="preserve">
+    <value>正在检查本地文件完整性...</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D002" xml:space="preserve">
+    <value>存在问题的视频：{0} 个</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D003" xml:space="preserve">
+    <value>扫描已取消</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D004" xml:space="preserve">
+    <value>错误：{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D005" xml:space="preserve">
+    <value>本地文件完整性检查失败：
+{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D006" xml:space="preserve">
+    <value>本地文件完整性检查</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D007" xml:space="preserve">
+    <value>请选择一个视频进行重新关联。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D008" xml:space="preserve">
+    <value>项目状态已改变，列表已刷新。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D009" xml:space="preserve">
+    <value>已将“{0}”重新关联到本地文件。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D010" xml:space="preserve">
+    <value>要将选中的 {0} 个项目加入重新下载队列吗？</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D011" xml:space="preserve">
+    <value>确认重新下载</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D012" xml:space="preserve">
+    <value>已将 {0} 个项目加入重新下载队列。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D013" xml:space="preserve">
+    <value>已加入 {0} 个项目。{1} 个因状态改变或正在处理而跳过。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D014" xml:space="preserve">
+    <value>重新下载失败：
+{0}</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D015" xml:space="preserve">
+    <value>该视频当前正在队列中或处理中，列表已刷新。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D016" xml:space="preserve">
+    <value>无法连接以下驱动器或共享: {0}
+
+其中的 {1} 个项目未被判定为“缺失”，而是排除在检查之外。外接驱动器可能未连接，请连接后重新扫描。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D017" xml:space="preserve">
+    <value>正在等待映射操作完成，完成前无法关闭窗口。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D018" xml:space="preserve">
+    <value>检测到 {1} 个缺失项 (仅显示前 {0} 个)。数量过多通常意味着驱动器未连接。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_D019" xml:space="preserve">
+    <value>上次扫描达到了缺失项上限。如果驱动器已连接但无响应，实际存在的文件也可能被判定为“缺失”。
+
+此时重新下载 {0} 个项目，可能会重新获取已有的文件。
+
+仍要继续吗？（强烈建议先检查驱动器状态并重新扫描。）</value>
+  </data>
+  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve">
+    <value>数据库路径中的文件不存在</value>
+  </data>
+  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve">
+    <value>已完成但数据库路径为空</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve">
+    <value>下载中</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve">
+    <value>已暂停</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve">
+    <value>等待中</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve">
+    <value>已跳过</value>
+  </data>
+  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve">
+    <value>写入标签中</value>
+  </data>
+  <data name="LocalFileIntegrityForm_Title" xml:space="preserve">
+    <value>本地文件完整性检查</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve">
+    <value>重新关联本地文件...</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve">
+    <value>重新下载</value>
+  </data>
+  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve">
+    <value>重新扫描</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve">
+    <value>数据库路径</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve">
+    <value>原因</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve">
+    <value>Video ID</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve">
+    <value>查找数据库中本地文件缺失的视频。选择项目后，可以重新关联本地文件或重新下载。</value>
+  </data>
+  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve">
+    <value>等待扫描</value>
+  </data>
+  <data name="MainForm_BugFixRepairConfirm" xml:space="preserve">
+    <value>要重新获取 {0} 个占位标题视频的信息吗？
+正在下载或处于其他忙碌状态的 {1} 个视频将被跳过。</value>
+  </data>
+  <data name="MainForm_BugFixRepairError" xml:space="preserve">
+    <value>修复视频信息时发生错误。
+{0}</value>
+  </data>
+  <data name="MainForm_BugFixRepairLoginRequired" xml:space="preserve">
+    <value>请先登录 iwara，然后再修复视频信息。</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoRunnable" xml:space="preserve">
+    <value>存在修复目标，但它们正在下载或处于其他忙碌状态，当前无法处理。（{0} 个）</value>
+  </data>
+  <data name="MainForm_BugFixRepairNoTargets" xml:space="preserve">
+    <value>没有需要修复的视频。</value>
+  </data>
+  <data name="MainForm_BugFixRepairResult" xml:space="preserve">
+    <value>视频信息修复完成。
+成功：{0} 个
+失败：{1} 个
+跳过：{2} 个</value>
+  </data>
+  <data name="MainForm_ChannelHint_CheckNow" xml:space="preserve">
+    <value>仅获取比已保存的最新视频更新的部分（较快）。</value>
+  </data>
+  <data name="MainForm_ChannelHint_RefetchAll" xml:space="preserve">
+    <value>重新获取全部页面。用于找回因旧版本获取上限而缺失的旧视频（较慢）。</value>
+  </data>
   <data name="MainForm_ConfirmDeleteMany" xml:space="preserve">
     <value>删除 {0} 个视频吗？</value>
   </data>
@@ -961,7 +1115,7 @@ videoId 后导入数据库。
     <value>设置未完成。可通过「环境设置」按钮重新运行。</value>
   </data>
   <data name="MainForm_D016" xml:space="preserve">
-    <value>正在退出。等待下载中断和标签写入完成...</value>
+    <value>正在退出。等待下载中断和标签写入完成（最长120秒）...</value>
   </data>
   <data name="MainForm_D017" xml:space="preserve">
     <value>环境尚未设置。请点击「环境设置」按钮。</value>
@@ -1241,7 +1395,9 @@ videoId 后导入数据库。
     <value>已将 {0} 的外部视频下载设置更改为「{1}」</value>
   </data>
   <data name="MainForm_D102" xml:space="preserve">
-    <value>将「{0}」从订阅列表中删除吗？</value>
+    <value>要从订阅列表中删除「{0}」吗？
+同时会永久删除 {1} 个已注册视频和 {2} 个本地视频文件。
+此操作无法撤销。</value>
   </data>
   <data name="MainForm_D103" xml:space="preserve">
     <value>确认</value>
@@ -1543,6 +1699,24 @@ videoId 后导入数据库。
     <value>启动数据库操作工具失败:
 {0}</value>
   </data>
+  <data name="MainForm_D203" xml:space="preserve">
+    <value>已将 {0} 的全部视频重新获取加入队列</value>
+  </data>
+  <data name="MainForm_D204" xml:space="preserve">
+    <value>已删除「{0}」（视频：{1}，本地文件：{2}）</value>
+  </data>
+  <data name="MainForm_D205" xml:space="preserve">
+    <value>已删除「{0}」（视频：{1}，本地文件：{2}）。无法删除的文件：{3}</value>
+  </data>
+  <data name="MainForm_DeleteChannelCounting" xml:space="preserve">
+    <value>正在确认要删除的项目...</value>
+  </data>
+  <data name="MainForm_DeleteChannelError" xml:space="preserve">
+    <value>删除“{0}”时出错：{1}</value>
+  </data>
+  <data name="MainForm_DeleteChannelInProgress" xml:space="preserve">
+    <value>正在删除“{0}”...</value>
+  </data>
   <data name="MainForm_ExcludedHeader" xml:space="preserve">
     <value>已排除（回收站）</value>
   </data>
@@ -1593,6 +1767,12 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_QueueWritingTags" xml:space="preserve">
     <value>{0} 写入标签</value>
+  </data>
+  <data name="MainForm_RedlAllShared" xml:space="preserve">
+    <value>所选的 {0} 个视频均与其他视频共享文件，因此未重新下载。</value>
+  </data>
+  <data name="MainForm_RedlSkippedShared" xml:space="preserve">
+    <value>已将 {0} 个加入重新下载队列（跳过 {1} 个共享文件的视频）</value>
   </data>
   <data name="MainForm_RelinkCopied" xml:space="preserve">
     <value>
@@ -1645,10 +1825,10 @@ videoId 后导入数据库。
     <value>进行Python环境、登录等初始设置</value>
   </data>
   <data name="MainForm_ToolbarHint_StartAll" xml:space="preserve">
-    <value>开始下载队列</value>
+    <value>恢复等待中和已暂停的下载</value>
   </data>
   <data name="MainForm_ToolbarHint_StopAll" xml:space="preserve">
-    <value>暂停正在进行的下载</value>
+    <value>暂停所有进行中和等待中的下载</value>
   </data>
   <data name="MainForm_ToolbarHint_Tools" xml:space="preserve">
     <value>打开工具菜单(批量导入、搜索导入、重复检查等)</value>
@@ -1720,13 +1900,13 @@ videoId 后导入数据库。
     <value>▶ 开始下载</value>
   </data>
   <data name="MainForm_btnStartAll_Tip" xml:space="preserve">
-    <value>开始下载等待中的视频</value>
+    <value>开始下载等待中和已暂停的视频</value>
   </data>
   <data name="MainForm_btnStopAll" xml:space="preserve">
     <value>■ 停止</value>
   </data>
   <data name="MainForm_btnStopAll_Tip" xml:space="preserve">
-    <value>停止所有进行中的下载</value>
+    <value>暂停所有进行中和等待中的视频</value>
   </data>
   <data name="MainForm_btnTools" xml:space="preserve">
     <value>工具</value>
@@ -1801,7 +1981,7 @@ videoId 后导入数据库。
     <value>默认优先级</value>
   </data>
   <data name="MainForm_menuChDelete" xml:space="preserve">
-    <value>删除</value>
+    <value>删除订阅和视频</value>
   </data>
   <data name="MainForm_menuChDeleteNotFound" xml:space="preserve">
     <value>排除 Not Found</value>
@@ -1829,6 +2009,9 @@ videoId 后导入数据库。
   </data>
   <data name="MainForm_menuChOpen" xml:space="preserve">
     <value>打开页面</value>
+  </data>
+  <data name="MainForm_menuChRefetchAll" xml:space="preserve">
+    <value>重新获取全部视频</value>
   </data>
   <data name="MainForm_menuChSetSavePath" xml:space="preserve">
     <value>更改保存位置...</value>
@@ -1860,6 +2043,9 @@ videoId 后导入数据库。
   <data name="MainForm_menuShow" xml:space="preserve">
     <value>显示</value>
   </data>
+  <data name="MainForm_menuToolsBugFix" xml:space="preserve">
+    <value>错误修复</value>
+  </data>
   <data name="MainForm_menuToolsBulkImport" xml:space="preserve">
     <value>批量URL导入...</value>
   </data>
@@ -1872,14 +2058,17 @@ videoId 后导入数据库。
   <data name="MainForm_menuToolsImportFolder" xml:space="preserve">
     <value>从文件夹导入...</value>
   </data>
-  <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
-    <value>重新链接已移动文件...</value>
-  </data>
   <data name="MainForm_menuToolsLocalFileIntegrity" xml:space="preserve">
     <value>本地文件完整性检查...</value>
   </data>
+  <data name="MainForm_menuToolsRelinkFiles" xml:space="preserve">
+    <value>重新链接已移动文件...</value>
+  </data>
   <data name="MainForm_menuToolsRelocateFiles" xml:space="preserve">
     <value>批量移动未迁移文件...</value>
+  </data>
+  <data name="MainForm_menuToolsRepairImportedVideoInfo" xml:space="preserve">
+    <value>修复批量URL导入的视频信息...</value>
   </data>
   <data name="MainForm_menuToolsSearchImport" xml:space="preserve">
     <value>iwara 搜索导入...</value>
@@ -3419,6 +3608,9 @@ videoId 后导入数据库。
   <data name="SvcDownloadManager_LowSpace" xml:space="preserve">
     <value>磁盘空间不足：目标驱动器的可用空间低于设置的下限（{0} GB），当前 {1} GB</value>
   </data>
+  <data name="SvcDownloadManager_RefreshSkippedBusy" xml:space="preserve">
+    <value>{0}: 获取期间下载状态发生变化，已跳过保存信息</value>
+  </data>
   <data name="SvcDownloadManager_TaskBackfill" xml:space="preserve">
     <value>缩略图补全</value>
   </data>
@@ -3709,14 +3901,68 @@ videoId 后导入数据库。
   <data name="UntaggedFileMatchForm_D020" xml:space="preserve">
     <value>正在匹配 {0} 个文件(面向整个数据库)...</value>
   </data>
+  <data name="UntaggedFileMatchForm_D021" xml:space="preserve">
+    <value>有 {0} 个文件尚未指定处理方式。是否跳过未指定的文件并继续？</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D022" xml:space="preserve">
+    <value>请选择扫描文件夹本身或其下级文件夹。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D023" xml:space="preserve">
+    <value>已选择 {0} 个文件。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D024" xml:space="preserve">
+    <value>已将“{1}”指定给 {0} 个文件。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D025" xml:space="preserve">
+    <value>请勾选要应用处理方式的文件。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D026" xml:space="preserve">
+    <value>未指定</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027" xml:space="preserve">
+    <value>获取所选作者的最新视频列表，仅对本次选择进行匹配。支持新视频。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D027_Short" xml:space="preserve">
+    <value>作者搜索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028" xml:space="preserve">
+    <value>用文件名在整个数据库中匹配。未登记在数据库中的视频不在对象范围内。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D028_Short" xml:space="preserve">
+    <value>文件名搜索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029" xml:space="preserve">
+    <value>本次选择不导入。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D029_Short" xml:space="preserve">
+    <value>跳过</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D030" xml:space="preserve">
+    <value>已勾选: {0} / 已指定: {1} / 未指定: {2}</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D031" xml:space="preserve">
+    <value>无模板</value>
+  </data>
+  <data name="UntaggedFileMatchForm_D032" xml:space="preserve">
+    <value>正在匹配 {0} 个文件...</value>
+  </data>
   <data name="UntaggedFileMatchForm_Title" xml:space="preserve">
     <value>匹配无标签文件</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnApplyRule" xml:space="preserve">
+    <value>应用到所选文件</value>
   </data>
   <data name="UntaggedFileMatchForm_btnBrowseArtistFolder" xml:space="preserve">
     <value>浏览...</value>
   </data>
+  <data name="UntaggedFileMatchForm_btnBrowseScopeFolder" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
   <data name="UntaggedFileMatchForm_btnCancel" xml:space="preserve">
     <value>取消</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnClearFileSelection" xml:space="preserve">
+    <value>清除选择</value>
   </data>
   <data name="UntaggedFileMatchForm_btnRefetchArtist" xml:space="preserve">
     <value>通过API重新获取</value>
@@ -3726,6 +3972,51 @@ videoId 后导入数据库。
   </data>
   <data name="UntaggedFileMatchForm_btnRun" xml:space="preserve">
     <value>执行搜索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectAllFiles" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="UntaggedFileMatchForm_btnSelectScope" xml:space="preserve">
+    <value>选择其中内容</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item0" xml:space="preserve">
+    <value>按作者文件夹搜索</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item1" xml:space="preserve">
+    <value>按文件名搜索(整个数据库)</value>
+  </data>
+  <data name="UntaggedFileMatchForm_cmbMethod_Item2" xml:space="preserve">
+    <value>跳过</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedDetail" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colAssignedMethod" xml:space="preserve">
+    <value>指定的方式</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFileName" xml:space="preserve">
+    <value>文件名</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colFullPath" xml:space="preserve">
+    <value>完整路径</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colRelativePath" xml:space="preserve">
+    <value>相对路径</value>
+  </data>
+  <data name="UntaggedFileMatchForm_colSelected" xml:space="preserve">
+    <value>对象</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpArtist" xml:space="preserve">
+    <value>作者搜索设置</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpFilename" xml:space="preserve">
+    <value>文件名搜索设置</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpFiles" xml:space="preserve">
+    <value>无标签文件</value>
+  </data>
+  <data name="UntaggedFileMatchForm_grpRule" xml:space="preserve">
+    <value>应用到所选文件</value>
   </data>
   <data name="UntaggedFileMatchForm_lblArtistDesc" xml:space="preserve">
     <value>只匹配指定的这一位作者的视频。误匹配风险最低，也可以导入全新的视频。</value>
@@ -3743,6 +4034,9 @@ videoId 后导入数据库。
     <value>{id}=视频ID / {title}=标题 / {date}=日期 (yyyy-MM-dd、yyyy_MM_dd、yyyyMMdd等)
 例如: "{id}_{title}.mp4" / "{date}_{title}.mp4" / "{title}.mp4"</value>
   </data>
+  <data name="UntaggedFileMatchForm_lblFileList" xml:space="preserve">
+    <value>在“对象”列中勾选文件，然后在下方应用处理方式。相对路径和完整路径可用于确认。</value>
+  </data>
   <data name="UntaggedFileMatchForm_lblFilenameDesc" xml:space="preserve">
     <value>以文件名为线索，面向整个本地数据库进行匹配。仅匹配数据库中已有的记录(不会新增视频)。</value>
   </data>
@@ -3752,6 +4046,21 @@ videoId 后导入数据库。
   <data name="UntaggedFileMatchForm_lblFilenameTemplateHint" xml:space="preserve">
     <value>{id}=视频ID / {title}=标题 / {artist}=作者 / {date}=日期
 例如: "{date}_{title}.mp4" / "{id}_{title}.mp4" / "{artist}\{title}.mp4"</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblMethod" xml:space="preserve">
+    <value>方式:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleHelp" xml:space="preserve">
+    <value>将设置应用到已勾选的文件。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblRuleSummary" xml:space="preserve">
+    <value>已指定的方式会显示在列表中。</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblScopeFolder" xml:space="preserve">
+    <value>选择文件夹内容:</value>
+  </data>
+  <data name="UntaggedFileMatchForm_lblSelectionStatus" xml:space="preserve">
+    <value>选择状态</value>
   </data>
   <data name="UntaggedFileMatchForm_lblSkipDesc" xml:space="preserve">
     <value>无标签文件不会被导入此应用。</value>
@@ -3852,52 +4161,4 @@ videoId 后导入数据库。
   <data name="VideoDetailsForm_lblLocalFilePath" xml:space="preserve">
     <value>保存位置</value>
   </data>
-  <data name="LocalFileIntegrityForm_Title" xml:space="preserve"><value>本地文件完整性检查</value></data>
-  <data name="LocalFileIntegrityForm_lblDescription" xml:space="preserve"><value>查找数据库中本地文件缺失的视频。选择项目后，可以重新关联本地文件或重新下载。</value></data>
-  <data name="LocalFileIntegrityForm_btnScan" xml:space="preserve"><value>重新扫描</value></data>
-  <data name="LocalFileIntegrityForm_btnMap" xml:space="preserve"><value>重新关联本地文件...</value></data>
-  <data name="LocalFileIntegrityForm_btnRedownload" xml:space="preserve"><value>重新下载</value></data>
-  <data name="LocalFileIntegrityForm_btnClose" xml:space="preserve"><value>关闭</value></data>
-  <data name="LocalFileIntegrityForm_lblStatus" xml:space="preserve"><value>等待扫描</value></data>
-  <data name="LocalFileIntegrityForm_colTitle" xml:space="preserve"><value>标题</value></data>
-  <data name="LocalFileIntegrityForm_colVideoId" xml:space="preserve"><value>Video ID</value></data>
-  <data name="LocalFileIntegrityForm_colStatus" xml:space="preserve"><value>状态</value></data>
-  <data name="LocalFileIntegrityForm_colDbPath" xml:space="preserve"><value>数据库路径</value></data>
-  <data name="LocalFileIntegrityForm_colReason" xml:space="preserve"><value>原因</value></data>
-  <data name="LocalFileIntegrityForm_D001" xml:space="preserve"><value>正在检查本地文件完整性...</value></data>
-  <data name="LocalFileIntegrityForm_D002" xml:space="preserve"><value>存在问题的视频：{0} 个</value></data>
-  <data name="LocalFileIntegrityForm_D003" xml:space="preserve"><value>扫描已取消</value></data>
-  <data name="LocalFileIntegrityForm_D004" xml:space="preserve"><value>错误：{0}</value></data>
-  <data name="LocalFileIntegrityForm_D005" xml:space="preserve"><value>本地文件完整性检查失败：
-{0}</value></data>
-  <data name="LocalFileIntegrityForm_D006" xml:space="preserve"><value>本地文件完整性检查</value></data>
-  <data name="LocalFileIntegrityForm_D007" xml:space="preserve"><value>请选择一个视频进行重新关联。</value></data>
-  <data name="LocalFileIntegrityForm_D008" xml:space="preserve"><value>项目状态已改变，列表已刷新。</value></data>
-  <data name="LocalFileIntegrityForm_D009" xml:space="preserve"><value>已将“{0}”重新关联到本地文件。</value></data>
-  <data name="LocalFileIntegrityForm_D010" xml:space="preserve"><value>要将选中的 {0} 个项目加入重新下载队列吗？</value></data>
-  <data name="LocalFileIntegrityForm_D011" xml:space="preserve"><value>确认重新下载</value></data>
-  <data name="LocalFileIntegrityForm_D012" xml:space="preserve"><value>已将 {0} 个项目加入重新下载队列。</value></data>
-  <data name="LocalFileIntegrityForm_D013" xml:space="preserve"><value>已加入 {0} 个项目。{1} 个因状态改变或正在处理而跳过。</value></data>
-  <data name="LocalFileIntegrityForm_D014" xml:space="preserve"><value>重新下载失败：
-{0}</value></data>
-  <data name="LocalFileIntegrityForm_D015" xml:space="preserve"><value>该视频当前正在队列中或处理中，列表已刷新。</value></data>
-  <data name="LocalFileIntegrityForm_D016" xml:space="preserve"><value>无法连接以下驱动器或共享: {0}
-
-其中的 {1} 个项目未被判定为“缺失”，而是排除在检查之外。外接驱动器可能未连接，请连接后重新扫描。</value></data>
-  <data name="LocalFileIntegrityForm_D017" xml:space="preserve"><value>正在等待映射操作完成，完成前无法关闭窗口。</value></data>
-  <data name="LocalFileIntegrityForm_D018" xml:space="preserve"><value>检测到 {1} 个缺失项 (仅显示前 {0} 个)。数量过多通常意味着驱动器未连接。</value></data>
-  <data name="LocalFileIntegrityForm_D019" xml:space="preserve"><value>上次扫描达到了缺失项上限。如果驱动器已连接但无响应，实际存在的文件也可能被判定为“缺失”。
-
-此时重新下载 {0} 个项目，可能会重新获取已有的文件。
-
-仍要继续吗？（强烈建议先检查驱动器状态并重新扫描。）</value></data>
-  <data name="LocalFileIntegrityForm_StatusPending" xml:space="preserve"><value>等待中</value></data>
-  <data name="LocalFileIntegrityForm_StatusDownloading" xml:space="preserve"><value>下载中</value></data>
-  <data name="LocalFileIntegrityForm_StatusWritingTags" xml:space="preserve"><value>写入标签中</value></data>
-  <data name="LocalFileIntegrityForm_StatusCompleted" xml:space="preserve"><value>已完成</value></data>
-  <data name="LocalFileIntegrityForm_StatusFailed" xml:space="preserve"><value>失败</value></data>
-  <data name="LocalFileIntegrityForm_StatusSkipped" xml:space="preserve"><value>已跳过</value></data>
-  <data name="LocalFileIntegrityForm_StatusPaused" xml:space="preserve"><value>已暂停</value></data>
-  <data name="LocalFileIntegrityForm_IssueMissingPath" xml:space="preserve"><value>已完成但数据库路径为空</value></data>
-  <data name="LocalFileIntegrityForm_IssueMissingFile" xml:space="preserve"><value>数据库路径中的文件不存在</value></data>
 </root>

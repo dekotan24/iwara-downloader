@@ -458,6 +458,11 @@
                             <MenuItem Header="{loc:T MainForm_menuToolsRelocateFiles}" Command="{Binding RelocateFilesCommand}" />
                             <MenuItem Header="{loc:T MainForm_menuToolsRelinkFiles}" Command="{Binding RelinkFilesCommand}" />
                             <MenuItem Header="{loc:T MainForm_menuToolsLocalFileIntegrity}" Command="{Binding OpenLocalFileIntegrityCommand}" />
+                            <Separator />
+                            <MenuItem Header="{loc:T MainForm_menuToolsBugFix}">
+                                <MenuItem Header="{loc:T MainForm_menuToolsRepairImportedVideoInfo}"
+                                          Command="{Binding RepairImportedVideoInfoCommand}" />
+                            </MenuItem>
                             <Separator Visibility="{Binding IsAdvancedDbToolEnabled, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuToolsDatabaseTool}" Command="{Binding OpenDatabaseToolCommand}"
                                       Visibility="{Binding IsAdvancedDbToolEnabled, Converter={StaticResource BoolToVis}}" />
@@ -531,23 +536,62 @@
                             各項目のVisibilityはMainViewModel.RefreshChannelContextMenuState()が
                             開く直前(ContextMenuOpening)に計算する(旧WinForms版contextMenuChannel_Openingに相当)。
                         -->
-                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                     Closed="ToolbarItem_HideHint">
+                            <ContextMenu.Resources>
+                                <!-- ツールバーと同じ仕組み: ToolTip に書いた説明を、ホバー/キーボード
+                                     フォーカス時にステータスバーへも出す (MainWindow.xaml.cs
+                                     ToolbarItem_ShowHint/HideHint は sender.ToolTip を読むだけの
+                                     汎用実装なので MenuItem でもそのまま動く)。
+                                     ToolTip の無い項目にホバーすると説明は空になり、自然に消える。 -->
+                                <Style TargetType="MenuItem">
+                                    <EventSetter Event="MouseEnter" Handler="ToolbarItem_ShowHint" />
+                                    <EventSetter Event="MouseLeave" Handler="ToolbarItem_HideHint" />
+                                    <EventSetter Event="GotFocus" Handler="ToolbarItem_ShowHint" />
+                                    <EventSetter Event="LostFocus" Handler="ToolbarItem_HideHint" />
+                                </Style>
+                            </ContextMenu.Resources>
                             <MenuItem Header="{loc:T MainForm_menuChOpen}" Command="{Binding OpenChannelPageCommand}"
-                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE77B;" /></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="{Binding CheckChannelNowText}" Command="{Binding CheckChannelNowCommand}"
+                                      ToolTip="{loc:T MainForm_ChannelHint_CheckNow}"
                                       IsEnabled="{Binding CheckChannelNowEnabled}"
-                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE72C;" /></MenuItem.Icon>
+                            </MenuItem>
+                            <!-- 通常の新着チェックは既知の最新投稿日で早期打ち切りするため、旧バージョンの
+                                 取得上限で切り捨てられた古い動画には到達しない。これは全ページ舐め直す手動操作。 -->
+                            <MenuItem Header="{loc:T MainForm_menuChRefetchAll}" Command="{Binding RefetchAllChannelCommand}"
+                                      ToolTip="{loc:T MainForm_ChannelHint_RefetchAll}"
+                                      IsEnabled="{Binding CheckChannelNowEnabled}"
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE895;" /></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="{loc:T MainForm_menuChDownloadAll}" Command="{Binding DownloadAllChannelCommand}"
-                                      Visibility="{Binding CanDownloadAllChannel, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding CanDownloadAllChannel, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE896;" /></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="{loc:T MainForm_menuChCheckFiles}" Command="{Binding CheckChannelFilesCommand}"
-                                      Visibility="{Binding CanCheckChannelFiles, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding CanCheckChannelFiles, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE930;" /></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="{loc:T MainForm_menuChDeleteNotFound}" Command="{Binding DeleteNotFoundChannelCommand}"
-                                      Visibility="{Binding CanDeleteNotFoundChannel, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding CanDeleteNotFoundChannel, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyphDestructive}" Text="&#xE74D;" /></MenuItem.Icon>
+                            </MenuItem>
                             <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{Binding ChannelSavePathText}" Command="{Binding SetChannelSavePathCommand}"
-                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE8B7;" /></MenuItem.Icon>
+                            </MenuItem>
+                            <!-- 子項目はIsCheckable。既定のMenuItemテンプレートではチェックマークとIconが
+                                 左の同じスロットを共有するため、子にはアイコンを付けない (動画メニューと同じ理由)。 -->
                             <MenuItem Header="{loc:T MainForm_menuChExternalDL}"
                                       Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE128;" /></MenuItem.Icon>
+
                                 <MenuItem Header="{Binding ChannelExternalDLInheritText}" Command="{Binding SetChannelExternalDLInheritCommand}"
                                           IsCheckable="True" IsChecked="{Binding ChannelExternalDLInheritChecked, Mode=OneWay}" />
                                 <MenuItem Header="{loc:T MainForm_menuChExternalDLOn}" Command="{Binding SetChannelExternalDLOnCommand}"
@@ -557,6 +601,8 @@
                             </MenuItem>
                             <MenuItem Header="{loc:T MainForm_menuChDefaultPriority}"
                                       Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7C1;" /></MenuItem.Icon>
+
                                 <MenuItem Header="{loc:T MainForm_menuPriorityHighest}" Command="{Binding SetChannelPriorityHighestCommand}"
                                           IsCheckable="True" IsChecked="{Binding ChannelPriorityHighestChecked, Mode=OneWay}" />
                                 <MenuItem Header="{loc:T MainForm_menuPriorityHigh}" Command="{Binding SetChannelPriorityHighCommand}"
@@ -568,12 +614,18 @@
                             </MenuItem>
                             <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuChEnable}" Command="{Binding EnableChannelCommand}"
-                                      Visibility="{Binding CanEnableChannel, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding CanEnableChannel, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE73E;" /></MenuItem.Icon>
+                            </MenuItem>
                             <MenuItem Header="{loc:T MainForm_menuChDisable}" Command="{Binding DisableChannelCommand}"
-                                      Visibility="{Binding CanDisableChannel, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding CanDisableChannel, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE711;" /></MenuItem.Icon>
+                            </MenuItem>
                             <Separator Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
                             <MenuItem Header="{loc:T MainForm_menuChDelete}" Command="{Binding DeleteChannelCommand}"
-                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}" />
+                                      Visibility="{Binding IsUserNodeSelected, Converter={StaticResource BoolToVis}}">
+                                <MenuItem.Icon><TextBlock Style="{StaticResource MenuGlyphDestructive}" Text="&#xE74D;" /></MenuItem.Icon>
+                            </MenuItem>
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListBox.ItemContainerStyle>

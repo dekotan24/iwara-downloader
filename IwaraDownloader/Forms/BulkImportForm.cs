@@ -13,6 +13,10 @@ namespace IwaraDownloader.Forms
     {
         private readonly DatabaseService _database;
         private readonly DownloadManager? _downloadManager;
+        private CancellationTokenSource? _importCancellation;
+        private bool _isImporting;
+        private bool _cancelRequested;
+        private bool _allowClose;
 
         /// <summary>インポートされた動画リスト</summary>
         public List<VideoInfo> ImportedVideos { get; } = new();
@@ -31,8 +35,6 @@ namespace IwaraDownloader.Forms
         private void BulkImportForm_Load(object sender, EventArgs e)
         {
             UpdateStats();
-            // 既定値はツールバーの「即DL」トグルに合わせる (この画面限定で上書き可能)
-            chkImmediateDownload.Checked = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
         }
 
         /// <summary>
@@ -160,6 +162,164 @@ namespace IwaraDownloader.Forms
         private readonly record struct VideoEntry(string Id, string Url, string Site);
 
         /// <summary>
+        /// 一括インポートする動画の表示用情報を取得する。
+        ///
+        /// 一括URLインポートは、従来はAPIを呼ばずに仮タイトルだけでDBへ登録していたため、
+        /// その後ダウンロードしない動画は「[未取得] VideoId」のまま残っていた。
+        /// ログイン済みなら get_info を使って表示用メタデータを補完し、取得できない場合は
+        /// インポート自体を失敗させずに従来の仮タイトルへフォールバックする。
+        /// </summary>
+        private async Task<VideoInfo> CreateImportedVideoAsync(
+            VideoEntry entry, bool immediateDownload, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var video = new VideoInfo
+            {
+                VideoId = entry.Id,
+                Title = L.T("BulkImportForm_D015", entry.Id),
+                Url = entry.Url,
+                Site = entry.Site,
+                // 即DLチェックOFFなら Paused で保存 (Pending だと次回起動時の
+                // レジュームで意図せず自動DLされてしまうため。issue #21)
+                Status = immediateDownload ? DownloadStatus.Pending : DownloadStatus.Paused,
+                CreatedAt = DateTime.Now
+            };
+
+            // メタデータ取得にはログイン済みの IwaraApiService が必要。
+            // 未ログイン時は従来どおり仮登録し、後のログイン/情報更新で補完できるようにする。
+            if (_downloadManager?.IsLoggedIn != true)
+                return video;
+
+            try
+            {
+                // ダウンロードURLやCDN情報は不要なので、get_info の軽い経路を使う。
+                var info = await _downloadManager.IwaraApi.GetVideoInfoAsync(
+                    entry.Id, entry.Site, cancellationToken);
+                if (!info.Success)
+                {
+                    LoggingService.Instance.Warn(
+                        $"一括インポートの動画情報取得に失敗 ({entry.Id}): {info.Error ?? "unknown error"}");
+                    return video;
+                }
+
+                if (!string.IsNullOrWhiteSpace(info.Title))
+                    video.Title = info.Title;
+                if (!string.IsNullOrEmpty(info.FileUuid))
+                    video.FileUuid = info.FileUuid;
+                if (!string.IsNullOrEmpty(info.AuthorUsername))
+                    video.AuthorUsername = info.AuthorUsername;
+                if (!string.IsNullOrEmpty(info.Rating))
+                    video.Rating = info.Rating;
+                if (!string.IsNullOrEmpty(info.ThumbnailUrl))
+                    video.ThumbnailUrl = info.ThumbnailUrl;
+                if (info.DurationSeconds > 0)
+                    video.DurationSeconds = info.DurationSeconds;
+                if (!string.IsNullOrEmpty(info.EmbedUrl))
+                    video.EmbedUrl = info.EmbedUrl;
+                if (info.PostedAt.HasValue)
+                    video.PostedAt = info.PostedAt;
+                if (!string.IsNullOrEmpty(info.ApiRawJson))
+                    video.ApiRawJson = info.ApiRawJson;
+
+                // site未指定時の自動フォールバックが将来有効になった場合にも、
+                // 保存後のダウンロード先が実際に解決したサイトと一致するようにする。
+                if (!string.IsNullOrEmpty(info.ResolvedSite))
+                    video.Site = info.ResolvedSite;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // 1件のメタデータ取得失敗で、残りのURLまで取り込めなくならないようにする。
+                LoggingService.Instance.Warn(
+                    $"一括インポートの動画情報取得中に例外 ({entry.Id}): {ex.Message}");
+            }
+
+            return video;
+        }
+
+        /// <summary>
+        /// 一括追加した動画をダウンロードキューへ投入する。
+        /// AddVideosBatch はDBへの保存だけを行い、DownloadManagerのメモリキューは
+        /// 更新しないため、ヘッダの即DL設定が有効な場合は保存後に明示的に投入する必要がある。
+        /// </summary>
+        private void EnqueueImportedVideos(IEnumerable<VideoInfo> videos)
+        {
+            if (_downloadManager == null) return;
+
+            foreach (var importedVideo in videos)
+            {
+                // AddVideosBatch は高速化のため VideoInfo.Id を採番して返さない。
+                // DownloadManager.UpdateVideo は Id で更新するため、Bulk Import の新規行は
+                // DBから再読込して通常の単体登録と同じ実体をキューへ渡す。
+                // 既存行も、存在確認からここまでの間に別経路でDL完了等へ進んでいることがあるため
+                // 手元のスナップショットではなく最新の行で判定する。
+                // (新規のつもりの行も INSERT OR IGNORE で別経路の行に負けていれば、読み直すのはその行)
+                var video = _database.GetVideoByVideoId(importedVideo.VideoId);
+                if (video == null)
+                {
+                    LoggingService.Instance.Warn(
+                        $"一括インポート後の動画再読込に失敗 ({importedVideo.VideoId})");
+                    continue;
+                }
+
+                // 完了済み・スキップ済みを再DLさせない。
+                if (video.Status == DownloadStatus.Completed || video.Status == DownloadStatus.Skipped)
+                    continue;
+
+                // 待機中/DL中のタスクがあれば、DB上の Status に関わらず二重投入しない。
+                if (_downloadManager.GetTask(video.VideoId) != null)
+                    continue;
+
+                SubscribedUser? subscribedUser = null;
+                if (video.SubscribedUserId.HasValue)
+                    subscribedUser = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
+
+                _downloadManager.EnqueueDownload(
+                    video, video.SubscribedUserId.HasValue, subscribedUser);
+            }
+        }
+
+        /// <summary>
+        /// 単発登録と同じく、作者が判明した動画を作者チャンネルへ紐付ける。
+        /// 新規動画は一括INSERT前にフィールドへ反映し、既存動画はチャンネル列だけを
+        /// 限定更新して、ダウンロード中のステータス等を古いスナップショットで上書きしない。
+        /// </summary>
+        private void AssociateVideosWithAuthorChannels(
+            IEnumerable<VideoInfo> videos,
+            IDictionary<string, SubscribedUser> channelCache,
+            bool persistExisting)
+        {
+            foreach (var video in videos)
+            {
+                var author = video.AuthorUsername?.Trim();
+                if (string.IsNullOrEmpty(author)) continue;
+
+                // 修復対象はチャンネル未所属の動画だけ。既に別チャンネルへ所属している動画を
+                // 作者チャンネルへ移すと、購読チャンネル側の一覧から動画が消えてしまう。
+                // 判定は起動時の作者チャンネル集約 (SubscribedUserId IS NULL) と揃える。
+                if (persistExisting && video.SubscribedUserId.HasValue) continue;
+
+                if (!channelCache.TryGetValue(author, out var channel))
+                {
+                    channel = _database.EnsureChannelForAuthor(author, video.Site);
+                    channelCache[author] = channel;
+                }
+
+                var channelChanged = video.SubscribedUserId != channel.Id
+                    || !string.Equals(video.AuthorUserId, channel.UserId, StringComparison.Ordinal);
+                video.AuthorUserId = channel.UserId;
+                video.SubscribedUserId = channel.Id;
+
+                if (persistExisting && video.Id > 0 && channelChanged)
+                    _database.UpdateVideoChannelAssignment(video.Id, channel.UserId, channel.Id);
+            }
+        }
+
+        /// <summary>
         /// インポート実行
         /// </summary>
         private async void btnImport_Click(object sender, EventArgs e)
@@ -187,6 +347,7 @@ namespace IwaraDownloader.Forms
             }
 
             btnImport.Enabled = false;
+            btnCancel.Enabled = true;
             btnImport.Text = L.T("BulkImportForm_D010");
             progressBar.Visible = true;
             progressBar.Value = 0;
@@ -195,55 +356,78 @@ namespace IwaraDownloader.Forms
             ImportedVideos.Clear();
             DuplicateCount = 0;
             int addedChannels = 0, channelFailed = 0;
+            bool videosPersisted = false;
+            // Bulk Importも通常の単体登録と同じく、ヘッダの即DL設定だけに従う。
+            var immediateDownload = SettingsManager.Instance.Settings.ImmediateDownloadOnAdd;
+            var videosToEnqueue = new List<VideoInfo>();
+            var existingVideos = new List<VideoInfo>();
+            var channelCache = new Dictionary<string, SubscribedUser>(StringComparer.OrdinalIgnoreCase);
+            using var cancellation = new CancellationTokenSource();
+            _importCancellation = cancellation;
+            _isImporting = true;
+            _cancelRequested = false;
 
             try
             {
+                var cancellationToken = cancellation.Token;
+
                 // --- 動画 (id) の処理 ---
                 if (videos.Count > 0)
                 {
                     var videoIds = videos.Select(v => v.Id).ToList();
                     var existingIds = _database.GetExistingVideoIds(videoIds);
 
-                    await Task.Run(() =>
+                    foreach (var v in videos)
                     {
-                        foreach (var v in videos)
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        if (existingIds.Contains(v.Id))
                         {
-                            if (existingIds.Contains(v.Id))
+                            DuplicateCount++;
+
+                            // 以前の一括登録で作者チャンネルへの紐付けが漏れた動画も、
+                            // 再インポート時に通常登録と同じ所属へ修復する。
+                            var existing = _database.GetVideoByVideoId(v.Id);
+                            if (existing != null)
                             {
-                                DuplicateCount++;
-                            }
-                            else
-                            {
-                                ImportedVideos.Add(new VideoInfo
+                                existingVideos.Add(existing);
+                                if (existing.Status != DownloadStatus.Completed)
                                 {
-                                    VideoId = v.Id,
-                                    Title = L.T("BulkImportForm_D015", v.Id),
-                                    Url = v.Url,
-                                    Site = v.Site,
-                                    // 即DLチェックOFFなら Paused で保存 (Pending だと次回起動時の
-                                    // レジュームで意図せず自動DLされてしまうため。issue #21)
-                                    Status = chkImmediateDownload.Checked ? DownloadStatus.Pending : DownloadStatus.Paused,
-                                    CreatedAt = DateTime.Now
-                                });
-                            }
-                            // インポート中にユーザーがウィンドウを閉じると、破棄済み/ハンドル破棄済みの
-                            // コントロールへのInvokeが例外を投げてバックグラウンドスレッドをクラッシュ
-                            // させるため、IsDisposedチェックとtry-catchの両方でガードする
-                            // (チェック直後にDisposeされるTOCTOUの余地があるためtry-catchも必須)。
-                            if (!this.IsDisposed)
-                            {
-                                try
-                                {
-                                    this.Invoke(() => progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum));
+                                    if (immediateDownload && _downloadManager != null)
+                                        videosToEnqueue.Add(existing);
                                 }
-                                catch (ObjectDisposedException) { }
-                                catch (InvalidOperationException) { }
                             }
                         }
-                    });
+                        else
+                        {
+                            // API呼び出しは非同期なのでUIスレッドをブロックせず、
+                            // 取得に失敗した場合も仮タイトルで取り込みを継続する。
+                            var imported = await CreateImportedVideoAsync(
+                                v, immediateDownload, cancellationToken);
+                            ImportedVideos.Add(imported);
+                            if (immediateDownload)
+                                videosToEnqueue.Add(imported);
+                        }
+
+                        if (!IsDisposed && !Disposing)
+                            progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
+                    }
+
+                    // 新規動画・既存動画とも、単体登録と同じく作者チャンネルへ所属させる。
+                    AssociateVideosWithAuthorChannels(ImportedVideos, channelCache, persistExisting: false);
+                    AssociateVideosWithAuthorChannels(existingVideos, channelCache, persistExisting: true);
 
                     if (ImportedVideos.Count > 0)
+                    {
                         _database.AddVideosBatch(ImportedVideos);
+                        videosPersisted = true;
+                    }
+
+                    // AddVideosBatch はDB保存のみで、DownloadManagerのメモリキューには
+                    // 入らない。ここで初めて投入することで、画面上もPending/待機中のまま
+                    // 取り残されず、通常の単体追加と同じく即時に処理が始まる。
+                    if (immediateDownload && videosToEnqueue.Count > 0)
+                        EnqueueImportedVideos(videosToEnqueue);
                 }
 
                 // --- チャンネル (profile) の処理 ---
@@ -252,13 +436,17 @@ namespace IwaraDownloader.Forms
                 {
                     foreach (var profileUrl in profiles)
                     {
-                        if (_downloadManager.EnqueueSubscribedUser(profileUrl, chkImmediateDownload.Checked))
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        if (_downloadManager.EnqueueSubscribedUser(profileUrl))
                             addedChannels++;
                         else
                             channelFailed++;
                         progressBar.Value = Math.Min(progressBar.Value + 1, progressBar.Maximum);
                     }
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 // 結果表示
                 var channelMsg = addedChannels > 0
@@ -273,9 +461,44 @@ namespace IwaraDownloader.Forms
 
                 if (ImportedVideos.Count > 0 || addedChannels > 0)
                 {
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
+                    CompleteDialog(DialogResult.OK);
                 }
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // キャンセル時も、API取得が完了してリストへ追加済みの分は失わない。
+                // ここで出た例外は下の catch (Exception) には渡らず、async void から
+                // UIスレッドの未処理例外になるため、この場で受け止める。
+                bool saveFailed = false;
+                if (!videosPersisted && ImportedVideos.Count > 0)
+                {
+                    try
+                    {
+                        AssociateVideosWithAuthorChannels(ImportedVideos, channelCache, persistExisting: false);
+
+                        // キャンセルでキュー投入を省略した分は、Pendingのまま残すと
+                        // 次回起動時に意図せず自動DLされるため、明示的に保留へ戻す。
+                        if (immediateDownload)
+                        {
+                            foreach (var video in ImportedVideos)
+                                video.Status = DownloadStatus.Paused;
+                        }
+                        _database.AddVideosBatch(ImportedVideos);
+                        videosPersisted = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        saveFailed = true;
+                        LoggingService.Instance.Error($"一括インポートのキャンセル時の保存に失敗: {ex.Message}", ex);
+                        MessageBox.Show(L.T("BulkImportForm_D012", ex.Message),
+                            L.T("BulkImportForm_D003"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+
+                if ((!saveFailed && ImportedVideos.Count > 0) || addedChannels > 0)
+                    CompleteDialog(DialogResult.OK);
+                else
+                    CompleteDialog(DialogResult.Cancel);
             }
             catch (Exception ex)
             {
@@ -284,7 +507,10 @@ namespace IwaraDownloader.Forms
             }
             finally
             {
+                _importCancellation = null;
+                _isImporting = false;
                 btnImport.Enabled = true;
+                btnCancel.Enabled = true;
                 btnImport.Text = L.T("BulkImportForm_D013");
                 progressBar.Visible = false;
             }
@@ -292,8 +518,42 @@ namespace IwaraDownloader.Forms
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
-            this.Close();
+            if (_isImporting)
+            {
+                RequestCancellation();
+                return;
+            }
+
+            CompleteDialog(DialogResult.Cancel);
+        }
+
+        private void RequestCancellation()
+        {
+            if (_cancelRequested) return;
+
+            _cancelRequested = true;
+            btnCancel.Enabled = false;
+            _importCancellation?.Cancel();
+        }
+
+        private void CompleteDialog(DialogResult result)
+        {
+            _allowClose = true;
+            _isImporting = false;
+            DialogResult = result;
+            Close();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_isImporting && !_allowClose)
+            {
+                e.Cancel = true;
+                RequestCancellation();
+                return;
+            }
+
+            base.OnFormClosing(e);
         }
     }
 }

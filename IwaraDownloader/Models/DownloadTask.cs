@@ -102,6 +102,12 @@ namespace IwaraDownloader.Models
         public bool SuspendedForLogin { get; set; }
 
         /// <summary>
+        /// ヘッダの全体停止後に「DL開始」が押されたことを示すフラグ。
+        /// キャンセル完了が非同期になる実行中タスクを、完了後に再びキューへ戻すために使う。
+        /// </summary>
+        public bool ResumeAfterGlobalStop { get; set; }
+
+        /// <summary>
         /// キャンセル
         /// </summary>
         public void Cancel()

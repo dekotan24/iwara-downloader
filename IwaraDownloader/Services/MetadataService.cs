@@ -29,9 +29,10 @@ namespace IwaraDownloader.Services
 
         /// <summary>
         /// 全ての mp4 タグ書き込みが完了するまで待機 (アプリ終了時に呼ぶ)。
-        /// タイムアウトを過ぎたら false を返す (それでも実行は終わる - 破損リスクあり)。
+        /// 既定では最大120秒待機し、タイムアウトを過ぎたら false を返す
+        /// (それでも実行は終わるため、破損リスクあり)。
         /// </summary>
-        public static bool WaitForWritesToComplete(int timeoutMs = 10000)
+        public static bool WaitForWritesToComplete(int timeoutMs = 120000)
         {
             var sw = Stopwatch.StartNew();
             while (WritesInProgress > 0 && sw.ElapsedMilliseconds < timeoutMs)

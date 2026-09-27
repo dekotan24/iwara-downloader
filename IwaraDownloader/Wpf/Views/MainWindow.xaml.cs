@@ -169,13 +169,20 @@ namespace IwaraDownloader.Wpf.Views
             }
         }
 
+        private bool _shutdownStarted;
+        private bool _shutdownCompleted;
+
         /// <summary>
         /// 旧WinForms版MainForm_FormClosingに対応。MinimizeToTray設定時はXボタンでの閉じるを
-        /// トレイ最小化に読み替える。実際に終了する経路(トレイメニューの「終了」)では
-        /// DL中/タグ書き込み中ならバルーン通知を出してからMainViewModel.Dispose()で後始末する。
+        /// トレイ最小化に読み替える。実際に終了する経路(トレイメニューの「終了」等)では一旦閉じるのを
+        /// 取り消し、MainViewModel.ShutdownAsync()でタグ書き込みの完了をバックグラウンドで待ってから
+        /// 改めて閉じる(待ちの間もウィンドウが応答なしにならないようにするため)。
         /// </summary>
         private void MainWindow_Closing(object? sender, CancelEventArgs e)
         {
+            // 後始末を終えてからの閉じ直しはそのまま通す。
+            if (_shutdownCompleted) return;
+
             var settings = SettingsManager.Instance.Settings;
             if (!_isClosing && settings.MinimizeToTray)
             {
@@ -187,6 +194,16 @@ namespace IwaraDownloader.Wpf.Views
 
             if (DataContext is not MainViewModel vm) return;
 
+            e.Cancel = true;
+            if (_shutdownStarted) return;
+            _shutdownStarted = true;
+            // 終了待ちの間に閉じるボタンが押されても、トレイ最小化へ読み替えない。
+            _isClosing = true;
+            _ = ShutdownAndCloseAsync(vm);
+        }
+
+        private async Task ShutdownAndCloseAsync(MainViewModel vm)
+        {
             try
             {
                 if (vm.IsSlowCloseExpected)
@@ -197,8 +214,23 @@ namespace IwaraDownloader.Wpf.Views
             }
             catch { }
 
-            vm.Dispose();
+            // 待っている間に、停止済みのDownloadManagerへ新しい操作(DL開始・URL追加)が届かないようにする。
+            UnregisterClipboardListener();
+            if (Content is UIElement content) content.IsEnabled = false;
+
+            try
+            {
+                await vm.ShutdownAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("MainWindow shutdown failed", ex);
+            }
+
             if (_notifyIcon != null) _notifyIcon.Visible = false;
+            _shutdownCompleted = true;
+            // Closingハンドラの中へ同期的に戻ってきた場合でもClose()を再入させない。
+            _ = Dispatcher.BeginInvoke(new Action(Close));
         }
 
         private void VideoList_ContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)

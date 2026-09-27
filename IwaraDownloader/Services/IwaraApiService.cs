@@ -233,12 +233,17 @@ namespace IwaraDownloader.Services
         /// Pythonスクリプトを実行 (site 指定可)
         /// </summary>
         private Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
-            => RunPythonAsync(action, null, CancellationToken.None, args);
+            => RunPythonAsync(action, null, CancellationToken.None, null, args);
 
         private Task<JsonDocument?> RunPythonAsync(string action, string? site, params string[] args)
-            => RunPythonAsync(action, site, CancellationToken.None, args);
+            => RunPythonAsync(action, site, CancellationToken.None, null, args);
 
-        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, params string[] args)
+        /// <param name="onStderrLine">
+        /// Python の stderr を 1 行ずつ同期的に受け取るフック。呼び出し元が
+        /// 「まだ生きている」ことを検知する (進捗ウォッチドッグ) ために使う。
+        /// IProgress と違い SynchronizationContext を経由しないので、UI が詰まっていても遅延しない。
+        /// </param>
+        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, Action<string>? onStderrLine, params string[] args)
         {
             if (!IsPythonConfigured)
             {
@@ -318,7 +323,11 @@ namespace IwaraDownloader.Services
                 {
                     error.AppendLine(e.Data);
                     Debug.WriteLine($"Python stderr: {e.Data}");
-                    
+
+                    // 進捗ウォッチドッグ用フック (ハンドラ内の例外で読み取りを止めない)
+                    try { onStderrLine?.Invoke(e.Data); }
+                    catch (Exception hookEx) { Debug.WriteLine($"onStderrLine threw: {hookEx.Message}"); }
+
                     // LoggingServiceにも出力(エラーレベルの判定)
                     if (e.Data.Contains("Error") || e.Data.Contains("error") || 
                         e.Data.Contains("Exception") || e.Data.Contains("Traceback") ||
@@ -483,7 +492,16 @@ namespace IwaraDownloader.Services
         /// 判定できなかった) を区別する。呼び出し側はアカウント消滅フラグ等の永続状態を
         /// Failed のときには変更してはいけない(一時的な403/レート制限を消滅と誤判定するため)。
         /// </summary>
-        public async Task<(List<VideoInfo> Videos, ChannelFetchStatus Status)> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default)
+        /// <param name="since">
+        /// 新着チェック用。DB が既に持っている最新投稿日時を渡すと、Python 側が
+        /// それより古いページに入った時点でページングを打ち切る (API は新しい順固定)。
+        /// null なら従来通り全ページ取得 (チャンネル新規追加時)。
+        /// </param>
+        /// <param name="onFetchProgress">
+        /// Python の stderr を 1 行ずつ同期的に受け取る。取得が長引くチャンネルで
+        /// 「生きているか」を呼び出し側が判断する (タイムアウト延長) ために使う。
+        /// </param>
+        public async Task<(List<VideoInfo> Videos, ChannelFetchStatus Status)> GetUserVideosAsync(string username, IProgress<string>? progress = null, string? site = null, CancellationToken ct = default, DateTime? since = null, Action<string>? onFetchProgress = null)
         {
             if (!IsLoggedIn)
             {
@@ -493,7 +511,12 @@ namespace IwaraDownloader.Services
 
             progress?.Report(L.T("SvcIwaraApiService_D001", username));
 
-            var result = await RunPythonAsync("get_videos", site, ct, username);
+            // since は UTC の ISO8601 で渡す (Python 側は "o" 書式も Z 付きも受けられる)
+            var pyArgs = since.HasValue
+                ? new[] { username, "--since", since.Value.ToUniversalTime().ToString("o") }
+                : new[] { username };
+
+            var result = await RunPythonAsync("get_videos", site, ct, onFetchProgress, pyArgs);
 
             if (result == null)
             {
@@ -591,19 +614,21 @@ namespace IwaraDownloader.Services
         /// ダウンロードURLは必要ないため、get_url の filesq/CDN問い合わせを省略する。
         /// フォルダ取り込みなど、タイトル・作者・file_idだけが必要な処理で使用する。
         /// </summary>
-        public async Task<VideoUrlInfo> GetVideoInfoAsync(string videoId, string? site = null)
+        public async Task<VideoUrlInfo> GetVideoInfoAsync(
+            string videoId, string? site = null, CancellationToken cancellationToken = default)
         {
             if (!IsLoggedIn)
                 return VideoUrlInfo.FromError("LOGIN_REQUIRED: " + Utils.L.T("Svc_LoginRequired"));
 
-            var info = await GetVideoInfoInternalAsync(videoId, site);
+            var info = await GetVideoInfoInternalAsync(videoId, site, cancellationToken);
             // GetDownloadUrlAsync と同じ site 自動フォールバックを維持する。
             if (!info.Success
                 && string.IsNullOrEmpty(site)
                 && (info.Error?.Contains("differentSite", StringComparison.OrdinalIgnoreCase) ?? false))
             {
                 Debug.WriteLine($"GetVideoInfo: differentSite detected for {videoId}, retrying with www.iwara.ai");
-                var retry = await GetVideoInfoInternalAsync(videoId, Utils.Helpers.SiteAi);
+                var retry = await GetVideoInfoInternalAsync(
+                    videoId, Utils.Helpers.SiteAi, cancellationToken);
                 if (retry.Success)
                 {
                     retry.ResolvedSite = Utils.Helpers.SiteAi;
@@ -613,9 +638,10 @@ namespace IwaraDownloader.Services
             return info;
         }
 
-        private async Task<VideoUrlInfo> GetVideoInfoInternalAsync(string videoId, string? site)
+        private async Task<VideoUrlInfo> GetVideoInfoInternalAsync(
+            string videoId, string? site, CancellationToken cancellationToken)
         {
-            var result = await RunPythonAsync("get_info", site, videoId);
+            var result = await RunPythonAsync("get_info", site, cancellationToken, null, videoId);
             if (result == null)
                 return VideoUrlInfo.FromError(L.T("SvcIwaraApiService_D002"));
 
