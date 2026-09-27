@@ -2402,6 +2402,14 @@ namespace IwaraDownloader.Services
                     user.Id = _database.AddSubscribedUser(user);
                     UserAdded?.Invoke(this, user); // UIツリーに仮表示
                 }
+                else if (!existing.IsEnabled)
+                {
+                    // 単発登録やインポートで自動作成されたチャンネルは無効状態で作られる。
+                    // 明示的に購読されたら新着チェックの対象に入れる。
+                    existing.IsEnabled = true;
+                    _database.UpdateSubscribedUser(existing);
+                    UserAdded?.Invoke(this, existing);
+                }
 
                 // キューが既に閉じている (Dispose 後) 場合は仮登録だけ残し、巻き戻す
                 if (!_fetchQueue.Writer.TryWrite(new FetchRequest(username, FetchReason.Add,
@@ -2546,7 +2554,10 @@ namespace IwaraDownloader.Services
 
                 // 新着チェックは既知の最新投稿日を基準に途中で打ち切らせる。
                 // Add (新規追加) と手動の全件再取得は過去分も全部欲しいので null のまま全ページ取得する。
-                DateTime? since = req.Reason == FetchReason.Check && !req.FullRefetch
+                // 全件取得が一度も済んでいないチャンネル (単発登録で自動作成されたもの、Add を諦めたもの) は
+                // 手元の最新動画より古い分をまだ持っていないので、打ち切ると古い動画が欠けたまま
+                // VideosLoaded=true になり二度と回収されない。
+                DateTime? since = req.Reason == FetchReason.Check && !req.FullRefetch && user.VideosLoaded
                     ? _database.GetLatestPostedAtForUser(user.Id)
                     : null;
 
@@ -2617,7 +2628,10 @@ namespace IwaraDownloader.Services
                 // 消滅判定が意図せず巻き戻ったりする。
                 if (fetchStatus != ChannelFetchStatus.Failed)
                 {
-                    user.TotalVideoCount = videos.Count;
+                    // 途中で打ち切った回は取得件数が総数にならないので、新しく見つけた分だけ足す
+                    user.TotalVideoCount = since == null
+                        ? videos.Count
+                        : user.TotalVideoCount + newVideos.Count;
                     // 取得成功 = 本登録扱い。Add はもちろん、5 回失敗で諦めた仮登録 (VideosLoaded=false) が
                     // 後の新着チェックで取れた場合もここで解除し、起動時の無駄な Add 再取得ループを防ぐ。
                     user.VideosLoaded = true;
