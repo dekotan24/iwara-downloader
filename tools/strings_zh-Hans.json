@@ -821,6 +821,8 @@
   "SettingsForm_D093": "导入订阅列表",
   "SettingsForm_D094": "选择音频文件",
   "SettingsForm_D095": "选择错误提示音文件",
+  "SettingsForm_D096": "由于未设置密码，服务器未对局域网开放，仅在本机 (127.0.0.1) 上启动。\n如需从手机等其他设备连接，请先设置登录密码，然后重新启动服务器。",
+  "SettingsForm_D097": "警告",
   "SettingsForm_MoveSubjectDownloadFolder": "下载保存位置",
   "SettingsForm_Title": "设置",
   "SettingsForm_btnApply": "应用",

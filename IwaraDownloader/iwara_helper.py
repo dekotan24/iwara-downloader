@@ -1141,23 +1141,24 @@ class IwaraAPI:
 
 
 
-def _resolve_yt_dlp(yt_dlp_path: str) -> str | None:
-    """yt-dlp 実行コマンドを解決。見つからなければ None"""
+def _resolve_yt_dlp(yt_dlp_path: str) -> list[str] | None:
+    """yt-dlp 実行コマンド(argv リスト)を解決。見つからなければ None。
+    パスに空白を含んでも壊れないよう文字列ではなくリストで返す"""
     import shutil
     if not yt_dlp_path:
         yt_dlp_path = "yt-dlp"
     # フルパス指定の場合
     if os.path.isabs(yt_dlp_path) and os.path.isfile(yt_dlp_path):
-        return yt_dlp_path
+        return [yt_dlp_path]
     # PATH 検索
     found = shutil.which(yt_dlp_path)
     if found:
-        return found
+        return [found]
     # python -m yt_dlp も試す
     try:
         subprocess.run([sys.executable, "-m", "yt_dlp", "--version"],
                        capture_output=True, check=True, timeout=15)
-        return f"{sys.executable} -m yt_dlp"
+        return [sys.executable, "-m", "yt_dlp"]
     except Exception:
         return None
 
@@ -1178,11 +1179,11 @@ def _install_yt_dlp() -> tuple[bool, str]:
         return False, str(e)
 
 
-def _update_yt_dlp(yt_dlp_cmd: str) -> tuple[bool, str]:
+def _update_yt_dlp(yt_dlp_cmd: list[str]) -> tuple[bool, str]:
     """yt-dlp 自体を -U で更新(pip 経由インストールの場合は pip --upgrade)"""
     try:
         # python -m yt_dlp 形式の場合は pip で更新
-        if yt_dlp_cmd.startswith(sys.executable):
+        if yt_dlp_cmd[0] == sys.executable:
             print("yt-dlp を pip で更新中...", file=sys.stderr)
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"],
@@ -1190,10 +1191,9 @@ def _update_yt_dlp(yt_dlp_cmd: str) -> tuple[bool, str]:
             )
         else:
             # スタンドアロン版は -U で自己更新
-            cmd_parts = yt_dlp_cmd.split()
             print(f"yt-dlp を -U で更新中: {yt_dlp_cmd}", file=sys.stderr)
             result = subprocess.run(
-                cmd_parts + ["-U"],
+                yt_dlp_cmd + ["-U"],
                 capture_output=True, text=True, timeout=300
             )
         return result.returncode == 0, (result.stderr or result.stdout)
@@ -1201,23 +1201,20 @@ def _update_yt_dlp(yt_dlp_cmd: str) -> tuple[bool, str]:
         return False, str(e)
 
 
-def _run_yt_dlp(yt_dlp_cmd: str, embed_url: str, output_path: str) -> tuple[bool, str]:
-    """yt-dlp を実行して動画をDL。output_path はフルパス(拡張子抜きの場合は -o テンプレート扱い)"""
+def _run_yt_dlp(yt_dlp_cmd: list[str], embed_url: str, output_path: str) -> tuple[bool, str]:
+    """yt-dlp を実行して動画をDL。output_path は拡張子抜きのフルパス"""
     try:
-        # output_path はファイル名フォーマット(拡張子なしの想定)
-        # 拡張子なしならテンプレートとして使用、ありなら % 不要
-        if "." not in os.path.basename(output_path):
-            out_template = output_path + ".%(ext)s"
-        else:
-            out_template = output_path
+        # output_path は常に拡張子なし (C# 側で生成)。タイトルに "." を含んでも拡張子を付ける。
+        # タイトル中の "%" が yt-dlp の出力テンプレートとして展開されないよう "%%" にエスケープ
+        out_template = output_path.replace("%", "%%") + ".%(ext)s"
 
-        cmd_parts = yt_dlp_cmd.split()
-        full_cmd = cmd_parts + [
+        full_cmd = yt_dlp_cmd + [
             "-o", out_template,
             "--no-playlist",
             "--no-warnings",
             "--newline",  # 進捗を行単位で
             "--merge-output-format", "mp4",
+            "--",  # embed_url が "-" 始まりでもオプションとして解釈させない
             embed_url,
         ]
         print(f"yt-dlp 実行: {' '.join(full_cmd)}", file=sys.stderr)
@@ -1255,6 +1252,14 @@ def download_external_video(embed_url: str, output_path: str, yt_dlp_path: str =
     """yt-dlp で外部動画をDL。未インストールなら pip 自動DL、失敗時は -U して再試行"""
     if not embed_url:
         return {"success": False, "error": "embed_url is empty"}
+    # API 由来の URL なので http/https 以外 (オプション風の値や file: 等) は拒否
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(embed_url)
+    except ValueError:
+        parsed = None
+    if parsed is None or parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return {"success": False, "error": "embed_url is not a valid http(s) URL"}
 
     yt_dlp_cmd = _resolve_yt_dlp(yt_dlp_path)
 
@@ -1294,7 +1299,7 @@ def _find_saved_file(base_path: str) -> str:
         return base_path
     import glob
     # base_path + .xxx を探す
-    candidates = glob.glob(base_path + ".*")
+    candidates = glob.glob(glob.escape(base_path) + ".*")
     if candidates:
         # 最新のファイル
         return max(candidates, key=os.path.getmtime)
@@ -1352,10 +1357,14 @@ def main():
     api = IwaraAPI(token=token, rate_limit_config=rate_limit_config, site=site)
     
     if action == "login":
-        if len(sys.argv) < 4:
-            print(json.dumps({"success": False, "error": "Usage: login <email> <password>"}))
+        # パスワードは環境変数 IWARA_PASSWORD 優先 (コマンドラインから他プロセスに読まれないように)
+        password = os.environ.get("IWARA_PASSWORD")
+        if password is None and len(sys.argv) >= 4:
+            password = sys.argv[3]
+        if len(sys.argv) < 3 or password is None:
+            print(json.dumps({"success": False, "error": "Usage: login <email> (password via IWARA_PASSWORD)"}))
             sys.exit(1)
-        result = api.login(sys.argv[2], sys.argv[3])
+        result = api.login(sys.argv[2], password)
 
     elif action == "verify_token":
         result = api.verify_token()

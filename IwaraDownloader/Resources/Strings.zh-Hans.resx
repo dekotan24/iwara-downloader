@@ -2677,6 +2677,13 @@ videoId 后导入数据库。
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>选择错误提示音文件</value>
   </data>
+  <data name="SettingsForm_D096" xml:space="preserve">
+    <value>由于未设置密码，服务器未对局域网开放，仅在本机 (127.0.0.1) 上启动。
+如需从手机等其他设备连接，请先设置登录密码，然后重新启动服务器。</value>
+  </data>
+  <data name="SettingsForm_D097" xml:space="preserve">
+    <value>警告</value>
+  </data>
   <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
     <value>下载保存位置</value>
   </data>

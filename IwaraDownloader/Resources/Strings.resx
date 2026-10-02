@@ -2681,6 +2681,13 @@ DL済みのファイルは削除されます（戻すには再DLが必要です�
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>エラー音声ファイルを選択</value>
   </data>
+  <data name="SettingsForm_D096" xml:space="preserve">
+    <value>パスワードが設定されていないため、LAN 内への公開は行わずこの PC (127.0.0.1) のみで起動しました。
+スマホ等から接続するには、ログインパスワードを設定してから再起動してください。</value>
+  </data>
+  <data name="SettingsForm_D097" xml:space="preserve">
+    <value>警告</value>
+  </data>
   <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
     <value>ダウンロード保存先</value>
   </data>

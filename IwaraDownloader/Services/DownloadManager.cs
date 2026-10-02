@@ -13,6 +13,41 @@ namespace IwaraDownloader.Services
         private readonly IwaraApiService _iwaraApi;
         private readonly DatabaseService _database;
         private readonly LoggingService _logger = LoggingService.Instance;
+
+        private int _cancelAllGeneration;
+
+        // 空き容量不足で DL が失敗したドライブ (回復監視の対象)
+        private readonly ConcurrentDictionary<string, byte> _lowDiskSpaceRoots = new(StringComparer.OrdinalIgnoreCase);
+
+        // DL 中の出力パス (並列DLで同じファイル名を取り合わないための予約)
+        private readonly HashSet<string> _reservedOutputPaths = new(StringComparer.OrdinalIgnoreCase);
+
+        private string ReserveOutputPath(string path)
+        {
+            lock (_reservedOutputPaths)
+            {
+                var candidate = Helpers.GetUniqueFilePath(path);
+                if (_reservedOutputPaths.Contains(candidate))
+                {
+                    var dir = Path.GetDirectoryName(path) ?? "";
+                    var name = Path.GetFileNameWithoutExtension(path);
+                    var ext = Path.GetExtension(path);
+                    int counter = 1;
+                    do
+                    {
+                        candidate = Path.Combine(dir, $"{name} ({counter}){ext}");
+                        counter++;
+                    } while (_reservedOutputPaths.Contains(candidate) || File.Exists(candidate));
+                }
+                _reservedOutputPaths.Add(candidate);
+                return candidate;
+            }
+        }
+
+        private void ReleaseOutputPath(string path)
+        {
+            lock (_reservedOutputPaths) _reservedOutputPaths.Remove(path);
+        }
         private readonly ConcurrentDictionary<string, DownloadTask> _activeTasks;
         private readonly ConcurrentDictionary<string, DownloadTask> _pendingTasks;
         // ChangeVideoPriority と、まだメモリキューへ投入されていない Pending 動画の
@@ -704,6 +739,14 @@ namespace IwaraDownloader.Services
                 {
                     shouldRequeue = true;
                 }
+                else if (v.Status is DownloadStatus.Downloading or DownloadStatus.WritingTags)
+                {
+                    // DL 中に除外された動画は Downloading のまま保存されている。
+                    // 実際に動いているタスクは無いので Pending に戻して再取得する。
+                    v.Status = DownloadStatus.Pending;
+                    _database.UpdateVideo(v);
+                    shouldRequeue = true;
+                }
 
                 if (shouldRequeue)
                 {
@@ -1188,7 +1231,16 @@ namespace IwaraDownloader.Services
 
                 // video レコードを最新情報で補強
                 if (!string.IsNullOrEmpty(urlInfo.FileUuid))
+                {
+                    bool uuidChanged = !string.Equals(video.FileUuid, urlInfo.FileUuid, StringComparison.Ordinal);
                     video.FileUuid = urlInfo.FileUuid;
+                    // .part 作成前に DB へ保存 (クラッシュ後の起動時掃除で途中ファイルを孤児扱いさせない)
+                    if (uuidChanged && video.Id > 0)
+                    {
+                        try { _database.SetVideoFileUuid(video.Id, urlInfo.FileUuid); }
+                        catch (Exception ex) { _logger.Warn($"FileUuid の事前保存に失敗: {ex.Message}"); }
+                    }
+                }
                 if (!string.IsNullOrEmpty(urlInfo.AuthorUsername) && string.IsNullOrEmpty(video.AuthorUsername))
                     video.AuthorUsername = urlInfo.AuthorUsername;
                 // 作者不明のまま仮登録されていた動画(URL取得失敗の再試行等)が、ここで初めて作者判明
@@ -1265,6 +1317,13 @@ namespace IwaraDownloader.Services
 
                     if (freeBytes.HasValue && freeBytes.Value < minFreeGb * 1024L * 1024 * 1024)
                     {
+                        // 回復監視はこのドライブを見る (チャンネル別保存先が既定フォルダと別ドライブの場合)
+                        try
+                        {
+                            var lowRoot = Path.GetPathRoot(Path.GetFullPath(outputPath));
+                            if (!string.IsNullOrEmpty(lowRoot)) _lowDiskSpaceRoots[lowRoot] = 0;
+                        }
+                        catch { }
                         // "DISK_SPACE" マーカー: StatisticsForm のエラー分類 (m.Contains("space")) が
                         // どの表示言語でも判定できるようにする
                         throw new IOException(
@@ -1292,7 +1351,9 @@ namespace IwaraDownloader.Services
                     }
                 }
 
-                outputPath = Helpers.GetUniqueFilePath(outputPath);
+                // 並列DL中の別動画と同じパスにならないよう予約する (テンプレートに {id} が無いと
+                // 同名タイトルが同時に走り、.part を共有・最終ファイルを上書きし合うため)
+                outputPath = ReserveOutputPath(outputPath);
 
                 // ダウンロード実行(IwaraApiService使用)
                 var progress = new Progress<string>(msg =>
@@ -1325,13 +1386,23 @@ namespace IwaraDownloader.Services
                     task.CancellationTokenSource.Token,
                     _globalCts?.Token ?? CancellationToken.None);
 
-                var (success, error) = await _iwaraApi.DownloadVideoAsync(
-                    video.VideoId,
-                    outputPath,
-                    progress,
-                    percentProgress,
-                    linkedCts.Token,
-                    siteForApi);
+                bool success;
+                string? error;
+                try
+                {
+                    (success, error) = await _iwaraApi.DownloadVideoAsync(
+                        video.VideoId,
+                        outputPath,
+                        progress,
+                        percentProgress,
+                        linkedCts.Token,
+                        siteForApi);
+                }
+                finally
+                {
+                    // 完了後は実ファイルが存在するので以降は File.Exists で衝突回避できる
+                    ReleaseOutputPath(outputPath);
+                }
 
                 if (success && File.Exists(outputPath))
                 {
@@ -1410,12 +1481,7 @@ namespace IwaraDownloader.Services
 
                     if (video.SubscribedUserId.HasValue)
                     {
-                        var user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
-                        if (user != null)
-                        {
-                            user.DownloadedCount++;
-                            _database.UpdateSubscribedUser(user);
-                        }
+                        _database.IncrementSubscribedUserDownloadedCount(video.SubscribedUserId.Value);
                     }
 
                     NotificationService.Instance.NotifyDownloadComplete(video.Title, outputPath);
@@ -1547,11 +1613,14 @@ namespace IwaraDownloader.Services
                     var videoToRetry = task.Video;
                     var isSubRetry = task.IsSubscriptionDownload;
                     var userToRetry = task.SubscribedUser;
+                    var retryGeneration = Volatile.Read(ref _cancelAllGeneration);
                     _ = Task.Run(async () =>
                     {
                         try
                         {
                             await Task.Delay(5000, _globalCts?.Token ?? CancellationToken.None);
+                            // 待機中に「すべて停止」された場合は再投入しない
+                            if (Volatile.Read(ref _cancelAllGeneration) != retryGeneration) return;
                             EnqueueDownload(videoToRetry, isSubRetry, userToRetry);
                         }
                         catch (OperationCanceledException) { /* シャットダウン中: 諦める */ }
@@ -1741,12 +1810,7 @@ namespace IwaraDownloader.Services
 
                 if (video.SubscribedUserId.HasValue)
                 {
-                    var user = _database.GetSubscribedUserById(video.SubscribedUserId.Value);
-                    if (user != null)
-                    {
-                        user.DownloadedCount++;
-                        _database.UpdateSubscribedUser(user);
-                    }
+                    _database.IncrementSubscribedUserDownloadedCount(video.SubscribedUserId.Value);
                 }
 
                 NotificationService.Instance.NotifyDownloadComplete(video.Title, filePath);
@@ -1952,8 +2016,7 @@ namespace IwaraDownloader.Services
 
         /// <summary>
         /// 空き容量不足によるキュー一時停止(報告のあったissue対応)。ログイン切れと違い、
-        /// 全ドライブ・全保存先を厳密に区別すると設計が複雑になるため、既定の保存先
-        /// (settings.DownloadFolder)のドライブ1つだけを監視対象として単純化している。
+        /// 回復監視は容量不足で失敗した保存先のドライブ (_lowDiskSpaceRoots、無ければ既定の保存先) を対象とする。
         /// 実行中タスクは能動的にキャンセルしない(ディスクフルなら書き込みで自然に失敗するため、
         /// ログイン切れほど緊急に止める必要がない)。待機中タスクだけPendingに戻して次の投入を防ぐ。
         /// </summary>
@@ -1997,12 +2060,21 @@ namespace IwaraDownloader.Services
                 var minFreeGb = settings.MinFreeSpaceGb;
                 if (minFreeGb <= 0) { ResumeAfterDiskSpaceRecovered(); return; }
 
-                var root = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
-                if (string.IsNullOrEmpty(root)) return;
+                // 容量不足で失敗したドライブ全て (記録が無ければ既定保存先) が回復したら再開
+                var roots = _lowDiskSpaceRoots.Keys.ToList();
+                if (roots.Count == 0)
+                {
+                    var defRoot = Path.GetPathRoot(Path.GetFullPath(settings.DownloadFolder));
+                    if (string.IsNullOrEmpty(defRoot)) return;
+                    roots.Add(defRoot);
+                }
 
-                var freeBytes = new DriveInfo(root).AvailableFreeSpace;
-                if (freeBytes >= minFreeGb * 1024L * 1024 * 1024)
-                    ResumeAfterDiskSpaceRecovered();
+                var threshold = minFreeGb * 1024L * 1024 * 1024;
+                foreach (var root in roots)
+                {
+                    if (new DriveInfo(root).AvailableFreeSpace < threshold) return;
+                }
+                ResumeAfterDiskSpaceRecovered();
             }
             catch (Exception ex)
             {
@@ -2017,6 +2089,7 @@ namespace IwaraDownloader.Services
             _diskSpaceRecoveryTimer?.Dispose();
             _diskSpaceRecoveryTimer = null;
             Interlocked.Exchange(ref _suspendNotifiedForDiskSpace, 0);
+            _lowDiskSpaceRoots.Clear();
 
             var pendingVideos = _database.GetVideosByStatus(DownloadStatus.Pending);
             // ResumeAfterLoginと同じ理由(購読チャンネル別保存先・UUID重複検出の維持)で
@@ -2164,6 +2237,8 @@ namespace IwaraDownloader.Services
         /// </summary>
         public void CancelAllTasks()
         {
+            // 失敗後の自動リトライ (5 秒後に再投入) を止めるための世代番号
+            Interlocked.Increment(ref _cancelAllGeneration);
             List<DownloadTask> pausedTasks;
             lock (_enqueueLock)
             {
@@ -2783,7 +2858,10 @@ namespace IwaraDownloader.Services
                     user.VideosLoaded = true;
                     user.IsAccountDeleted = fetchStatus == ChannelFetchStatus.UserNotFound;
                 }
-                _database.UpdateSubscribedUser(user);
+                // 取得結果のカラムだけ更新 (取得中にユーザーが変えた保存先/優先度/有効状態などを巻き戻さない)
+                _database.UpdateSubscribedUserFetchResult(user.Id, user.LastCheckedAt,
+                    updateCounts: fetchStatus != ChannelFetchStatus.Failed,
+                    user.TotalVideoCount, user.VideosLoaded, user.IsAccountDeleted);
 
                 // 保存後に削除された場合も、削除済みチャンネルの通知・自動DLはしない
                 // (保存済みの動画は削除側のトランザクションでまとめて消える)。

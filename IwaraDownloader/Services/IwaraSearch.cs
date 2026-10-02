@@ -73,11 +73,9 @@ namespace IwaraDownloader.Services
             {
                 // IwaraApiService に直接アクセスする手段が無いので Process を呼ぶ
                 // トークンは環境変数経由 (コマンドライン引数からの漏洩防止)
-                var siteArg = string.IsNullOrEmpty(site) ? "" : $" --site \"{site}\"";
                 var psi = new ProcessStartInfo
                 {
                     FileName = Utils.SettingsManager.Instance.Settings.PythonPath,
-                    Arguments = $"\"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "iwara_helper.py")}\" search \"{query.Replace("\"", "\\\"")}\" {page} {limit}{siteArg}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -86,6 +84,17 @@ namespace IwaraDownloader.Services
                     StandardErrorEncoding = Encoding.UTF8,
                     WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
                 };
+                // ArgumentList で渡す (クエリ中の " や \ で引数が分割・注入されないように)
+                psi.ArgumentList.Add(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "iwara_helper.py"));
+                psi.ArgumentList.Add("search");
+                psi.ArgumentList.Add(query);
+                psi.ArgumentList.Add(page.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                psi.ArgumentList.Add(limit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (!string.IsNullOrEmpty(site))
+                {
+                    psi.ArgumentList.Add("--site");
+                    psi.ArgumentList.Add(site);
+                }
                 if (!string.IsNullOrEmpty(_api.Token))
                 {
                     psi.EnvironmentVariables["IWARA_TOKEN"] = _api.Token;

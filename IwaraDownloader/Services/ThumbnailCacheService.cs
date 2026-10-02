@@ -91,7 +91,8 @@ namespace IwaraDownloader.Services
                 try { Directory.CreateDirectory(dir); } catch { }
                 _lastCacheDir = dir;
             }
-            return Path.Combine(dir, videoId + ".jpg");
+            // videoId は貼り付け URL 由来のこともあるので、パス区切りや ".." を含めない
+            return Path.Combine(dir, Utils.Helpers.SanitizeFileName(videoId) + ".jpg");
         }
 
         private static readonly object _syncDirLock = new();
@@ -408,7 +409,7 @@ namespace IwaraDownloader.Services
         {
             try
             {
-                var resp = await _http.GetAsync(url);
+                using var resp = await _http.GetAsync(url);
                 if (!resp.IsSuccessStatusCode)
                 {
                     try { DatabaseService.Instance.UpdateThumbnailStatusByVideoId(videoId, 2); } catch { }
@@ -421,7 +422,17 @@ namespace IwaraDownloader.Services
                     return;
                 }
                 var path = GetCachePath(videoId);
-                await File.WriteAllBytesAsync(path, bytes);
+                // 一時ファイルに書いてから差し替える (書き込み途中で落ちても壊れた .jpg を残さない)
+                var tmpPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                try
+                {
+                    await File.WriteAllBytesAsync(tmpPath, bytes);
+                    File.Move(tmpPath, path, overwrite: true);
+                }
+                finally
+                {
+                    try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
+                }
 
                 PutMem(videoId, bytes);
 

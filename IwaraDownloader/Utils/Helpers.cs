@@ -100,12 +100,28 @@ namespace IwaraDownloader.Utils
             sanitized = sanitized.Trim('_', ' ', '.');
 
             // 長すぎる場合は切り詰め
-            if (sanitized.Length > 200)
-            {
-                sanitized = sanitized.Substring(0, 200);
-            }
+            sanitized = TruncateSafe(sanitized, 200).TrimEnd(' ', '.');
 
-            return string.IsNullOrWhiteSpace(sanitized) ? "untitled" : sanitized;
+            if (string.IsNullOrWhiteSpace(sanitized)) return "untitled";
+            return EscapeReservedName(sanitized);
+        }
+
+        // Windows の予約デバイス名 (拡張子が付いていても予約扱い)
+        private static readonly Regex RxReservedName = new(
+            @"^(CON|PRN|AUX|NUL|COM[0-9¹²³]|LPT[0-9¹²³])(\..*)?$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>CON / NUL / COM1 等の予約名なら先頭に "_" を付ける</summary>
+        public static string EscapeReservedName(string name)
+            => RxReservedName.IsMatch(name.TrimEnd(' ', '.')) ? "_" + name : name;
+
+        /// <summary>サロゲートペアを分断しないように最大長で切り詰める</summary>
+        public static string TruncateSafe(string value, int maxLength)
+        {
+            if (value.Length <= maxLength) return value;
+            int len = maxLength;
+            if (char.IsHighSurrogate(value[len - 1])) len--;
+            return value.Substring(0, len);
         }
 
         /// <summary>
@@ -279,18 +295,39 @@ namespace IwaraDownloader.Utils
 
             var dateStr = postedAt?.ToString("yyyyMMdd") ?? "unknown";
 
-            var result = template
-                .Replace("{title}", SanitizeFileName(title))
-                .Replace("{author}", SanitizeFileName(author))
-                .Replace("{date}", dateStr)
-                .Replace("{id}", SanitizeFileName(videoId))
-                .Replace("{quality}", SanitizeFileName(quality));
+            // 1 パスで置換する (連続 Replace だとタイトル中の "{author}" 等の文字列まで後段で置換される)
+            var result = RxTemplatePlaceholder.Replace(template, m => m.Groups[1].Value switch
+            {
+                "title" => SanitizeFileName(title),
+                "author" => SanitizeFileName(author),
+                "date" => dateStr,
+                "id" => SanitizeFileName(videoId),
+                "quality" => SanitizeFileName(quality),
+                _ => m.Value
+            });
 
             // 結果が空の場合はデフォルト
             if (string.IsNullOrWhiteSpace(result))
                 result = SanitizeFileName(title);
 
+            // 1 つのファイル名は 255 文字まで。".mp4.part.meta" や " (n)" の付加分と
+            // フォルダパスの長さを見込んで、パス区切りごとに MaxFileNameSegment 文字に抑える。
+            var segments = result.Split('\\', '/');
+            for (int i = 0; i < segments.Length; i++)
+            {
+                var seg = TruncateSafe(segments[i], MaxFileNameSegment).TrimEnd(' ', '.');
+                segments[i] = seg.Length == 0 ? seg : EscapeReservedName(seg);
+            }
+            result = string.Join(Path.DirectorySeparatorChar, segments);
+            if (string.IsNullOrWhiteSpace(result.Trim(Path.DirectorySeparatorChar)))
+                result = SanitizeFileName(title);
+
             return result;
         }
+
+        private const int MaxFileNameSegment = 150;
+
+        private static readonly Regex RxTemplatePlaceholder = new(
+            @"\{(title|author|date|id|quality)\}", RegexOptions.CultureInvariant);
     }
 }

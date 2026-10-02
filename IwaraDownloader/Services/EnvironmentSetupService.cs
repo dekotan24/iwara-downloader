@@ -251,11 +251,12 @@ namespace IwaraDownloader.Services
                 StandardErrorEncoding = Encoding.UTF8,
             };
             using var proc = new Process { StartInfo = psi };
+            // stdout / stderr のハンドラは別スレッドから同時に呼ばれるので StringBuilder を lock で守る
             proc.OutputDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    sb.AppendLine(e.Data);
+                    lock (sb) sb.AppendLine(e.Data);
                     progress?.Report(new SetupProgress(e.Data, -1));
                 }
             };
@@ -263,7 +264,7 @@ namespace IwaraDownloader.Services
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    sb.AppendLine(e.Data);
+                    lock (sb) sb.AppendLine(e.Data);
                     progress?.Report(new SetupProgress(e.Data, -1));
                 }
             };

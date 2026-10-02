@@ -33,15 +33,65 @@ namespace IwaraDownloader.Services
             WriteIndented = false
         };
 
+        private readonly LoginThrottle _loginThrottle = new();
+        private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
+        private static readonly string MachineName = SafeMachineName();
+
         public bool IsRunning => _app != null;
         public int Port { get; private set; }
         public string? BaseUrl { get; private set; }
 
+        /// <summary>
+        /// LAN 公開が要求されたが、パスワード未設定のため 127.0.0.1 に限定して起動した場合 true
+        /// </summary>
+        public bool LanBindingRefusedNoPassword { get; private set; }
+
+        public WebServerService()
+        {
+            // パスワード/ユーザー名が変わったら既存セッションを全て失効させる
+            SettingsManager.Instance.WebServerCredentialsChanged += (_, _) => InvalidateAllSessions();
+        }
+
         public void SetDownloadManager(DownloadManager dm) => _downloadManager = dm;
+
+        /// <summary>全ログインセッションを失効させる</summary>
+        public void InvalidateAllSessions()
+        {
+            _sessions.Clear();
+            _loginThrottle.Clear();
+        }
+
+        private static string SafeMachineName()
+        {
+            try { return Dns.GetHostName(); } catch { return Environment.MachineName; }
+        }
 
         public async Task StartAsync(int port, bool bindAll)
         {
+            await _lifecycleLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await StartCoreAsync(port, bindAll).ConfigureAwait(false);
+            }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
+        }
+
+        private async Task StartCoreAsync(int port, bool bindAll)
+        {
             if (_app != null) return;
+
+            // パスワード未設定のまま LAN 全体に公開すると、同じネットワークの誰でも
+            // ライブラリ閲覧やファイル削除ができてしまう。その場合はローカルのみで起動する。
+            LanBindingRefusedNoPassword = false;
+            if (bindAll && string.IsNullOrEmpty(SettingsManager.Instance.GetWebServerPassword()))
+            {
+                _logger.Warn("Web media server: LAN access requires a password. Binding to 127.0.0.1 only.");
+                bindAll = false;
+                LanBindingRefusedNoPassword = true;
+            }
 
             Port = port;
             _cts = new CancellationTokenSource();
@@ -62,6 +112,27 @@ namespace IwaraDownloader.Services
                 ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
                 ctx.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
                 ctx.Response.Headers["Referrer-Policy"] = "same-origin";
+
+                // DNS リバインディング対策: 攻撃者ドメイン名の Host を拒否
+                if (!WebRequestGuard.IsAllowedHost(ctx.Request.Headers.Host.ToString(), MachineName))
+                {
+                    ctx.Response.StatusCode = 421;
+                    return;
+                }
+
+                // CSRF 対策: 状態を変更するメソッドはクロスサイトからの送信を拒否
+                if (!HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method) && !HttpMethods.IsOptions(ctx.Request.Method)
+                    && !WebRequestGuard.IsSameOriginRequest(
+                        ctx.Request.Headers.Origin.ToString(),
+                        ctx.Request.Headers["Sec-Fetch-Site"].ToString(),
+                        ctx.Request.Headers.Host.ToString()))
+                {
+                    ctx.Response.StatusCode = 403;
+                    ctx.Response.ContentType = "application/json";
+                    await ctx.Response.WriteAsync("{\"error\":\"Cross-site request rejected\"}");
+                    return;
+                }
+
                 try
                 {
                     await next();
@@ -108,6 +179,19 @@ namespace IwaraDownloader.Services
 
         public async Task StopAsync()
         {
+            await _lifecycleLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await StopCoreAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
+        }
+
+        private async Task StopCoreAsync()
+        {
             if (_app == null) return;
 
             _logger.Info("Web media server stopping...");
@@ -142,6 +226,7 @@ namespace IwaraDownloader.Services
                 _cts?.Dispose();
                 _cts = null;
                 BaseUrl = null;
+                InvalidateAllSessions();
             }
         }
 
@@ -201,7 +286,12 @@ namespace IwaraDownloader.Services
 
                 app.MapFallback(async ctx =>
                 {
-                    if (ctx.Request.Path.StartsWithSegments("/api")) return;
+                    if (ctx.Request.Path.StartsWithSegments("/api"))
+                    {
+                        // 未定義 API は 200 の空応答ではなく 404 を返す
+                        ctx.Response.StatusCode = 404;
+                        return;
+                    }
                     var indexPath = Path.Combine(webUiPath, "index.html");
                     if (File.Exists(indexPath))
                     {
@@ -338,12 +428,33 @@ namespace IwaraDownloader.Services
             var expectedPass = SettingsManager.Instance.GetWebServerPassword();
 
             if (string.IsNullOrEmpty(expectedPass))
-                return Results.BadRequest(new { error = "Server password not configured" });
+            {
+                // 暗号文はあるのに復号できない = 別ユーザー/別PCへ設定を移した等
+                return Results.BadRequest(new
+                {
+                    error = string.IsNullOrEmpty(settings.WebServerPasswordEncrypted)
+                        ? "Server password not configured"
+                        : "Server password could not be decrypted. Please set the web password again in the app settings."
+                });
+            }
+
+            // 総当たり対策: 失敗が続いた接続元は一定時間ロック
+            var clientKey = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (_loginThrottle.IsLockedOut(clientKey, out var retryAfter))
+            {
+                ctx.Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return Results.Json(new { error = "Too many failed attempts. Try again later." }, statusCode: 429);
+            }
 
             // 資格情報の比較は一致した接頭辞の長さが応答時間に出ないよう定数時間で行う。
             if (!FixedTimeStringEquals(body.Username, expectedUser)
                 || !FixedTimeStringEquals(body.Password, expectedPass))
+            {
+                _loginThrottle.RegisterFailure(clientKey);
+                await Task.Delay(500);
                 return Results.Json(new { error = "Invalid credentials" }, statusCode: 401);
+            }
+            _loginThrottle.RegisterSuccess(clientKey);
 
             PruneExpiredSessions();
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
@@ -392,7 +503,7 @@ namespace IwaraDownloader.Services
             if (authResult != null) return authResult;
 
             var q = ctx.Request.Query;
-            int page = int.TryParse(q["page"], out var p) ? Math.Max(1, p) : 1;
+            int page = int.TryParse(q["page"], out var p) ? Math.Clamp(p, 1, 1_000_000) : 1;
             int limit = int.TryParse(q["limit"], out var l) ? Math.Clamp(l, 1, 200) : 50;
             string? channelId = q["channel"];
             string? status = q["status"];

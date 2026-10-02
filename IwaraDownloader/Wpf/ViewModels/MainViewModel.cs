@@ -1496,7 +1496,7 @@ namespace IwaraDownloader.Wpf.ViewModels
             foreach (var video in videos)
             {
                 video.IsFavorite = !allFav;
-                _database.UpdateVideo(video);
+                _database.SetVideoFavorite(video.Id, video.IsFavorite);
             }
             foreach (var item in Videos.Where(item => videos.Contains(item.Video)))
                 item.Refresh(_downloadManager.GetTask(item.Video.VideoId));
@@ -1676,7 +1676,11 @@ namespace IwaraDownloader.Wpf.ViewModels
         [RelayCommand]
         private void ReDownloadVideo()
         {
-            var selectedVideos = GetSelectedVideoInfos().Where(v => v.Status == DownloadStatus.Completed).ToList();
+            // 一覧の行は移動/リネーム後の古い LocalFilePath を持っている可能性があるので DB から読み直す
+            var selectedVideos = GetSelectedVideoInfos()
+                .Select(v => _database.GetVideoById(v.Id) ?? v)
+                .Where(v => v.Status == DownloadStatus.Completed)
+                .ToList();
             if (selectedVideos.Count == 0) return;
 
             // ファイルを他の動画行(選択中の別の行も含む)と共有している動画は再DLしない。
@@ -1708,6 +1712,13 @@ namespace IwaraDownloader.Wpf.ViewModels
             int requeuedCount = 0;
             foreach (var video in videos)
             {
+                // ファイルが使用中等で消せなかった動画は再DLしない (DB から外すと追跡されない
+                // ファイルが残り、再DLで "name (1).mp4" が増えるため)
+                if (!string.IsNullOrEmpty(video.LocalFilePath) && File.Exists(video.LocalFilePath))
+                {
+                    LoggingService.Instance.Warn($"Re-download skipped (file could not be deleted): {video.LocalFilePath}");
+                    continue;
+                }
                 video.LocalFilePath = string.Empty;
                 video.FileSize = 0;
                 video.Status = DownloadStatus.Pending;

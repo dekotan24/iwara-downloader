@@ -562,6 +562,47 @@ namespace IwaraDownloader.Services
         }
 
         /// <summary>
+        /// DL 完了数を DB 上でインクリメントする (並列完了時の読み取り→書き戻しによる取りこぼし防止)。
+        /// </summary>
+        public void IncrementSubscribedUserDownloadedCount(int userId)
+        {
+            using var connection = OpenConnection();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE SubscribedUsers SET DownloadedCount = DownloadedCount + 1 WHERE Id = @Id";
+            command.Parameters.AddWithValue("@Id", userId);
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// チャンネル取得結果のカラムだけを更新する。取得処理は数分かかることがあり、その間に
+        /// ユーザーが変更した保存先・優先度・有効/無効などを古いスナップショットで巻き戻さないため。
+        /// updateCounts=false の場合は LastCheckedAt のみ更新する。
+        /// </summary>
+        public void UpdateSubscribedUserFetchResult(int userId, DateTime? lastCheckedAt, bool updateCounts,
+            int totalVideoCount, bool videosLoaded, bool isAccountDeleted)
+        {
+            using var connection = OpenConnection();
+            var command = connection.CreateCommand();
+            command.CommandText = updateCounts
+                ? @"UPDATE SubscribedUsers SET
+                        LastCheckedAt = @LastCheckedAt,
+                        TotalVideoCount = @TotalVideoCount,
+                        VideosLoaded = @VideosLoaded,
+                        IsAccountDeleted = @IsAccountDeleted
+                    WHERE Id = @Id"
+                : "UPDATE SubscribedUsers SET LastCheckedAt = @LastCheckedAt WHERE Id = @Id";
+            command.Parameters.AddWithValue("@Id", userId);
+            command.Parameters.AddWithValue("@LastCheckedAt", lastCheckedAt?.ToString("o") ?? (object)DBNull.Value);
+            if (updateCounts)
+            {
+                command.Parameters.AddWithValue("@TotalVideoCount", totalVideoCount);
+                command.Parameters.AddWithValue("@VideosLoaded", videosLoaded ? 1 : 0);
+                command.Parameters.AddWithValue("@IsAccountDeleted", isAccountDeleted ? 1 : 0);
+            }
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
         /// 購読ユーザーを更新
         /// </summary>
         public void UpdateSubscribedUser(SubscribedUser user)
@@ -1015,6 +1056,11 @@ namespace IwaraDownloader.Services
         /// <summary>
         /// 動画を更新
         /// </summary>
+        /// <remarks>
+        /// ユーザーが編集する Tags / Memo / IsFavorite はここでは書き込まない
+        /// (UpdateVideoTagsMemoFavorite / SetVideoFavorite を使う)。DL 処理などが enqueue 時点の
+        /// 古い VideoInfo で行全体を上書きした際に、DL 中の編集が巻き戻るのを防ぐため。
+        /// </remarks>
         public void UpdateVideo(VideoInfo video)
         {
             using var connection = OpenConnection();
@@ -1037,13 +1083,10 @@ namespace IwaraDownloader.Services
                     SubscribedUserId = @SubscribedUserId,
                     RetryCount = @RetryCount,
                     LastErrorMessage = @LastErrorMessage,
-                    Tags = @Tags,
-                    Memo = @Memo,
                     FileUuid = @FileUuid,
                     EmbedUrl = @EmbedUrl,
                     Rating = @Rating,
                     Site = @Site,
-                    IsFavorite = @IsFavorite,
                     ThumbnailStatus = @ThumbnailStatus,
                     ApiRawJson = @ApiRawJson,
                     Priority = @Priority
@@ -1194,6 +1237,21 @@ namespace IwaraDownloader.Services
             command.CommandText = "UPDATE Videos SET ThumbnailStatus = @Status WHERE VideoId = @VideoId";
             command.Parameters.AddWithValue("@Status", status);
             command.Parameters.AddWithValue("@VideoId", videoId);
+            command.ExecuteNonQuery();
+        }
+
+        /// <summary>
+        /// FileUuid だけを更新する(他カラムを触らない単発 UPDATE)。
+        /// DL 開始時に保存しておかないと、途中でクラッシュした場合に起動時の孤児 .part 掃除が
+        /// DB と照合できず再開可能な途中ファイルを削除してしまう。
+        /// </summary>
+        public void SetVideoFileUuid(int videoId, string fileUuid)
+        {
+            using var connection = OpenConnection();
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE Videos SET FileUuid = @FileUuid WHERE Id = @Id";
+            command.Parameters.AddWithValue("@FileUuid", fileUuid);
+            command.Parameters.AddWithValue("@Id", videoId);
             command.ExecuteNonQuery();
         }
 

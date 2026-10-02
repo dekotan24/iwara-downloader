@@ -11,7 +11,15 @@ namespace IwaraDownloader.Services
     public class UpdateService
     {
         // 既定の100秒タイムアウトだと設定画面の手動チェックでUIが固まるので短縮
-        private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+        private static readonly HttpClient _httpClient = CreateHttpClient();
+
+        // DefaultRequestHeaders は共有 HttpClient 上でスレッドセーフではないため、生成時に一度だけ設定する
+        private static HttpClient CreateHttpClient()
+        {
+            var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            client.DefaultRequestHeaders.Add("User-Agent", "IwaraDownloader");
+            return client;
+        }
         private const string GitHubApiUrl = "https://api.github.com/repos/dekotan24/iwara-downloader/releases/latest";
         private const string ReleasesPageUrl = "https://github.com/dekotan24/iwara-downloader/releases";
 
@@ -40,10 +48,7 @@ namespace IwaraDownloader.Services
         {
             try
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("User-Agent", "IwaraDownloader");
-
-                var response = await _httpClient.GetAsync(GitHubApiUrl);
+                using var response = await _httpClient.GetAsync(GitHubApiUrl);
                 
                 if (!response.IsSuccessStatusCode)
                 {

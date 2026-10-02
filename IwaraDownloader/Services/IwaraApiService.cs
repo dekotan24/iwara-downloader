@@ -143,10 +143,18 @@ namespace IwaraDownloader.Services
                     Directory.CreateDirectory(dir);
                 
                 if (!string.IsNullOrEmpty(_token))
-                    File.WriteAllText(tokenPath, _token);
+                {
+                    // JWT はアカウントへのフルアクセス権なので DPAPI で暗号化して保存する
+                    // (暗号化に失敗した場合は平文で残さず、次回起動時に再ログインさせる)
+                    var encrypted = Utils.CryptoHelper.Encrypt(_token);
+                    if (!string.IsNullOrEmpty(encrypted))
+                        File.WriteAllText(tokenPath, TokenFilePrefix + encrypted);
+                }
             }
             catch { }
         }
+
+        private const string TokenFilePrefix = "dpapi:";
 
         /// <summary>
         /// トークンを読み込み。JWT の有効期限をチェックし、期限切れなら破棄する。
@@ -165,6 +173,13 @@ namespace IwaraDownloader.Services
                 var token = File.ReadAllText(tokenPath).Trim();
                 if (string.IsNullOrEmpty(token)) return;
 
+                bool legacyPlaintext = !token.StartsWith(TokenFilePrefix, StringComparison.Ordinal);
+                if (!legacyPlaintext)
+                {
+                    token = Utils.CryptoHelper.Decrypt(token.Substring(TokenFilePrefix.Length));
+                    if (string.IsNullOrEmpty(token)) return; // 別ユーザー/別PC等で復号不可 → 再ログイン
+                }
+
                 if (IsTokenExpired(token))
                 {
                     LoggingService.Instance.Warn("保存されていたトークンの有効期限が切れていたため破棄しました。再ログインが必要です。");
@@ -173,6 +188,10 @@ namespace IwaraDownloader.Services
                 }
 
                 _token = token;
+
+                // 旧バージョンの平文 token.txt は暗号化形式に移行
+                if (legacyPlaintext)
+                    SaveToken();
             }
             catch { }
         }
@@ -233,17 +252,52 @@ namespace IwaraDownloader.Services
         /// Pythonスクリプトを実行 (site 指定可)
         /// </summary>
         private Task<JsonDocument?> RunPythonAsync(string action, params string[] args)
-            => RunPythonAsync(action, null, CancellationToken.None, null, args);
+            => RunPythonAsync(action, null, CancellationToken.None, null, null, args);
 
         private Task<JsonDocument?> RunPythonAsync(string action, string? site, params string[] args)
-            => RunPythonAsync(action, site, CancellationToken.None, null, args);
+            => RunPythonAsync(action, site, CancellationToken.None, null, null, args);
+
+        private Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, Action<string>? onStderrLine, params string[] args)
+            => RunPythonAsync(action, site, ct, onStderrLine, null, args);
+
+        /// <summary>
+        /// Python に渡す引数を ProcessStartInfo.ArgumentList に積む。
+        /// 文字列連結 + "\"" 置換は Windows のコマンドライン解析規則 (直前のバックスラッシュ) を
+        /// 満たさず、API 由来の値 (embedUrl 等) から任意の引数を注入できてしまうため使わない。
+        /// </summary>
+        private void AddPythonArguments(ProcessStartInfo psi, string action, IEnumerable<string> args, string? site, bool includeRateLimit)
+        {
+            psi.ArgumentList.Add(_scriptPath);
+            psi.ArgumentList.Add(action);
+            foreach (var a in args)
+                psi.ArgumentList.Add(a ?? string.Empty);
+
+            if (includeRateLimit)
+            {
+                // レート制限設定を追加
+                foreach (var a in GetRateLimitArgs())
+                    psi.ArgumentList.Add(a);
+
+                // バックオフ無効の場合
+                if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
+                    psi.ArgumentList.Add("--no-backoff");
+            }
+
+            // iwara.ai / iwara.tv 切替 (空なら省略=デフォルト www.iwara.tv)
+            if (!string.IsNullOrEmpty(site))
+            {
+                psi.ArgumentList.Add("--site");
+                psi.ArgumentList.Add(site);
+            }
+        }
 
         /// <param name="onStderrLine">
         /// Python の stderr を 1 行ずつ同期的に受け取るフック。呼び出し元が
         /// 「まだ生きている」ことを検知する (進捗ウォッチドッグ) ために使う。
         /// IProgress と違い SynchronizationContext を経由しないので、UI が詰まっていても遅延しない。
         /// </param>
-        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, Action<string>? onStderrLine, params string[] args)
+        private async Task<JsonDocument?> RunPythonAsync(string action, string? site, CancellationToken ct, Action<string>? onStderrLine,
+            IReadOnlyDictionary<string, string>? extraEnv, params string[] args)
         {
             if (!IsPythonConfigured)
             {
@@ -268,32 +322,11 @@ namespace IwaraDownloader.Services
                     "ライブラリ未インストールの可能性があります。設定画面から再セットアップを実行してください。 (action={action})");
             }
 
-            var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
-            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
-
             // トークンは環境変数 IWARA_TOKEN 経由で渡す (tasklist /v / WMI で他プロセスから
             // コマンドラインを読まれた時の JWT 漏洩を防ぐ)。Python 側は環境変数フォールバック対応済み。
-
-            // レート制限設定を追加
-            allArgs.AddRange(GetRateLimitArgs());
-
-            // バックオフ無効の場合
-            if (!Utils.SettingsManager.Instance.Settings.EnableExponentialBackoff)
-            {
-                allArgs.Add("--no-backoff");
-            }
-
-            // iwara.ai / iwara.tv 切替 (空なら省略=デフォルト www.iwara.tv)
-            if (!string.IsNullOrEmpty(site))
-            {
-                allArgs.Add("--site");
-                allArgs.Add($"\"{site}\"");
-            }
-
             var psi = new ProcessStartInfo
             {
                 FileName = PythonPath,
-                Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -302,12 +335,19 @@ namespace IwaraDownloader.Services
                 StandardErrorEncoding = System.Text.Encoding.UTF8,
                 WorkingDirectory = _appDir
             };
+            AddPythonArguments(psi, action, args, site, includeRateLimit: true);
             if (!string.IsNullOrEmpty(_token))
             {
                 psi.EnvironmentVariables["IWARA_TOKEN"] = _token;
             }
+            if (extraEnv != null)
+            {
+                foreach (var kv in extraEnv)
+                    psi.EnvironmentVariables[kv.Key] = kv.Value;
+            }
 
-            Debug.WriteLine($"Running: {PythonPath} {psi.Arguments}");
+            // 引数にはメールアドレス等が含まれ得るので action のみ出力
+            Debug.WriteLine($"Running: {PythonPath} iwara_helper.py {action}");
 
             using var process = new Process { StartInfo = psi };
             var output = new System.Text.StringBuilder();
@@ -407,7 +447,9 @@ namespace IwaraDownloader.Services
         /// </summary>
         public async Task<(bool Success, string? Error)> LoginAsync(string email, string password)
         {
-            var result = await RunPythonAsync("login", new[] { email, password });
+            // パスワードは環境変数で渡す (コマンドライン引数だと他プロセスから読める)
+            var result = await RunPythonAsync("login", null, CancellationToken.None, null,
+                new Dictionary<string, string> { ["IWARA_PASSWORD"] = password ?? string.Empty }, email);
             
             if (result == null)
                 return (false, "Pythonスクリプトの実行に失敗しました。環境セットアップを確認してください。");
@@ -811,6 +853,11 @@ namespace IwaraDownloader.Services
             if (string.IsNullOrEmpty(embedUrl))
                 return (false, "埋め込みURLが空です", null);
 
+            // embedUrl は API (= 投稿者) 由来の値。http/https の絶対 URL 以外は yt-dlp に渡さない
+            if (!Uri.TryCreate(embedUrl, UriKind.Absolute, out var embedUri)
+                || (embedUri.Scheme != Uri.UriSchemeHttp && embedUri.Scheme != Uri.UriSchemeHttps))
+                return (false, "埋め込みURLが不正です (http/https のみ対応)", null);
+
             progress?.Report(L.T("SvcIwaraApiService_D007", embedUrl));
 
             var ytDlpPath = Utils.SettingsManager.Instance.Settings.YtDlpPath;
@@ -865,21 +912,10 @@ namespace IwaraDownloader.Services
                 return null;
             }
 
-            var allArgs = new List<string> { $"\"{_scriptPath}\"", action };
-            allArgs.AddRange(args.Select(a => $"\"{a.Replace("\"", "\\\"")}\""));
-
             // トークンは環境変数経由 (コマンドライン引数からの漏洩防止)
-
-            if (!string.IsNullOrEmpty(site))
-            {
-                allArgs.Add("--site");
-                allArgs.Add($"\"{site}\"");
-            }
-
             var psi = new ProcessStartInfo
             {
                 FileName = PythonPath,
-                Arguments = string.Join(" ", allArgs),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -888,6 +924,7 @@ namespace IwaraDownloader.Services
                 StandardErrorEncoding = System.Text.Encoding.UTF8,
                 WorkingDirectory = _appDir
             };
+            AddPythonArguments(psi, action, args, site, includeRateLimit: false);
             if (!string.IsNullOrEmpty(_token))
             {
                 psi.EnvironmentVariables["IWARA_TOKEN"] = _token;

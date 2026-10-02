@@ -141,16 +141,18 @@ namespace IwaraDownloader.Services
             if (newExists && oldExists)
             {
                 // クロスドライブ移動で「コピー完了 → 元削除」の間に中断したケース。
-                // サイズ一致なら移動完了とみなして元を削除、不一致なら新側を不完全として破棄。
-                long oldSize = new FileInfo(oldPath).Length;
-                long newSize = new FileInfo(newPath).Length;
-                if (oldSize == newSize)
+                // コピーは .iwdlpart に書いてから rename するため、本名の newPath が存在するなら
+                // コピー自体は完了している。ただし移動が失敗した後に別のファイルが newPath に
+                // 置かれた可能性もあるので、内容が一致した場合だけ移動完了とみなして元を削除する。
+                // 一致しなければ無関係なファイルとして両方残す (DB は旧パスのまま)。
+                if (FilesHaveSameContent(oldPath, newPath))
                 {
                     File.Delete(oldPath);
                     FinishMove(database, entry);
                     return (true, false);
                 }
-                File.Delete(newPath);
+                LoggingService.Instance.Warn(
+                    $"移動ジャーナル復旧: 移動先に別内容のファイルがあるため両方残します: {oldPath} / {newPath}");
                 return (false, true);
             }
 
@@ -162,6 +164,27 @@ namespace IwaraDownloader.Services
 
             // new が無い → 移動は始まっていない。DB も旧パスのままなので整合している。
             return (false, true);
+        }
+
+        private static bool FilesHaveSameContent(string a, string b)
+        {
+            var fa = new FileInfo(a);
+            var fb = new FileInfo(b);
+            if (fa.Length != fb.Length) return false;
+
+            const int BufSize = 1024 * 1024;
+            using var sa = new FileStream(a, FileMode.Open, FileAccess.Read, FileShare.Read, BufSize, FileOptions.SequentialScan);
+            using var sb = new FileStream(b, FileMode.Open, FileAccess.Read, FileShare.Read, BufSize, FileOptions.SequentialScan);
+            var bufA = new byte[BufSize];
+            var bufB = new byte[BufSize];
+            while (true)
+            {
+                int ra = sa.ReadAtLeast(bufA, BufSize, throwOnEndOfStream: false);
+                int rb = sb.ReadAtLeast(bufB, BufSize, throwOnEndOfStream: false);
+                if (ra != rb) return false;
+                if (ra == 0) return true;
+                if (!bufA.AsSpan(0, ra).SequenceEqual(bufB.AsSpan(0, rb))) return false;
+            }
         }
 
         /// <summary>移動完了の後始末: json サイドカーの追従 + DB の LocalFilePath 更新</summary>

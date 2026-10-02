@@ -821,6 +821,8 @@
   "SettingsForm_D093": "Import subscriptions",
   "SettingsForm_D094": "Select a sound file",
   "SettingsForm_D095": "Select an error sound file",
+  "SettingsForm_D096": "No password is set, so the server was started for this PC only (127.0.0.1) instead of the whole LAN.\nTo connect from other devices, set a login password and restart the server.",
+  "SettingsForm_D097": "Warning",
   "SettingsForm_MoveSubjectDownloadFolder": "download folder",
   "SettingsForm_Title": "Settings",
   "SettingsForm_btnApply": "Apply",

@@ -162,7 +162,7 @@ namespace IwaraDownloader.Models
         public int WebServerPort { get; set; } = 7860;
 
         /// <summary>LAN内の他デバイスからのアクセスを許可 (true=0.0.0.0, false=127.0.0.1)</summary>
-        public bool WebServerBindAll { get; set; } = true;
+        public bool WebServerBindAll { get; set; } = false;
 
         /// <summary>Webサーバーのログインユーザー名</summary>
         public string WebServerUsername { get; set; } = "admin";

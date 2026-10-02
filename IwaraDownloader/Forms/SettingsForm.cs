@@ -202,8 +202,7 @@ namespace IwaraDownloader.Forms
             settings.WebServerAutoStart = chkWebServerAutoStart.Checked;
             settings.WebServerPort = (int)numWebPort.Value;
             settings.WebServerBindAll = chkWebBindAll.Checked;
-            settings.WebServerUsername = txtWebUsername.Text.Trim();
-            _settingsManager.SetWebServerPassword(txtWebPassword.Text);
+            _settingsManager.SetWebServerCredentials(txtWebUsername.Text.Trim(), txtWebPassword.Text);
 
             // 保存
             _settingsManager.Save();
@@ -1011,6 +1010,11 @@ namespace IwaraDownloader.Forms
                     SaveSettings();
                     var settings = _settingsManager.Settings;
                     await webServer.StartAsync(settings.WebServerPort, settings.WebServerBindAll);
+                    if (webServer.LanBindingRefusedNoPassword)
+                    {
+                        MessageBox.Show(L.T("SettingsForm_D096"), L.T("SettingsForm_D097"),
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
                 }
             }
             catch (Exception ex)

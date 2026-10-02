@@ -821,6 +821,8 @@
   "SettingsForm_D093": "購読リストをインポート",
   "SettingsForm_D094": "音声ファイルを選択",
   "SettingsForm_D095": "エラー音声ファイルを選択",
+  "SettingsForm_D096": "パスワードが設定されていないため、LAN 内への公開は行わずこの PC (127.0.0.1) のみで起動しました。\nスマホ等から接続するには、ログインパスワードを設定してから再起動してください。",
+  "SettingsForm_D097": "警告",
   "SettingsForm_MoveSubjectDownloadFolder": "ダウンロード保存先",
   "SettingsForm_Title": "設定",
   "SettingsForm_btnApply": "適用",

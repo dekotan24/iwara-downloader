@@ -2677,6 +2677,13 @@ Current: {0}</value>
   <data name="SettingsForm_D095" xml:space="preserve">
     <value>Select an error sound file</value>
   </data>
+  <data name="SettingsForm_D096" xml:space="preserve">
+    <value>No password is set, so the server was started for this PC only (127.0.0.1) instead of the whole LAN.
+To connect from other devices, set a login password and restart the server.</value>
+  </data>
+  <data name="SettingsForm_D097" xml:space="preserve">
+    <value>Warning</value>
+  </data>
   <data name="SettingsForm_MoveSubjectDownloadFolder" xml:space="preserve">
     <value>download folder</value>
   </data>
